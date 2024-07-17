@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Default theme -->
+    <style name="Theme.Messenger" parent="Theme.MaterialComponents.DayNight.NoActionBar" >
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <!-- Theme 1 -->
+    <style name="Theme1" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/color1_main</item>
+        <item name="colorPrimaryDark">@color/color1_main</item>
+        <item name="colorAccent">@color/color1_secondary</item>
+    </style>
+
+    <!-- Theme 2 -->
+    <style name="Theme2" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/color2_main</item>
+        <item name="colorPrimaryDark">@color/color2_main</item>
+        <item name="colorAccent">@color/color2_secondary</item>
+    </style>
+
+    <!-- Theme 3 -->
+    <style name="Theme3" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/color3_main</item>
+        <item name="colorPrimaryDark">@color/color3_main</item>
+        <item name="colorAccent">@color/color3_secondary</item>
+    </style>
+
+    <!-- Theme 4 -->
+    <style name="Theme4" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/color4_main</item>
+        <item name="colorPrimaryDark">@color/color4_main</item>
+        <item name="colorAccent">@color/color4_secondary</item>
+    </style>
+
+    <!-- Theme 5 -->
+    <style name="Theme5" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/color5_main</item>
+        <item name="colorPrimaryDark">@color/color5_main</item>
+        <item name="colorAccent">@color/color5_secondary</item>
+    </style>
+
+    <!-- Theme 6 -->
+    <style name="Theme6" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/color6_main</item>
+        <item name="colorPrimaryDark">@color/color6_main</item>
+        <item name="colorAccent">@color/color6_secondary</item>
+    </style>
+
+    <!-- Theme 7 -->
+    <style name="Theme7" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/color7_main</item>
+        <item name="colorPrimaryDark">@color/color7_main</item>
+        <item name="colorAccent">@color/color7_secondary</item>
+    </style>
+
+    <!-- Theme 8 -->
+    <style name="Theme8" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/color8_main</item>
+        <item name="colorPrimaryDark">@color/color8_main</item>
+        <item name="colorAccent">@color/color8_secondary</item>
+    </style>
+
+</resources>
