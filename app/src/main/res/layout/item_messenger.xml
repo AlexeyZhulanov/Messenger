@@ -1,74 +1,98 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    xmlns:tools="http://schemas.android.com/tools"
-    tools:ignore="HardcodedText"
-    android:orientation="vertical">
+    android:background="?android:attr/selectableItemBackground">
 
-
-    <TextView
-        android:id="@+id/timeTextView"
-        android:layout_width="0dp"
-        android:layout_height="65dp"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="20sp"
-        android:autoSizeMaxTextSize="100sp"
-        android:autoSizeStepGranularity="2sp"
-        android:textStyle="bold|italic"
-        android:gravity="center"
-        android:textColor="?attr/colorAccent"
+    <ImageView
+        android:id="@+id/photoImageView"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="6dp"
+        tools:src="@drawable/ic_user_avatar"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/intervalTextView"
-        app:layout_constraintHorizontal_chainStyle="spread_inside"
-        app:layout_constraintWidth_percent="0.3"
-        tools:text="7:00" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/intervalTextView"
+        android:id="@+id/userNameTextView"
         android:layout_width="0dp"
-        android:layout_height="30dp"
-        android:gravity="center"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="10sp"
-        android:autoSizeMaxTextSize="22sp"
-        android:autoSizeStepGranularity="2sp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toEndOf="@id/timeTextView"
-        app:layout_constraintEnd_toStartOf="@id/switch1"
-        app:layout_constraintBottom_toBottomOf="@id/timeTextView"
-        app:layout_constraintWidth_percent="0.4"
-        android:layout_marginStart="5dp"
-        android:maxLines="1"
-        android:maxLength="16"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textColor="@color/black"
+        android:layout_marginStart="16dp"
+        android:lines="1"
         android:ellipsize="end"
-        tools:text="раз в 5 мин." />
+        tools:text="John Smith"
+        app:layout_constraintTop_toTopOf="@id/photoImageView"
+        app:layout_constraintStart_toEndOf="@id/photoImageView"
+        app:layout_constraintEnd_toStartOf="@id/ic_check"/>
 
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switch1"
-        android:layout_width="wrap_content"
+    <TextView
+        android:id="@+id/userCompanyTextView"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:scaleX="1.5"
-        android:scaleY="1.3"
-        android:layout_marginEnd="20dp"
-        android:visibility="visible"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toEndOf="@id/intervalTextView"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="@id/timeTextView"
-        app:layout_constraintWidth_percent="0.15" />
-    <CheckBox
-        android:id="@+id/checkBox"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:scaleX="1.5"
-        android:scaleY="1.3"
+        android:lines="1"
+        android:ellipsize="end"
+        android:textSize="14sp"
+        android:layout_marginTop="4dp"
+        tools:text="Google Inc."
+        app:layout_constraintTop_toBottomOf="@id/userNameTextView"
+        app:layout_constraintStart_toStartOf="@id/userNameTextView"
+        app:layout_constraintEnd_toStartOf="@id/ic_check"/>
+
+    <ImageView
+        android:id="@+id/ic_check"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_check"
+        android:layout_marginEnd="-5dp"
+        android:padding="8dp"
         android:visibility="invisible"
-        app:layout_goneMarginEnd="0dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        app:layout_constraintTop_toTopOf="@id/dateText"
+        app:layout_constraintBottom_toBottomOf="@id/dateText"
+        app:layout_constraintEnd_toStartOf="@id/dateText"/>
+
+    <ImageView
+        android:id="@+id/ic_check2"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_check_circle"
+        android:layout_marginEnd="-5dp"
+        android:padding="8dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        app:layout_constraintTop_toTopOf="@id/dateText"
+        app:layout_constraintBottom_toBottomOf="@id/dateText"
+        app:layout_constraintEnd_toStartOf="@id/dateText"/>
+
+
+    <TextView
+        android:id="@+id/dateText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textColor="@color/black"
+        tools:text="19 jul"
+        android:layout_marginEnd="10dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toEndOf="@id/intervalTextView"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="@id/timeTextView" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <androidx.constraintlayout.widget.Barrier
+        android:id="@+id/barrier"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:constraint_referenced_ids="photoImageView,userCompanyTextView"
+        app:barrierDirection="bottom"/>
+
+    <Space
+        android:layout_width="wrap_content"
+        android:layout_height="6dp"
+        app:layout_constraintTop_toBottomOf="@id/barrier"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
