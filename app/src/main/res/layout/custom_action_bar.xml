@@ -4,32 +4,41 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:background="?android:attr/selectableItemBackground">
+    android:layout_height="wrap_content">
+
+    <ImageView
+        android:id="@+id/back_arrow"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_back_arrow"
+        android:padding="3dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"/>
 
     <ImageView
         android:id="@+id/photoImageView"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:layout_marginStart="16dp"
+        android:layout_marginStart="5dp"
         android:layout_marginTop="6dp"
         tools:src="@drawable/ic_user_avatar"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintStart_toEndOf="@id/back_arrow"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/userNameTextView"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="16sp"
         android:textColor="@color/black"
-        android:layout_marginStart="16dp"
+        android:layout_marginStart="10dp"
         android:lines="1"
         android:ellipsize="end"
         tools:text="John Smith"
         app:layout_constraintTop_toTopOf="@id/photoImageView"
-        app:layout_constraintStart_toEndOf="@id/photoImageView"
-        app:layout_constraintEnd_toStartOf="@id/ic_check"/>
+        app:layout_constraintStart_toEndOf="@id/photoImageView" />
 
     <TextView
         android:id="@+id/userCompanyTextView"
@@ -39,45 +48,28 @@
         android:ellipsize="end"
         android:textSize="14sp"
         android:layout_marginTop="4dp"
-        tools:text="Google Inc."
+        tools:text="был в сети час назад"
         app:layout_constraintTop_toBottomOf="@id/userNameTextView"
         app:layout_constraintStart_toStartOf="@id/userNameTextView"
         app:layout_constraintEnd_toStartOf="@id/ic_check"/>
 
     <ImageView
+        android:id="@+id/ic_volume_off"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_volume_off"
+        android:padding="10dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        app:layout_constraintTop_toTopOf="@id/userNameTextView"
+        app:layout_constraintBottom_toBottomOf="@id/userNameTextView"
+        app:layout_constraintStart_toEndOf="@id/userNameTextView"/>
+
+    <ImageView
         android:id="@+id/ic_check"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        android:src="@drawable/ic_check"
-        android:layout_marginEnd="-5dp"
+        android:src="@drawable/ic_more"
         android:padding="8dp"
-        android:visibility="invisible"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
-        app:layout_constraintTop_toTopOf="@id/dateText"
-        app:layout_constraintBottom_toBottomOf="@id/dateText"
-        app:layout_constraintEnd_toStartOf="@id/dateText"/>
-
-    <ImageView
-        android:id="@+id/ic_check2"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:src="@drawable/ic_check_circle"
-        android:layout_marginEnd="-5dp"
-        android:padding="8dp"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
-        app:layout_constraintTop_toTopOf="@id/dateText"
-        app:layout_constraintBottom_toBottomOf="@id/dateText"
-        app:layout_constraintEnd_toStartOf="@id/dateText"/>
-
-
-    <TextView
-        android:id="@+id/dateText"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:textColor="@color/black"
-        tools:text="19 jul"
-        android:layout_marginEnd="10dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
