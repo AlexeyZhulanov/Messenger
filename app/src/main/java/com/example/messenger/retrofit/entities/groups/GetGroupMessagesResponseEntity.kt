@@ -1,14 +1,15 @@
-package com.example.messenger.retrofit.entities.messages
+package com.example.messenger.retrofit.entities.groups
 
 import com.squareup.moshi.Json
 
-data class GetMessagesResponseEntity(
+data class GetGroupMessagesResponseEntity(
     val messages: List<Message>
 )
 
 data class Message(
     val id: Int,
-    @Json(name = "id_sender") val idSender: Int,
+    @Json(name = "sender_id") val senderId: Int,
+    @Json(name = "group_id") val groupId: Int,
     var text: String,
     var images: List<String>,
     var voice: String,

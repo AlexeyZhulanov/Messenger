@@ -7,6 +7,7 @@ import com.example.messenger.retrofit.entities.ResponseEntityMessageAnswer
 import com.example.messenger.retrofit.entities.users.UpdatePasswordRequestEntity
 import com.example.messenger.retrofit.entities.users.UpdateProfileRequestEntity
 import retrofit2.http.Body
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.PUT
 
@@ -18,9 +19,13 @@ interface UsersApi {
     suspend fun login(@Body loginRequestEntity: LoginRequestEntity) : LoginResponseEntity
 
     @PUT("update_profile")
-    suspend fun updateProfile(@Body updateProfileRequestEntity: UpdateProfileRequestEntity) : ResponseEntityMessageAnswer
+    suspend fun updateProfile(
+        @Header("Authorization") token: String,
+        @Body updateProfileRequestEntity: UpdateProfileRequestEntity) : ResponseEntityMessageAnswer
 
     @PUT("update_password")
-    suspend fun updatePassword(@Body updatePasswordRequestEntity: UpdatePasswordRequestEntity) : ResponseEntityMessageAnswer
+    suspend fun updatePassword(
+        @Header("Authorization") token: String,
+        @Body updatePasswordRequestEntity: UpdatePasswordRequestEntity) : ResponseEntityMessageAnswer
 
 }

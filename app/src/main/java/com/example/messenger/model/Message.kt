@@ -1,9 +1,9 @@
 package com.example.messenger.model
 
 data class Message(
-    val id: Long,
-    val idSender: Long,
-    var text: String = "",
+    val id: Int,
+    val idSender: Int,
+    var text: String,
     var images: List<String>,
     var voice: String,
     var file: String,

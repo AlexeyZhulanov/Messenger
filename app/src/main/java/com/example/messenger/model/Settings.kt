@@ -5,7 +5,7 @@ import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
 
 @Parcelize
-data class Settings @Inject constructor(
+data class Settings(
     val id: Long,
     var remember: Boolean = false,
     var name: String,

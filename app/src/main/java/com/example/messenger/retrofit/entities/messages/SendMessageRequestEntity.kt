@@ -1,10 +1,11 @@
 package com.example.messenger.retrofit.entities.messages
 
+import com.squareup.moshi.JsonClass
+
+@JsonClass(generateAdapter = true) //null значения не будут отправлены
 data class SendMessageRequestEntity(
-    val token: String,
-    val idDialog: Long,
-    val text: String,
-    val images: List<String>,
-    val file: String,
-    val voice: String
+    val text: String? = null,
+    val images: List<String>? = null,
+    val file: String? = null,
+    val voice: String? = null
 )
