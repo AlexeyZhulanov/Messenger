@@ -28,6 +28,7 @@ interface MessagesApi {
     @POST("messages")
     suspend fun sendMessage(
         @Header("Authorization") token: String,
+        @Header("id_dialog") idDialog: Int,
         @Body sendMessageRequestEntity: SendMessageRequestEntity) : ResponseEntityMessageAnswer
 
     @GET("messages")

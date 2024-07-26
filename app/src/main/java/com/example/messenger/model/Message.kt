@@ -17,3 +17,16 @@ data class LastMessage(
     val timestamp: Long,
     val isRead: Boolean
 )
+
+data class GroupMessage(
+    val id: Int,
+    val senderId: Int,
+    val groupId: Int,
+    var text: String? = null,
+    var images: List<String>? = null,
+    var voice: String? = null,
+    var file: String? = null,
+    var timestamp: Long,
+    var isRead: Boolean,
+    var isEdited: Boolean
+)

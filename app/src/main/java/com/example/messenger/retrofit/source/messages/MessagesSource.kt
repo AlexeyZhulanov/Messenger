@@ -8,7 +8,7 @@ import com.example.messenger.model.UserShort
 interface MessagesSource {
     suspend fun createDialog(token: String, name: String) : String
 
-    suspend fun sendMessage(token: String, text: String? = null, images: List<String>? = null,
+    suspend fun sendMessage(token: String, idDialog: Int, text: String? = null, images: List<String>? = null,
                             voice: String? = null, file: String? = null) : String
 
     suspend fun getMessages(token: String, idDialog: Int, start: Int, end: Int) : List<Message>

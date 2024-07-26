@@ -121,7 +121,7 @@ interface GroupsApi {
     ) : ResponseEntityMessageAnswer
 
     @DELETE("groups/{group_id}/delete_messages")
-    suspend fun deleteGroupMessages(
+    suspend fun deleteGroupMessagesAll(
         @Path("group_id") groupId: Int,
         @Header("Authorization") token: String
     ) : ResponseEntityMessageAnswer

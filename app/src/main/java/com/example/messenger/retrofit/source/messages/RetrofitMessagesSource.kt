@@ -24,11 +24,11 @@ class RetrofitMessagesSource(
         messagesApi.createDialog(token, dialogCreateRequestEntity).message
     }
 
-    override suspend fun sendMessage(token: String, text: String?, images: List<String>?,
+    override suspend fun sendMessage(token: String, idDialog: Int, text: String?, images: List<String>?,
         voice: String?, file: String?): String = wrapRetrofitExceptions {
         val sendMessageRequestEntity = SendMessageRequestEntity(text = text, images = images,
             file = file, voice = voice)
-        messagesApi.sendMessage(token, sendMessageRequestEntity).message
+        messagesApi.sendMessage(token, idDialog, sendMessageRequestEntity).message
     }
 
     override suspend fun getMessages(token: String, idDialog: Int, start: Int, end: Int): List<Message> = wrapRetrofitExceptions {
