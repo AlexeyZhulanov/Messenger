@@ -1,4 +1,4 @@
-package com.example.messenger.retrofit
+package com.example.messenger.retrofit.source
 
 import com.squareup.moshi.Moshi
 import retrofit2.Retrofit

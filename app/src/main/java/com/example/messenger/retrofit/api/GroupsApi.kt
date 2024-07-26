@@ -8,6 +8,7 @@ import com.example.messenger.retrofit.entities.groups.GetGroupMessagesResponseEn
 import com.example.messenger.retrofit.entities.groups.SendGroupMessageRequestEntity
 import com.example.messenger.retrofit.entities.groups.UpdateGroupAvatarRequestEntity
 import com.example.messenger.retrofit.entities.messages.DeleteMessagesRequestEntity
+import com.example.messenger.retrofit.entities.messages.GetDialogSettingsResponseEntity
 import com.example.messenger.retrofit.entities.messages.GetUsersResponseEntity
 import com.example.messenger.retrofit.entities.messages.UpdateAutoDeleteIntervalRequestEntity
 import retrofit2.http.Body
@@ -120,8 +121,14 @@ interface GroupsApi {
     ) : ResponseEntityMessageAnswer
 
     @DELETE("groups/{group_id}/delete_messages")
-    suspend fun deleteGroupMessages(
+    suspend fun deleteGroupMessagesAll(
         @Path("group_id") groupId: Int,
         @Header("Authorization") token: String
     ) : ResponseEntityMessageAnswer
+
+    @GET("group/{group_id}/settings")
+    suspend fun getGroupSettings(
+        @Path("group_id") groupId: Int,
+        @Header("Authorization") token: String
+    ) : GetDialogSettingsResponseEntity
 }
