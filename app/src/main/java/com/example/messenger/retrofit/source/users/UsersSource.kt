@@ -1,7 +1,5 @@
 package com.example.messenger.retrofit.source.users
 
-import com.example.messenger.retrofit.entities.users.UpdateProfileRequestEntity
-
 interface UsersSource {
     suspend fun register(name: String, username: String, password: String) : String
 

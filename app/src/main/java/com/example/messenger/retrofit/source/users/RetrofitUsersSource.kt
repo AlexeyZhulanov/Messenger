@@ -13,6 +13,7 @@ class RetrofitUsersSource(
 ) : BaseRetrofitSource(config), UsersSource {
 
     private val usersApi = retrofit.create(UsersApi::class.java)
+
     override suspend fun register(name: String, username: String, password: String): String = wrapRetrofitExceptions {
         val registerRequestEntity = RegisterRequestEntity(name = name, username = username, password = password)
         usersApi.register(registerRequestEntity).message

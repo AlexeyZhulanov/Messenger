@@ -5,6 +5,7 @@ import com.example.messenger.retrofit.entities.messages.AddKeyToDialogRequestEnt
 import com.example.messenger.retrofit.entities.messages.DeleteMessagesRequestEntity
 import com.example.messenger.retrofit.entities.messages.DialogCreateRequestEntity
 import com.example.messenger.retrofit.entities.messages.GetConversationsResponseEntity
+import com.example.messenger.retrofit.entities.messages.GetDialogSettingsResponseEntity
 import com.example.messenger.retrofit.entities.messages.GetMessagesResponseEntity
 import com.example.messenger.retrofit.entities.messages.GetUsersResponseEntity
 import com.example.messenger.retrofit.entities.messages.SendMessageRequestEntity
@@ -110,4 +111,10 @@ interface MessagesApi {
         @Path("dialog_id") dialogId: Int,
         @Header("Authorization") token: String
     ) : ResponseEntityMessageAnswer
+
+    @GET("dialog/{dialog_id}/settings")
+    suspend fun getDialogSettings(
+        @Path("dialog_id") dialogId: Int,
+        @Header("Authorization") token: String
+    ) : GetDialogSettingsResponseEntity
 }
