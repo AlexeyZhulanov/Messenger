@@ -23,20 +23,17 @@ import retrofit2.http.Query
 interface GroupsApi {
     @POST("groups")
     suspend fun createGroup(
-        @Header("Authorization") token: String,
         @Body createGroupRequestEntity: CreateGroupRequestEntity
     ) : ResponseEntityMessageAnswer
 
     @POST("group/{group_id}/messages")
     suspend fun sendGroupMessage(
         @Path("group_id") groupId: Int,
-        @Header("Authorization") token: String,
         @Body sendGroupMessageRequestEntity: SendGroupMessageRequestEntity
     ) : ResponseEntityMessageAnswer
 
     @GET("group/messages")
     suspend fun getGroupMessages(
-        @Header("Authorization") token: String,
         @Header("group_id") groupId: Int,
         @Query("start") start: Int,
         @Query("end") end: Int
@@ -45,33 +42,28 @@ interface GroupsApi {
     @PUT("group_messages/{group_message_id}")
     suspend fun editGroupMessage(
         @Path("group_message_id") groupMessageId: Int,
-        @Header("Authorization") token: String,
         @Body sendGroupMessageRequestEntity: SendGroupMessageRequestEntity
     ) : ResponseEntityMessageAnswer
 
     @DELETE("group/messages")
     suspend fun deleteGroupMessages(
-        @Header("Authorization") token: String,
         @Body deleteMessagesRequestEntity: DeleteMessagesRequestEntity
     ) : ResponseEntityMessageAnswer
 
     @DELETE("groups/{group_id}")
     suspend fun deleteGroup(
-        @Path("group_id") groupId: Int,
-        @Header("Authorization") token: String
+        @Path("group_id") groupId: Int
     ) : ResponseEntityMessageAnswer
 
     @PUT("groups/{group_id}")
     suspend fun editGroupName(
         @Path("group_id") groupId: Int,
-        @Header("Authorization") token: String,
         @Body createGroupRequestEntity: CreateGroupRequestEntity
     ) : ResponseEntityMessageAnswer
 
     @POST("groups/{group_id}/members")
     suspend fun addUserToGroup(
         @Path("group_id") groupId: Int,
-        @Header("Authorization") token: String,
         @Body addUserToGroupRequestEntity: AddUserToGroupRequestEntity
     ) : ResponseEntityMessageAnswer
 
@@ -79,56 +71,47 @@ interface GroupsApi {
     suspend fun deleteUserFromGroup(
         @Path("group_id") groupId: Int,
         @Path("user_id") userId: Int,
-        @Header("Authorization") token: String
     ) : ResponseEntityMessageAnswer
 
     @GET("groups/{group_id}/available_users")
     suspend fun getAvailableUsersForGroup(
-        @Path("group_id") groupId: Int,
-        @Header("Authorization") token: String
+        @Path("group_id") groupId: Int
     ) : GetUsersResponseEntity
 
     @GET("groups/{group_id}/members")
     suspend fun getGroupMembers(
-        @Path("group_id") groupId: Int,
-        @Header("Authorization") token: String
+        @Path("group_id") groupId: Int
     ) : GetGroupMembersResponseEntity
 
     @PUT("groups/{group_id}/avatar")
     suspend fun updateGroupAvatar(
         @Path("group_id") groupId: Int,
-        @Header("Authorization") token: String,
         @Body updateGroupAvatarRequestEntity: UpdateGroupAvatarRequestEntity
     ) : ResponseEntityMessageAnswer
 
     @PUT("group_messages/read")
     suspend fun markGroupMessagesAsRead(
-        @Header("Authorization") token: String,
         @Body deleteMessagesRequestEntity: DeleteMessagesRequestEntity
     ) : ResponseEntityMessageAnswer
 
     @PUT("groups/{group_id}/toggle_can_delete")
     suspend fun toggleGroupCanDelete(
-        @Path("group_id") groupId: Int,
-        @Header("Authorization") token: String
+        @Path("group_id") groupId: Int
     ) : ResponseEntityMessageAnswer
 
     @PUT("groups/{group_id}/update_auto_delete_interval")
     suspend fun updateGroupAutoDeleteInterval(
         @Path("group_id") groupId: Int,
-        @Header("Authorization") token: String,
         @Body updateAutoDeleteIntervalRequestEntity: UpdateAutoDeleteIntervalRequestEntity
     ) : ResponseEntityMessageAnswer
 
     @DELETE("groups/{group_id}/delete_messages")
     suspend fun deleteGroupMessagesAll(
-        @Path("group_id") groupId: Int,
-        @Header("Authorization") token: String
+        @Path("group_id") groupId: Int
     ) : ResponseEntityMessageAnswer
 
     @GET("group/{group_id}/settings")
     suspend fun getGroupSettings(
-        @Path("group_id") groupId: Int,
-        @Header("Authorization") token: String
+        @Path("group_id") groupId: Int
     ) : GetDialogSettingsResponseEntity
 }

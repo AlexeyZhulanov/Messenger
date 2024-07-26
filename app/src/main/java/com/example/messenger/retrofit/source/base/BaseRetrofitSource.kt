@@ -1,4 +1,4 @@
-package com.example.messenger.retrofit.source
+package com.example.messenger.retrofit.source.base
 
 import com.example.messenger.model.AppException
 import com.example.messenger.model.BackendException

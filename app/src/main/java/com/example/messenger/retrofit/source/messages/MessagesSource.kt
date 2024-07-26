@@ -6,39 +6,39 @@ import com.example.messenger.model.Message
 import com.example.messenger.model.UserShort
 
 interface MessagesSource {
-    suspend fun createDialog(token: String, name: String) : String
+    suspend fun createDialog(name: String) : String
 
-    suspend fun sendMessage(token: String, idDialog: Int, text: String? = null, images: List<String>? = null,
+    suspend fun sendMessage(idDialog: Int, text: String? = null, images: List<String>? = null,
                             voice: String? = null, file: String? = null) : String
 
-    suspend fun getMessages(token: String, idDialog: Int, start: Int, end: Int) : List<Message>
+    suspend fun getMessages(idDialog: Int, start: Int, end: Int) : List<Message>
 
-    suspend fun addKeyToDialog(token: String, dialogId: Int, key: String) : String
+    suspend fun addKeyToDialog(dialogId: Int, key: String) : String
 
-    suspend fun removeKeyFromDialog(token: String, dialogId: Int) : String
+    suspend fun removeKeyFromDialog(dialogId: Int) : String
 
-    suspend fun editMessage(token: String, messageId: Int, text: String? = null,
+    suspend fun editMessage(messageId: Int, text: String? = null,
                             images: List<String>? = null, voice: String? = null,
                             file: String? = null) : String
 
-    suspend fun deleteMessages(token: String, ids: List<Int>) : String
+    suspend fun deleteMessages(ids: List<Int>) : String
 
-    suspend fun deleteDialog(token: String, dialogId: Int) : String
+    suspend fun deleteDialog(dialogId: Int) : String
 
-    suspend fun getUsers(token: String) : List<UserShort>
+    suspend fun getUsers() : List<UserShort>
 
-    suspend fun markMessagesAsRead(token: String, ids: List<Int>) : String
+    suspend fun markMessagesAsRead(ids: List<Int>) : String
 
-    suspend fun searchMessagesInDialog(token: String, dialogId: Int, word: String) : List<Message>
+    suspend fun searchMessagesInDialog(dialogId: Int, word: String) : List<Message>
 
-    suspend fun getConversations(token: String) : List<Conversation>
+    suspend fun getConversations() : List<Conversation>
 
-    suspend fun toggleDialogCanDelete(token: String, dialogId : Int) : String
+    suspend fun toggleDialogCanDelete(dialogId : Int) : String
 
-    suspend fun updateAutoDeleteInterval(token: String, dialogId: Int, autoDeleteInterval: Int) : String
+    suspend fun updateAutoDeleteInterval(dialogId: Int, autoDeleteInterval: Int) : String
 
-    suspend fun deleteDialogMessages(token: String, dialogId: Int) : String
+    suspend fun deleteDialogMessages(dialogId: Int) : String
 
-    suspend fun getDialogSettings(token: String, dialogId: Int) : ConversationSettings
+    suspend fun getDialogSettings(dialogId: Int) : ConversationSettings
 
 }

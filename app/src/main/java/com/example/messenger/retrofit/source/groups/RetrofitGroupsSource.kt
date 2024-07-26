@@ -11,8 +11,8 @@ import com.example.messenger.retrofit.entities.groups.SendGroupMessageRequestEnt
 import com.example.messenger.retrofit.entities.groups.UpdateGroupAvatarRequestEntity
 import com.example.messenger.retrofit.entities.messages.DeleteMessagesRequestEntity
 import com.example.messenger.retrofit.entities.messages.UpdateAutoDeleteIntervalRequestEntity
-import com.example.messenger.retrofit.source.BaseRetrofitSource
-import com.example.messenger.retrofit.source.RetrofitConfig
+import com.example.messenger.retrofit.source.base.BaseRetrofitSource
+import com.example.messenger.retrofit.source.base.RetrofitConfig
 
 class RetrofitGroupsSource(
     config: RetrofitConfig
@@ -20,87 +20,87 @@ class RetrofitGroupsSource(
 
     private val groupsApi = retrofit.create(GroupsApi::class.java)
 
-    override suspend fun createGroup(token: String, name: String): String = wrapRetrofitExceptions {
+    override suspend fun createGroup(name: String): String = wrapRetrofitExceptions {
         val createGroupRequestEntity = CreateGroupRequestEntity(name = name)
-        groupsApi.createGroup(token, createGroupRequestEntity).message
+        groupsApi.createGroup(createGroupRequestEntity).message
     }
 
-    override suspend fun sendGroupMessage(token: String, groupId: Int, text: String?,
+    override suspend fun sendGroupMessage(groupId: Int, text: String?,
         images: List<String>?, voice: String?,
         file: String?): String = wrapRetrofitExceptions {
         val sendGroupMessageRequestEntity = SendGroupMessageRequestEntity(text = text,
             images = images, voice = voice, file = file)
-        groupsApi.sendGroupMessage(groupId, token, sendGroupMessageRequestEntity).message
+        groupsApi.sendGroupMessage(groupId, sendGroupMessageRequestEntity).message
     }
 
-    override suspend fun getGroupMessages(token: String, groupId: Int,
+    override suspend fun getGroupMessages(groupId: Int,
         start: Int, end: Int): List<GroupMessage> = wrapRetrofitExceptions {
-        groupsApi.getGroupMessages(token, groupId, start, end).toGroupMessages()
+        groupsApi.getGroupMessages(groupId, start, end).toGroupMessages()
     }
 
-    override suspend fun editGroupMessage(token: String, groupMessageId: Int, text: String?,
+    override suspend fun editGroupMessage(groupMessageId: Int, text: String?,
         images: List<String>?, voice: String?, file: String?): String = wrapRetrofitExceptions {
         val sendGroupMessageRequestEntity = SendGroupMessageRequestEntity(text = text,
             images = images, voice = voice, file = file)
-        groupsApi.editGroupMessage(groupMessageId, token, sendGroupMessageRequestEntity).message
+        groupsApi.editGroupMessage(groupMessageId, sendGroupMessageRequestEntity).message
     }
 
-    override suspend fun deleteGroupMessages(token: String, ids: List<Int>): String = wrapRetrofitExceptions {
+    override suspend fun deleteGroupMessages(ids: List<Int>): String = wrapRetrofitExceptions {
         val deleteMessagesRequestEntity = DeleteMessagesRequestEntity(ids = ids)
-        groupsApi.deleteGroupMessages(token, deleteMessagesRequestEntity).message
+        groupsApi.deleteGroupMessages(deleteMessagesRequestEntity).message
     }
 
-    override suspend fun deleteGroup(token: String, groupId: Int): String = wrapRetrofitExceptions {
-        groupsApi.deleteGroup(groupId, token).message
+    override suspend fun deleteGroup(groupId: Int): String = wrapRetrofitExceptions {
+        groupsApi.deleteGroup(groupId).message
     }
 
-    override suspend fun editGroupName(token: String, groupId: Int, name: String): String = wrapRetrofitExceptions {
+    override suspend fun editGroupName(groupId: Int, name: String): String = wrapRetrofitExceptions {
         val createGroupRequestEntity = CreateGroupRequestEntity(name = name)
-        groupsApi.editGroupName(groupId, token, createGroupRequestEntity).message
+        groupsApi.editGroupName(groupId, createGroupRequestEntity).message
     }
 
-    override suspend fun addUserToGroup(token: String, groupId: Int, userId: Int): String = wrapRetrofitExceptions  {
+    override suspend fun addUserToGroup(groupId: Int, userId: Int): String = wrapRetrofitExceptions  {
         val addUserToGroupRequestEntity = AddUserToGroupRequestEntity(userId = userId)
-        groupsApi.addUserToGroup(groupId, token, addUserToGroupRequestEntity).message
+        groupsApi.addUserToGroup(groupId, addUserToGroupRequestEntity).message
     }
 
-    override suspend fun deleteUserFromGroup(token: String, groupId: Int, userId: Int): String = wrapRetrofitExceptions {
-        groupsApi.deleteUserFromGroup(groupId, userId, token).message
+    override suspend fun deleteUserFromGroup(groupId: Int, userId: Int): String = wrapRetrofitExceptions {
+        groupsApi.deleteUserFromGroup(groupId, userId).message
     }
 
-    override suspend fun getAvailableUsersForGroup(token: String, groupId: Int): List<UserShort> = wrapRetrofitExceptions {
-        groupsApi.getAvailableUsersForGroup(groupId, token).toUsersShort()
+    override suspend fun getAvailableUsersForGroup(groupId: Int): List<UserShort> = wrapRetrofitExceptions {
+        groupsApi.getAvailableUsersForGroup(groupId).toUsersShort()
     }
 
-    override suspend fun getGroupMembers(token: String, groupId: Int): List<User> = wrapRetrofitExceptions {
-        groupsApi.getGroupMembers(groupId, token).toUsers()
+    override suspend fun getGroupMembers(groupId: Int): List<User> = wrapRetrofitExceptions {
+        groupsApi.getGroupMembers(groupId).toUsers()
     }
 
-    override suspend fun updateGroupAvatar(token: String, groupId: Int, avatar: String): String = wrapRetrofitExceptions {
+    override suspend fun updateGroupAvatar(groupId: Int, avatar: String): String = wrapRetrofitExceptions {
         val updateGroupAvatarRequestEntity = UpdateGroupAvatarRequestEntity(avatar = avatar)
-        groupsApi.updateGroupAvatar(groupId, token, updateGroupAvatarRequestEntity).message
+        groupsApi.updateGroupAvatar(groupId, updateGroupAvatarRequestEntity).message
     }
 
-    override suspend fun markGroupMessagesAsRead(token: String, ids: List<Int>): String = wrapRetrofitExceptions {
+    override suspend fun markGroupMessagesAsRead(ids: List<Int>): String = wrapRetrofitExceptions {
         val deleteMessagesRequestEntity = DeleteMessagesRequestEntity(ids = ids)
-        groupsApi.markGroupMessagesAsRead(token, deleteMessagesRequestEntity).message
+        groupsApi.markGroupMessagesAsRead(deleteMessagesRequestEntity).message
     }
 
-    override suspend fun toggleGroupCanDelete(token: String, groupId: Int): String = wrapRetrofitExceptions {
-        groupsApi.toggleGroupCanDelete(groupId, token).message
+    override suspend fun toggleGroupCanDelete(groupId: Int): String = wrapRetrofitExceptions {
+        groupsApi.toggleGroupCanDelete(groupId).message
     }
 
-    override suspend fun updateGroupAutoDeleteInterval(token: String, groupId: Int,
+    override suspend fun updateGroupAutoDeleteInterval(groupId: Int,
                         autoDeleteInterval: Int): String = wrapRetrofitExceptions {
         val updateAutoDeleteIntervalRequestEntity = UpdateAutoDeleteIntervalRequestEntity(autoDeleteInterval = autoDeleteInterval)
-        groupsApi.updateGroupAutoDeleteInterval(groupId, token, updateAutoDeleteIntervalRequestEntity).message
+        groupsApi.updateGroupAutoDeleteInterval(groupId, updateAutoDeleteIntervalRequestEntity).message
     }
 
-    override suspend fun deleteGroupMessagesAll(token: String, groupId: Int): String = wrapRetrofitExceptions {
-        groupsApi.deleteGroupMessagesAll(groupId, token).message
+    override suspend fun deleteGroupMessagesAll(groupId: Int): String = wrapRetrofitExceptions {
+        groupsApi.deleteGroupMessagesAll(groupId).message
     }
 
-    override suspend fun getGroupSettings(token: String, groupId: Int): ConversationSettings = wrapRetrofitExceptions {
-        groupsApi.getGroupSettings(groupId, token).toConversationSettings()
+    override suspend fun getGroupSettings(groupId: Int): ConversationSettings = wrapRetrofitExceptions {
+        groupsApi.getGroupSettings(groupId).toConversationSettings()
     }
 }

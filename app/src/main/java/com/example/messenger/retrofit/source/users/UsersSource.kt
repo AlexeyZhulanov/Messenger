@@ -5,12 +5,12 @@ interface UsersSource {
 
     suspend fun login(name: String, password: String) : String
 
-    suspend fun updateProfile(token: String, username: String? = null, avatar: String? = null) : String
+    suspend fun updateProfile(username: String? = null, avatar: String? = null) : String
 
-    suspend fun updatePassword(token: String, password: String) : String
+    suspend fun updatePassword(password: String) : String
 
-    suspend fun updateLastSession(token: String) : String
+    suspend fun updateLastSession() : String
 
-    suspend fun getLastSession(token: String, userId: Int) : Long
+    suspend fun getLastSession(userId: Int) : Long
 
 }

@@ -23,23 +23,18 @@ interface UsersApi {
 
     @PUT("update_profile")
     suspend fun updateProfile(
-        @Header("Authorization") token: String,
         @Body updateProfileRequestEntity: UpdateProfileRequestEntity) : ResponseEntityMessageAnswer
 
     @PUT("update_password")
     suspend fun updatePassword(
-        @Header("Authorization") token: String,
         @Body updatePasswordRequestEntity: UpdatePasswordRequestEntity) : ResponseEntityMessageAnswer
 
     @PUT("update_last_session")
-    suspend fun updateLastSession(
-        @Header("Authorization") token: String
-    ) : ResponseEntityMessageAnswer
+    suspend fun updateLastSession() : ResponseEntityMessageAnswer
 
     @GET("last_session/{user_id}")
     suspend fun getLastSession(
-        @Path("user_id") userId: Int,
-        @Header("Authorization") token: String
+        @Path("user_id") userId: Int
     ) : GetLastSessionResponseEntity
 
 }
