@@ -35,7 +35,7 @@ class MessengerFragment : Fragment() {
                 binding.alarmLayout.background = ContextCompat.getDrawable(requireContext(), resId)
         }
         adapter = MessengerAdapter(object: MessengerActionListener {
-            override fun onMessageClicked(conversation: Conversation, index: Int) {
+            override fun onConversationClicked(conversation: Conversation, index: Int) {
                 Toast.makeText(context, conversation.type, Toast.LENGTH_SHORT).show()
             }
         })

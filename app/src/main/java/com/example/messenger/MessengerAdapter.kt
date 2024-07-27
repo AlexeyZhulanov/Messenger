@@ -10,7 +10,7 @@ import com.example.messenger.model.Conversation
 import com.example.messenger.model.Message
 
 interface MessengerActionListener {
-    fun onMessageClicked(conversation: Conversation, index: Int)
+    fun onConversationClicked(conversation: Conversation, index: Int)
 }
 
 class MessengerAdapter(
@@ -23,10 +23,18 @@ class MessengerAdapter(
             notifyDataSetChanged()
         }
 
+    private var index = 0
+
 
     override fun onClick(v: View) {
         val conversation = v.tag as Conversation
-        // todo
+        for (i in conversations.indices) {
+            if(conversations[i] == conversation) {
+                index = i
+                break
+            }
+        }
+        actionListener.onConversationClicked(conversation, index)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MessengerViewHolder {
