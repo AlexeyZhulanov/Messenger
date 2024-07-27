@@ -4,6 +4,7 @@ import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -36,7 +37,7 @@ class RegisterFragment : Fragment() {
         binding.loginButton.setOnClickListener {
             if(binding.username.text.isNotEmpty() && binding.password.text.isNotEmpty()
                 && binding.name.text.isNotEmpty() && binding.passwordRepeat.text.isNotEmpty()) {
-                if(binding.password.text == binding.passwordRepeat.text) {
+                if(binding.password.text.toString() == binding.passwordRepeat.text.toString()) {
                     uiScope.launch {
                         val name = binding.name.text.toString()
                         val username = binding.username.text.toString()

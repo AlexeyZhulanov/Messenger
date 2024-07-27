@@ -6,6 +6,7 @@ import com.example.messenger.retrofit.source.base.RetrofitConfig
 import com.example.messenger.retrofit.source.base.RetrofitSourcesProvider
 import com.example.messenger.retrofit.source.base.SourcesProvider
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -17,7 +18,9 @@ object SourceProviderHolder {
     private const val BASE_URL = "http://10.0.2.2:5000" //localhost android --> 127.0.0.1
 
     val sourcesProvider: SourcesProvider by lazy {
-        val moshi = Moshi.Builder().build()
+        val moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .build()
         val config = RetrofitConfig(
             retrofit = createRetrofit(moshi),
             moshi = moshi
