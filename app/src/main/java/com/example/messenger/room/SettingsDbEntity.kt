@@ -13,7 +13,7 @@ import com.example.messenger.model.Settings
 )
 data class SettingsDbEntity(
     @PrimaryKey(autoGenerate = true) val id: Long,
-    var remember: Boolean,
+    var remember: Int,
     var name: String,
     var password: String
 ) {
@@ -28,8 +28,8 @@ data class SettingsDbEntity(
         fun fromUserInput(settings: Settings): SettingsDbEntity = SettingsDbEntity(
             id = settings.id,
             remember = settings.remember,
-            name = settings.name,
-            password = settings.password
+            name = settings.name!!,
+            password = settings.password!!
         )
     }
 }

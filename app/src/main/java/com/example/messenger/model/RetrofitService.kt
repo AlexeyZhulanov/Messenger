@@ -3,6 +3,7 @@ package com.example.messenger.model
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.example.messenger.Singletons
 import com.example.messenger.model.appsettings.AppSettings
 import com.example.messenger.retrofit.source.groups.GroupsSource
 import com.example.messenger.retrofit.source.messages.MessagesSource
@@ -20,8 +21,8 @@ class RetrofitService(
     private val messagesSource: MessagesSource,
     private val groupsSource: GroupsSource,
     private val appSettings: AppSettings,
-    //private val messengerService: MessengerService
-) {
+    private val messengerRepository: MessengerRepository
+) : RetrofitRepository {
     private var conversations = listOf<Conversation>()
     private val listeners = mutableSetOf<ConversationsListener>()
     private val job = Job()
@@ -30,6 +31,9 @@ class RetrofitService(
     private val _initCompleted = MutableLiveData<Boolean>()
     val initCompleted: LiveData<Boolean> get() = _initCompleted
 
+    private val messengerService: MessengerService
+        get() = messengerRepository as MessengerService
+
     init {
         uiScope.launch {
             conversations = getConversations()
@@ -37,12 +41,12 @@ class RetrofitService(
         }
     }
 
-    fun isSignedIn(): Boolean {
+    override fun isSignedIn(): Boolean {
         // user is signed-in if auth token exists
         return appSettings.getCurrentToken() != null
     }
 
-    suspend fun register(name: String, username: String, password: String) {
+    override suspend fun register(name: String, username: String, password: String) : Boolean {
         if (name.isBlank()) throw EmptyFieldException(Field.Name)
         if (username.isBlank()) throw EmptyFieldException(Field.Username)
         if (password.isBlank()) throw EmptyFieldException(Field.Password)
@@ -53,9 +57,10 @@ class RetrofitService(
             else throw e
         }
         Log.d("testRegister", message)
+        return true
     }
 
-    suspend fun login(name: String, password: String) : List<Conversation> {
+    override suspend fun login(name: String, password: String) : List<Conversation> {
         if (name.isBlank()) throw EmptyFieldException(Field.Name)
         if (password.isBlank()) throw EmptyFieldException(Field.Password)
         val token = try {
@@ -82,7 +87,7 @@ class RetrofitService(
         return conversations
     }
 
-    suspend fun getConversations(): List<Conversation> {
+    override suspend fun getConversations(): List<Conversation> {
         if(isSignedIn()) {
             conversations = try {
                 messagesSource.getConversations()
@@ -94,10 +99,14 @@ class RetrofitService(
                 }
         }
     }
-//        else {
-//            val settings = messengerService.getSettings()
-//            conversations = login(settings.name, settings.password)
-//        }
+        else {
+            val settings = messengerService.getSettings()
+            if(settings.name != "" && settings.password != "") {
+                val name = settings.name ?: ""
+                val password = settings.password ?: ""
+                conversations = login(name, password)
+            }
+        }
         return conversations
     }
 

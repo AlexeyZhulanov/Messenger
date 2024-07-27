@@ -50,14 +50,14 @@ class MessengerAdapter(
             holder.itemView.tag = conversation
             if(conversation.type == "dialog") {
                 userNameTextView.text = conversation.otherUser?.username ?: "Имя не указано"
-                lastMessageTextView.text = conversation.lastMessage?.text ?: "Сообщений пока нет"
-                dateText.text = conversation.lastMessage?.timestamp.toString()
             }
             else {
                 userNameTextView.text = conversation.name
-                lastMessageTextView.text = conversation.lastMessage?.text ?: "Сообщений пока нет"
-                dateText.text = conversation.lastMessage?.timestamp.toString()
             }
+            lastMessageTextView.text = conversation.lastMessage?.text ?: "Сообщений пока нет"
+            dateText.text = conversation.lastMessage?.timestamp.toString()
+            if(conversation.lastMessage!!.isRead) icCheck2.visibility = View.VISIBLE
+            else icCheck.visibility = View.VISIBLE
         }
     }
 

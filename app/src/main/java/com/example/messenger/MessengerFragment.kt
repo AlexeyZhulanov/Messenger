@@ -15,6 +15,7 @@ import com.example.messenger.databinding.FragmentMessengerBinding
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.ConversationsListener
 import com.example.messenger.model.Message
+import com.example.messenger.model.RetrofitRepository
 import com.example.messenger.model.RetrofitService
 
 class MessengerFragment : Fragment() {
@@ -22,7 +23,7 @@ class MessengerFragment : Fragment() {
     private lateinit var adapter: MessengerAdapter
 
     private val retrofitService: RetrofitService
-        get() = Singletons.retrofitService
+        get() = Singletons.retrofitRepository as RetrofitService
 
     @SuppressLint("DiscouragedApi")
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {

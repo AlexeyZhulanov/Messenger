@@ -10,6 +10,12 @@ import android.view.MenuItem
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.example.messenger.databinding.ActivityMainBinding
+import com.example.messenger.model.MessengerService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 
 const val APP_PREFERENCES = "APP_PREFERENCES"
 const val PREF_WALLPAPER = "PREF_WALLPAPER"
@@ -18,6 +24,10 @@ const val PREF_THEME = "PREF_THEME"
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private val job = Job()
+    private val uiScope = CoroutineScope(Dispatchers.Main + job)
+    private val messengerService: MessengerService
+        get() = Singletons.messengerRepository as MessengerService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Singletons.init(applicationContext)
@@ -39,11 +49,25 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         binding = ActivityMainBinding.inflate(layoutInflater).also { setContentView(it.root) }
         setContentView(binding.root)
-        if (savedInstanceState == null) {
-            supportFragmentManager
-                .beginTransaction()
-                .add(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_TAG")
-                .commit()
+        uiScope.launch {
+            val s = async { messengerService.getSettings() }
+            val settings = s.await()
+            if (savedInstanceState == null) {
+                if (settings.remember == 1) {
+                    if (settings.name != "" && settings.password != "" && settings.name != "empty" && settings.password != "empty") {
+                        supportFragmentManager
+                            .beginTransaction()
+                            .add(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_TAG")
+                            .commit()
+                    }
+                }
+                else {
+                    supportFragmentManager
+                        .beginTransaction()
+                        .add(R.id.fragmentContainer, LoginFragment(), "LOGIN_FRAGMENT_TAG")
+                        .commit()
+                }
+            }
         }
     }
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

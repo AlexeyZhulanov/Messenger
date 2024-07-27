@@ -8,14 +8,17 @@ import kotlinx.coroutines.withContext
 
 class MessengerService(
     private val settingsDao: SettingsDao
-) {
-    private lateinit var settings : Settings
-    suspend fun getSettings(): Settings = withContext(Dispatchers.IO) {
-        settings = settingsDao.getSettings().toSettings()
+) : MessengerRepository {
+    private var settings = Settings(0)
+    override suspend fun getSettings(): Settings = withContext(Dispatchers.IO) {
+        val settingsEntity = settingsDao.getSettings()
+        if (settingsEntity != null) {
+            settings = settingsEntity.toSettings()
+        }
         return@withContext settings
     }
 
-    suspend fun updateSettings(settings: Settings) = withContext(Dispatchers.IO) {
+    override suspend fun updateSettings(settings: Settings) = withContext(Dispatchers.IO) {
         settingsDao.updateSettings(SettingsDbEntity.fromUserInput(settings))
     }
 
