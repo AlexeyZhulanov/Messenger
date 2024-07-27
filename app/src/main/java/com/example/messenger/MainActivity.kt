@@ -9,11 +9,7 @@ import android.view.Menu
 import android.view.MenuItem
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.fragment.app.Fragment
 import com.example.messenger.databinding.ActivityMainBinding
-import kotlinx.coroutines.launch
 
 const val APP_PREFERENCES = "APP_PREFERENCES"
 const val PREF_WALLPAPER = "PREF_WALLPAPER"
@@ -24,6 +20,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        Singletons.init(applicationContext)
         val preferences = getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
         val themeNumber = preferences.getInt(PREF_THEME, 0)
         when(themeNumber) {

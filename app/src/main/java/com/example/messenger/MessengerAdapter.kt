@@ -6,16 +6,17 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.databinding.ItemMessengerBinding
+import com.example.messenger.model.Conversation
 import com.example.messenger.model.Message
 
 interface MessengerActionListener {
-    fun onMessageClicked(message: Message, index: Int)
+    fun onMessageClicked(conversation: Conversation, index: Int)
 }
 
 class MessengerAdapter(
     private val actionListener: MessengerActionListener
 ) : RecyclerView.Adapter<MessengerAdapter.MessengerViewHolder>(), View.OnClickListener {
-    var messages: List<Message> = emptyList()
+    var conversations: List<Conversation> = emptyList()
         @SuppressLint("NotifyDataSetChanged")
         set(value) {
             field = value
@@ -24,26 +25,35 @@ class MessengerAdapter(
 
 
     override fun onClick(v: View) {
-        val message = v.tag as Message
+        val conversation = v.tag as Conversation
         // todo
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MessengerViewHolder {
         val inflater = LayoutInflater.from(parent.context)
         val binding = ItemMessengerBinding.inflate(inflater, parent, false)
-        binding.root.setOnClickListener(this) //list<message> element
+        binding.root.setOnClickListener(this) //list<conversation> element
         return MessengerViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: MessengerViewHolder, position: Int) {
-        val message = messages[position]
+        val conversation = conversations[position]
         with(holder.binding) {
-            holder.itemView.tag = message
-            // todo
+            holder.itemView.tag = conversation
+            if(conversation.type == "dialog") {
+                userNameTextView.text = conversation.otherUser?.username ?: "Имя не указано"
+                lastMessageTextView.text = conversation.lastMessage?.text ?: "Сообщений пока нет"
+                dateText.text = conversation.lastMessage?.timestamp.toString()
+            }
+            else {
+                userNameTextView.text = conversation.name
+                lastMessageTextView.text = conversation.lastMessage?.text ?: "Сообщений пока нет"
+                dateText.text = conversation.lastMessage?.timestamp.toString()
+            }
         }
     }
 
-    override fun getItemCount(): Int = messages.size
+    override fun getItemCount(): Int = conversations.size
     class MessengerViewHolder(
         val binding: ItemMessengerBinding
     ) : RecyclerView.ViewHolder(binding.root)
