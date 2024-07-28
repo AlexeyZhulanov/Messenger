@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#E1FFC7"/> <!-- Цвет фона сообщения отправителя -->
+    <corners android:radius="16dp"/> <!-- Закругление углов -->
+    <padding android:left="8dp"
+        android:top="8dp"
+        android:right="8dp"
+        android:bottom="8dp"/> <!-- Внутренние отступы -->
+</shape>
