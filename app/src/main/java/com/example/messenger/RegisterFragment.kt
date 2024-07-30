@@ -34,14 +34,14 @@ class RegisterFragment : Fragment() {
         drawableStart = ContextCompat.getDrawable(requireContext(), R.drawable.ic_lock)!!
         drawableEnd = ContextCompat.getDrawable(requireContext(), R.drawable.ic_check_circle)!!
         binding.errorTextView.visibility = View.INVISIBLE
-        binding.loginButton.setOnClickListener {
-            if(binding.username.text.isNotEmpty() && binding.password.text.isNotEmpty()
-                && binding.name.text.isNotEmpty() && binding.passwordRepeat.text.isNotEmpty()) {
-                if(binding.password.text.toString() == binding.passwordRepeat.text.toString()) {
+        binding.registerButton.setOnClickListener {
+            if(binding.username2.text.isNotEmpty() && binding.password2.text.isNotEmpty()
+                && binding.name2.text.isNotEmpty() && binding.passwordRepeat.text.isNotEmpty()) {
+                if(binding.password2.text.toString() == binding.passwordRepeat.text.toString()) {
                     uiScope.launch {
-                        val name = binding.name.text.toString()
-                        val username = binding.username.text.toString()
-                        val password = binding.password.text.toString()
+                        val name = binding.name2.text.toString()
+                        val username = binding.username2.text.toString()
+                        val password = binding.password2.text.toString()
                         val b = async { retrofitService.register(name, username, password) }
                         val bool = b.await()
                         if (bool) {
@@ -59,9 +59,9 @@ class RegisterFragment : Fragment() {
                     binding.errorTextView.visibility = View.VISIBLE
                 }
             } else {
-                if(binding.name.text.isEmpty()) binding.errorTextView.text = "Ошибка: Пустая строка логина"
-                else if(binding.username.text.isEmpty()) binding.errorTextView.text = "Ошибка: Пустая строка имени пользователя"
-                else if(binding.password.text.isEmpty()) binding.errorTextView.text = "Ошибка: Пустая строка пароля"
+                if(binding.name2.text.isEmpty()) binding.errorTextView.text = "Ошибка: Пустая строка логина"
+                else if(binding.username2.text.isEmpty()) binding.errorTextView.text = "Ошибка: Пустая строка имени пользователя"
+                else if(binding.password2.text.isEmpty()) binding.errorTextView.text = "Ошибка: Пустая строка пароля"
                 else if(binding.passwordRepeat.text.isEmpty()) binding.errorTextView.text = "Ошибка: Пустая строка повтора пароля"
                 binding.errorTextView.visibility = View.VISIBLE
             }
@@ -73,31 +73,31 @@ class RegisterFragment : Fragment() {
                 .commit()
         }
 
-        binding.name.addTextChangedListener(object: TextWatcher {
+        binding.name2.addTextChangedListener(object: TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                checkCharSequence(s, binding.name)
+                checkCharSequence(s, binding.name2)
             }
 
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        binding.username.addTextChangedListener(object: TextWatcher {
+        binding.username2.addTextChangedListener(object: TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                checkCharSequence(s, binding.username)
+                checkCharSequence(s, binding.username2)
             }
 
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        binding.password.addTextChangedListener(object: TextWatcher {
+        binding.password2.addTextChangedListener(object: TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                checkCharSequence(s, binding.password)
+                checkCharSequence(s, binding.password2)
             }
 
             override fun afterTextChanged(s: Editable?) {}

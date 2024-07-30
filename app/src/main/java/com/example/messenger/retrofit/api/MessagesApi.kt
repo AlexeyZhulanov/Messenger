@@ -2,9 +2,9 @@ package com.example.messenger.retrofit.api
 
 import com.example.messenger.retrofit.entities.ResponseEntityMessageAnswer
 import com.example.messenger.retrofit.entities.messages.AddKeyToDialogRequestEntity
+import com.example.messenger.retrofit.entities.messages.ConversationEntity
 import com.example.messenger.retrofit.entities.messages.DeleteMessagesRequestEntity
 import com.example.messenger.retrofit.entities.messages.DialogCreateRequestEntity
-import com.example.messenger.retrofit.entities.messages.GetConversationsResponseEntity
 import com.example.messenger.retrofit.entities.messages.GetDialogSettingsResponseEntity
 import com.example.messenger.retrofit.entities.messages.GetMessagesResponseEntity
 import com.example.messenger.retrofit.entities.messages.GetUsersResponseEntity
@@ -78,7 +78,7 @@ interface MessagesApi {
     ) : GetMessagesResponseEntity
 
     @GET("conversations")
-    suspend fun getConversations() : GetConversationsResponseEntity
+    suspend fun getConversations() : List<ConversationEntity>
 
     @PUT("dialogs/{dialog_id}/toggle_can_delete")
     suspend fun toggleDialogCanDelete(

@@ -78,6 +78,8 @@ class MessageFragment(
             // todo maybe use lib
         }
 
+        // todo fill messages
+
         return binding.root
     }
 

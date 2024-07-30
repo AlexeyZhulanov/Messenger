@@ -11,6 +11,7 @@ import com.example.messenger.retrofit.source.users.UsersSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -36,7 +37,6 @@ class RetrofitService(
 
     init {
         uiScope.launch {
-            conversations = getConversations()
             _initCompleted.postValue(true)
         }
     }
@@ -47,12 +47,14 @@ class RetrofitService(
     }
 
     override suspend fun register(name: String, username: String, password: String) : Boolean {
+        Log.d("testStartRegister", name)
         if (name.isBlank()) throw EmptyFieldException(Field.Name)
         if (username.isBlank()) throw EmptyFieldException(Field.Username)
         if (password.isBlank()) throw EmptyFieldException(Field.Password)
         val message = try {
             usersSource.register(name, username, password)
         } catch (e: BackendException) {
+            Log.d("testRegisterThrow", "...")
             if(e.code == 400) throw AccountAlreadyExistsException(e)
             else throw e
         }
@@ -60,9 +62,10 @@ class RetrofitService(
         return true
     }
 
-    override suspend fun login(name: String, password: String) : List<Conversation> {
+    override suspend fun login(name: String, password: String) : Boolean {
         if (name.isBlank()) throw EmptyFieldException(Field.Name)
         if (password.isBlank()) throw EmptyFieldException(Field.Password)
+        Log.d("testBeforeSaveToken", "OK")
         val token = try {
             usersSource.login(name, password)
         } catch (e: Exception) {
@@ -73,18 +76,10 @@ class RetrofitService(
                 throw e
             }
         }
+        Log.d("testBeforeSetToken", token)
         appSettings.setCurrentToken(token)
-        // load account data
-        conversations = try {
-            messagesSource.getConversations()
-        } catch (e: BackendException) {
-            if (e.code == 500) {
-                throw InvalidCredentialsException(e)
-            } else {
-                throw e
-            }
-        }
-        return conversations
+        Log.d("testLoginToken", token)
+        return true
     }
 
     override suspend fun getConversations(): List<Conversation> {
@@ -104,9 +99,16 @@ class RetrofitService(
             if(settings.name != "" && settings.password != "") {
                 val name = settings.name ?: ""
                 val password = settings.password ?: ""
-                conversations = login(name, password)
+                uiScope.launch {
+                    val correct = async {
+                        login(name, password)
+                    }
+                    if(correct.await())
+                        conversations = messagesSource.getConversations()
+                }
             }
         }
+        Log.d("testConversations", conversations.toString())
         return conversations
     }
 

@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
+import android.util.Log
 import android.util.TypedValue
 import android.view.Menu
 import android.view.MenuItem
@@ -50,8 +51,10 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater).also { setContentView(it.root) }
         setContentView(binding.root)
         uiScope.launch {
+            Log.d("testBeforeRoomMain", "OK")
             val s = async { messengerService.getSettings() }
             val settings = s.await()
+            Log.d("testAfterRoomMain", settings.toString())
             if (savedInstanceState == null) {
                 if (settings.remember == 1) {
                     if (settings.name != "" && settings.password != "" && settings.name != "empty" && settings.password != "empty") {

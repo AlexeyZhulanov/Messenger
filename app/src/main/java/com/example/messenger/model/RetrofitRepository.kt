@@ -6,7 +6,7 @@ interface RetrofitRepository {
 
     suspend fun register(name: String, username: String, password: String) : Boolean
 
-    suspend fun login(name: String, password: String) : List<Conversation>
+    suspend fun login(name: String, password: String) : Boolean
 
     suspend fun getConversations(): List<Conversation>
 

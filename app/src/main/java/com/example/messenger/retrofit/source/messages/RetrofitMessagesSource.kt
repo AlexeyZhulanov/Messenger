@@ -76,7 +76,8 @@ class RetrofitMessagesSource(
     }
 
     override suspend fun getConversations(): List<Conversation> = wrapRetrofitExceptions {
-        messagesApi.getConversations().toConversations()
+        val response = messagesApi.getConversations()
+        response.map { it.toConversation() }
     }
 
     override suspend fun toggleDialogCanDelete(dialogId: Int): String = wrapRetrofitExceptions {

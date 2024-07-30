@@ -15,7 +15,7 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 
 object SourceProviderHolder {
 
-    private const val BASE_URL = "http://10.0.2.2:5000" //localhost android --> 127.0.0.1
+    private const val BASE_URL = "https://amessenger.ru" // ;)
 
     val sourcesProvider: SourcesProvider by lazy {
         val moshi = Moshi.Builder()

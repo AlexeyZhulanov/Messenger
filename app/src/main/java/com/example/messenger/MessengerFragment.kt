@@ -70,7 +70,6 @@ class MessengerFragment : Fragment() {
         val layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerview.layoutManager = layoutManager
         binding.recyclerview.adapter = adapter
-        retrofitService.addListener(conversationsListener)
         (activity as AppCompatActivity?)!!.setSupportActionBar(binding.toolbar) //adds a button
         retrofitService.initCompleted.observe(viewLifecycleOwner) { initCompleted ->
             if(initCompleted) {
@@ -86,13 +85,9 @@ class MessengerFragment : Fragment() {
         return binding.root
     }
 
-    private val conversationsListener: ConversationsListener = {
-        adapter.conversations = it
-    }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        retrofitService.removeListener(conversationsListener)
         updateJob?.cancel()
     }
 

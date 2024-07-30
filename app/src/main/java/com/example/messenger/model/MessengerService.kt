@@ -12,9 +12,7 @@ class MessengerService(
     private var settings = Settings(0)
     override suspend fun getSettings(): Settings = withContext(Dispatchers.IO) {
         val settingsEntity = settingsDao.getSettings()
-        if (settingsEntity != null) {
             settings = settingsEntity.toSettings()
-        }
         return@withContext settings
     }
 

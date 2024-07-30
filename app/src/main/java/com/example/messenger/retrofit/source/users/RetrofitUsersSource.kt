@@ -21,7 +21,7 @@ class RetrofitUsersSource(
 
     override suspend fun login(name: String, password: String): String = wrapRetrofitExceptions {
         val loginRequestEntity = LoginRequestEntity(name = name, password = password)
-        usersApi.login(loginRequestEntity).token
+        usersApi.login(loginRequestEntity).accessToken
     }
 
     override suspend fun updateProfile(username: String?, avatar: String?): String = wrapRetrofitExceptions {
