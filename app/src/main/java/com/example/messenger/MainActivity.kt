@@ -4,15 +4,20 @@ import android.content.Context
 import android.os.Bundle
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
+import android.util.Log
 import android.util.TypedValue
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.EditText
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.fragment.app.Fragment
 import com.example.messenger.databinding.ActivityMainBinding
+import com.example.messenger.model.MessengerService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 const val APP_PREFERENCES = "APP_PREFERENCES"
@@ -22,8 +27,13 @@ const val PREF_THEME = "PREF_THEME"
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private val job = Job()
+    private val uiScope = CoroutineScope(Dispatchers.Main + job)
+    private val messengerService: MessengerService
+        get() = Singletons.messengerRepository as MessengerService
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        Singletons.init(applicationContext)
         val preferences = getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
         val themeNumber = preferences.getInt(PREF_THEME, 0)
         when(themeNumber) {
@@ -42,11 +52,27 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         binding = ActivityMainBinding.inflate(layoutInflater).also { setContentView(it.root) }
         setContentView(binding.root)
-        if (savedInstanceState == null) {
-            supportFragmentManager
-                .beginTransaction()
-                .add(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_TAG")
-                .commit()
+        uiScope.launch {
+            Log.d("testBeforeRoomMain", "OK")
+            val s = async { messengerService.getSettings() }
+            val settings = s.await()
+            Log.d("testAfterRoomMain", settings.toString())
+            if (savedInstanceState == null) {
+                if (settings.remember == 1) {
+                    if (settings.name != "" && settings.password != "" && settings.name != "empty" && settings.password != "empty") {
+                        supportFragmentManager
+                            .beginTransaction()
+                            .add(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_TAG")
+                            .commit()
+                    }
+                }
+                else {
+                    supportFragmentManager
+                        .beginTransaction()
+                        .add(R.id.fragmentContainer, LoginFragment(), "LOGIN_FRAGMENT_TAG")
+                        .commit()
+                }
+            }
         }
     }
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -81,7 +107,42 @@ class MainActivity : AppCompatActivity() {
                 // todo
                 true
             }
+
+            R.id.action_add -> {
+                showAddDialog()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
+
+
+    }
+    private fun showAddDialog() {
+        // Inflate the custom layout for the dialog
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_item, null)
+
+        // Create the AlertDialog
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Добавить элемент")
+            .setView(dialogView)
+            .setPositiveButton("Добавить") { dialogInterface, _ ->
+                val input = dialogView.findViewById<EditText>(R.id.dialog_input).text.toString()
+                // Handle the "Add" button click here
+                handleAddButtonClick(input)
+                dialogInterface.dismiss()
+            }
+            .setNegativeButton("Назад") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+            }
+            .create()
+
+        // Show the dialog
+        dialog.show()
+    }
+
+    private fun handleAddButtonClick(input: String) {
+        // Handle the input from the dialog
+        // For example, you could add the item to a list or perform another action
+        Log.d("MainActivity", "Item added: $input")
     }
 }

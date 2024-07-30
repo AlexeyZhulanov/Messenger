@@ -7,19 +7,6 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
-data class GetConversationsResponseEntity(
-    val conversations: List<ConversationEntity>
-) {
-    fun toConversations() : List<Conversation> {
-        val list = mutableListOf<Conversation>()
-        conversations.forEach {
-            list.add(it.toConversation())
-        }
-        return list
-    }
-}
-
-@JsonClass(generateAdapter = true)
 data class ConversationEntity(
     val type: String,
     val id: Int,

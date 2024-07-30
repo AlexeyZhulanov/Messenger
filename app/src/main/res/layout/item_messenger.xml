@@ -32,7 +32,7 @@
         app:layout_constraintEnd_toStartOf="@id/ic_check"/>
 
     <TextView
-        android:id="@+id/userCompanyTextView"
+        android:id="@+id/lastMessageTextView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:lines="1"
@@ -64,6 +64,7 @@
         android:src="@drawable/ic_check_circle"
         android:layout_marginEnd="-5dp"
         android:padding="8dp"
+        android:visibility="invisible"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="@id/dateText"
         app:layout_constraintBottom_toBottomOf="@id/dateText"
@@ -87,7 +88,7 @@
         android:id="@+id/barrier"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:constraint_referenced_ids="photoImageView,userCompanyTextView"
+        app:constraint_referenced_ids="photoImageView,userNameTextView"
         app:barrierDirection="bottom"/>
 
     <Space

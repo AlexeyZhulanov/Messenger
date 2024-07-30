@@ -41,7 +41,7 @@
         app:layout_constraintStart_toEndOf="@id/photoImageView" />
 
     <TextView
-        android:id="@+id/userCompanyTextView"
+        android:id="@+id/lastSessionTextView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:lines="1"
@@ -79,7 +79,7 @@
         android:id="@+id/barrier"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:constraint_referenced_ids="photoImageView,userCompanyTextView"
+        app:constraint_referenced_ids="photoImageView,lastSessionTextView"
         app:barrierDirection="bottom"/>
 
     <Space

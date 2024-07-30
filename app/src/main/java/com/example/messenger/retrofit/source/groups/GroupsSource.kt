@@ -7,42 +7,42 @@ import com.example.messenger.model.UserShort
 
 interface GroupsSource {
 
-    suspend fun createGroup(token: String, name: String) : String
+    suspend fun createGroup(name: String) : String
 
-    suspend fun sendGroupMessage(token: String, groupId: Int, text: String? = null,
+    suspend fun sendGroupMessage(groupId: Int, text: String? = null,
                                  images: List<String>? = null, voice: String? = null,
                                  file: String? = null) : String
 
-    suspend fun getGroupMessages(token: String, groupId: Int, start: Int, end: Int) : List<GroupMessage>
+    suspend fun getGroupMessages(groupId: Int, start: Int, end: Int) : List<GroupMessage>
 
-    suspend fun editGroupMessage(token: String, groupMessageId: Int, text: String? = null,
+    suspend fun editGroupMessage(groupMessageId: Int, text: String? = null,
                                  images: List<String>? = null, voice: String? = null,
                                  file: String? = null) : String
 
-    suspend fun deleteGroupMessages(token: String, ids: List<Int>) : String
+    suspend fun deleteGroupMessages(ids: List<Int>) : String
 
-    suspend fun deleteGroup(token: String, groupId: Int) : String
+    suspend fun deleteGroup(groupId: Int) : String
 
-    suspend fun editGroupName(token: String, groupId: Int, name: String) : String
+    suspend fun editGroupName(groupId: Int, name: String) : String
 
-    suspend fun addUserToGroup(token: String, groupId: Int, userId: Int) : String
+    suspend fun addUserToGroup(groupId: Int, userId: Int) : String
 
-    suspend fun deleteUserFromGroup(token: String, groupId: Int, userId: Int) : String
+    suspend fun deleteUserFromGroup(groupId: Int, userId: Int) : String
 
-    suspend fun getAvailableUsersForGroup(token: String, groupId: Int) : List<UserShort>
+    suspend fun getAvailableUsersForGroup(groupId: Int) : List<UserShort>
 
-    suspend fun getGroupMembers(token: String, groupId: Int) : List<User>
+    suspend fun getGroupMembers(groupId: Int) : List<User>
 
-    suspend fun updateGroupAvatar(token: String, groupId: Int, avatar: String) : String
+    suspend fun updateGroupAvatar(groupId: Int, avatar: String) : String
 
-    suspend fun markGroupMessagesAsRead(token: String, ids: List<Int>) : String
+    suspend fun markGroupMessagesAsRead(ids: List<Int>) : String
 
-    suspend fun toggleGroupCanDelete(token: String, groupId: Int) : String
+    suspend fun toggleGroupCanDelete(groupId: Int) : String
 
-    suspend fun updateGroupAutoDeleteInterval(token: String, groupId: Int, autoDeleteInterval: Int) : String
+    suspend fun updateGroupAutoDeleteInterval(groupId: Int, autoDeleteInterval: Int) : String
 
-    suspend fun deleteGroupMessagesAll(token: String, groupId: Int) : String
+    suspend fun deleteGroupMessagesAll(groupId: Int) : String
 
-    suspend fun getGroupSettings(token: String, groupId: Int) : ConversationSettings
+    suspend fun getGroupSettings(groupId: Int) : ConversationSettings
 
 }

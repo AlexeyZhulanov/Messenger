@@ -5,8 +5,8 @@ import com.example.messenger.retrofit.entities.users.LoginRequestEntity
 import com.example.messenger.retrofit.entities.users.RegisterRequestEntity
 import com.example.messenger.retrofit.entities.users.UpdatePasswordRequestEntity
 import com.example.messenger.retrofit.entities.users.UpdateProfileRequestEntity
-import com.example.messenger.retrofit.source.BaseRetrofitSource
-import com.example.messenger.retrofit.source.RetrofitConfig
+import com.example.messenger.retrofit.source.base.BaseRetrofitSource
+import com.example.messenger.retrofit.source.base.RetrofitConfig
 
 class RetrofitUsersSource(
     config: RetrofitConfig
@@ -21,24 +21,24 @@ class RetrofitUsersSource(
 
     override suspend fun login(name: String, password: String): String = wrapRetrofitExceptions {
         val loginRequestEntity = LoginRequestEntity(name = name, password = password)
-        usersApi.login(loginRequestEntity).token
+        usersApi.login(loginRequestEntity).accessToken
     }
 
-    override suspend fun updateProfile(token: String, username: String?, avatar: String?): String = wrapRetrofitExceptions {
+    override suspend fun updateProfile(username: String?, avatar: String?): String = wrapRetrofitExceptions {
         val updateProfileRequestEntity = UpdateProfileRequestEntity(username = username, avatar = avatar)
-        usersApi.updateProfile(token, updateProfileRequestEntity).message
+        usersApi.updateProfile(updateProfileRequestEntity).message
     }
 
-    override suspend fun updatePassword(token: String, password: String): String = wrapRetrofitExceptions {
+    override suspend fun updatePassword(password: String): String = wrapRetrofitExceptions {
         val updatePasswordRequestEntity = UpdatePasswordRequestEntity(password = password)
-        usersApi.updatePassword(token, updatePasswordRequestEntity).message
+        usersApi.updatePassword(updatePasswordRequestEntity).message
     }
 
-    override suspend fun updateLastSession(token: String): String = wrapRetrofitExceptions {
-        usersApi.updateLastSession(token).message
+    override suspend fun updateLastSession(): String = wrapRetrofitExceptions {
+        usersApi.updateLastSession().message
     }
 
-    override suspend fun getLastSession(token: String, userId: Int): Long = wrapRetrofitExceptions {
-        usersApi.getLastSession(userId, token).timestamp!!
+    override suspend fun getLastSession(userId: Int): Long = wrapRetrofitExceptions {
+        usersApi.getLastSession(userId).timestamp!!
     }
 }

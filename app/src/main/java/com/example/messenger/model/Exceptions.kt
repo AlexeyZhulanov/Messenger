@@ -1,7 +1,5 @@
 package com.example.messenger.model
 
-import java.lang.reflect.Field
-
 open class AppException : RuntimeException {
     constructor() : super()
     constructor(message: String) : super(message)
