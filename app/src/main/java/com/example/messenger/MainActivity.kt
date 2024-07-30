@@ -8,7 +8,9 @@ import android.util.Log
 import android.util.TypedValue
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.EditText
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.messenger.databinding.ActivityMainBinding
 import com.example.messenger.model.MessengerService
@@ -105,7 +107,42 @@ class MainActivity : AppCompatActivity() {
                 // todo
                 true
             }
+
+            R.id.action_add -> {
+                showAddDialog()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
+
+
+    }
+    private fun showAddDialog() {
+        // Inflate the custom layout for the dialog
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_item, null)
+
+        // Create the AlertDialog
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Добавить элемент")
+            .setView(dialogView)
+            .setPositiveButton("Добавить") { dialogInterface, _ ->
+                val input = dialogView.findViewById<EditText>(R.id.dialog_input).text.toString()
+                // Handle the "Add" button click here
+                handleAddButtonClick(input)
+                dialogInterface.dismiss()
+            }
+            .setNegativeButton("Назад") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+            }
+            .create()
+
+        // Show the dialog
+        dialog.show()
+    }
+
+    private fun handleAddButtonClick(input: String) {
+        // Handle the input from the dialog
+        // For example, you could add the item to a list or perform another action
+        Log.d("MainActivity", "Item added: $input")
     }
 }
