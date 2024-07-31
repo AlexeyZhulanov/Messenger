@@ -35,7 +35,8 @@ class RetrofitGroupsSource(
 
     override suspend fun getGroupMessages(groupId: Int,
         start: Int, end: Int): List<GroupMessage> = wrapRetrofitExceptions {
-        groupsApi.getGroupMessages(groupId, start, end).toGroupMessages()
+        val response = groupsApi.getGroupMessages(groupId, start, end)
+        response.map { it.toGroupMessage() }
     }
 
     override suspend fun editGroupMessage(groupMessageId: Int, text: String?,
@@ -73,7 +74,8 @@ class RetrofitGroupsSource(
     }
 
     override suspend fun getGroupMembers(groupId: Int): List<User> = wrapRetrofitExceptions {
-        groupsApi.getGroupMembers(groupId).toUsers()
+        val response = groupsApi.getGroupMembers(groupId)
+        response.map { it.toUser() }
     }
 
     override suspend fun updateGroupAvatar(groupId: Int, avatar: String): String = wrapRetrofitExceptions {

@@ -6,8 +6,8 @@ import com.example.messenger.retrofit.entities.messages.ConversationEntity
 import com.example.messenger.retrofit.entities.messages.DeleteMessagesRequestEntity
 import com.example.messenger.retrofit.entities.messages.DialogCreateRequestEntity
 import com.example.messenger.retrofit.entities.messages.GetDialogSettingsResponseEntity
-import com.example.messenger.retrofit.entities.messages.GetMessagesResponseEntity
 import com.example.messenger.retrofit.entities.messages.GetUsersResponseEntity
+import com.example.messenger.retrofit.entities.messages.Message
 import com.example.messenger.retrofit.entities.messages.SendMessageRequestEntity
 import com.example.messenger.retrofit.entities.messages.UpdateAutoDeleteIntervalRequestEntity
 import retrofit2.http.Body
@@ -34,7 +34,7 @@ interface MessagesApi {
         @Header("id_dialog") idDialog: Int,
         @Query("start") start: Int,
         @Query("end") end: Int
-        ) : GetMessagesResponseEntity
+        ) : List<Message>
 
     @PUT("dialogs/{dialog_id}/key")
     suspend fun addKeyToDialog(
@@ -75,7 +75,7 @@ interface MessagesApi {
     suspend fun searchMessagesInDialog(
         @Path("dialog_id") dialogId: Int,
         @Query("q") word: String
-    ) : GetMessagesResponseEntity
+    ) : List<Message>
 
     @GET("conversations")
     suspend fun getConversations() : List<ConversationEntity>

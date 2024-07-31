@@ -10,4 +10,79 @@ interface RetrofitRepository {
 
     suspend fun getConversations(): List<Conversation>
 
+    suspend fun updateProfile(username: String?, avatar: String?) : Boolean
+
+    suspend fun updatePassword(password: String) : Boolean
+
+    suspend fun updateLastSession() : Boolean
+
+    suspend fun getLastSession(userId: Int): Long
+
+    suspend fun createDialog(name: String) : Boolean
+
+    suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?,
+                            voice: String?, file: String?) : Boolean
+
+    suspend fun getMessages(idDialog: Int, start: Int, end: Int) : List<Message>
+
+    suspend fun addKeyToDialog(dialogId: Int, key: String) : Boolean
+
+    suspend fun removeKeyFromDialog(dialogId: Int) : Boolean
+
+    suspend fun editMessage(messageId: Int, text: String?,
+                            images: List<String>?, voice: String?, file: String?) : Boolean
+
+    suspend fun deleteMessages(ids: List<Int>) : Boolean
+
+    suspend fun deleteDialog(dialogId: Int) : Boolean
+
+    suspend fun getUsers(): List<UserShort>
+
+    suspend fun markMessagesAsRead(ids: List<Int>) : Boolean
+
+    suspend fun searchMessagesInDialog(dialogId: Int, word: String): List<Message>
+
+    suspend fun toggleDialogCanDelete(dialogId: Int) : Boolean
+
+    suspend fun updateAutoDeleteInterval(dialogId: Int, autoDeleteInterval: Int) : Boolean
+
+    suspend fun deleteDialogMessages(dialogId: Int) : Boolean
+
+    suspend fun getDialogSettings(dialogId: Int): ConversationSettings
+
+    suspend fun createGroup(name: String) : Boolean
+
+    suspend fun sendGroupMessage(groupId: Int, text: String?,
+                                 images: List<String>?, voice: String?, file: String?) : Boolean
+
+    suspend fun getGroupMessages(groupId: Int, start: Int, end: Int): List<GroupMessage>
+
+    suspend fun editGroupMessage(groupMessageId: Int, text: String?,
+                                 images: List<String>?, voice: String?, file: String?) : Boolean
+
+    suspend fun deleteGroupMessages(ids: List<Int>) : Boolean
+
+    suspend fun deleteGroup(groupId: Int) : Boolean
+
+    suspend fun editGroupName(groupId: Int, name: String) : Boolean
+
+    suspend fun addUserToGroup(groupId: Int, userId: Int) : Boolean
+
+    suspend fun deleteUserFromGroup(groupId: Int, userId: Int) : Boolean
+
+    suspend fun getAvailableUsersForGroup(groupId: Int): List<UserShort>
+
+    suspend fun getGroupMembers(groupId: Int): List<User>
+
+    suspend fun updateGroupAvatar(groupId: Int, avatar: String) : Boolean
+
+    suspend fun markGroupMessagesAsRead(ids: List<Int>) : Boolean
+
+    suspend fun toggleGroupCanDelete(groupId: Int) : Boolean
+
+    suspend fun updateGroupAutoDeleteInterval(groupId: Int, autoDeleteInterval: Int) : Boolean
+
+    suspend fun deleteGroupMessagesAll(groupId: Int) : Boolean
+
+    suspend fun getGroupSettings(groupId: Int): ConversationSettings
 }

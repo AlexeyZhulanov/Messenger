@@ -4,17 +4,6 @@ import com.example.messenger.model.GroupMessage
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
-data class GetGroupMessagesResponseEntity(
-    val messages: List<Message>
-) {
-    fun toGroupMessages() : List<GroupMessage> {
-        val list = mutableListOf<GroupMessage>()
-        messages.forEach {
-            list.add(it.toGroupMessage())
-        }
-        return list
-    }
-}
 @JsonClass(generateAdapter = true)
 data class Message(
     val id: Int,

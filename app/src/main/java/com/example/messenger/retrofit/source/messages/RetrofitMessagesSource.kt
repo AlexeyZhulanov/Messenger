@@ -32,7 +32,8 @@ class RetrofitMessagesSource(
     }
 
     override suspend fun getMessages(idDialog: Int, start: Int, end: Int): List<Message> = wrapRetrofitExceptions {
-        messagesApi.getMessages(idDialog, start, end).toMessages()
+        val response = messagesApi.getMessages(idDialog, start, end)
+        response.map { it.toMessage() }
     }
 
     override suspend fun addKeyToDialog(dialogId: Int, key: String): String = wrapRetrofitExceptions {
@@ -72,7 +73,8 @@ class RetrofitMessagesSource(
 
     override suspend fun searchMessagesInDialog(dialogId: Int,
                                                 word: String): List<Message> = wrapRetrofitExceptions {
-        messagesApi.searchMessagesInDialog(dialogId, word).toMessages()
+        val response = messagesApi.searchMessagesInDialog(dialogId, word)
+        response.map { it.toMessage() }
     }
 
     override suspend fun getConversations(): List<Conversation> = wrapRetrofitExceptions {

@@ -112,6 +112,154 @@ class RetrofitService(
         return conversations
     }
 
+    override suspend fun updateProfile(username: String?, avatar: String?): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun updatePassword(password: String): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun updateLastSession(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getLastSession(userId: Int): Long {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun createDialog(name: String): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?,
+        voice: String?, file: String?): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getMessages(idDialog: Int, start: Int, end: Int): List<Message> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun addKeyToDialog(dialogId: Int, key: String): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun removeKeyFromDialog(dialogId: Int): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun editMessage(messageId: Int, text: String?, images: List<String>?,
+        voice: String?, file: String?): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteMessages(ids: List<Int>): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteDialog(dialogId: Int): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getUsers(): List<UserShort> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun markMessagesAsRead(ids: List<Int>): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun searchMessagesInDialog(dialogId: Int, word: String): List<Message> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun toggleDialogCanDelete(dialogId: Int): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun updateAutoDeleteInterval(dialogId: Int, autoDeleteInterval: Int): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteDialogMessages(dialogId: Int): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getDialogSettings(dialogId: Int): ConversationSettings {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun createGroup(name: String): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun sendGroupMessage(groupId: Int, text: String?, images: List<String>?,
+        voice: String?, file: String?): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getGroupMessages(groupId: Int, start: Int, end: Int): List<GroupMessage> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun editGroupMessage(groupMessageId: Int, text: String?, images: List<String>?,
+        voice: String?, file: String?): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteGroupMessages(ids: List<Int>): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteGroup(groupId: Int): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun editGroupName(groupId: Int, name: String): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun addUserToGroup(groupId: Int, userId: Int): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteUserFromGroup(groupId: Int, userId: Int): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getAvailableUsersForGroup(groupId: Int): List<UserShort> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getGroupMembers(groupId: Int): List<User> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun updateGroupAvatar(groupId: Int, avatar: String): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun markGroupMessagesAsRead(ids: List<Int>): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun toggleGroupCanDelete(groupId: Int): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun updateGroupAutoDeleteInterval(groupId: Int, autoDeleteInterval: Int): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteGroupMessagesAll(groupId: Int): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getGroupSettings(groupId: Int): ConversationSettings {
+        TODO("Not yet implemented")
+    }
+
     fun addListener(listener: ConversationsListener) {
         listeners.add(listener)
         listener.invoke(conversations)
