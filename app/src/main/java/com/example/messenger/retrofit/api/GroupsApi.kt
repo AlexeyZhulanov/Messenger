@@ -3,14 +3,14 @@ package com.example.messenger.retrofit.api
 import com.example.messenger.retrofit.entities.ResponseEntityMessageAnswer
 import com.example.messenger.retrofit.entities.groups.AddUserToGroupRequestEntity
 import com.example.messenger.retrofit.entities.groups.CreateGroupRequestEntity
-import com.example.messenger.retrofit.entities.groups.GetGroupMembersResponseEntity
-import com.example.messenger.retrofit.entities.groups.GetGroupMessagesResponseEntity
+import com.example.messenger.retrofit.entities.groups.Message
 import com.example.messenger.retrofit.entities.groups.SendGroupMessageRequestEntity
 import com.example.messenger.retrofit.entities.groups.UpdateGroupAvatarRequestEntity
 import com.example.messenger.retrofit.entities.messages.DeleteMessagesRequestEntity
 import com.example.messenger.retrofit.entities.messages.GetDialogSettingsResponseEntity
 import com.example.messenger.retrofit.entities.messages.GetUsersResponseEntity
 import com.example.messenger.retrofit.entities.messages.UpdateAutoDeleteIntervalRequestEntity
+import com.example.messenger.retrofit.entities.messages.UserEntity
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -37,7 +37,7 @@ interface GroupsApi {
         @Header("group_id") groupId: Int,
         @Query("start") start: Int,
         @Query("end") end: Int
-    ) : GetGroupMessagesResponseEntity
+    ) : List<Message>
 
     @PUT("group_messages/{group_message_id}")
     suspend fun editGroupMessage(
@@ -81,7 +81,7 @@ interface GroupsApi {
     @GET("groups/{group_id}/members")
     suspend fun getGroupMembers(
         @Path("group_id") groupId: Int
-    ) : GetGroupMembersResponseEntity
+    ) : List<UserEntity>
 
     @PUT("groups/{group_id}/avatar")
     suspend fun updateGroupAvatar(
@@ -114,4 +114,6 @@ interface GroupsApi {
     suspend fun getGroupSettings(
         @Path("group_id") groupId: Int
     ) : GetDialogSettingsResponseEntity
+
+    // todo search group messages
 }
