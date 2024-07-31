@@ -25,6 +25,26 @@ class InvalidCredentialsException(cause: Exception) : AppException(cause = cause
 
 class ConnectionException(cause: Throwable) : AppException(cause = cause)
 
+class UserNotFoundException(cause: Throwable) : AppException(cause = cause)
+
+class DialogNotFoundException(cause: Throwable) : AppException(cause = cause)
+
+class DialogAlreadyExistsException(cause: Throwable) : AppException(cause = cause)
+
+class InvalidStartEndValuesException(cause: Throwable) : AppException(cause = cause)
+
+class NoPermissionException(cause: Throwable) : AppException(cause = cause)
+
+class MessageNotFoundException(cause: Throwable) : AppException(cause = cause)
+
+class InvalidIdsException(cause: Throwable) : AppException(cause = cause)
+
+class GroupNotFoundException(cause: Throwable) : AppException(cause = cause)
+
+class UserAlreadyInGroupException(cause: Throwable) : AppException(cause = cause)
+
+class UserIsNotAMemberOfGroupException(cause: Throwable) : AppException(cause = cause)
+
 open class BackendException(
     val code: Int,
     message: String
