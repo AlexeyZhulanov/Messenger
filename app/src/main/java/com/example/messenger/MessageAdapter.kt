@@ -12,6 +12,7 @@ import com.example.messenger.databinding.ItemImagesReceiverBinding
 import com.example.messenger.databinding.ItemImagesSenderBinding
 import com.example.messenger.databinding.ItemMessageReceiverBinding
 import com.example.messenger.databinding.ItemMessageSenderBinding
+import com.example.messenger.model.Conversation
 import com.example.messenger.model.Message
 
 interface MessageActionListener {
@@ -24,7 +25,12 @@ class MessageAdapter(
     private val senderId: Int
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    private val messages = mutableListOf<Message>()
+    var messages: List<Message> = emptyList()
+        @SuppressLint("NotifyDataSetChanged")
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
 
     companion object {
         private const val TYPE_TEXT_RECEIVER = 0
@@ -88,13 +94,6 @@ class MessageAdapter(
     }
 
     override fun getItemCount(): Int = messages.size
-
-    @SuppressLint("NotifyDataSetChanged")
-    fun setMessages(newMessages: List<Message>) {
-        messages.clear()
-        messages.addAll(newMessages)
-        notifyDataSetChanged()
-    }
 
     inner class MessagesViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 

@@ -23,7 +23,7 @@
         android:layout_height="48dp"
         android:layout_marginStart="5dp"
         android:layout_marginTop="6dp"
-        tools:src="@drawable/ic_user_avatar"
+        android:src="@drawable/ic_user_avatar"
         app:layout_constraintStart_toEndOf="@id/back_arrow"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -32,7 +32,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="16sp"
-        android:textColor="@color/black"
+        android:textColor="?attr/colorAccent"
         android:layout_marginStart="10dp"
         android:lines="1"
         android:ellipsize="end"
@@ -74,17 +74,5 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
-
-    <androidx.constraintlayout.widget.Barrier
-        android:id="@+id/barrier"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:constraint_referenced_ids="photoImageView,lastSessionTextView"
-        app:barrierDirection="bottom"/>
-
-    <Space
-        android:layout_width="wrap_content"
-        android:layout_height="6dp"
-        app:layout_constraintTop_toBottomOf="@id/barrier"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
