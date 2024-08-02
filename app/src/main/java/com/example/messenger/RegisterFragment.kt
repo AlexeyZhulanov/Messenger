@@ -32,7 +32,7 @@ class RegisterFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         binding = FragmentRegisterBinding.inflate(inflater, container, false)
         drawableStart = ContextCompat.getDrawable(requireContext(), R.drawable.ic_lock)!!
-        drawableEnd = ContextCompat.getDrawable(requireContext(), R.drawable.ic_check_circle)!!
+        drawableEnd = ContextCompat.getDrawable(requireContext(), R.drawable.ic_check_two)!!
         binding.errorTextView.visibility = View.INVISIBLE
         binding.registerButton.setOnClickListener {
             if(binding.username2.text.isNotEmpty() && binding.password2.text.isNotEmpty()

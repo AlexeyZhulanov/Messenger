@@ -15,23 +15,81 @@
 
     <LinearLayout
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
         app:layout_constraintStart_toEndOf="@id/senderGuideLine"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         android:gravity="end"
         >
 
-    <TextView
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="wrap_content"
+            android:background="@drawable/message_background_sender"
+            android:layout_height="wrap_content">
+
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/centerGuideLine"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                app:layout_constraintGuide_percent="0.5"
+                />
+
+        <TextView
         android:id="@+id/messageSenderTextView"
-        android:background="@drawable/message_background_sender"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:textStyle="italic"
         tools:text="Сообщение"
         android:textColor="#000000"
-        android:padding="8dp"
-        android:layout_marginEnd="10dp" />
+            app:layout_constraintEnd_toStartOf="@id/timeTextView"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginEnd="5dp" />
+
+            <TextView
+                android:id="@+id/timeTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="21:35"
+                android:textSize="13sp"
+                android:maxLines="1"
+                android:textStyle="italic"
+                android:textColor="#000000"
+                app:layout_constraintEnd_toStartOf="@id/ic_check"
+                app:layout_constraintTop_toBottomOf="@id/centerGuideLine"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <ImageView
+                android:id="@+id/ic_check"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_check"
+                android:paddingVertical="3dp"
+                android:layout_marginEnd="-5dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@id/timeTextView"
+                app:layout_constraintBottom_toBottomOf="@id/timeTextView"
+                />
+
+            <ImageView
+                android:id="@+id/ic_check2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_check_two"
+                android:visibility="invisible"
+                android:paddingVertical="3dp"
+                android:layout_marginEnd="-5dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@id/timeTextView"
+                app:layout_constraintBottom_toBottomOf="@id/timeTextView"
+                />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

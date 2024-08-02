@@ -11,6 +11,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.widget.PopupMenu
@@ -41,7 +42,7 @@ class MessageFragment(
     private lateinit var binding: FragmentMessageBinding
     private lateinit var adapter: MessageAdapter
     private lateinit var preferences: SharedPreferences
-    private var lastSessionString : String = ""
+    private var lastSessionString: String = ""
     private var countMsg = dialog.countMsg
     private var updateJob: Job? = null
     private val job = Job()
@@ -54,7 +55,10 @@ class MessageFragment(
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val toolbarLayout: ConstraintLayout = view.findViewById(R.id.toolbar)
+        val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
+        val defaultToolbar = LayoutInflater.from(context)
+            .inflate(R.layout.custom_action_bar, toolbarContainer, false)
+        toolbarContainer.addView(defaultToolbar)
         val backArrow: ImageView = view.findViewById(R.id.back_arrow)
         backArrow.setOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
@@ -93,15 +97,21 @@ class MessageFragment(
             showPopupMenu(it, R.menu.popup_menu_dialog)
         }
     }
+
     @SuppressLint("InflateParams")
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         binding = FragmentMessageBinding.inflate(inflater, container, false)
         preferences = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
         val wallpaper = preferences.getString(PREF_WALLPAPER, "")
-        if(wallpaper != "") {
+        if (wallpaper != "") {
             val resId = resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
-            if(resId != 0)
-                binding.messageLayout.background = ContextCompat.getDrawable(requireContext(), resId)
+            if (resId != 0)
+                binding.messageLayout.background =
+                    ContextCompat.getDrawable(requireContext(), resId)
         }
         adapter = MessageAdapter(object : MessageActionListener {
             override fun onMessageClick(message: Message, itemView: View) {
@@ -147,7 +157,7 @@ class MessageFragment(
             uiScope.launch {
                 retrofitService.sendMessage(dialog.id, text, null, null, null)
                 countMsg += 1
-                val enterText : EditText = requireView().findViewById(R.id.enter_message)
+                val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 enterText.setText("")
                 adapter.messages = retrofitService.getMessages(dialog.id, 0, countMsg)
             }
@@ -213,23 +223,66 @@ class MessageFragment(
             }
         }
     }
+
     private fun showPopupMenu(view: View, menuRes: Int) {
         val popupMenu = PopupMenu(requireContext(), view)
         popupMenu.menuInflater.inflate(menuRes, popupMenu.menu)
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.item_search -> {
-                    // todo show search edittext
+                    val toolbarContainer: FrameLayout =
+                        requireView().findViewById(R.id.toolbar_container)
+                    val alternateToolbar = LayoutInflater.from(context)
+                        .inflate(R.layout.search_acton_bar, toolbarContainer, false)
+                    toolbarContainer.removeAllViews()
+                    toolbarContainer.addView(alternateToolbar)
+                    val backArrow: ImageView = requireView().findViewById(R.id.back_arrow)
+                    backArrow.setOnClickListener {
+                        replaceFragment(MessageFragment(dialog))
+                    }
+                    val icClear: ImageView = requireView().findViewById(R.id.ic_clear)
+                    icClear.setOnClickListener {
+                        val searchEditText: EditText =
+                            requireView().findViewById(R.id.searchEditText)
+                        searchEditText.setText("")
+                    }
+                    val searchEditText: EditText = requireView().findViewById(R.id.searchEditText)
+                    searchEditText.addTextChangedListener(object : TextWatcher {
+                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                            searchMessages(s)
+                        }
+
+                        override fun afterTextChanged(s: Editable?) {}
+                    })
                     true
                 }
+
                 else -> false
             }
         }
         popupMenu.show()
     }
-}
 
-    class VerticalSpaceItemDecoration(private val verticalSpaceHeight: Int) : RecyclerView.ItemDecoration() {
+    private fun replaceFragment(newFragment: Fragment) {
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, newFragment)
+            .commit()
+    }
+
+    private fun searchMessages(query: CharSequence?) {
+        uiScope.launch {
+            if (query.isNullOrEmpty()) {
+                adapter.messages = retrofitService.getMessages(dialog.id, 0, countMsg)
+            } else {
+                adapter.messages = retrofitService.searchMessagesInDialog(dialog.id, query.toString())
+            }
+        }
+    }
+
+    class VerticalSpaceItemDecoration(private val verticalSpaceHeight: Int) :
+        RecyclerView.ItemDecoration() {
         override fun getItemOffsets(
             outRect: Rect,
             view: View,
@@ -240,3 +293,4 @@ class MessageFragment(
             outRect.bottom = verticalSpaceHeight
         }
     }
+}

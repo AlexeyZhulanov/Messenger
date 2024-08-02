@@ -15,6 +15,9 @@ import com.example.messenger.databinding.ItemMessageReceiverBinding
 import com.example.messenger.databinding.ItemMessageSenderBinding
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.Message
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 interface MessageActionListener {
     fun onMessageClick(message: Message, itemView: View)
@@ -96,6 +99,11 @@ class MessageAdapter(
     inner class MessagesViewHolderReceiver(private val binding: ItemMessageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message) {
             binding.messageReceiverTextView.text = message.text
+            binding.timeTextView.text = formatMessageDate(message.timestamp)
+            if (message.isRead) {
+                binding.icCheck.visibility = View.INVISIBLE
+                binding.icCheck2.visibility = View.VISIBLE
+            }
             binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
             binding.root.setOnLongClickListener {
                 actionListener.onMessageLongClick(message, itemView)
@@ -108,6 +116,11 @@ class MessageAdapter(
     inner class MessagesViewHolderSender(private val binding: ItemMessageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message) {
             binding.messageSenderTextView.text = message.text
+            binding.timeTextView.text = formatMessageDate(message.timestamp)
+            if (message.isRead) {
+                binding.icCheck.visibility = View.INVISIBLE
+                binding.icCheck2.visibility = View.VISIBLE
+            }
             binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
             binding.root.setOnLongClickListener {
                 actionListener.onMessageLongClick(message, itemView)
@@ -168,5 +181,31 @@ class MessageAdapter(
                 true
             }
         }
+    }
+
+    private fun formatMessageDate(timestamp: Long?): String {
+        if(timestamp == null) return "-"
+        // Приведение серверного времени(мск GMT+3) к GMT
+        val greenwichMessageDate = Calendar.getInstance().apply {
+            timeInMillis = timestamp - 10800000
+        }
+        val dateFormatToday = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val dateFormatDayMonth = SimpleDateFormat("d MMM", Locale.getDefault())
+        val dateFormatYear = SimpleDateFormat("d.MM.yyyy", Locale.getDefault())
+        val localNow = Calendar.getInstance()
+        return when {
+            isToday(localNow, greenwichMessageDate) -> dateFormatToday.format(greenwichMessageDate.time)
+            isThisYear(localNow, greenwichMessageDate) -> dateFormatDayMonth.format(greenwichMessageDate.time)
+            else -> dateFormatYear.format(greenwichMessageDate.time)
+        }
+    }
+
+    private fun isToday(now: Calendar, messageDate: Calendar): Boolean {
+        return now.get(Calendar.YEAR) == messageDate.get(Calendar.YEAR) &&
+                now.get(Calendar.DAY_OF_YEAR) == messageDate.get(Calendar.DAY_OF_YEAR)
+    }
+
+    private fun isThisYear(now: Calendar, messageDate: Calendar): Boolean {
+        return now.get(Calendar.YEAR) == messageDate.get(Calendar.YEAR)
     }
 }
