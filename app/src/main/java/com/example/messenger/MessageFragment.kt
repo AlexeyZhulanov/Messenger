@@ -14,6 +14,7 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.widget.PopupMenu
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
@@ -29,6 +30,7 @@ import com.example.messenger.model.RetrofitService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -113,15 +115,45 @@ class MessageFragment(
                 binding.messageLayout.background =
                     ContextCompat.getDrawable(requireContext(), resId)
         }
-        adapter = MessageAdapter(object : MessageActionListener {
-            override fun onMessageClick(message: Message, itemView: View) {
-                showPopupMenu(itemView, R.menu.popup_menu_message)
-            }
+            adapter = MessageAdapter(object : MessageActionListener {
+                override fun onMessageClick(message: Message, itemView: View) {
+                    showPopupMenu(itemView, R.menu.popup_menu_message)
+                }
 
-            override fun onMessageLongClick(message: Message, itemView: View) {
-                TODO("Not yet implemented")
-            }
-        }, dialog.otherUser.id)
+                override fun onMessageLongClick(message: Message, itemView: View) {
+                    uiScope.launch {
+                        binding.floatingActionButtonDelete.visibility = View.VISIBLE
+                        val dialogSettings = async(Dispatchers.IO) {retrofitService.getDialogSettings(dialog.id)}
+                        adapter.dialogSettings = dialogSettings.await()
+                    requireActivity().onBackPressedDispatcher.addCallback(
+                        viewLifecycleOwner,
+                        object : OnBackPressedCallback(true) {
+                            @SuppressLint("NotifyDataSetChanged")
+                            override fun handleOnBackPressed() {
+                                if (!adapter.canLongClick) {
+                                    adapter.clearPositions()
+                                    adapter.notifyDataSetChanged()
+                                    binding.floatingActionButtonDelete.visibility = View.GONE
+                                } else {
+                                    //Removing this callback
+                                    remove()
+                                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                                }
+                            }
+                        })
+                    binding.floatingActionButtonDelete.setOnClickListener {
+                        val messagesToDelete = adapter.getDeleteList()
+                        if (messagesToDelete.isNotEmpty()) {
+                            uiScope.launch {
+                                retrofitService.deleteMessages(messagesToDelete)
+                            }
+                            binding.floatingActionButtonDelete.visibility = View.GONE
+                            adapter.clearPositions()
+                        }
+                    }
+                }
+                }
+            }, dialog.otherUser.id)
         binding.enterMessage.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 

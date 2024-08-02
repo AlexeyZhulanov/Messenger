@@ -14,6 +14,8 @@ import com.example.messenger.databinding.ItemImagesSenderBinding
 import com.example.messenger.databinding.ItemMessageReceiverBinding
 import com.example.messenger.databinding.ItemMessageSenderBinding
 import com.example.messenger.model.Conversation
+import com.example.messenger.model.ConversationSettings
+import com.example.messenger.model.Dialog
 import com.example.messenger.model.Message
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -27,9 +29,7 @@ interface MessageActionListener {
 class MessageAdapter(
     private val actionListener: MessageActionListener,
     private val otherUserId: Int
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-
-    private var dates = mutableSetOf<String>()
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>(), View.OnClickListener, View.OnLongClickListener {
 
     var messages: List<Message> = emptyList()
         @SuppressLint("NotifyDataSetChanged")
@@ -37,6 +37,59 @@ class MessageAdapter(
             field = value
             notifyDataSetChanged()
         }
+
+    private var dates = mutableSetOf<String>()
+    var canLongClick: Boolean = true
+    private var checkedPositions: MutableSet<Int> = mutableSetOf()
+    lateinit var dialogSettings: ConversationSettings
+
+    fun getDeleteList(): List<Int> {
+        val list = mutableListOf<Int>()
+        for(i in checkedPositions) list.add(messages[i].id)
+        return list
+    }
+
+    fun clearPositions() {
+        canLongClick = true
+        checkedPositions.clear()
+    }
+
+    private fun savePosition(message: Message) {
+        for (i in messages.indices) {
+            if (messages[i] == message) {
+                if (i in checkedPositions) {
+                    checkedPositions.remove(i)
+                } else {
+                    checkedPositions.add(i)
+                }
+                break
+            }
+        }
+    }
+
+    override fun onClick(v: View) {
+        val message = v.tag as Message
+        if(v.id == R.id.checkbox) {
+            if(!canLongClick) {
+                savePosition(message)
+            }
+        } else
+        if(!canLongClick) {
+            savePosition(message)
+            notifyDataSetChanged()
+        }
+    }
+
+    override fun onLongClick(v: View?): Boolean {
+        if(canLongClick) {
+            val message = v?.tag as Message
+            savePosition(message)
+            actionListener.onMessageLongClick(message, v)
+            canLongClick = false
+            notifyDataSetChanged()
+        }
+        return true
+    }
 
     companion object {
         private const val TYPE_TEXT_RECEIVER = 0
@@ -101,6 +154,7 @@ class MessageAdapter(
     inner class MessagesViewHolderReceiver(private val binding: ItemMessageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message) {
             binding.messageReceiverTextView.text = message.text
+            binding.checkbox.visibility = View.GONE
             val (time, date) = formatMessageDate(message.timestamp)
             if(date !in dates) {
                 dates.add(date)
@@ -115,6 +169,9 @@ class MessageAdapter(
             binding.root.setOnLongClickListener {
                 actionListener.onMessageLongClick(message, itemView)
                 true
+            }
+            if(!canLongClick && dialogSettings.canDelete) {
+                binding.checkbox.visibility = View.VISIBLE
             }
         }
     }
@@ -123,6 +180,7 @@ class MessageAdapter(
     inner class MessagesViewHolderSender(private val binding: ItemMessageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message) {
             binding.messageSenderTextView.text = message.text
+            binding.checkbox.visibility = View.GONE
             val (time, date) = formatMessageDate(message.timestamp)
             if(date !in dates) {
                 dates.add(date)
@@ -137,6 +195,9 @@ class MessageAdapter(
             binding.root.setOnLongClickListener {
                 actionListener.onMessageLongClick(message, itemView)
                 true
+            }
+            if(!canLongClick) {
+                binding.checkbox.visibility = View.VISIBLE
             }
         }
     }
