@@ -29,6 +29,8 @@ class MessageAdapter(
     private val otherUserId: Int
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
+    private var dates = mutableSetOf<String>()
+
     var messages: List<Message> = emptyList()
         @SuppressLint("NotifyDataSetChanged")
         set(value) {
@@ -99,7 +101,12 @@ class MessageAdapter(
     inner class MessagesViewHolderReceiver(private val binding: ItemMessageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message) {
             binding.messageReceiverTextView.text = message.text
-            binding.timeTextView.text = formatMessageDate(message.timestamp)
+            val (time, date) = formatMessageDate(message.timestamp)
+            if(date !in dates) {
+                dates.add(date)
+                binding.dateTextView.text = date
+            } else binding.dateTextView.visibility = View.GONE
+            binding.timeTextView.text = time
             if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
                 binding.icCheck2.visibility = View.VISIBLE
@@ -116,7 +123,12 @@ class MessageAdapter(
     inner class MessagesViewHolderSender(private val binding: ItemMessageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message) {
             binding.messageSenderTextView.text = message.text
-            binding.timeTextView.text = formatMessageDate(message.timestamp)
+            val (time, date) = formatMessageDate(message.timestamp)
+            if(date !in dates) {
+                dates.add(date)
+                binding.dateTextView.text = date
+            } else binding.dateTextView.visibility = View.GONE
+            binding.timeTextView.text = time
             if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
                 binding.icCheck2.visibility = View.VISIBLE
@@ -183,9 +195,10 @@ class MessageAdapter(
         }
     }
 
-    private fun formatMessageDate(timestamp: Long?): String {
-        if(timestamp == null) return "-"
-        // Приведение серверного времени(мск GMT+3) к GMT
+    private fun formatMessageDate(timestamp: Long?): Pair<String, String> {
+        if (timestamp == null) return Pair("-", "")
+
+        // Приведение серверного времени (МСК GMT+3) к GMT
         val greenwichMessageDate = Calendar.getInstance().apply {
             timeInMillis = timestamp - 10800000
         }
@@ -193,10 +206,20 @@ class MessageAdapter(
         val dateFormatDayMonth = SimpleDateFormat("d MMM", Locale.getDefault())
         val dateFormatYear = SimpleDateFormat("d.MM.yyyy", Locale.getDefault())
         val localNow = Calendar.getInstance()
+
         return when {
-            isToday(localNow, greenwichMessageDate) -> dateFormatToday.format(greenwichMessageDate.time)
-            isThisYear(localNow, greenwichMessageDate) -> dateFormatDayMonth.format(greenwichMessageDate.time)
-            else -> dateFormatYear.format(greenwichMessageDate.time)
+            isToday(localNow, greenwichMessageDate) -> Pair(
+                dateFormatToday.format(greenwichMessageDate.time),
+                dateFormatDayMonth.format(greenwichMessageDate.time)
+            )
+            isThisYear(localNow, greenwichMessageDate) -> Pair(
+                dateFormatToday.format(greenwichMessageDate.time),
+                dateFormatDayMonth.format(greenwichMessageDate.time)
+            )
+            else -> Pair(
+                dateFormatToday.format(greenwichMessageDate.time),
+                dateFormatYear.format(greenwichMessageDate.time)
+            )
         }
     }
 
