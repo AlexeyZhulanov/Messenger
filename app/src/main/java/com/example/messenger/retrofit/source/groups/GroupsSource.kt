@@ -45,4 +45,6 @@ interface GroupsSource {
 
     suspend fun getGroupSettings(groupId: Int) : ConversationSettings
 
+    suspend fun searchMessagesInGroup(groupId: Int, word: String) : List<GroupMessage>
+
 }

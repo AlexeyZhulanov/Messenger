@@ -1,6 +1,7 @@
 package com.example.messenger
 
 import android.annotation.SuppressLint
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -16,13 +17,13 @@ import com.example.messenger.model.Conversation
 import com.example.messenger.model.Message
 
 interface MessageActionListener {
-    fun onMessageClick(message: Message)
-    fun onMessageLongClick(message: Message)
+    fun onMessageClick(message: Message, itemView: View)
+    fun onMessageLongClick(message: Message, itemView: View)
 }
 
 class MessageAdapter(
     private val actionListener: MessageActionListener,
-    private val senderId: Int
+    private val otherUserId: Int
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     var messages: List<Message> = emptyList()
@@ -44,34 +45,34 @@ class MessageAdapter(
     override fun getItemViewType(position: Int): Int {
         val message = messages[position]
         return when {
-            message.idSender == senderId && message.images?.size == 0 && message.text?.length != 0 -> TYPE_TEXT_SENDER
-            message.images?.size == 0 && message.text?.length != 0 -> TYPE_TEXT_RECEIVER
-            message.images?.size == 1 && message.idSender == senderId -> TYPE_IMAGE_SENDER
-            message.images?.size == 1 -> TYPE_IMAGE_RECEIVER
-            message.idSender == senderId -> TYPE_IMAGES_SENDER
-            else  -> TYPE_IMAGES_RECEIVER
+            message.idSender == otherUserId && message.images.isNullOrEmpty() && message.text?.isNotEmpty() == true -> TYPE_TEXT_RECEIVER
+            message.images.isNullOrEmpty() && message.text?.isNotEmpty() == true -> TYPE_TEXT_SENDER
+            message.images?.size == 1 && message.idSender == otherUserId -> TYPE_IMAGE_RECEIVER
+            message.images?.size == 1 -> TYPE_IMAGE_SENDER
+            message.idSender == otherUserId -> TYPE_IMAGES_RECEIVER
+            else -> TYPE_IMAGES_SENDER
         }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return when (viewType) {
-            TYPE_TEXT_RECEIVER -> MessagesViewHolder(
-                ItemMessageReceiverBinding.inflate(LayoutInflater.from(parent.context), parent, false).root
+            TYPE_TEXT_RECEIVER -> MessagesViewHolderReceiver(
+                ItemMessageReceiverBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             )
-            TYPE_TEXT_SENDER -> MessagesViewHolder(
-                ItemMessageSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false).root
+            TYPE_TEXT_SENDER -> MessagesViewHolderSender(
+                ItemMessageSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             )
-            TYPE_IMAGE_RECEIVER -> MessagesViewHolder(
-                ItemImageReceiverBinding.inflate(LayoutInflater.from(parent.context), parent, false).root
+            TYPE_IMAGE_RECEIVER -> MessagesViewHolderImageReceiver(
+                ItemImageReceiverBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             )
-            TYPE_IMAGE_SENDER -> MessagesViewHolder(
-                ItemImageSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false).root
+            TYPE_IMAGE_SENDER -> MessagesViewHolderImageSender(
+                ItemImageSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             )
-            TYPE_IMAGES_RECEIVER -> MessagesViewHolder(
-                ItemImagesReceiverBinding.inflate(LayoutInflater.from(parent.context), parent, false).root
+            TYPE_IMAGES_RECEIVER -> MessagesViewHolderImagesReceiver(
+                ItemImagesReceiverBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             )
-            TYPE_IMAGES_SENDER -> MessagesViewHolder(
-                ItemImagesSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false).root
+            TYPE_IMAGES_SENDER -> MessagesViewHolderImagesSender(
+                ItemImagesSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             )
             else -> throw IllegalArgumentException("Invalid view type")
         }
@@ -80,99 +81,91 @@ class MessageAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val message = messages[position]
         when (holder) {
-            is MessagesViewHolder -> {
-                when (getItemViewType(position)) {
-                    TYPE_TEXT_RECEIVER -> holder.bindTextReceiver(message)
-                    TYPE_TEXT_SENDER -> holder.bindTextSender(message)
-                    TYPE_IMAGE_RECEIVER -> holder.bindImageReceiver(message)
-                    TYPE_IMAGE_SENDER -> holder.bindImageSender(message)
-                    TYPE_IMAGES_RECEIVER -> holder.bindImagesReceiver(message)
-                    TYPE_IMAGES_SENDER -> holder.bindImagesSender(message)
-                }
-            }
+            is MessagesViewHolderReceiver -> holder.bind(message)
+            is MessagesViewHolderSender -> holder.bind(message)
+            is MessagesViewHolderImageReceiver -> holder.bind(message)
+            is MessagesViewHolderImageSender -> holder.bind(message)
+            is MessagesViewHolderImagesReceiver -> holder.bind(message)
+            is MessagesViewHolderImagesSender -> holder.bind(message)
         }
     }
 
     override fun getItemCount(): Int = messages.size
 
-    inner class MessagesViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-
-        private val messageReceiverBinding = ItemMessageReceiverBinding.bind(itemView)
-        private val messageSenderBinding = ItemMessageSenderBinding.bind(itemView)
-        private val imageReceiverBinding = ItemImageReceiverBinding.bind(itemView)
-        private val imageSenderBinding = ItemImageSenderBinding.bind(itemView)
-        private val imagesReceiverBinding = ItemImagesReceiverBinding.bind(itemView)
-        private val imagesSenderBinding = ItemImagesSenderBinding.bind(itemView)
-
-        fun bindTextReceiver(message: Message) {
-            messageReceiverBinding.apply {
-                messageReceiverTextView.text = message.text
-                root.setOnClickListener { actionListener.onMessageClick(message) }
-                root.setOnLongClickListener {
-                    actionListener.onMessageLongClick(message)
-                    true
-                }
+    // ViewHolder для текстовых сообщений получателя
+    inner class MessagesViewHolderReceiver(private val binding: ItemMessageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(message: Message) {
+            binding.messageReceiverTextView.text = message.text
+            binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
+            binding.root.setOnLongClickListener {
+                actionListener.onMessageLongClick(message, itemView)
+                true
             }
         }
+    }
 
-        fun bindTextSender(message: Message) {
-            messageSenderBinding.apply {
-                messageSenderTextView.text = message.text
-                root.setOnClickListener { actionListener.onMessageClick(message) }
-                root.setOnLongClickListener {
-                    actionListener.onMessageLongClick(message)
-                    true
-                }
+    // ViewHolder для текстовых сообщений отправителя
+    inner class MessagesViewHolderSender(private val binding: ItemMessageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(message: Message) {
+            binding.messageSenderTextView.text = message.text
+            binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
+            binding.root.setOnLongClickListener {
+                actionListener.onMessageLongClick(message, itemView)
+                true
             }
         }
+    }
 
-        fun bindImageReceiver(message: Message) {
-            imageReceiverBinding.apply {
-                // Загрузите изображение и примените данные
-                //Glide.with(root.context).load(message.imageUrl).into(imageView)
-                root.setOnClickListener { actionListener.onMessageClick(message) }
-                root.setOnLongClickListener {
-                    actionListener.onMessageLongClick(message)
-                    true
-                }
+    // ViewHolder для изображений получателя
+    inner class MessagesViewHolderImageReceiver(private val binding: ItemImageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(message: Message) {
+            // Загрузите изображение и примените данные
+            //Glide.with(binding.root.context).load(message.imageUrl).into(binding.imageView)
+            binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
+            binding.root.setOnLongClickListener {
+                actionListener.onMessageLongClick(message, itemView)
+                true
             }
         }
+    }
 
-        fun bindImageSender(message: Message) {
-            imageSenderBinding.apply {
-                // Загрузите изображение и примените данные
-                //Glide.with(root.context).load(message.imageUrl).into(imageView)
-                root.setOnClickListener { actionListener.onMessageClick(message) }
-                root.setOnLongClickListener {
-                    actionListener.onMessageLongClick(message)
-                    true
-                }
+    // ViewHolder для изображений отправителя
+    inner class MessagesViewHolderImageSender(private val binding: ItemImageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(message: Message) {
+            // Загрузите изображение и примените данные
+            //Glide.with(binding.root.context).load(message.imageUrl).into(binding.imageView)
+            binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
+            binding.root.setOnLongClickListener {
+                actionListener.onMessageLongClick(message, itemView)
+                true
             }
         }
+    }
 
-        fun bindImagesReceiver(message: Message) {
-            imagesReceiverBinding.apply {
-                val adapter = ImagesAdapter(message.images ?: emptyList())
-                recyclerview.layoutManager = GridLayoutManager(root.context, 3)
-                recyclerview.adapter = adapter
-                root.setOnClickListener { actionListener.onMessageClick(message) }
-                root.setOnLongClickListener {
-                    actionListener.onMessageLongClick(message)
-                    true
-                }
+    // ViewHolder для множества изображений получателя
+    inner class MessagesViewHolderImagesReceiver(private val binding: ItemImagesReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(message: Message) {
+            val adapter = ImagesAdapter(message.images ?: emptyList())
+            binding.recyclerview.layoutManager = GridLayoutManager(binding.root.context, 3)
+            binding.recyclerview.adapter = adapter
+            binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
+            binding.root.setOnLongClickListener {
+                actionListener.onMessageLongClick(message, itemView)
+                true
             }
         }
+    }
 
-        fun bindImagesSender(message: Message) {
-            imagesSenderBinding.apply {
-                val adapter = ImagesAdapter(message.images ?: emptyList())
-                recyclerview.layoutManager = GridLayoutManager(root.context, 3)
-                recyclerview.adapter = adapter
-                root.setOnClickListener { actionListener.onMessageClick(message) }
-                root.setOnLongClickListener {
-                    actionListener.onMessageLongClick(message)
-                    true
-                }
+    // ViewHolder для множества изображений отправителя
+    inner class MessagesViewHolderImagesSender(private val binding: ItemImagesSenderBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(message: Message) {
+            val adapter = ImagesAdapter(message.images ?: emptyList())
+            binding.recyclerview.layoutManager = GridLayoutManager(binding.root.context, 3)
+            binding.recyclerview.adapter = adapter
+            binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
+            binding.root.setOnLongClickListener {
+                actionListener.onMessageLongClick(message, itemView)
+                true
             }
         }
     }

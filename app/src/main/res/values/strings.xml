@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Messenger</string>
+    <string name="app_name">AMessenger</string>
     <string name="register_question"><u>Нет аккаунта? --> <b>Регистрация</b></u></string>
     <string name="a_messenger"><font color="red">A</font>Messenger</string>
     <string name="login_question"><u>Уже есть аккаунт? --> <b>Вход</b></u></string>

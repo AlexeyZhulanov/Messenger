@@ -6,7 +6,6 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
@@ -25,9 +24,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.messenger.databinding.FragmentMessengerBinding
 import com.example.messenger.model.Conversation
-import com.example.messenger.model.ConversationsListener
-import com.example.messenger.model.Message
-import com.example.messenger.model.RetrofitRepository
 import com.example.messenger.model.RetrofitService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -61,7 +57,7 @@ class MessengerFragment : Fragment() {
         titleTextView.setOnClickListener {
             Toast.makeText(context, "Title clicked!", Toast.LENGTH_SHORT).show()
         }
-        val checkImageView: ImageView = view.findViewById(R.id.ic_check)
+        val checkImageView: ImageView = view.findViewById(R.id.ic_options)
         checkImageView.setOnClickListener {
             showPopupMenu(it, R.menu.popup_menu_check)
         }

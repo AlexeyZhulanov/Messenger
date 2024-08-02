@@ -614,6 +614,20 @@ class RetrofitService(
         return@withContext settings
     }
 
+    override suspend fun searchMessagesInGroup(groupId: Int, word: String): List<GroupMessage> = withContext(Dispatchers.IO) {
+        val messagesGroupSearch = try {
+            groupsSource.searchMessagesInGroup(groupId, word)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw GroupNotFoundException(e)
+                403 -> throw NoPermissionException(e)
+                else -> throw e
+            }
+        }
+        Log.d("testSearchMessagesInDialog", messagesGroupSearch.toString())
+        return@withContext messagesGroupSearch
+    }
+
     fun addListener(listener: ConversationsListener) {
         listeners.add(listener)
         listener.invoke(conversations)

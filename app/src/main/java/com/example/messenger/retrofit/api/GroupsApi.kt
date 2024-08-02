@@ -34,7 +34,7 @@ interface GroupsApi {
 
     @GET("group/messages")
     suspend fun getGroupMessages(
-        @Header("group_id") groupId: Int,
+        @Query("group_id") groupId: Int,
         @Query("start") start: Int,
         @Query("end") end: Int
     ) : List<Message>
@@ -115,5 +115,10 @@ interface GroupsApi {
         @Path("group_id") groupId: Int
     ) : GetDialogSettingsResponseEntity
 
-    // todo search group messages
+    @GET("groups/{group_id}/messages/search")
+    suspend fun searchMessagesInGroup(
+        @Path("group_id") groupId: Int,
+        @Query("q") word: String
+    ) : List<Message>
+
 }

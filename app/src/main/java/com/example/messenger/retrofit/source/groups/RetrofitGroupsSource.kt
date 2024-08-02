@@ -105,4 +105,9 @@ class RetrofitGroupsSource(
     override suspend fun getGroupSettings(groupId: Int): ConversationSettings = wrapRetrofitExceptions {
         groupsApi.getGroupSettings(groupId).toConversationSettings()
     }
+
+    override suspend fun searchMessagesInGroup(groupId: Int, word: String): List<GroupMessage> = wrapRetrofitExceptions {
+        val response = groupsApi.searchMessagesInGroup(groupId, word)
+        response.map { it.toGroupMessage() }
+    }
 }
