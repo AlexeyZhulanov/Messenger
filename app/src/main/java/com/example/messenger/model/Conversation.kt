@@ -6,7 +6,7 @@ data class Conversation(
     val key: String? = null,
     val otherUser: User? = null,
     val name: String? = null,
-    val createdBy: Int,
+    val createdBy: Int? = null,
     val avatar: String? = null,
     val lastMessage: LastMessage? = null,
     val countMsg: Int
@@ -15,7 +15,7 @@ data class Conversation(
         id = id, key = key, otherUser = otherUser!!, lastMessage = lastMessage, countMsg = countMsg)
 
     fun toGroup() : Group = Group(
-        id = id, name = name!!, createdBy = createdBy,
+        id = id, name = name!!, createdBy = createdBy!!,
         avatar = avatar, lastMessage = lastMessage, countMsg = countMsg)
 }
 data class Dialog(

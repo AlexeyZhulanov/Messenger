@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:id="@+id/dialogInfo_layout"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:background="@color/purple_500"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <ImageView
+        android:id="@+id/photoImageView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:src="@drawable/ic_user_avatar"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/topGuideLine"
+         />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/lastSessionTextView"
+        tools:text="Дамир"
+        android:layout_marginStart="10dp"
+        android:id="@+id/userNameTextView"
+        android:textColor="?attr/colorAccent"
+        android:fontFamily="casual"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="28sp"
+        android:autoSizeMaxTextSize="100sp"
+        android:autoSizeStepGranularity="2sp"
+        android:padding="2dp"
+        android:elevation="4dp"
+        android:textStyle="bold|italic" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="@id/photoImageView"
+        android:layout_marginBottom="15dp"
+        tools:text="был в сети час назад"
+        android:layout_marginStart="10dp"
+        android:id="@+id/lastSessionTextView"
+        android:textColor="?attr/colorAccent"
+        android:fontFamily="casual"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="16sp"
+        android:autoSizeMaxTextSize="100sp"
+        android:autoSizeStepGranularity="2sp"
+        android:padding="2dp"
+        android:elevation="4dp"
+        android:textStyle="bold|italic" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/topGuideLine"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.4"
+        />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/info_layout"
+        android:layout_width="0dp"
+        android:background="@drawable/choose_settings"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/photoImageView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:text="Информация"
+        android:layout_marginStart="10dp"
+        android:id="@+id/infoTextView"
+        android:textColor="?attr/colorAccent"
+        android:fontFamily="casual"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="16sp"
+        android:autoSizeMaxTextSize="100sp"
+        android:autoSizeStepGranularity="2sp"
+        android:padding="2dp"
+        android:textStyle="bold|italic" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="30dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/infoTextView"
+            app:layout_constraintEnd_toStartOf="@id/midStartGuideLine"
+            android:text="Никнейм"
+            android:layout_marginStart="10dp"
+            android:id="@+id/nickWordTextView"
+            android:layout_marginTop="10dp"
+            android:textColor="?attr/colorPrimary"
+            android:fontFamily="casual"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="20sp"
+            android:autoSizeMaxTextSize="100sp"
+            android:autoSizeStepGranularity="2sp"
+            android:padding="2dp"
+            android:textStyle="bold|italic"/>
+
+        <TextView
+            android:id="@+id/nickTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/infoTextView"
+            app:layout_constraintStart_toEndOf="@id/midStartGuideLine"
+            tools:text="user123"
+            android:layout_marginTop="10dp"
+            android:textColor="?attr/colorPrimary"
+            android:fontFamily="casual"
+            android:textSize="20sp"
+            android:padding="2dp"
+            android:textStyle="bold|italic"/>
+
+        <ImageView
+            android:id="@+id/copyImageView"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:src="@drawable/ic_copy"
+            app:layout_constraintTop_toTopOf="@id/nickTextView"
+            app:layout_constraintBottom_toBottomOf="@id/nickTextView"
+            app:layout_constraintStart_toEndOf="@id/nickTextView"
+            android:layout_marginStart="5dp"
+            />
+
+        <TextView
+            android:id="@+id/notificationsTextView"
+            android:layout_width="0dp"
+            android:layout_height="30dp"
+            app:layout_constraintEnd_toStartOf="@id/midGuideLine"
+            app:layout_constraintTop_toBottomOf="@id/nickWordTextView"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginStart="10dp"
+            android:text="Уведомления"
+            android:layout_marginTop="15dp"
+            android:textColor="?attr/colorPrimary"
+            android:fontFamily="casual"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="20sp"
+            android:autoSizeMaxTextSize="100sp"
+            android:autoSizeStepGranularity="2sp"
+            android:padding="2dp"
+            android:textStyle="bold|italic"/>
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_notifications"
+            android:layout_width="wrap_content"
+            app:layout_constraintStart_toEndOf="@id/midGuideLine"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/notificationsTextView"
+            app:layout_constraintBottom_toBottomOf="@id/notificationsTextView"
+            android:layout_height="match_parent"/>
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/midGuideLine"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.5"
+            />
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/midStartGuideLine"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.4"
+            />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/buttons_layout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginHorizontal="5dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/info_layout">
+
+
+        <Button
+            android:id="@+id/button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textAllCaps="false"
+            android:text="Медиа"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="10sp"
+            android:autoSizeMaxTextSize="22sp"
+            android:autoSizeStepGranularity="2sp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/button3"
+            app:layout_constraintHorizontal_chainStyle="spread_inside"
+            android:textColor="?attr/colorAccent"
+            style="?android:attr/buttonBarButtonStyle" />
+
+        <Button
+            android:id="@+id/button3"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textAllCaps="false"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="10sp"
+            android:autoSizeMaxTextSize="22sp"
+            android:autoSizeStepGranularity="2sp"
+            style="?android:attr/buttonBarButtonStyle"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/button"
+            app:layout_constraintEnd_toStartOf="@+id/button4"
+            android:text="Файлы" />
+
+        <Button
+            android:id="@+id/button4"
+            android:layout_width="0dp"
+            android:textAllCaps="false"
+            android:layout_height="wrap_content"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="10sp"
+            android:autoSizeMaxTextSize="22sp"
+            android:autoSizeStepGranularity="2sp"
+            style="?android:attr/buttonBarButtonStyle"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/button3"
+            android:text="Голосовые" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+<ScrollView
+    android:layout_width="0dp"
+    android:layout_height="0dp"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/buttons_layout"
+    app:layout_constraintBottom_toBottomOf="parent">
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        />
+
+</ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

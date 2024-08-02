@@ -26,12 +26,12 @@ interface MessagesApi {
 
     @POST("messages")
     suspend fun sendMessage(
-        @Header("id_dialog") idDialog: Int,
+        @Query("id_dialog") idDialog: Int,
         @Body sendMessageRequestEntity: SendMessageRequestEntity) : ResponseEntityMessageAnswer
 
     @GET("messages")
     suspend fun getMessages(
-        @Header("id_dialog") idDialog: Int,
+        @Query("id_dialog") idDialog: Int,
         @Query("start") start: Int,
         @Query("end") end: Int
         ) : List<Message>

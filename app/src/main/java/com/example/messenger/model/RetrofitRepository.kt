@@ -85,4 +85,6 @@ interface RetrofitRepository {
     suspend fun deleteGroupMessagesAll(groupId: Int) : Boolean
 
     suspend fun getGroupSettings(groupId: Int): ConversationSettings
+
+    suspend fun searchMessagesInGroup(groupId: Int, word: String) : List<GroupMessage>
 }

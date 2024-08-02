@@ -4,16 +4,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:background="?android:attr/selectableItemBackground">
+    android:layout_height="70dp"
+    android:background="@drawable/messenger_item_background">
 
     <ImageView
         android:id="@+id/photoImageView"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginStart="16dp"
+        android:layout_width="70dp"
+        android:layout_height="match_parent"
         android:layout_marginTop="6dp"
-        tools:src="@drawable/ic_user_avatar"
+        android:src="@drawable/ic_user_avatar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -21,12 +20,11 @@
         android:id="@+id/userNameTextView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:textColor="@color/black"
-        android:layout_marginStart="16dp"
+        android:textSize="20sp"
         android:lines="1"
         android:ellipsize="end"
         tools:text="John Smith"
+        android:textColor="?attr/colorAccent"
         app:layout_constraintTop_toTopOf="@id/photoImageView"
         app:layout_constraintStart_toEndOf="@id/photoImageView"
         app:layout_constraintEnd_toStartOf="@id/ic_check"/>
@@ -37,12 +35,12 @@
         android:layout_height="wrap_content"
         android:lines="1"
         android:ellipsize="end"
-        android:textSize="14sp"
+        android:textSize="16sp"
         android:layout_marginTop="4dp"
         tools:text="Google Inc."
         app:layout_constraintTop_toBottomOf="@id/userNameTextView"
         app:layout_constraintStart_toStartOf="@id/userNameTextView"
-        app:layout_constraintEnd_toStartOf="@id/ic_check"/>
+        app:layout_constraintEnd_toEndOf="parent"/>
 
     <ImageView
         android:id="@+id/ic_check"
@@ -76,12 +74,12 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:textSize="16sp"
-        android:textColor="@color/black"
         tools:text="19 jul"
+        android:textColor="?attr/colorAccent"
         android:layout_marginEnd="10dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toBottomOf="@id/userNameTextView"
         app:layout_constraintEnd_toEndOf="parent"/>
 
     <androidx.constraintlayout.widget.Barrier

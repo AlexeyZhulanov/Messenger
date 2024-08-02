@@ -6,7 +6,6 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
@@ -25,13 +24,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.messenger.databinding.FragmentMessengerBinding
 import com.example.messenger.model.Conversation
-import com.example.messenger.model.ConversationsListener
-import com.example.messenger.model.Message
-import com.example.messenger.model.RetrofitRepository
 import com.example.messenger.model.RetrofitService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -46,8 +43,32 @@ class MessengerFragment : Fragment() {
     private val retrofitService: RetrofitService
         get() = Singletons.retrofitRepository as RetrofitService
 
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val toolbar: Toolbar = view.findViewById(R.id.toolbar)
+        (activity as AppCompatActivity).setSupportActionBar(toolbar)
+        (activity as AppCompatActivity).supportActionBar?.setDisplayShowTitleEnabled(false)
+        val avatarImageView: ImageView = view.findViewById(R.id.toolbar_avatar)
+        avatarImageView.setOnClickListener {
+            Toast.makeText(context, "Avatar clicked!", Toast.LENGTH_SHORT).show()
+        }
+        val titleTextView: TextView = view.findViewById(R.id.toolbar_title)
+        titleTextView.setOnClickListener {
+            Toast.makeText(context, "Title clicked!", Toast.LENGTH_SHORT).show()
+        }
+        val checkImageView: ImageView = view.findViewById(R.id.ic_options)
+        checkImageView.setOnClickListener {
+            showPopupMenu(it, R.menu.popup_menu_check)
+        }
+        val addImageView: ImageView = view.findViewById(R.id.ic_add)
+        addImageView.setOnClickListener {
+            showPopupMenu(it, R.menu.popup_menu_add)
+        }
+    }
+
     @SuppressLint("DiscouragedApi")
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentMessengerBinding.inflate(inflater, container, false)
         preferences = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
         val wallpaper = preferences.getString(PREF_WALLPAPER, "")
@@ -56,25 +77,6 @@ class MessengerFragment : Fragment() {
             if(resId != 0)
                 binding.messengerLayout.background = ContextCompat.getDrawable(requireContext(), resId)
         }
-        val toolbar: Toolbar = requireView().findViewById(R.id.toolbar)
-        (activity as AppCompatActivity).setSupportActionBar(toolbar)
-        val avatarImageView: ImageView = requireView().findViewById(R.id.toolbar_avatar)
-        avatarImageView.setOnClickListener {
-            Toast.makeText(context, "Avatar clicked!", Toast.LENGTH_SHORT).show()
-        }
-        val titleTextView: TextView = requireView().findViewById(R.id.toolbar_title)
-        titleTextView.setOnClickListener {
-            Toast.makeText(context, "Title clicked!", Toast.LENGTH_SHORT).show()
-        }
-        val checkImageView: ImageView = requireView().findViewById(R.id.ic_check)
-        checkImageView.setOnClickListener {
-            showPopupMenu(it, R.menu.popup_menu_check)
-        }
-        val addImageView: ImageView = requireView().findViewById(R.id.ic_add)
-        addImageView.setOnClickListener {
-            showPopupMenu(it, R.menu.popup_menu_add)
-        }
-
         adapter = MessengerAdapter(object: MessengerActionListener {
             override fun onConversationClicked(conversation: Conversation, index: Int) {
                 when (conversation.type) {
@@ -128,19 +130,24 @@ class MessengerFragment : Fragment() {
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.menu_item1 -> {
-                    Toast.makeText(context, "Item 1 clicked", Toast.LENGTH_SHORT).show()
+                    parentFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, SettingsFragment(), "SETTINGS_FRAGMENT_TAG")
+                        .addToBackStack(null)
+                        .commit()
                     true
                 }
                 R.id.menu_item2 -> {
-                    Toast.makeText(context, "Item 2 clicked", Toast.LENGTH_SHORT).show()
+                    parentFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, LoginFragment(), "LOGIN_FRAGMENT_TAG3")
+                        .commit()
                     true
                 }
                 R.id.menu_item3 -> {
-                    Toast.makeText(context, "Item 3 clicked", Toast.LENGTH_SHORT).show()
+                    showAddDialog()
                     true
                 }
                 R.id.menu_item4 -> {
-                    Toast.makeText(context, "Item 4 clicked", Toast.LENGTH_SHORT).show()
+                    showAddGroup()
                     true
                 }
                 else -> false
@@ -163,7 +170,7 @@ class MessengerFragment : Fragment() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_item, null)
 
         // Create the AlertDialog
-        val dialog = AlertDialog.Builder(requireActivity().applicationContext)
+        val dialog = AlertDialog.Builder(requireContext())
             .setTitle("Введите никнейм пользователя")
             .setView(dialogView)
             .setPositiveButton("Добавить") { dialogInterface, _ ->
@@ -182,9 +189,42 @@ class MessengerFragment : Fragment() {
     }
 
     private fun handleAddButtonClick(input: String) {
-        // Handle the input from the dialog
-        // For example, you could add the item to a list or perform another action
-        Log.d("MainActivity", "Item added: $input")
+        uiScope.launch {
+            val res = async(Dispatchers.IO) { retrofitService.createDialog(input) }
+            if(res.await()) {
+                adapter.conversations = retrofitService.getConversations()
+            }
+        }
+    }
+    private fun showAddGroup() {
+        // Inflate the custom layout for the dialog
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_item, null)
+
+        // Create the AlertDialog
+        val dialog = AlertDialog.Builder(requireContext())
+            .setTitle("Введите название группы")
+            .setView(dialogView)
+            .setPositiveButton("Создать") { dialogInterface, _ ->
+                val input = dialogView.findViewById<EditText>(R.id.dialog_input).text.toString()
+                // Handle the "Add" button click here
+                handleAddButtonClickGroup(input)
+                dialogInterface.dismiss()
+            }
+            .setNegativeButton("Назад") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+            }
+            .create()
+
+        // Show the dialog
+        dialog.show()
     }
 
+    private fun handleAddButtonClickGroup(input: String) {
+        uiScope.launch {
+            val res = async(Dispatchers.IO) { retrofitService.createGroup(input) }
+            if(res.await()) {
+                adapter.conversations = retrofitService.getConversations()
+            }
+        }
+    }
 }
