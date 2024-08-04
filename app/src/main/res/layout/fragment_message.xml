@@ -7,22 +7,20 @@
     android:background="?android:attr/colorBackground"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <include
-        layout="@layout/custom_action_bar"
-        android:id="@+id/toolbar"
+    <FrameLayout
+        android:id="@+id/toolbar_container"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintTop_toBottomOf="@id/toolbar_container"
         app:layout_constraintBottom_toTopOf="@id/layout_enter"
         android:layout_marginTop="15dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
@@ -35,6 +33,34 @@
             />
 
     </LinearLayout>
+
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:visibility="gone" />
+
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/floatingActionButtonDelete"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        android:layout_marginBottom="10dp"
+        app:layout_constraintBottom_toTopOf="@id/layout_enter"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:src="@drawable/ic_trash"
+        app:tint="?attr/colorPrimary"
+        android:backgroundTint="?attr/colorAccent"
+        app:borderWidth="0dp"
+        android:visibility="gone"
+        />
 
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -66,6 +92,8 @@
             android:padding="8dp"
             android:background="@drawable/custom_edittext2"
             android:inputType="text"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
             android:textColor="@android:color/white"
             app:layout_constraintStart_toEndOf="@id/attach_button"
             app:layout_constraintEnd_toStartOf="@id/emoji_button"
@@ -102,6 +130,19 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ic_send"
+            android:padding="3dp"
+            android:visibility="invisible"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:layout_marginEnd="5dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <ImageView
+            android:id="@+id/edit_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_check_circle"
             android:padding="3dp"
             android:visibility="invisible"
             android:background="?android:attr/selectableItemBackgroundBorderless"

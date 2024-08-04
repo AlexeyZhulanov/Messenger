@@ -10,12 +10,16 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.widget.PopupMenu
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -28,9 +32,11 @@ import com.example.messenger.model.RetrofitService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import okhttp3.internal.wait
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -41,8 +47,9 @@ class MessageFragment(
     private lateinit var binding: FragmentMessageBinding
     private lateinit var adapter: MessageAdapter
     private lateinit var preferences: SharedPreferences
-    private var lastSessionString : String = ""
+    private var lastSessionString: String = ""
     private var countMsg = dialog.countMsg
+    private var editFlag = false
     private var updateJob: Job? = null
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.Main + job)
@@ -54,7 +61,10 @@ class MessageFragment(
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val toolbarLayout: ConstraintLayout = view.findViewById(R.id.toolbar)
+        val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
+        val defaultToolbar = LayoutInflater.from(context)
+            .inflate(R.layout.custom_action_bar, toolbarContainer, false)
+        toolbarContainer.addView(defaultToolbar)
         val backArrow: ImageView = view.findViewById(R.id.back_arrow)
         backArrow.setOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
@@ -93,35 +103,82 @@ class MessageFragment(
             showPopupMenu(it, R.menu.popup_menu_dialog)
         }
     }
+
     @SuppressLint("InflateParams")
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         binding = FragmentMessageBinding.inflate(inflater, container, false)
         preferences = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
         val wallpaper = preferences.getString(PREF_WALLPAPER, "")
-        if(wallpaper != "") {
+        if (wallpaper != "") {
             val resId = resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
-            if(resId != 0)
-                binding.messageLayout.background = ContextCompat.getDrawable(requireContext(), resId)
+            if (resId != 0)
+                binding.messageLayout.background =
+                    ContextCompat.getDrawable(requireContext(), resId)
         }
-        adapter = MessageAdapter(object : MessageActionListener {
-            override fun onMessageClick(message: Message, itemView: View) {
-                showPopupMenu(itemView, R.menu.popup_menu_message)
-            }
+            adapter = MessageAdapter(object : MessageActionListener {
+                override fun onMessageClick(message: Message, itemView: View) {
+                    showPopupMenuMessage(itemView, R.menu.popup_menu_message, message)
+                }
 
-            override fun onMessageLongClick(message: Message, itemView: View) {
-                TODO("Not yet implemented")
-            }
-        }, dialog.otherUser.id)
+                override fun onMessageLongClick(message: Message, itemView: View) {
+                    uiScope.launch {
+                        stopMessagePolling()
+                        binding.floatingActionButtonDelete.visibility = View.VISIBLE
+                        val dialogSettings = async(Dispatchers.IO) {retrofitService.getDialogSettings(dialog.id)}
+                        adapter.dialogSettings = dialogSettings.await()
+                    requireActivity().onBackPressedDispatcher.addCallback(
+                        viewLifecycleOwner,
+                        object : OnBackPressedCallback(true) {
+                            @SuppressLint("NotifyDataSetChanged")
+                            override fun handleOnBackPressed() {
+                                if (!adapter.canLongClick) {
+                                    adapter.clearPositions()
+                                    binding.floatingActionButtonDelete.visibility = View.GONE
+                                } else {
+                                    //Removing this callback
+                                    remove()
+                                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                                }
+                                startMessagePolling()
+                            }
+                        })
+                    binding.floatingActionButtonDelete.setOnClickListener {
+                        val messagesToDelete = adapter.getDeleteList()
+                        if (messagesToDelete.isNotEmpty()) {
+                            uiScope.launch {
+                                binding.progressBar.visibility = View.VISIBLE
+                                val response = async { retrofitService.deleteMessages(messagesToDelete) }
+                                binding.floatingActionButtonDelete.visibility = View.GONE
+                                countMsg -= messagesToDelete.size
+                                adapter.clearPositions()
+                                if(response.await()) {
+                                    startMessagePolling()
+                                    binding.progressBar.visibility = View.GONE
+                                }
+                            }
+                        }
+                    }
+                }
+                }
+            }, dialog.otherUser.id)
         binding.enterMessage.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 if (s.isNullOrEmpty()) {
                     binding.micButton.visibility = View.VISIBLE
-                    binding.enterButton.visibility = View.INVISIBLE
+                    if(!editFlag) {
+                        binding.enterButton.visibility = View.INVISIBLE
+                    } else binding.editButton.visibility = View.GONE
                 } else {
-                    binding.enterButton.visibility = View.VISIBLE
                     binding.micButton.visibility = View.INVISIBLE
+                    if(!editFlag) {
+                        binding.enterButton.visibility = View.VISIBLE
+                    } else binding.editButton.visibility = View.VISIBLE
                 }
             }
 
@@ -147,25 +204,38 @@ class MessageFragment(
             uiScope.launch {
                 retrofitService.sendMessage(dialog.id, text, null, null, null)
                 countMsg += 1
-                val enterText : EditText = requireView().findViewById(R.id.enter_message)
+                val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 enterText.setText("")
-                adapter.messages = retrofitService.getMessages(dialog.id, 0, countMsg)
+                adapter.messages = retrofitService.getMessages(dialog.id, 0, countMsg).associateWith { "" }
+                binding.recyclerview.post {
+                    binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
+                }
             }
         }
         retrofitService.initCompleted.observe(viewLifecycleOwner) { initCompleted ->
             if (initCompleted) {
-                updateJob = lifecycleScope.launch {
-                    while (isActive) {
-                        adapter.messages =
-                            retrofitService.getMessages(dialog.id, 0, countMsg) //todo pagination
-                        delay(30000)
-                    }
-                }
+                startMessagePolling()
             }
         }
 
         return binding.root
     }
+
+    private fun startMessagePolling() {
+        updateJob = lifecycleScope.launch {
+            while (isActive) {
+                val temp = async(Dispatchers.IO) { retrofitService.getMessages(dialog.id, 0, countMsg).associateWith { "" } } //todo pagination
+                adapter.messages = temp.await()
+                delay(30000)
+            }
+        }
+    }
+
+    private fun stopMessagePolling() {
+        updateJob?.cancel()
+        updateJob = null
+    }
+
 
     override fun onDestroyView() {
         super.onDestroyView()
@@ -213,13 +283,41 @@ class MessageFragment(
             }
         }
     }
+
     private fun showPopupMenu(view: View, menuRes: Int) {
         val popupMenu = PopupMenu(requireContext(), view)
         popupMenu.menuInflater.inflate(menuRes, popupMenu.menu)
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.item_search -> {
-                    // todo show search edittext
+                    val toolbarContainer: FrameLayout =
+                        requireView().findViewById(R.id.toolbar_container)
+                    val alternateToolbar = LayoutInflater.from(context)
+                        .inflate(R.layout.search_acton_bar, toolbarContainer, false)
+                    toolbarContainer.removeAllViews()
+                    toolbarContainer.addView(alternateToolbar)
+                    val backArrow: ImageView = requireView().findViewById(R.id.back_arrow)
+                    backArrow.setOnClickListener {
+                        replaceFragment(MessageFragment(dialog))
+                    }
+                    val icClear: ImageView = requireView().findViewById(R.id.ic_clear)
+                    icClear.setOnClickListener {
+                        val searchEditText: EditText =
+                            requireView().findViewById(R.id.searchEditText)
+                        searchEditText.setText("")
+                    }
+                    val searchEditText: EditText = requireView().findViewById(R.id.searchEditText)
+                    searchEditText.addTextChangedListener(object : TextWatcher {
+                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                            if (!s.isNullOrEmpty() && s.length >= 2) {
+                                searchMessages(s)
+                            }
+                        }
+
+                        override fun afterTextChanged(s: Editable?) {}
+                    })
                     true
                 }
                 else -> false
@@ -227,9 +325,61 @@ class MessageFragment(
         }
         popupMenu.show()
     }
-}
 
-    class VerticalSpaceItemDecoration(private val verticalSpaceHeight: Int) : RecyclerView.ItemDecoration() {
+    private fun showPopupMenuMessage(view: View, menuRes: Int, message: Message) {
+        val popupMenu = PopupMenu(requireContext(), view)
+        popupMenu.menuInflater.inflate(menuRes, popupMenu.menu)
+        popupMenu.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.item_edit -> {
+                    editFlag = true
+                    val editText: EditText = requireView().findViewById(R.id.enter_message)
+                    editText.setText(message.text)
+                    editText.setSelection(message.text?.length ?: 0)
+                    val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    editText.postDelayed({
+                        editText.requestFocus()
+                        imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
+                    }, 100)
+                    val editButton: ImageView = requireView().findViewById(R.id.edit_button)
+                    editButton.setOnClickListener {
+                        uiScope.launch {
+                            stopMessagePolling()
+                            val response = async { retrofitService.editMessage(message.id, editText.text.toString(), null, null, null) }
+                            if(response.await()) {
+                                editFlag = false
+                                editText.setText("")
+                                startMessagePolling()
+                            }
+
+                        }
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
+        popupMenu.show()
+    }
+
+    private fun replaceFragment(newFragment: Fragment) {
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, newFragment)
+            .commit()
+    }
+
+    private fun searchMessages(query: CharSequence?) {
+        uiScope.launch {
+            if (query.isNullOrEmpty()) {
+                adapter.messages = retrofitService.getMessages(dialog.id, 0, countMsg).associateWith { "" }
+            } else {
+                adapter.messages = retrofitService.searchMessagesInDialog(dialog.id, query.toString()).associateWith { "" }
+            }
+        }
+    }
+
+    class VerticalSpaceItemDecoration(private val verticalSpaceHeight: Int) :
+        RecyclerView.ItemDecoration() {
         override fun getItemOffsets(
             outRect: Rect,
             view: View,
@@ -240,3 +390,4 @@ class MessageFragment(
             outRect.bottom = verticalSpaceHeight
         }
     }
+}

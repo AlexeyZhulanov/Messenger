@@ -14,7 +14,7 @@ import com.example.messenger.retrofit.entities.messages.UserEntity
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
-import retrofit2.http.Header
+import retrofit2.http.HTTP
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -45,7 +45,7 @@ interface GroupsApi {
         @Body sendGroupMessageRequestEntity: SendGroupMessageRequestEntity
     ) : ResponseEntityMessageAnswer
 
-    @DELETE("group/messages")
+    @HTTP(method = "DELETE", path = "group/messages", hasBody = true)
     suspend fun deleteGroupMessages(
         @Body deleteMessagesRequestEntity: DeleteMessagesRequestEntity
     ) : ResponseEntityMessageAnswer

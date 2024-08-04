@@ -1,5 +1,7 @@
 package com.example.messenger.retrofit.entities.messages
 
+import com.squareup.moshi.Json
+
 data class DeleteMessagesRequestEntity(
-    val ids: List<Int>
+    @Json(name = "message_ids") val ids: List<Int>
 )
