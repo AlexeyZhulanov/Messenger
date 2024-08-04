@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.databinding.ItemImageReceiverBinding
@@ -13,9 +14,7 @@ import com.example.messenger.databinding.ItemImagesReceiverBinding
 import com.example.messenger.databinding.ItemImagesSenderBinding
 import com.example.messenger.databinding.ItemMessageReceiverBinding
 import com.example.messenger.databinding.ItemMessageSenderBinding
-import com.example.messenger.model.Conversation
 import com.example.messenger.model.ConversationSettings
-import com.example.messenger.model.Dialog
 import com.example.messenger.model.Message
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -29,66 +28,60 @@ interface MessageActionListener {
 class MessageAdapter(
     private val actionListener: MessageActionListener,
     private val otherUserId: Int
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>(), View.OnClickListener, View.OnLongClickListener {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    var messages: List<Message> = emptyList()
+    var messages: Map<Message, String> = emptyMap()
         @SuppressLint("NotifyDataSetChanged")
         set(value) {
-            field = value
+            val dates = mutableSetOf<String>()
+            val newMessages = mutableMapOf<Message, String>()
+            for((message, _) in value) {
+                val date = formatMessageDate(message.timestamp)
+                if(date !in dates) {
+                    dates.add(date)
+                    newMessages[message] = date
+                } else {
+                    newMessages[message] = ""
+                }
+            }
+            field = newMessages
+            Log.d("testAdapterSet", "$field")
             notifyDataSetChanged()
         }
 
-    private var dates = mutableSetOf<String>()
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
     lateinit var dialogSettings: ConversationSettings
 
     fun getDeleteList(): List<Int> {
         val list = mutableListOf<Int>()
-        for(i in checkedPositions) list.add(messages[i].id)
+        checkedPositions.forEach { list.add(messages.keys.elementAt(it).id) }
         return list
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun clearPositions() {
         canLongClick = true
         checkedPositions.clear()
     }
 
     private fun savePosition(message: Message) {
-        for (i in messages.indices) {
-            if (messages[i] == message) {
-                if (i in checkedPositions) {
-                    checkedPositions.remove(i)
-                } else {
-                    checkedPositions.add(i)
-                }
-                break
-            }
+        val position = messages.keys.indexOf(message)
+        if (position in checkedPositions) {
+            checkedPositions.remove(position)
+        } else {
+            checkedPositions.add(position)
         }
+        notifyItemChanged(position)
     }
 
-    override fun onClick(v: View) {
-        val message = v.tag as Message
-        if(v.id == R.id.checkbox) {
-            if(!canLongClick) {
-                savePosition(message)
-            }
-        } else
-        if(!canLongClick) {
-            savePosition(message)
-            notifyDataSetChanged()
-        }
-    }
-
-    override fun onLongClick(v: View?): Boolean {
+    @SuppressLint("NotifyDataSetChanged")
+    private fun onLongClick(message: Message) {
         if(canLongClick) {
-            val message = v?.tag as Message
             savePosition(message)
-            actionListener.onMessageLongClick(message, v)
             canLongClick = false
             notifyDataSetChanged()
         }
-        return true
     }
 
     companion object {
@@ -101,7 +94,7 @@ class MessageAdapter(
     }
 
     override fun getItemViewType(position: Int): Int {
-        val message = messages[position]
+        val message = messages.keys.elementAt(position)
         return when {
             message.idSender == otherUserId && message.images.isNullOrEmpty() && message.text?.isNotEmpty() == true -> TYPE_TEXT_RECEIVER
             message.images.isNullOrEmpty() && message.text?.isNotEmpty() == true -> TYPE_TEXT_SENDER
@@ -137,10 +130,10 @@ class MessageAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val message = messages[position]
+        val message = messages.keys.elementAt(position)
         when (holder) {
-            is MessagesViewHolderReceiver -> holder.bind(message)
-            is MessagesViewHolderSender -> holder.bind(message)
+            is MessagesViewHolderReceiver -> holder.bind(message, position)
+            is MessagesViewHolderSender -> holder.bind(message, position)
             is MessagesViewHolderImageReceiver -> holder.bind(message)
             is MessagesViewHolderImageSender -> holder.bind(message)
             is MessagesViewHolderImagesReceiver -> holder.bind(message)
@@ -152,52 +145,82 @@ class MessageAdapter(
 
     // ViewHolder для текстовых сообщений получателя
     inner class MessagesViewHolderReceiver(private val binding: ItemMessageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message) {
+        fun bind(message: Message, position: Int) {
             binding.messageReceiverTextView.text = message.text
-            binding.checkbox.visibility = View.GONE
-            val (time, date) = formatMessageDate(message.timestamp)
-            if(date !in dates) {
-                dates.add(date)
+            val time = formatMessageTime(message.timestamp)
+            val date = messages.values.elementAt(position)
+            if(date != "") {
+                binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
             } else binding.dateTextView.visibility = View.GONE
             binding.timeTextView.text = time
+            if(!canLongClick && dialogSettings.canDelete) {
+                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                binding.checkbox.isChecked = position in checkedPositions
+                binding.checkbox.setOnClickListener {
+                    savePosition(message)
+                }
+            }
+            else { binding.checkbox.visibility = View.GONE }
             if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
                 binding.icCheck2.visibility = View.VISIBLE
             }
-            binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
-            binding.root.setOnLongClickListener {
-                actionListener.onMessageLongClick(message, itemView)
-                true
+            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            binding.root.setOnClickListener {
+                if(!canLongClick) {
+                    savePosition(message)
+                }
+                else
+                    actionListener.onMessageClick(message, itemView)
             }
-            if(!canLongClick && dialogSettings.canDelete) {
-                binding.checkbox.visibility = View.VISIBLE
+            binding.root.setOnLongClickListener {
+                if(canLongClick) {
+                    onLongClick(message)
+                    actionListener.onMessageLongClick(message, itemView)
+                }
+                true
             }
         }
     }
 
     // ViewHolder для текстовых сообщений отправителя
     inner class MessagesViewHolderSender(private val binding: ItemMessageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message) {
+        fun bind(message: Message, position: Int) {
             binding.messageSenderTextView.text = message.text
-            binding.checkbox.visibility = View.GONE
-            val (time, date) = formatMessageDate(message.timestamp)
-            if(date !in dates) {
-                dates.add(date)
+            val time = formatMessageTime(message.timestamp)
+            val date = messages.values.elementAt(position)
+            if(date != "") {
+                binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
             } else binding.dateTextView.visibility = View.GONE
             binding.timeTextView.text = time
+            if(!canLongClick) {
+                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                binding.checkbox.isChecked = position in checkedPositions
+                binding.checkbox.setOnClickListener {
+                    savePosition(message)
+                }
+            }
+            else { binding.checkbox.visibility = View.GONE }
             if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
                 binding.icCheck2.visibility = View.VISIBLE
             }
-            binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
-            binding.root.setOnLongClickListener {
-                actionListener.onMessageLongClick(message, itemView)
-                true
+            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            binding.root.setOnClickListener {
+                if(!canLongClick) {
+                    savePosition(message)
+                }
+                else
+                    actionListener.onMessageClick(message, itemView)
             }
-            if(!canLongClick) {
-                binding.checkbox.visibility = View.VISIBLE
+            binding.root.setOnLongClickListener {
+                if(canLongClick) {
+                    onLongClick(message)
+                    actionListener.onMessageLongClick(message, itemView)
+                }
+                true
             }
         }
     }
@@ -256,33 +279,36 @@ class MessageAdapter(
         }
     }
 
-    private fun formatMessageDate(timestamp: Long?): Pair<String, String> {
-        if (timestamp == null) return Pair("-", "")
+    private fun formatMessageTime(timestamp: Long?): String {
+        if (timestamp == null) return "-"
 
         // Приведение серверного времени (МСК GMT+3) к GMT
         val greenwichMessageDate = Calendar.getInstance().apply {
             timeInMillis = timestamp - 10800000
         }
         val dateFormatToday = SimpleDateFormat("HH:mm", Locale.getDefault())
-        val dateFormatDayMonth = SimpleDateFormat("d MMM", Locale.getDefault())
-        val dateFormatYear = SimpleDateFormat("d.MM.yyyy", Locale.getDefault())
+        return dateFormatToday.format(greenwichMessageDate.time)
+    }
+
+    private fun formatMessageDate(timestamp: Long?): String {
+        if (timestamp == null) return ""
+
+        // Приведение серверного времени (МСК GMT+3) к GMT
+        val greenwichMessageDate = Calendar.getInstance().apply {
+            timeInMillis = timestamp - 10800000
+        }
+        val dateFormatMonthDay = SimpleDateFormat("d MMMM", Locale.getDefault())
+        val dateFormatYear = SimpleDateFormat("d MMMM yyyy", Locale.getDefault())
         val localNow = Calendar.getInstance()
 
         return when {
-            isToday(localNow, greenwichMessageDate) -> Pair(
-                dateFormatToday.format(greenwichMessageDate.time),
-                dateFormatDayMonth.format(greenwichMessageDate.time)
-            )
-            isThisYear(localNow, greenwichMessageDate) -> Pair(
-                dateFormatToday.format(greenwichMessageDate.time),
-                dateFormatDayMonth.format(greenwichMessageDate.time)
-            )
-            else -> Pair(
-                dateFormatToday.format(greenwichMessageDate.time),
-                dateFormatYear.format(greenwichMessageDate.time)
-            )
+            isToday(localNow, greenwichMessageDate) -> dateFormatMonthDay.format(greenwichMessageDate.time)
+            isThisYear(localNow, greenwichMessageDate) -> dateFormatMonthDay.format(greenwichMessageDate.time)
+            else -> dateFormatYear.format(greenwichMessageDate.time)
         }
     }
+
+
 
     private fun isToday(now: Calendar, messageDate: Calendar): Boolean {
         return now.get(Calendar.YEAR) == messageDate.get(Calendar.YEAR) &&

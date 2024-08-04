@@ -13,7 +13,7 @@ import com.example.messenger.retrofit.entities.messages.UpdateAutoDeleteInterval
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
-import retrofit2.http.Header
+import retrofit2.http.HTTP
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -53,7 +53,7 @@ interface MessagesApi {
         @Body sendMessageRequestEntity: SendMessageRequestEntity
     ) : ResponseEntityMessageAnswer
 
-    @DELETE("messages")
+    @HTTP(method = "DELETE", path = "messages", hasBody = true)
     suspend fun deleteMessages(
         @Body deleteMessagesRequestEntity: DeleteMessagesRequestEntity
     ) : ResponseEntityMessageAnswer
