@@ -1,5 +1,8 @@
 package com.example.messenger.model
 
+import android.content.Context
+import java.io.File
+
 interface RetrofitRepository {
 
     fun isSignedIn(): Boolean
@@ -87,4 +90,13 @@ interface RetrofitRepository {
     suspend fun getGroupSettings(groupId: Int): ConversationSettings
 
     suspend fun searchMessagesInGroup(groupId: Int, word: String) : List<GroupMessage>
+
+    suspend fun uploadPhoto(photo: File) : String
+
+    suspend fun uploadFile(file: File) : String
+
+    suspend fun uploadAudio(audio: File) : String
+
+    suspend fun downloadFile(context: Context, folder: String, filename: String) : String
+
 }

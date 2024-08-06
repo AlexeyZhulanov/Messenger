@@ -2,6 +2,7 @@ package com.example.messenger.retrofit.source.base
 
 import com.example.messenger.retrofit.source.groups.GroupsSource
 import com.example.messenger.retrofit.source.messages.MessagesSource
+import com.example.messenger.retrofit.source.uploads.UploadsSource
 import com.example.messenger.retrofit.source.users.UsersSource
 
 interface SourcesProvider {
@@ -10,4 +11,7 @@ interface SourcesProvider {
     fun getMessagesSource() : MessagesSource
 
     fun getGroupsSource() : GroupsSource
+
+    fun getUploadsSource() : UploadsSource
+
 }

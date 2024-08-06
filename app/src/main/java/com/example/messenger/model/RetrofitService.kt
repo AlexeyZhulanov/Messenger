@@ -1,5 +1,6 @@
 package com.example.messenger.model
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -14,6 +15,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 
 typealias ConversationsListener = (conversations: List<Conversation>) -> Unit
@@ -626,6 +628,22 @@ class RetrofitService(
         }
         Log.d("testSearchMessagesInDialog", messagesGroupSearch.toString())
         return@withContext messagesGroupSearch
+    }
+
+    override suspend fun uploadPhoto(photo: File): String = withContext(Dispatchers.IO) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun uploadFile(file: File): String = withContext(Dispatchers.IO) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun uploadAudio(audio: File): String = withContext(Dispatchers.IO) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun downloadFile(context: Context, folder: String, filename: String): String = withContext(Dispatchers.IO) {
+        TODO("Not yet implemented")
     }
 
     fun addListener(listener: ConversationsListener) {
