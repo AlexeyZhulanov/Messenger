@@ -3,4 +3,9 @@
     <style name="CustomCheckBox" parent="Widget.AppCompat.CompoundButton.CheckBox">
         <item name="android:button">@drawable/checkbox_background</item>
     </style>
+    <style name="CustomSelectNumberStyle">
+        <item name="android:textSize">14sp</item>
+        <item name="android:background">#FF0000</item>
+        <item name="android:textColor">#FFFFFF</item>
+    </style>
 </resources>

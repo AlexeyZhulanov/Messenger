@@ -36,6 +36,10 @@ object Singletons {
         sourcesProvider.getGroupsSource()
     }
 
+    private val uploadsSource by lazy {
+        sourcesProvider.getUploadsSource()
+    }
+
     private val database: AppDatabase by lazy<AppDatabase> {
         Room.databaseBuilder(appContext, AppDatabase::class.java, "database.db")
             .createFromAsset("init_db.db")
@@ -47,7 +51,7 @@ object Singletons {
     }
 
     val retrofitRepository: RetrofitRepository by lazy {
-        RetrofitService(usersSource, messagesSource, groupsSource, appSettings, messengerRepository)
+        RetrofitService(usersSource, messagesSource, groupsSource, uploadsSource, appSettings, messengerRepository)
     }
 
     fun init(context: Context) {

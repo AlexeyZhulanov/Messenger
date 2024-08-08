@@ -8,6 +8,7 @@ import com.example.messenger.Singletons
 import com.example.messenger.model.appsettings.AppSettings
 import com.example.messenger.retrofit.source.groups.GroupsSource
 import com.example.messenger.retrofit.source.messages.MessagesSource
+import com.example.messenger.retrofit.source.uploads.UploadsSource
 import com.example.messenger.retrofit.source.users.UsersSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,6 +24,7 @@ class RetrofitService(
     private val usersSource: UsersSource,
     private val messagesSource: MessagesSource,
     private val groupsSource: GroupsSource,
+    private val uploadSource: UploadsSource,
     private val appSettings: AppSettings,
     private val messengerRepository: MessengerRepository
 ) : RetrofitRepository {
@@ -631,19 +633,47 @@ class RetrofitService(
     }
 
     override suspend fun uploadPhoto(photo: File): String = withContext(Dispatchers.IO) {
-        TODO("Not yet implemented")
+        val file = try {
+            uploadSource.uploadPhoto(photo)
+        } catch (e: BackendException) {
+            if(e.code == 400) throw InvalidCredentialsException(e)
+            else throw e
+        }
+        Log.d("testUploadPhoto", file)
+        return@withContext file
     }
 
     override suspend fun uploadFile(file: File): String = withContext(Dispatchers.IO) {
-        TODO("Not yet implemented")
+        val fileUpload = try {
+            uploadSource.uploadFile(file)
+        } catch (e: BackendException) {
+            if(e.code == 400) throw InvalidCredentialsException(e)
+            else throw e
+        }
+        Log.d("testUploadFile", fileUpload)
+        return@withContext fileUpload
     }
 
     override suspend fun uploadAudio(audio: File): String = withContext(Dispatchers.IO) {
-        TODO("Not yet implemented")
+        val file = try {
+            uploadSource.uploadAudio(audio)
+        } catch (e: BackendException) {
+            if(e.code == 400) throw InvalidCredentialsException(e)
+            else throw e
+        }
+        Log.d("testUploadAudio", file)
+        return@withContext file
     }
 
     override suspend fun downloadFile(context: Context, folder: String, filename: String): String = withContext(Dispatchers.IO) {
-        TODO("Not yet implemented")
+        val filePath = try {
+            uploadSource.downloadFile(context, folder, filename)
+        } catch (e: BackendException) {
+            if(e.code == 400) throw InvalidCredentialsException(e)
+            else throw e
+        }
+        Log.d("testDownloadFile", filePath)
+        return@withContext filePath
     }
 
     fun addListener(listener: ConversationsListener) {
