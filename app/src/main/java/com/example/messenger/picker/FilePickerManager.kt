@@ -133,7 +133,7 @@ class FilePickerManager(private val fragment: MessageFragment) {
             .isPreviewImage(true)
             .isPreviewZoomEffect(true)
             .isPageSyncAlbumCount(true)
-            .setRecyclerAnimationMode(0) // default
+            .setRecyclerAnimationMode(1)
             .setInjectLayoutResourceListener(object: OnInjectLayoutResourceListener {
                 override fun getLayoutResourceId(context: Context?, resourceSource: Int): Int {
                     @Suppress("DEPRECATED_IDENTITY_EQUALS")

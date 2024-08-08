@@ -7,6 +7,7 @@ import android.graphics.Rect
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -189,6 +190,18 @@ class MessageFragment(
         }
         binding.attachButton.setOnClickListener {
             filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = false)
+        }
+        binding.attachButton.setOnLongClickListener {
+            ChoosePickFragment(object: ChoosePickListener {
+                override fun onGalleryClick() {
+                    Log.d("testWork", "OK")
+                    filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = true)
+                }
+                override fun onFileClick() {
+                    TODO("Not yet implemented")
+                }
+            }).show(childFragmentManager, "ChoosePickTag")
+            true
         }
         binding.emojiButton.setOnClickListener {
             // todo maybe use lib
