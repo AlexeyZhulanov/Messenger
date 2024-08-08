@@ -17,9 +17,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.widget.PopupMenu
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.getSystemService
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -29,6 +27,7 @@ import com.example.messenger.model.Dialog
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.picker.FilePickerManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,7 +35,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import okhttp3.internal.wait
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -119,6 +117,7 @@ class MessageFragment(
                 binding.messageLayout.background =
                     ContextCompat.getDrawable(requireContext(), resId)
         }
+        val filePickerManager = FilePickerManager(this)
             adapter = MessageAdapter(object : MessageActionListener {
                 override fun onMessageClick(message: Message, itemView: View) {
                     showPopupMenuMessage(itemView, R.menu.popup_menu_message, message)
@@ -189,7 +188,7 @@ class MessageFragment(
             // todo use lib
         }
         binding.attachButton.setOnClickListener {
-            // todo use lib
+            filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = false)
         }
         binding.emojiButton.setOnClickListener {
             // todo maybe use lib
