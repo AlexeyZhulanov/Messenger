@@ -55,8 +55,8 @@
     <string name="ps_not_crop_data">Нет данных</string>
     <string name="ps_original_image">Оригинал (%1$s)</string>
     <string name="ps_default_original_image">Оригинал</string>
-    <string name="ps_send">выполнить</string>
-    <string name="ps_send_num">выполнить(%1$d/%2$d)</string>
+    <string name="ps_send">send</string>
+    <string name="ps_send_num">send(%1$d/%2$d)</string>
     <string name="ps_preview_num">Просмотр(%1$d)</string>
     <string name="ps_select">выбор</string>
     <string name="ps_data_exception">Ошибка получения данных альбома…</string>
