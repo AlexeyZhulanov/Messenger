@@ -4,7 +4,9 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Rect
+import android.net.Uri
 import android.os.Bundle
+import android.os.ParcelFileDescriptor
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
@@ -17,10 +19,13 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.databinding.FragmentMessageBinding
@@ -29,6 +34,10 @@ import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.picker.FilePickerManager
+import com.example.messenger.voicerecorder.AudioPlayer
+import com.example.messenger.voicerecorder.AudioRecorder
+import com.tougee.recorderview.AudioRecordView
+import com.tougee.recorderview.toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,16 +45,23 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.PrintWriter
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+const val REQUEST_CODE_PICK_FILE = 1
+
 class MessageFragment(
     private val dialog: Dialog
-) : Fragment() {
+) : Fragment(), AudioRecordView.Callback {
     private lateinit var binding: FragmentMessageBinding
     private lateinit var adapter: MessageAdapter
     private lateinit var preferences: SharedPreferences
+    private lateinit var pickFileLauncher: ActivityResultLauncher<Array<String>>
+    private var audioRecord: AudioRecorder? = null
+    private var audioPlayer: AudioPlayer? = null
     private var lastSessionString: String = ""
     private var countMsg = dialog.countMsg
     private var editFlag = false
@@ -57,6 +73,31 @@ class MessageFragment(
     private val retrofitService: RetrofitService
         get() = Singletons.retrofitRepository as RetrofitService
 
+    private val file: File by lazy {
+        val f = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.pcm")
+        if (!f.exists()) {
+            f.createNewFile()
+        }
+        f
+    }
+
+    private val tmpFile: File by lazy {
+        val f = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}tmp.pcm")
+        if (!f.exists()) {
+            f.createNewFile()
+        }
+        f
+    }
+
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        pickFileLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) {uri: Uri? ->
+            uri?.let {
+                handleFileUri(uri) // обработка выбранного файла
+            }
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -170,12 +211,12 @@ class MessageFragment(
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 if (s.isNullOrEmpty()) {
-                    binding.micButton.visibility = View.VISIBLE
+                    binding.recordView.visibility = View.VISIBLE
                     if(!editFlag) {
                         binding.enterButton.visibility = View.INVISIBLE
                     } else binding.editButton.visibility = View.GONE
                 } else {
-                    binding.micButton.visibility = View.INVISIBLE
+                    binding.recordView.visibility = View.INVISIBLE
                     if(!editFlag) {
                         binding.enterButton.visibility = View.VISIBLE
                     } else binding.editButton.visibility = View.VISIBLE
@@ -185,8 +226,9 @@ class MessageFragment(
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        binding.micButton.setOnClickListener {
-            // todo use lib
+        binding.recordView.apply {
+            activity = requireActivity()
+            callback = this@MessageFragment
         }
         binding.attachButton.setOnClickListener {
             filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = false)
@@ -198,7 +240,7 @@ class MessageFragment(
                     filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = true)
                 }
                 override fun onFileClick() {
-                    TODO("Not yet implemented")
+                    pickFileLauncher.launch(arrayOf("*/*"))
                 }
             }).show(childFragmentManager, "ChoosePickTag")
             true
@@ -233,6 +275,35 @@ class MessageFragment(
         return binding.root
     }
 
+    override val defaultViewModelCreationExtras: CreationExtras
+        get() = super.defaultViewModelCreationExtras
+
+    override fun isReady(): Boolean = true
+
+    override fun onRecordCancel() {
+        audioRecord?.stop()
+    }
+
+    override fun onRecordEnd() {
+        audioRecord?.stop()
+
+        tmpFile.copyTo(file, true)
+    }
+
+    override fun onRecordStart() {
+        clearFile(tmpFile)
+
+        audioRecord = AudioRecorder(ParcelFileDescriptor.open(tmpFile, ParcelFileDescriptor.MODE_READ_WRITE))
+        audioRecord?.start(this)
+    }
+
+    private fun clearFile(f: File) {
+        PrintWriter(f).run {
+            print("")
+            close()
+        }
+    }
+
     private fun startMessagePolling() {
         updateJob = lifecycleScope.launch {
             while (isActive) {
@@ -257,6 +328,17 @@ class MessageFragment(
     override fun onPause() {
         super.onPause()
         updateJob?.cancel()
+    }
+
+    private fun handleFileUri(uri: Uri) {
+        // Получите путь файла или выполняйте другие действия
+        val filePath = getPathFromUri(uri)
+        Log.d("FilePicker", "Selected file path: $filePath")
+    }
+
+    private fun getPathFromUri(uri: Uri): String? {
+        // Реализация для получения пути файла из URI
+        return null
     }
 
     private fun formatUserSessionDate(timestamp: Long?): String {
