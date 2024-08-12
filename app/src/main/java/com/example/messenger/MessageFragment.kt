@@ -206,7 +206,7 @@ class MessageFragment(
                     }
                 }
                 }
-            }, dialog.otherUser.id)
+            }, dialog.otherUser.id, requireContext())
         binding.enterMessage.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
