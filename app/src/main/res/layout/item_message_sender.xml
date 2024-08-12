@@ -43,6 +43,7 @@
         android:id="@+id/layout_message"
         android:layout_width="0dp"
         android:layout_height="40dp"
+        android:layout_marginEnd="5dp"
         app:layout_constraintStart_toEndOf="@id/senderGuideLine"
         app:layout_constraintTop_toBottomOf="@id/dateTextView"
         app:layout_constraintEnd_toEndOf="parent"
@@ -103,6 +104,7 @@
                 android:maxLines="1"
                 android:textStyle="italic"
                 android:textColor="#000000"
+                app:layout_constraintVertical_bias="1"
                 app:layout_constraintEnd_toStartOf="@id/ic_check"
                 app:layout_constraintTop_toBottomOf="@id/centerGuideLine"
                 app:layout_constraintBottom_toBottomOf="parent" />

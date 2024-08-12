@@ -43,7 +43,7 @@
     <LinearLayout
         android:id="@+id/layout_message"
         android:layout_width="0dp"
-        android:layout_height="40dp"
+        android:layout_height="wrap_content"
         android:layout_marginStart="5dp"
         app:layout_constraintEnd_toStartOf="@id/receiverGuideLine"
         app:layout_constraintTop_toBottomOf="@id/dateTextView"
@@ -57,26 +57,57 @@
             android:background="@drawable/message_background_receiver"
             android:layout_height="wrap_content">
 
-            <androidx.constraintlayout.widget.Guideline
-                android:id="@+id/centerGuideLine"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                app:layout_constraintGuide_percent="0.5"
-                />
-
-            <TextView
-                android:id="@+id/messageReceiverTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:gravity="center"
-                android:textStyle="italic"
-                tools:text="Сообщение"
-                android:textColor="#000000"
+            <ImageView
+                android:id="@+id/play_button"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:src="@drawable/ic_play"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent" />
+                app:layout_constraintStart_toStartOf="parent"
+                />
+
+            <com.masoudss.lib.WaveformSeekBar
+                android:id="@+id/waveformSeekBar"
+                android:layout_width="275dp"
+                android:layout_height="50dp"
+                app:wave_progress="33"
+                app:wave_max_progress="100"
+                app:wave_width="5dp"
+                app:wave_gap="2dp"
+                app:wave_min_height="5dp"
+                app:wave_corner_radius="2dp"
+                app:wave_background_color="@color/white"
+                app:wave_progress_color="#42aaff"
+                app:wave_gravity="center"
+                app:wave_padding_top="2dp"
+                app:wave_padding_Bottom="2dp"
+                app:wave_padding_right="2dp"
+                app:wave_padding_left="2dp"
+                app:wave_visible_progress="50"
+                app:marker_color="@color/purple_500"
+                app:marker_width="1dp"
+                app:marker_text_color="@color/colorAccent"
+                app:marker_text_padding="2dp"
+                app:layout_constraintStart_toEndOf="@id/play_button"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:marker_text_size="12dp" />
+
+            <TextView
+                android:id="@+id/fileDetailsReceiverTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:textStyle="italic"
+                tools:text="585 KB"
+                android:textColor="#000000"
+                app:layout_constraintVertical_bias="0.75"
+                app:layout_constraintTop_toBottomOf="@id/waveformSeekBar"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@id/play_button"
+                android:layout_marginStart="10dp" />
 
             <TextView
                 android:id="@+id/editTextView"
@@ -87,12 +118,11 @@
                 android:textStyle="italic"
                 android:text="изменено"
                 android:textColor="#000000"
-                android:layout_marginStart="5dp"
+                android:layout_marginEnd="5dp"
                 android:visibility="gone"
                 app:layout_constraintTop_toTopOf="@id/timeTextView"
                 app:layout_constraintBottom_toBottomOf="@id/timeTextView"
-                app:layout_constraintEnd_toStartOf="@id/timeTextView"
-                app:layout_constraintStart_toEndOf="@id/messageReceiverTextView" />
+                app:layout_constraintEnd_toStartOf="@id/timeTextView" />
 
             <TextView
                 android:id="@+id/timeTextView"
@@ -105,9 +135,8 @@
                 android:textColor="#000000"
                 android:layout_marginStart="5dp"
                 app:layout_constraintVertical_bias="1"
-                app:layout_constraintStart_toEndOf="@id/editTextView"
                 app:layout_constraintEnd_toStartOf="@id/ic_check"
-                app:layout_constraintTop_toBottomOf="@id/centerGuideLine"
+                app:layout_constraintTop_toBottomOf="@id/waveformSeekBar"
                 app:layout_constraintBottom_toBottomOf="parent" />
 
             <ImageView

@@ -91,17 +91,54 @@ class MessageAdapter(
         private const val TYPE_IMAGE_SENDER = 3
         private const val TYPE_IMAGES_RECEIVER = 4
         private const val TYPE_IMAGES_SENDER = 5
+        private const val TYPE_VOICE_RECEIVER = 6
+        private const val TYPE_VOICE_SENDER = 7
+        private const val TYPE_FILE_RECEIVER = 8
+        private const val TYPE_FILE_SENDER = 9
+        private const val TYPE_TEXT_IMAGE_RECEIVER = 10
+        private const val TYPE_TEXT_IMAGE_SENDER = 11
+        private const val TYPE_TEXT_IMAGES_RECEIVER = 12
+        private const val TYPE_TEXT_IMAGES_SENDER = 13
     }
 
     override fun getItemViewType(position: Int): Int {
         val message = messages.keys.elementAt(position)
-        return when {
-            message.idSender == otherUserId && message.images.isNullOrEmpty() && message.text?.isNotEmpty() == true -> TYPE_TEXT_RECEIVER
-            message.images.isNullOrEmpty() && message.text?.isNotEmpty() == true -> TYPE_TEXT_SENDER
-            message.images?.size == 1 && message.idSender == otherUserId -> TYPE_IMAGE_RECEIVER
-            message.images?.size == 1 -> TYPE_IMAGE_SENDER
-            message.idSender == otherUserId -> TYPE_IMAGES_RECEIVER
-            else -> TYPE_IMAGES_SENDER
+        if(message.idSender == otherUserId) {
+            return when {
+                message.text?.isNotEmpty() == true -> {
+                    when {
+                        message.images.isNullOrEmpty() -> TYPE_TEXT_RECEIVER
+                        message.images?.size == 1 -> TYPE_TEXT_IMAGE_RECEIVER
+                        else -> TYPE_TEXT_IMAGES_RECEIVER
+                    }
+                }
+                else -> {
+                    when {
+                        message.images?.size == 1 -> TYPE_IMAGE_RECEIVER
+                        message.voice?.isNotEmpty() == true -> TYPE_VOICE_RECEIVER
+                        message.file?.isNotEmpty() == true -> TYPE_FILE_RECEIVER
+                        else -> TYPE_IMAGES_RECEIVER
+                    }
+                }
+            }
+        } else {
+            return when {
+                message.text?.isNotEmpty() == true -> {
+                    when {
+                        message.images.isNullOrEmpty() -> TYPE_TEXT_SENDER
+                        message.images?.size == 1 -> TYPE_TEXT_IMAGE_SENDER
+                        else -> TYPE_TEXT_IMAGES_SENDER
+                    }
+                }
+                else -> {
+                    when {
+                        message.images?.size == 1 -> TYPE_IMAGE_SENDER
+                        message.voice?.isNotEmpty() == true -> TYPE_VOICE_SENDER
+                        message.file?.isNotEmpty() == true -> TYPE_FILE_SENDER
+                        else -> TYPE_IMAGES_SENDER
+                    }
+                }
+            }
         }
     }
 
@@ -125,6 +162,7 @@ class MessageAdapter(
             TYPE_IMAGES_SENDER -> MessagesViewHolderImagesSender(
                 ItemImagesSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             )
+            // todo a lot of code
             else -> throw IllegalArgumentException("Invalid view type")
         }
     }
