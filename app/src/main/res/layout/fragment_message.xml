@@ -70,7 +70,7 @@
         android:background="#333333"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent">
+        app:layout_constraintBottom_toTopOf="@id/emoji_picker">
 
     <ImageView
         android:id="@+id/attach_button"
@@ -158,8 +158,19 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:mic_icon="@drawable/ic_mic_big"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/emoji_picker"
         app:layout_constraintEnd_toEndOf="parent"
         app:vibration_enable="true" />
+
+    <androidx.emoji2.emojipicker.EmojiPickerView
+        android:id="@+id/emoji_picker"
+        android:layout_width="0dp"
+        android:layout_height="250dp"
+        android:background="#333333"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:visibility="gone"
+        app:emojiGridColumns="9" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -21,6 +21,7 @@ import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -246,7 +247,13 @@ class MessageFragment(
             true
         }
         binding.emojiButton.setOnClickListener {
-            // todo maybe use lib
+            if(binding.emojiPicker.visibility == View.VISIBLE) binding.emojiPicker.visibility = View.GONE
+            else {
+                binding.emojiPicker.visibility = View.VISIBLE
+                binding.emojiPicker.setOnEmojiPickedListener { emojicon ->
+                    val emoji = emojicon.emoji
+                }
+            }
         }
 
         val layoutManager = LinearLayoutManager(requireContext())
