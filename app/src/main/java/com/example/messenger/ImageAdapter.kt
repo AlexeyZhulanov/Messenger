@@ -42,6 +42,12 @@ class ImageAdapter(
         }
     }
 
+    fun remove(position: Int) {
+        if (position < images.count()) {
+            images.removeAt(position)
+        }
+    }
+
     fun getData(): ArrayList<LocalMedia> {
         return images
     }
@@ -49,12 +55,10 @@ class ImageAdapter(
     override fun onClick(v: View) {
         val image = v.tag as LocalMedia
         when(v.id) {
-            R.id.photoImageView -> {
-                actionListener.onImageClicked(image, images.indexOf(image))
-            }
             R.id.delete_button -> {
                 actionListener.onDeleteImage(images.indexOf(image))
             }
+            else -> { actionListener.onImageClicked(image, images.indexOf(image)) }
         }
     }
 

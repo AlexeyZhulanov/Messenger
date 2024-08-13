@@ -22,7 +22,6 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -40,13 +39,12 @@ import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
 import com.example.messenger.voicerecorder.AudioPlayer
 import com.example.messenger.voicerecorder.AudioRecorder
-import com.luck.lib.camerax.CustomCameraConfig.imageEngine
 import com.luck.picture.lib.basic.PictureSelector
 import com.luck.picture.lib.config.InjectResourceSource
 import com.luck.picture.lib.entity.LocalMedia
+import com.luck.picture.lib.interfaces.OnExternalPreviewEventListener
 import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
 import com.tougee.recorderview.AudioRecordView
-import com.tougee.recorderview.toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -61,6 +59,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
+
 
 const val REQUEST_CODE_PICK_FILE = 1
 
@@ -221,6 +220,7 @@ class MessageFragment(
             }, dialog.otherUser.id, requireContext())
         imageAdapter = ImageAdapter(requireContext(), object: ImageActionListener {
             override fun onImageClicked(image: LocalMedia, position: Int) {
+                Log.d("testClick", "Image clicked: $image")
                 PictureSelector.create(requireContext())
                     .openPreview()
                     .setImageEngine(GlideEngine.createGlideEngine())
@@ -230,7 +230,7 @@ class MessageFragment(
                     .isVideoPauseResumePlay(true)
                     .setSelectorUIStyle(filePickerManager.selectorStyle)
                     .isPreviewFullScreenMode(true)
-                    .isPreviewZoomEffect(true, binding.selectedPhotosRecyclerView)
+                    .setExternalPreviewEventListener(MyExternalPreviewEventListener(imageAdapter))
                     .setInjectLayoutResourceListener(object: OnInjectLayoutResourceListener {
                         override fun getLayoutResourceId(context: Context?, resourceSource: Int): Int {
                             @Suppress("DEPRECATED_IDENTITY_EQUALS")
@@ -560,4 +560,16 @@ class MessageFragment(
             outRect.bottom = verticalSpaceHeight
         }
     }
+
+    private class MyExternalPreviewEventListener(private val imageAdapter: ImageAdapter) : OnExternalPreviewEventListener {
+        override fun onPreviewDelete(position: Int) {
+            imageAdapter.remove(position)
+            imageAdapter.notifyItemRemoved(position)
+        }
+
+        override fun onLongPressDownload(context: Context, media: LocalMedia): Boolean {
+            return false
+        }
+    }
+
 }

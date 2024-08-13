@@ -116,6 +116,8 @@ class FilePickerManager(private val fragment: MessageFragment) {
             .setSelectorUIStyle(selectorStyle)
             .setSelectionMode(2)
             .setMaxSelectNum(10)
+            .setMaxVideoSelectNum(10)
+            .isWithSelectVideoImage(true)
             .isSelectZoomAnim(true)
             .setImageSpanCount(4)
             .isPreviewImage(true)
