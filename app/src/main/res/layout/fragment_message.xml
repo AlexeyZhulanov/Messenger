@@ -2,6 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
     android:fitsSystemWindows="true"
     android:id="@+id/message_layout"
     android:background="?android:attr/colorBackground"
@@ -63,6 +64,17 @@
         />
 
 
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/selected_photos_recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/layout_enter"
+        tools:listitem="@layout/item_image"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layout_enter"
         android:layout_width="0dp"
@@ -70,7 +82,7 @@
         android:background="#333333"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent">
+        app:layout_constraintBottom_toTopOf="@id/emoji_picker">
 
     <ImageView
         android:id="@+id/attach_button"
@@ -158,8 +170,19 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:mic_icon="@drawable/ic_mic_big"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/emoji_picker"
         app:layout_constraintEnd_toEndOf="parent"
         app:vibration_enable="true" />
+
+    <androidx.emoji2.emojipicker.EmojiPickerView
+        android:id="@+id/emoji_picker"
+        android:layout_width="0dp"
+        android:layout_height="250dp"
+        android:background="#333333"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:visibility="gone"
+        app:emojiGridColumns="9" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,6 +1,8 @@
 package com.example.messenger
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -8,14 +10,30 @@ import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.example.messenger.databinding.ItemFileReceiverBinding
+import com.example.messenger.databinding.ItemFileSenderBinding
 import com.example.messenger.databinding.ItemImageReceiverBinding
 import com.example.messenger.databinding.ItemImageSenderBinding
 import com.example.messenger.databinding.ItemImagesReceiverBinding
 import com.example.messenger.databinding.ItemImagesSenderBinding
 import com.example.messenger.databinding.ItemMessageReceiverBinding
 import com.example.messenger.databinding.ItemMessageSenderBinding
+import com.example.messenger.databinding.ItemTextImageReceiverBinding
+import com.example.messenger.databinding.ItemTextImageSenderBinding
+import com.example.messenger.databinding.ItemTextImagesReceiverBinding
+import com.example.messenger.databinding.ItemTextImagesSenderBinding
+import com.example.messenger.databinding.ItemVoiceReceiverBinding
+import com.example.messenger.databinding.ItemVoiceSenderBinding
 import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.Message
+import com.example.messenger.model.RetrofitService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -27,7 +45,8 @@ interface MessageActionListener {
 
 class MessageAdapter(
     private val actionListener: MessageActionListener,
-    private val otherUserId: Int
+    private val otherUserId: Int,
+    private val context: Context
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     var messages: Map<Message, String> = emptyMap()
@@ -52,6 +71,10 @@ class MessageAdapter(
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
     lateinit var dialogSettings: ConversationSettings
+    private val retrofitService: RetrofitService
+        get() = Singletons.retrofitRepository as RetrofitService
+    private val job = Job()
+    private val uiScope = CoroutineScope(Dispatchers.IO + job)
 
     fun getDeleteList(): List<Int> {
         val list = mutableListOf<Int>()
@@ -91,17 +114,54 @@ class MessageAdapter(
         private const val TYPE_IMAGE_SENDER = 3
         private const val TYPE_IMAGES_RECEIVER = 4
         private const val TYPE_IMAGES_SENDER = 5
+        private const val TYPE_VOICE_RECEIVER = 6
+        private const val TYPE_VOICE_SENDER = 7
+        private const val TYPE_FILE_RECEIVER = 8
+        private const val TYPE_FILE_SENDER = 9
+        private const val TYPE_TEXT_IMAGE_RECEIVER = 10
+        private const val TYPE_TEXT_IMAGE_SENDER = 11
+        private const val TYPE_TEXT_IMAGES_RECEIVER = 12
+        private const val TYPE_TEXT_IMAGES_SENDER = 13
     }
 
     override fun getItemViewType(position: Int): Int {
         val message = messages.keys.elementAt(position)
-        return when {
-            message.idSender == otherUserId && message.images.isNullOrEmpty() && message.text?.isNotEmpty() == true -> TYPE_TEXT_RECEIVER
-            message.images.isNullOrEmpty() && message.text?.isNotEmpty() == true -> TYPE_TEXT_SENDER
-            message.images?.size == 1 && message.idSender == otherUserId -> TYPE_IMAGE_RECEIVER
-            message.images?.size == 1 -> TYPE_IMAGE_SENDER
-            message.idSender == otherUserId -> TYPE_IMAGES_RECEIVER
-            else -> TYPE_IMAGES_SENDER
+        if(message.idSender == otherUserId) {
+            return when {
+                message.text?.isNotEmpty() == true -> {
+                    when {
+                        message.images.isNullOrEmpty() -> TYPE_TEXT_RECEIVER
+                        message.images?.size == 1 -> TYPE_TEXT_IMAGE_RECEIVER
+                        else -> TYPE_TEXT_IMAGES_RECEIVER
+                    }
+                }
+                else -> {
+                    when {
+                        message.images?.size == 1 -> TYPE_IMAGE_RECEIVER
+                        message.voice?.isNotEmpty() == true -> TYPE_VOICE_RECEIVER
+                        message.file?.isNotEmpty() == true -> TYPE_FILE_RECEIVER
+                        else -> TYPE_IMAGES_RECEIVER
+                    }
+                }
+            }
+        } else {
+            return when {
+                message.text?.isNotEmpty() == true -> {
+                    when {
+                        message.images.isNullOrEmpty() -> TYPE_TEXT_SENDER
+                        message.images?.size == 1 -> TYPE_TEXT_IMAGE_SENDER
+                        else -> TYPE_TEXT_IMAGES_SENDER
+                    }
+                }
+                else -> {
+                    when {
+                        message.images?.size == 1 -> TYPE_IMAGE_SENDER
+                        message.voice?.isNotEmpty() == true -> TYPE_VOICE_SENDER
+                        message.file?.isNotEmpty() == true -> TYPE_FILE_SENDER
+                        else -> TYPE_IMAGES_SENDER
+                    }
+                }
+            }
         }
     }
 
@@ -125,6 +185,30 @@ class MessageAdapter(
             TYPE_IMAGES_SENDER -> MessagesViewHolderImagesSender(
                 ItemImagesSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             )
+            TYPE_VOICE_RECEIVER -> MessagesViewHolderVoiceReceiver(
+                ItemVoiceReceiverBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            )
+            TYPE_VOICE_SENDER -> MessagesViewHolderVoiceSender(
+                ItemVoiceSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            )
+            TYPE_FILE_RECEIVER -> MessagesViewHolderFileReceiver(
+                ItemFileReceiverBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            )
+            TYPE_FILE_SENDER -> MessagesViewHolderFileSender(
+                ItemFileSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            )
+            TYPE_TEXT_IMAGE_RECEIVER -> MessagesViewHolderTextImageReceiver(
+                ItemTextImageReceiverBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            )
+            TYPE_TEXT_IMAGE_SENDER -> MessagesViewHolderTextImageSender(
+                ItemTextImageSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            )
+            TYPE_TEXT_IMAGES_RECEIVER -> MessagesViewHolderTextImagesReceiver(
+                ItemTextImagesReceiverBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            )
+            TYPE_TEXT_IMAGES_SENDER -> MessagesViewHolderTextImagesSender(
+                ItemTextImagesSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            )
             else -> throw IllegalArgumentException("Invalid view type")
         }
     }
@@ -134,10 +218,18 @@ class MessageAdapter(
         when (holder) {
             is MessagesViewHolderReceiver -> holder.bind(message, position)
             is MessagesViewHolderSender -> holder.bind(message, position)
-            is MessagesViewHolderImageReceiver -> holder.bind(message)
-            is MessagesViewHolderImageSender -> holder.bind(message)
-            is MessagesViewHolderImagesReceiver -> holder.bind(message)
-            is MessagesViewHolderImagesSender -> holder.bind(message)
+            is MessagesViewHolderImageReceiver -> holder.bind(message, position)
+            is MessagesViewHolderImageSender -> holder.bind(message, position)
+            is MessagesViewHolderImagesReceiver -> holder.bind(message, position)
+            is MessagesViewHolderImagesSender -> holder.bind(message, position)
+            is MessagesViewHolderVoiceReceiver -> holder.bind(message, position)
+            is MessagesViewHolderVoiceSender -> holder.bind(message, position)
+            is MessagesViewHolderFileReceiver -> holder.bind(message, position)
+            is MessagesViewHolderFileSender -> holder.bind(message, position)
+            is MessagesViewHolderTextImageReceiver -> holder.bind(message, position)
+            is MessagesViewHolderTextImageSender -> holder.bind(message, position)
+            is MessagesViewHolderTextImagesReceiver -> holder.bind(message, position)
+            is MessagesViewHolderTextImagesSender -> holder.bind(message, position)
         }
     }
 
@@ -227,12 +319,56 @@ class MessageAdapter(
 
     // ViewHolder для изображений получателя
     inner class MessagesViewHolderImageReceiver(private val binding: ItemImageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message) {
-            // Загрузите изображение и примените данные
-            //Glide.with(binding.root.context).load(message.imageUrl).into(binding.imageView)
-            binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
+        fun bind(message: Message, position: Int) {
+            uiScope.launch {
+                binding.progressBar.visibility = View.VISIBLE
+                val filePath = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
+                val file = File(filePath.await())
+                if (file.exists()) {
+                    val uri = Uri.fromFile(file)
+                    binding.progressBar.visibility = View.GONE
+                    binding.receiverImageView.setImageURI(uri)
+                } else {
+                    Log.e("ImageError", "File does not exist: $filePath")
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
+                }
+            }
+            val time = formatMessageTime(message.timestamp)
+            val date = messages.values.elementAt(position)
+            if(date != "") {
+                binding.dateTextView.visibility = View.VISIBLE
+                binding.dateTextView.text = date
+            } else binding.dateTextView.visibility = View.GONE
+            binding.timeTextView.text = time
+            if(!canLongClick && dialogSettings.canDelete) {
+                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                binding.checkbox.isChecked = position in checkedPositions
+                binding.checkbox.setOnClickListener {
+                    savePosition(message)
+                }
+            }
+            else { binding.checkbox.visibility = View.GONE }
+            if (message.isRead) {
+                binding.icCheck.visibility = View.INVISIBLE
+                binding.icCheck2.visibility = View.VISIBLE
+            }
+            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            binding.root.setOnClickListener {
+                if(!canLongClick) {
+                    savePosition(message)
+                }
+                else
+                    actionListener.onMessageClick(message, itemView)
+            }
+            binding.receiverImageView.setOnClickListener {
+                // todo show image full screen
+            }
             binding.root.setOnLongClickListener {
-                actionListener.onMessageLongClick(message, itemView)
+                if(canLongClick) {
+                    onLongClick(message)
+                    actionListener.onMessageLongClick(message, itemView)
+                }
                 true
             }
         }
@@ -240,12 +376,56 @@ class MessageAdapter(
 
     // ViewHolder для изображений отправителя
     inner class MessagesViewHolderImageSender(private val binding: ItemImageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message) {
-            // Загрузите изображение и примените данные
-            //Glide.with(binding.root.context).load(message.imageUrl).into(binding.imageView)
-            binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
+        fun bind(message: Message, position: Int) {
+            uiScope.launch {
+                binding.progressBar.visibility = View.VISIBLE
+                val filePath = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
+                val file = File(filePath.await())
+                if (file.exists()) {
+                    val uri = Uri.fromFile(file)
+                    binding.progressBar.visibility = View.GONE
+                    binding.senderImageView.setImageURI(uri)
+                } else {
+                    Log.e("ImageError", "File does not exist: $filePath")
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
+                }
+            }
+            val time = formatMessageTime(message.timestamp)
+            val date = messages.values.elementAt(position)
+            if(date != "") {
+                binding.dateTextView.visibility = View.VISIBLE
+                binding.dateTextView.text = date
+            } else binding.dateTextView.visibility = View.GONE
+            binding.timeTextView.text = time
+            if(!canLongClick) {
+                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                binding.checkbox.isChecked = position in checkedPositions
+                binding.checkbox.setOnClickListener {
+                    savePosition(message)
+                }
+            }
+            else { binding.checkbox.visibility = View.GONE }
+            if (message.isRead) {
+                binding.icCheck.visibility = View.INVISIBLE
+                binding.icCheck2.visibility = View.VISIBLE
+            }
+            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            binding.root.setOnClickListener {
+                if(!canLongClick) {
+                    savePosition(message)
+                }
+                else
+                    actionListener.onMessageClick(message, itemView)
+            }
+            binding.senderImageView.setOnClickListener {
+                // todo show image full screen
+            }
             binding.root.setOnLongClickListener {
-                actionListener.onMessageLongClick(message, itemView)
+                if(canLongClick) {
+                    onLongClick(message)
+                    actionListener.onMessageLongClick(message, itemView)
+                }
                 true
             }
         }
@@ -253,7 +433,7 @@ class MessageAdapter(
 
     // ViewHolder для множества изображений получателя
     inner class MessagesViewHolderImagesReceiver(private val binding: ItemImagesReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message) {
+        fun bind(message: Message, position: Int) {
             val adapter = ImagesAdapter(message.images ?: emptyList())
             binding.recyclerview.layoutManager = GridLayoutManager(binding.root.context, 3)
             binding.recyclerview.adapter = adapter
@@ -267,7 +447,7 @@ class MessageAdapter(
 
     // ViewHolder для множества изображений отправителя
     inner class MessagesViewHolderImagesSender(private val binding: ItemImagesSenderBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message) {
+        fun bind(message: Message, position: Int) {
             val adapter = ImagesAdapter(message.images ?: emptyList())
             binding.recyclerview.layoutManager = GridLayoutManager(binding.root.context, 3)
             binding.recyclerview.adapter = adapter
@@ -276,6 +456,156 @@ class MessageAdapter(
                 actionListener.onMessageLongClick(message, itemView)
                 true
             }
+        }
+    }
+
+    inner class MessagesViewHolderVoiceReceiver(private val binding: ItemVoiceReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(message: Message, position: Int) {
+
+        }
+    }
+
+    inner class MessagesViewHolderVoiceSender(private val binding: ItemVoiceSenderBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(message: Message, position: Int) {
+
+        }
+    }
+
+    inner class MessagesViewHolderFileReceiver(private val binding: ItemFileReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(message: Message, position: Int) {
+
+        }
+    }
+
+    inner class MessagesViewHolderFileSender(private val binding: ItemFileSenderBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(message: Message, position: Int) {
+
+        }
+    }
+
+    inner class MessagesViewHolderTextImageReceiver(private val binding: ItemTextImageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(message: Message, position: Int) {
+            binding.messageReceiverTextView.text = message.text
+            uiScope.launch {
+                binding.progressBar.visibility = View.VISIBLE
+                val filePath = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
+                val file = File(filePath.await())
+                if (file.exists()) {
+                    val uri = Uri.fromFile(file)
+                    binding.progressBar.visibility = View.GONE
+                    binding.receiverImageView.setImageURI(uri)
+                } else {
+                    Log.e("ImageError", "File does not exist: $filePath")
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
+                }
+            }
+            val time = formatMessageTime(message.timestamp)
+            val date = messages.values.elementAt(position)
+            if(date != "") {
+                binding.dateTextView.visibility = View.VISIBLE
+                binding.dateTextView.text = date
+            } else binding.dateTextView.visibility = View.GONE
+            binding.timeTextView.text = time
+            if(!canLongClick && dialogSettings.canDelete) {
+                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                binding.checkbox.isChecked = position in checkedPositions
+                binding.checkbox.setOnClickListener {
+                    savePosition(message)
+                }
+            }
+            else { binding.checkbox.visibility = View.GONE }
+            if (message.isRead) {
+                binding.icCheck.visibility = View.INVISIBLE
+                binding.icCheck2.visibility = View.VISIBLE
+            }
+            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            binding.root.setOnClickListener {
+                if(!canLongClick) {
+                    savePosition(message)
+                }
+                else
+                    actionListener.onMessageClick(message, itemView)
+            }
+            binding.receiverImageView.setOnClickListener {
+                // todo show image full screen
+            }
+            binding.root.setOnLongClickListener {
+                if(canLongClick) {
+                    onLongClick(message)
+                    actionListener.onMessageLongClick(message, itemView)
+                }
+                true
+            }
+        }
+    }
+
+    inner class MessagesViewHolderTextImageSender(private val binding: ItemTextImageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(message: Message, position: Int) {
+            binding.messageSenderTextView.text = message.text
+            uiScope.launch {
+                binding.progressBar.visibility = View.VISIBLE
+                val filePath = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
+                val file = File(filePath.await())
+                if (file.exists()) {
+                    val uri = Uri.fromFile(file)
+                    binding.progressBar.visibility = View.GONE
+                    binding.senderImageView.setImageURI(uri)
+                } else {
+                    Log.e("ImageError", "File does not exist: $filePath")
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
+                }
+            }
+            val time = formatMessageTime(message.timestamp)
+            val date = messages.values.elementAt(position)
+            if(date != "") {
+                binding.dateTextView.visibility = View.VISIBLE
+                binding.dateTextView.text = date
+            } else binding.dateTextView.visibility = View.GONE
+            binding.timeTextView.text = time
+            if(!canLongClick) {
+                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                binding.checkbox.isChecked = position in checkedPositions
+                binding.checkbox.setOnClickListener {
+                    savePosition(message)
+                }
+            }
+            else { binding.checkbox.visibility = View.GONE }
+            if (message.isRead) {
+                binding.icCheck.visibility = View.INVISIBLE
+                binding.icCheck2.visibility = View.VISIBLE
+            }
+            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            binding.root.setOnClickListener {
+                if(!canLongClick) {
+                    savePosition(message)
+                }
+                else
+                    actionListener.onMessageClick(message, itemView)
+            }
+            binding.senderImageView.setOnClickListener {
+                // todo show image full screen
+            }
+            binding.root.setOnLongClickListener {
+                if(canLongClick) {
+                    onLongClick(message)
+                    actionListener.onMessageLongClick(message, itemView)
+                }
+                true
+            }
+        }
+    }
+
+    inner class MessagesViewHolderTextImagesReceiver(private val binding: ItemTextImagesReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(message: Message, position: Int) {
+
+        }
+    }
+
+    inner class MessagesViewHolderTextImagesSender(private val binding: ItemTextImagesSenderBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(message: Message, position: Int) {
+
         }
     }
 
