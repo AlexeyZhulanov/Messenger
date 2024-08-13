@@ -39,6 +39,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -390,18 +391,20 @@ class MessageAdapter(
     inner class MessagesViewHolderImageSender(private val binding: ItemImageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message, position: Int) {
             uiScope.launch {
-                binding.progressBar.visibility = View.VISIBLE
+                withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
                 val filePath = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
                 val file = File(filePath.await())
                 if (file.exists()) {
                     val uri = Uri.fromFile(file)
-                    binding.progressBar.visibility = View.GONE
+                    withContext(Dispatchers.Main) {
                     Glide.with(context)
                         .load(uri)
                         .centerCrop()
                         .placeholder(R.color.app_color_f6)
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
                         .into(binding.senderImageView)
+                     binding.progressBar.visibility = View.GONE
+                    }
                 } else {
                     Log.e("ImageError", "File does not exist: $filePath")
                     binding.progressBar.visibility = View.GONE
@@ -525,8 +528,10 @@ class MessageAdapter(
                     }
                     return@async medias
                 }
-                adapter.images = localMedias.await()
-                binding.progressBar.visibility = View.GONE
+                withContext(Dispatchers.Main) {
+                    adapter.images = localMedias.await()
+                    binding.progressBar.visibility = View.GONE
+                }
             }
             binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
             binding.root.setOnLongClickListener {

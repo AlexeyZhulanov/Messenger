@@ -7,6 +7,7 @@ import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
+import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
@@ -280,6 +281,10 @@ class MessageFragment(
                     Log.d("testRes", res.await().toString())
                     withContext(Dispatchers.Main) {
                         imageAdapter.images = res.await()
+                        if(res.await().isNotEmpty()) {
+                            binding.recordView.visibility = View.INVISIBLE
+                            binding.enterButton.visibility = View.VISIBLE
+                        }
                     }
                 } catch (e: CancellationException) {
                     withContext(Dispatchers.Main) {
@@ -297,14 +302,23 @@ class MessageFragment(
                 override fun onGalleryClick() {
                     uiScopeIO.launch {
                         try {
-                            val res = filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = true, imageAdapter.getData())
-                            Log.d("testRes", res.toString())
-                            imageAdapter.images = res
+                            val res = async { filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = true, imageAdapter.getData()) }
+                            Log.d("testRes", res.await().toString())
+                            withContext(Dispatchers.Main) {
+                                imageAdapter.images = res.await()
+                                if(res.await().isNotEmpty()) {
+                                    binding.recordView.visibility = View.INVISIBLE
+                                    binding.enterButton.visibility = View.VISIBLE
+                                }
+                            }
                         } catch (e: CancellationException) {
-                            Toast.makeText(requireContext(), "Выходим...", Toast.LENGTH_SHORT).show()
-
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(requireContext(), "Выходим...", Toast.LENGTH_SHORT).show()
+                            }
                         } catch (e: Exception) {
-                            Toast.makeText(requireContext(), "Неизвестная ошибка", Toast.LENGTH_SHORT).show()
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(requireContext(), "Неизвестная ошибка", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
                 }
@@ -332,8 +346,37 @@ class MessageFragment(
         binding.selectedPhotosRecyclerView.adapter = imageAdapter
         binding.enterButton.setOnClickListener {
             val text = binding.enterMessage.text.toString()
+            val items = imageAdapter.getData()
             uiScope.launch {
-                retrofitService.sendMessage(dialog.id, text, null, null, null)
+                if (items.isNotEmpty()) {
+                val listik = async {
+                val list = mutableListOf<String>()
+                    for (item in items) {
+                        if(item.duration > 0) {
+                            val file = getFileFromContentUri(requireContext(), Uri.parse(item.availablePath)) ?: continue
+                            val tmp = async { retrofitService.uploadPhoto(file) }
+                            list += tmp.await()
+                        } else {
+                            val tmp = async { retrofitService.uploadPhoto(File(item.availablePath)) }
+                            list += tmp.await()
+                        }
+                    }
+                    return@async list
+                }
+                    val list = listik.await()
+                    if(text.isNotEmpty()) {
+                        if (list.isNotEmpty()) {
+                            retrofitService.sendMessage(dialog.id, text, list, null, null)
+                        } else {
+                            retrofitService.sendMessage(dialog.id, text, null, null, null)
+                        }
+                    } else if (list.isNotEmpty()) retrofitService.sendMessage(dialog.id, null, list, null, null)
+                    else withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "Ошибка отправки изображений", Toast.LENGTH_SHORT).show() }
+            } else {
+                    if(text.isNotEmpty()) {
+                        retrofitService.sendMessage(dialog.id, text, null, null, null)
+                    }
+                }
                 countMsg += 1
                 val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 enterText.setText("")
@@ -354,6 +397,19 @@ class MessageFragment(
 
     override val defaultViewModelCreationExtras: CreationExtras
         get() = super.defaultViewModelCreationExtras
+
+    fun getFileFromContentUri(context: Context, contentUri: Uri): File? {
+        val projection = arrayOf(MediaStore.Video.Media.DATA)
+        val cursor = context.contentResolver.query(contentUri, projection, null, null, null)
+        cursor?.use {
+            if (it.moveToFirst()) {
+                val columnIndex = it.getColumnIndexOrThrow(MediaStore.Video.Media.DATA)
+                val filePath = it.getString(columnIndex)
+                return File(filePath)
+            }
+        }
+        return null
+    }
 
     override fun isReady(): Boolean = true
 
