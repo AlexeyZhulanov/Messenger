@@ -8,7 +8,11 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.messenger.databinding.ItemImageBinding
+import com.example.messenger.picker.DateUtils
+import com.luck.picture.lib.config.PictureMimeType
+import com.luck.picture.lib.config.SelectMimeType
 import com.luck.picture.lib.entity.LocalMedia
 
 
@@ -72,12 +76,31 @@ class ImageAdapter(
 
     override fun onBindViewHolder(holder: ImageViewHolder, position: Int) {
         val localMedia = images[position]
+        val chooseModel = localMedia.chooseModel
+        val duration = localMedia.duration
+        val path = localMedia.availablePath
         with(holder.binding) {
+            tvDuration.visibility = if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
+            if(chooseModel == SelectMimeType.ofAudio()) {
+                tvDuration.visibility = View.VISIBLE
+                tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
+            } else {
+                tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
+            }
+            tvDuration.text = (DateUtils.formatDurationTime(duration))
+            if(chooseModel == SelectMimeType.ofAudio()) {
+                photoImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
+            } else {
+                Glide.with(context)
+                    .load(if (PictureMimeType.isContent(path) && !localMedia.isCut && !localMedia.isCompressed) Uri.parse(path) else path)
+                    .centerCrop()
+                    .placeholder(com.example.messenger.R.color.app_color_f6)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .into(photoImageView)
+            }
             photoImageView.tag = localMedia
             deleteButton.tag = localMedia
         }
-        val uri = Uri.parse(localMedia.path) // get Uri from LocalMedia
-        Glide.with(context).load(uri).into(holder.binding.photoImageView)
     }
 
     override fun getItemCount(): Int = images.size

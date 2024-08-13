@@ -102,7 +102,7 @@ class FilePickerManager(private val fragment: MessageFragment) {
         selectorStyle.selectMainStyle = numberSelectMainStyle
     }
 
-    suspend fun openFilePicker(isCircle: Boolean, isFreeStyleCrop: Boolean) : ArrayList<LocalMedia> = suspendCancellableCoroutine { continuation ->
+    suspend fun openFilePicker(isCircle: Boolean, isFreeStyleCrop: Boolean, data: ArrayList<LocalMedia>) : ArrayList<LocalMedia> = suspendCancellableCoroutine { continuation ->
         PictureSelector.create(fragment)
             .openGallery(SelectMimeType.ofAll())
             .setImageEngine(GlideEngine.createGlideEngine())
@@ -132,6 +132,7 @@ class FilePickerManager(private val fragment: MessageFragment) {
                     else InjectResourceSource.DEFAULT_LAYOUT_RESOURCE
                 }
             })
+            .setSelectedData(data)
             .forResult(object: OnResultCallbackListener<LocalMedia> {
                 override fun onResult(result: ArrayList<LocalMedia>?) {
                     if(result != null) {

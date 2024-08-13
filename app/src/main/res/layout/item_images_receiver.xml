@@ -66,6 +66,27 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 />
 
+            <ImageView
+                android:id="@+id/errorImageView"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:src="@drawable/ic_error"
+                android:visibility="gone"
+                app:layout_constraintStart_toStartOf="@id/recyclerview"
+                app:layout_constraintTop_toTopOf="@id/recyclerview"
+                app:layout_constraintBottom_toBottomOf="@id/recyclerview"
+                app:layout_constraintEnd_toEndOf="@id/recyclerview" />
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:visibility="gone"
+                app:layout_constraintStart_toStartOf="@id/recyclerview"
+                app:layout_constraintEnd_toEndOf="@id/recyclerview"
+                app:layout_constraintTop_toTopOf="@id/recyclerview"
+                app:layout_constraintBottom_toBottomOf="@id/recyclerview"/>
+
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

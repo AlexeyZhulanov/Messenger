@@ -217,6 +217,9 @@ class MessageFragment(
                     }
                 }
                 }
+                override fun onImageClick(message: Message, itemView: View) {
+                    // todo show full screen image
+                }
             }, dialog.otherUser.id, requireContext())
         imageAdapter = ImageAdapter(requireContext(), object: ImageActionListener {
             override fun onImageClicked(image: LocalMedia, position: Int) {
@@ -273,15 +276,14 @@ class MessageFragment(
         binding.attachButton.setOnClickListener {
             uiScopeIO.launch {
                 try {
-                    val res = async { filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = false) }
+                    val res = async { filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = false, imageAdapter.getData()) }
                     Log.d("testRes", res.await().toString())
                     withContext(Dispatchers.Main) {
-                        //binding.selectedPhotosRecyclerView.visibility = View.VISIBLE
                         imageAdapter.images = res.await()
                     }
                 } catch (e: CancellationException) {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "Отправка не выполнена", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "Выходим...", Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
@@ -295,12 +297,11 @@ class MessageFragment(
                 override fun onGalleryClick() {
                     uiScopeIO.launch {
                         try {
-                            val res = filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = true)
+                            val res = filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = true, imageAdapter.getData())
                             Log.d("testRes", res.toString())
-                            //binding.selectedPhotosRecyclerView.visibility = View.VISIBLE
                             imageAdapter.images = res
                         } catch (e: CancellationException) {
-                            Toast.makeText(requireContext(), "Отправка не выполнена", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(requireContext(), "Выходим...", Toast.LENGTH_SHORT).show()
 
                         } catch (e: Exception) {
                             Toast.makeText(requireContext(), "Неизвестная ошибка", Toast.LENGTH_SHORT).show()

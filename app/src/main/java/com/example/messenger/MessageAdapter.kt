@@ -2,6 +2,8 @@ package com.example.messenger
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Rect
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Log
 import android.view.LayoutInflater
@@ -10,7 +12,9 @@ import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView.LayoutManager
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.messenger.databinding.ItemFileReceiverBinding
 import com.example.messenger.databinding.ItemFileSenderBinding
 import com.example.messenger.databinding.ItemImageReceiverBinding
@@ -28,6 +32,8 @@ import com.example.messenger.databinding.ItemVoiceSenderBinding
 import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.Message
 import com.example.messenger.model.RetrofitService
+import com.luck.picture.lib.config.PictureMimeType
+import com.luck.picture.lib.entity.LocalMedia
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -41,6 +47,7 @@ import java.util.Locale
 interface MessageActionListener {
     fun onMessageClick(message: Message, itemView: View)
     fun onMessageLongClick(message: Message, itemView: View)
+    fun onImageClick(message: Message, itemView: View)
 }
 
 class MessageAdapter(
@@ -327,7 +334,12 @@ class MessageAdapter(
                 if (file.exists()) {
                     val uri = Uri.fromFile(file)
                     binding.progressBar.visibility = View.GONE
-                    binding.receiverImageView.setImageURI(uri)
+                    Glide.with(context)
+                        .load(uri)
+                        .centerCrop()
+                        .placeholder(R.color.app_color_f6)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .into(binding.receiverImageView)
                 } else {
                     Log.e("ImageError", "File does not exist: $filePath")
                     binding.progressBar.visibility = View.GONE
@@ -362,7 +374,7 @@ class MessageAdapter(
                     actionListener.onMessageClick(message, itemView)
             }
             binding.receiverImageView.setOnClickListener {
-                // todo show image full screen
+                actionListener.onImageClick(message, itemView)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
@@ -384,7 +396,12 @@ class MessageAdapter(
                 if (file.exists()) {
                     val uri = Uri.fromFile(file)
                     binding.progressBar.visibility = View.GONE
-                    binding.senderImageView.setImageURI(uri)
+                    Glide.with(context)
+                        .load(uri)
+                        .centerCrop()
+                        .placeholder(R.color.app_color_f6)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .into(binding.senderImageView)
                 } else {
                     Log.e("ImageError", "File does not exist: $filePath")
                     binding.progressBar.visibility = View.GONE
@@ -419,7 +436,7 @@ class MessageAdapter(
                     actionListener.onMessageClick(message, itemView)
             }
             binding.senderImageView.setOnClickListener {
-                // todo show image full screen
+                actionListener.onImageClick(message, itemView)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
@@ -434,9 +451,39 @@ class MessageAdapter(
     // ViewHolder для множества изображений получателя
     inner class MessagesViewHolderImagesReceiver(private val binding: ItemImagesReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message, position: Int) {
-            val adapter = ImagesAdapter(message.images ?: emptyList())
-            binding.recyclerview.layoutManager = GridLayoutManager(binding.root.context, 3)
+            val adapter = ImagesAdapter(context, object: ImagesActionListener {
+                override fun onImageClicked(image: LocalMedia, position: Int) {
+                    // todo show full screen image
+                }
+
+                override fun onLongImageClicked(image: LocalMedia, position: Int) {
+                    actionListener.onMessageLongClick(message, itemView)
+                }
+            })
+            binding.recyclerview.layoutManager = CustomLayoutManager()
+            binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 16, true))
             binding.recyclerview.adapter = adapter
+            binding.progressBar.visibility = View.VISIBLE
+            uiScope.launch {
+                val localMedias = async {
+                    val medias = arrayListOf<LocalMedia>()
+                    for (image in message.images!!) {
+                        val filePath =
+                            async { retrofitService.downloadFile(context, "photos", image) }
+                        val file = File(filePath.await())
+                        if (file.exists()) {
+                            medias += fileToLocalMedia(file)
+                        } else {
+                            Log.e("ImageError", "File does not exist: $filePath")
+                            binding.progressBar.visibility = View.GONE
+                            binding.errorImageView.visibility = View.VISIBLE
+                        }
+                    }
+                    return@async medias
+                }
+                adapter.images = localMedias.await()
+                binding.progressBar.visibility = View.GONE
+            }
             binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
             binding.root.setOnLongClickListener {
                 actionListener.onMessageLongClick(message, itemView)
@@ -448,9 +495,39 @@ class MessageAdapter(
     // ViewHolder для множества изображений отправителя
     inner class MessagesViewHolderImagesSender(private val binding: ItemImagesSenderBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message, position: Int) {
-            val adapter = ImagesAdapter(message.images ?: emptyList())
-            binding.recyclerview.layoutManager = GridLayoutManager(binding.root.context, 3)
+            val adapter = ImagesAdapter(context, object: ImagesActionListener {
+                override fun onImageClicked(image: LocalMedia, position: Int) {
+                    // todo show full screen image
+                }
+
+                override fun onLongImageClicked(image: LocalMedia, position: Int) {
+                    actionListener.onMessageLongClick(message, itemView)
+                }
+            })
+            binding.recyclerview.layoutManager = CustomLayoutManager()
+            binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 16, true))
             binding.recyclerview.adapter = adapter
+            binding.progressBar.visibility = View.VISIBLE
+            uiScope.launch {
+                val localMedias = async {
+                    val medias = arrayListOf<LocalMedia>()
+                    for (image in message.images!!) {
+                        val filePath =
+                            async { retrofitService.downloadFile(context, "photos", image) }
+                        val file = File(filePath.await())
+                        if (file.exists()) {
+                            medias += fileToLocalMedia(file)
+                        } else {
+                            Log.e("ImageError", "File does not exist: $filePath")
+                            binding.progressBar.visibility = View.GONE
+                            binding.errorImageView.visibility = View.VISIBLE
+                        }
+                    }
+                    return@async medias
+                }
+                adapter.images = localMedias.await()
+                binding.progressBar.visibility = View.GONE
+            }
             binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
             binding.root.setOnLongClickListener {
                 actionListener.onMessageLongClick(message, itemView)
@@ -458,6 +535,154 @@ class MessageAdapter(
             }
         }
     }
+
+    private fun fileToLocalMedia(file: File): LocalMedia {
+        val localMedia = LocalMedia()
+
+        // Установите путь файла
+        localMedia.path = file.absolutePath
+
+        // Определите MIME тип файла на основе его расширения
+        localMedia.mimeType = when (file.extension.lowercase(Locale.ROOT)) {
+            "jpg", "jpeg" -> PictureMimeType.ofJPEG()
+            "png" -> PictureMimeType.ofPNG()
+            "mp4" -> PictureMimeType.ofMP4()
+            "avi" -> PictureMimeType.ofAVI()
+            "gif" -> PictureMimeType.ofGIF()
+            else -> PictureMimeType.MIME_TYPE_AUDIO // Или другой тип по умолчанию
+        }
+
+        // Установите дополнительные свойства
+        localMedia.isCompressed = false // Или true, если вы хотите сжать изображение
+        localMedia.isCut = false // Если это изображение было обрезано
+        localMedia.isOriginal = false // Если это оригинальный файл
+
+        if (localMedia.mimeType == PictureMimeType.MIME_TYPE_VIDEO) {
+            // Получаем длительность видео
+            val duration = getVideoDuration(file)
+            localMedia.duration = duration
+        } else {
+            localMedia.duration = 0 // Для изображений длительность обычно равна 0
+        }
+
+        return localMedia
+    }
+
+    private fun getVideoDuration(file: File): Long {
+        val retriever = MediaMetadataRetriever()
+        try {
+            retriever.setDataSource(file.absolutePath)
+            val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            return durationStr?.toLongOrNull() ?: 0
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return 0
+        } finally {
+            retriever.release()
+        }
+    }
+
+    class CustomLayoutManager : LayoutManager() {
+        override fun onLayoutChildren(recycler: RecyclerView.Recycler?, state: RecyclerView.State?) {
+            super.onLayoutChildren(recycler, state)
+            // Сначала убираем все старые элементы
+            detachAndScrapAttachedViews(recycler!!)
+            val totalCount = itemCount
+            if (totalCount == 0) return
+
+            // Определение числа колонок и строк
+            val columns = when {
+                totalCount <= 2 -> 2
+                totalCount == 3 -> 2
+                totalCount == 4 -> 2
+                totalCount in 5..6 -> 3
+                else -> 3
+            }
+
+            val rows = when {
+                totalCount <= 2 -> 1
+                totalCount == 3 -> 2
+                totalCount == 4 -> 3
+                totalCount in 5..6 -> 2
+                totalCount in 7..9 -> 3
+                else -> 4
+            }
+
+            val columnWidth = width / columns
+            val rowHeight = height / rows
+
+            // Располагаем элементы
+            var leftOffset = 0
+            var topOffset = 0
+            var spanSize = 1
+
+            for (i in 0 until totalCount) {
+                val view = recycler.getViewForPosition(i)
+                addView(view)
+                measureChildWithMargins(view, 0, 0)
+                val itemWidth = columnWidth * spanSize
+
+                layoutDecorated(
+                    view,
+                    leftOffset,
+                    topOffset,
+                    leftOffset + itemWidth,
+                    topOffset + rowHeight
+                )
+
+                leftOffset += itemWidth
+                if (leftOffset >= width) {
+                    leftOffset = 0
+                    topOffset += rowHeight
+                }
+
+                // Обновляем количество колонок и строк в зависимости от количества элементов
+                spanSize = if (i == 0 || i == 2 || i == 4) 1 else 2
+            }
+        }
+
+        override fun generateDefaultLayoutParams(): RecyclerView.LayoutParams {
+            return RecyclerView.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        override fun canScrollVertically(): Boolean {
+            return false
+        }
+
+        override fun canScrollHorizontally(): Boolean {
+            return false
+        }
+
+        override fun scrollToPosition(position: Int) {
+            return
+        }
+    }
+
+    class GridSpacingItemDecoration(private val spanCount: Int, private val spacing: Int, private val includeEdge: Boolean) : RecyclerView.ItemDecoration() {
+        override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
+            val position = (view.layoutParams as RecyclerView.LayoutParams).bindingAdapterPosition
+            val column = position % spanCount
+
+            if (includeEdge) {
+                outRect.left = spacing - column * spacing / spanCount
+                outRect.right = (column + 1) * spacing / spanCount
+                if (position < spanCount) {
+                    outRect.top = spacing
+                }
+                outRect.bottom = spacing
+            } else {
+                outRect.left = column * spacing / spanCount
+                outRect.right = spacing - (column + 1) * spacing / spanCount
+                if (position >= spanCount) {
+                    outRect.top = spacing
+                }
+            }
+        }
+    }
+
 
     inner class MessagesViewHolderVoiceReceiver(private val binding: ItemVoiceReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message, position: Int) {
