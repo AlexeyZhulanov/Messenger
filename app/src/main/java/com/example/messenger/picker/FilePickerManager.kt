@@ -1,43 +1,31 @@
 package com.example.messenger.picker
 
-import android.app.Activity
 import android.content.Context
-import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.drawable.Drawable
-import android.net.Uri
-import android.widget.ImageView
+import android.util.Log
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
-import com.bumptech.glide.Glide
-import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.transition.Transition
 import com.example.messenger.MessageFragment
 import com.example.messenger.R
-import com.example.messenger.picker.DateUtils.getCreateFileName
-import com.example.messenger.picker.ImageLoaderUtils.assertValidRequest
 import com.luck.picture.lib.basic.PictureSelector
 import com.luck.picture.lib.config.InjectResourceSource
-import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.config.SelectMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
-import com.luck.picture.lib.interfaces.OnMediaEditInterceptListener
+import com.luck.picture.lib.interfaces.OnResultCallbackListener
 import com.luck.picture.lib.style.BottomNavBarStyle
 import com.luck.picture.lib.style.PictureSelectorStyle
 import com.luck.picture.lib.style.SelectMainStyle
 import com.luck.picture.lib.style.TitleBarStyle
 import com.luck.picture.lib.utils.DensityUtil
-import com.yalantis.ucrop.UCrop
-import com.yalantis.ucrop.UCropImageEngine
-import java.io.File
-import javax.annotation.Nullable
+import kotlinx.coroutines.suspendCancellableCoroutine
+import java.util.ArrayList
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 
 class FilePickerManager(private val fragment: MessageFragment) {
 
-    private val REQUEST_CODE_CHOOSE = 1001
-    private val selectorStyle = PictureSelectorStyle()
+    val selectorStyle = PictureSelectorStyle()
 
     init {
         val numberSelectMainStyle = SelectMainStyle()
@@ -114,12 +102,12 @@ class FilePickerManager(private val fragment: MessageFragment) {
         selectorStyle.selectMainStyle = numberSelectMainStyle
     }
 
-    fun openFilePicker(isCircle: Boolean, isFreeStyleCrop: Boolean) {
+    suspend fun openFilePicker(isCircle: Boolean, isFreeStyleCrop: Boolean) : ArrayList<LocalMedia> = suspendCancellableCoroutine { continuation ->
         PictureSelector.create(fragment)
             .openGallery(SelectMimeType.ofAll())
             .setImageEngine(GlideEngine.createGlideEngine())
             .setVideoPlayerEngine(ExoPlayerEngine())
-            .setCropEngine(ImageFileCropEngine(selectorStyle, isCircle, isFreeStyleCrop))
+            //.setCropEngine(ImageFileCropEngine(selectorStyle, isCircle, isFreeStyleCrop)) // Обязательное редактирование всех фото
             .setCompressEngine(ImageFileCompressEngine())
             .setEditMediaInterceptListener(getMediaEditInterceptListener(fragment, selectorStyle, isCircle, isFreeStyleCrop))
             .isAutoVideoPlay(false)
@@ -142,14 +130,19 @@ class FilePickerManager(private val fragment: MessageFragment) {
                     else InjectResourceSource.DEFAULT_LAYOUT_RESOURCE
                 }
             })
-            .forResult(REQUEST_CODE_CHOOSE)
-    }
+            .forResult(object: OnResultCallbackListener<LocalMedia> {
+                override fun onResult(result: ArrayList<LocalMedia>?) {
+                    if(result != null) {
+                        continuation.resume(result)
+                    } else continuation.resumeWithException(CancellationException("Empty array"))
+                }
 
-    fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent?, onFilesSelected: (List<LocalMedia>) -> Unit) {
-        if (requestCode == REQUEST_CODE_CHOOSE && resultCode == Activity.RESULT_OK && data != null) {
-            val result = PictureSelector.obtainSelectorList(data)
-            onFilesSelected(result)
+                override fun onCancel() {
+                    continuation.resumeWithException(CancellationException("User cancelled the operation"))
+                }
+            })
+        continuation.invokeOnCancellation {
+            Log.d("testCancellation", "cancelled")
         }
     }
-
 }

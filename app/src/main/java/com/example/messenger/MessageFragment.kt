@@ -18,6 +18,7 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,9 +35,16 @@ import com.example.messenger.model.Dialog
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
+import com.example.messenger.picker.GlideEngine
 import com.example.messenger.voicerecorder.AudioPlayer
 import com.example.messenger.voicerecorder.AudioRecorder
+import com.luck.lib.camerax.CustomCameraConfig.imageEngine
+import com.luck.picture.lib.basic.PictureSelector
+import com.luck.picture.lib.config.InjectResourceSource
+import com.luck.picture.lib.entity.LocalMedia
+import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
 import com.tougee.recorderview.AudioRecordView
 import com.tougee.recorderview.toast
 import kotlinx.coroutines.CoroutineScope
@@ -46,11 +54,13 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.PrintWriter
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.coroutines.cancellation.CancellationException
 
 const val REQUEST_CODE_PICK_FILE = 1
 
@@ -59,6 +69,7 @@ class MessageFragment(
 ) : Fragment(), AudioRecordView.Callback {
     private lateinit var binding: FragmentMessageBinding
     private lateinit var adapter: MessageAdapter
+    private lateinit var imageAdapter: ImageAdapter
     private lateinit var preferences: SharedPreferences
     private lateinit var pickFileLauncher: ActivityResultLauncher<Array<String>>
     private var audioRecord: AudioRecorder? = null
@@ -69,6 +80,7 @@ class MessageFragment(
     private var updateJob: Job? = null
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.Main + job)
+    private val uiScopeIO = CoroutineScope(Dispatchers.IO + job)
     private val messengerService: MessengerService
         get() = Singletons.messengerRepository as MessengerService
     private val retrofitService: RetrofitService
@@ -207,6 +219,33 @@ class MessageFragment(
                 }
                 }
             }, dialog.otherUser.id, requireContext())
+        imageAdapter = ImageAdapter(requireContext(), object: ImageActionListener {
+            override fun onImageClicked(image: LocalMedia, position: Int) {
+                PictureSelector.create(requireContext())
+                    .openPreview()
+                    .setImageEngine(GlideEngine.createGlideEngine())
+                    .setVideoPlayerEngine(ExoPlayerEngine())
+                    .isAutoVideoPlay(false)
+                    .isLoopAutoVideoPlay(false)
+                    .isVideoPauseResumePlay(true)
+                    .setSelectorUIStyle(filePickerManager.selectorStyle)
+                    .isPreviewFullScreenMode(true)
+                    .isPreviewZoomEffect(true, binding.selectedPhotosRecyclerView)
+                    .setInjectLayoutResourceListener(object: OnInjectLayoutResourceListener {
+                        override fun getLayoutResourceId(context: Context?, resourceSource: Int): Int {
+                            @Suppress("DEPRECATED_IDENTITY_EQUALS")
+                            return if (resourceSource === InjectResourceSource.PREVIEW_LAYOUT_RESOURCE
+                            ) R.layout.ps_custom_fragment_preview
+                            else InjectResourceSource.DEFAULT_LAYOUT_RESOURCE
+                        }
+                    })
+                    .startActivityPreview(position, true, imageAdapter.getData())
+            }
+
+            override fun onDeleteImage(position: Int) {
+                imageAdapter.delete(position)
+            }
+        })
         binding.enterMessage.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
@@ -232,13 +271,41 @@ class MessageFragment(
             callback = this@MessageFragment
         }
         binding.attachButton.setOnClickListener {
-            filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = false)
+            uiScopeIO.launch {
+                try {
+                    val res = async { filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = false) }
+                    Log.d("testRes", res.await().toString())
+                    withContext(Dispatchers.Main) {
+                        //binding.selectedPhotosRecyclerView.visibility = View.VISIBLE
+                        imageAdapter.images = res.await()
+                    }
+                } catch (e: CancellationException) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(requireContext(), "Отправка не выполнена", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(requireContext(), "Неизвестная ошибка", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
         }
         binding.attachButton.setOnLongClickListener {
             ChoosePickFragment(object: ChoosePickListener {
                 override fun onGalleryClick() {
-                    Log.d("testWork", "OK")
-                    filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = true)
+                    uiScopeIO.launch {
+                        try {
+                            val res = filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = true)
+                            Log.d("testRes", res.toString())
+                            //binding.selectedPhotosRecyclerView.visibility = View.VISIBLE
+                            imageAdapter.images = res
+                        } catch (e: CancellationException) {
+                            Toast.makeText(requireContext(), "Отправка не выполнена", Toast.LENGTH_SHORT).show()
+
+                        } catch (e: Exception) {
+                            Toast.makeText(requireContext(), "Неизвестная ошибка", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
                 override fun onFileClick() {
                     pickFileLauncher.launch(arrayOf("*/*"))
@@ -260,6 +327,8 @@ class MessageFragment(
         binding.recyclerview.layoutManager = layoutManager
         binding.recyclerview.adapter = adapter
         binding.recyclerview.addItemDecoration(VerticalSpaceItemDecoration(15))
+        binding.selectedPhotosRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+        binding.selectedPhotosRecyclerView.adapter = imageAdapter
         binding.enterButton.setOnClickListener {
             val text = binding.enterMessage.text.toString()
             uiScope.launch {
