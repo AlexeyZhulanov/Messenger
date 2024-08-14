@@ -27,7 +27,7 @@ class ExoPlayerEngine : VideoPlayerEngine<StyledPlayerView> {
     }
 
     override fun onStarPlayer(exoPlayer: StyledPlayerView, media: LocalMedia) {
-        val player: Player = exoPlayer.player!!
+        val player: Player? = exoPlayer.player
         if (player != null) {
             val mediaItem: MediaItem
             val path = media.availablePath
@@ -47,21 +47,21 @@ class ExoPlayerEngine : VideoPlayerEngine<StyledPlayerView> {
     }
 
     override fun onResume(exoPlayer: StyledPlayerView) {
-        val player: Player = exoPlayer.player!!
+        val player: Player? = exoPlayer.player
         if (player != null) {
             player.play()
         }
     }
 
     override fun onPause(exoPlayer: StyledPlayerView) {
-        val player: Player = exoPlayer.player!!
+        val player: Player? = exoPlayer.player
         if (player != null) {
             player.pause()
         }
     }
 
     override fun isPlaying(exoPlayer: StyledPlayerView): Boolean {
-        val player: Player = exoPlayer.player!!
+        val player: Player? = exoPlayer.player
         return player != null && player.isPlaying
     }
 
@@ -87,7 +87,7 @@ class ExoPlayerEngine : VideoPlayerEngine<StyledPlayerView> {
     }
 
     override fun onPlayerDetachedFromWindow(exoPlayer: StyledPlayerView) {
-        val player: Player = exoPlayer.player!!
+        val player: Player? = exoPlayer.player
         if (player != null) {
             player.removeListener(mPlayerListener)
             player.release()
@@ -96,7 +96,7 @@ class ExoPlayerEngine : VideoPlayerEngine<StyledPlayerView> {
     }
 
     override fun destroy(exoPlayer: StyledPlayerView) {
-        val player: Player = exoPlayer.player!!
+        val player: Player? = exoPlayer.player
         if (player != null) {
             player.removeListener(mPlayerListener)
             player.release()
