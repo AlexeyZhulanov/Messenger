@@ -3,6 +3,7 @@ package com.example.messenger
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -16,8 +17,8 @@ import com.luck.picture.lib.config.SelectMimeType
 import com.luck.picture.lib.entity.LocalMedia
 
 interface ImagesActionListener {
-    fun onImageClicked(image: LocalMedia, position: Int)
-    fun onLongImageClicked(image: LocalMedia, position: Int)
+    fun onImageClicked(images: ArrayList<LocalMedia>, position: Int)
+    fun onLongImageClicked(images: ArrayList<LocalMedia>, position: Int)
 }
 
 class ImagesAdapter(
@@ -33,13 +34,15 @@ class ImagesAdapter(
         }
 
     override fun onClick(v: View) {
-        val image = v.tag as LocalMedia
-        actionListener.onImageClicked(image, images.indexOf(image))
+        val viewHolder = v.tag as ImagesViewHolder
+        val position = viewHolder.bindingAdapterPosition
+        actionListener.onImageClicked(images, position)
     }
 
     override fun onLongClick(v: View): Boolean {
-        val image = v.tag as LocalMedia
-        actionListener.onLongImageClicked(image, images.indexOf(image))
+        val viewHolder = v.tag as ImagesViewHolder
+        val position = viewHolder.bindingAdapterPosition
+        actionListener.onLongImageClicked(images, position)
         return true
     }
 
@@ -56,6 +59,7 @@ class ImagesAdapter(
         val chooseModel = localMedia.chooseModel
         val duration = localMedia.duration
         val path = localMedia.availablePath
+        Log.d("testBindImages", "localMedia: $localMedia")
         with(holder.binding) {
             tvDuration.visibility = if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
             if(chooseModel == SelectMimeType.ofAudio()) {
@@ -75,7 +79,7 @@ class ImagesAdapter(
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .into(photoImageView)
             }
-            photoImageView.tag = localMedia
+            holder.itemView.tag = holder
         }
     }
 

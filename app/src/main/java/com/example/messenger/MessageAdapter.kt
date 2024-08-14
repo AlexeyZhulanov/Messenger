@@ -2,6 +2,7 @@ package com.example.messenger
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Color
 import android.graphics.Rect
 import android.media.MediaMetadataRetriever
 import android.net.Uri
@@ -9,6 +10,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -32,7 +34,9 @@ import com.example.messenger.databinding.ItemVoiceSenderBinding
 import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.Message
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.picker.DateUtils
 import com.luck.picture.lib.config.PictureMimeType
+import com.luck.picture.lib.config.SelectMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,8 +51,8 @@ import java.util.Locale
 
 interface MessageActionListener {
     fun onMessageClick(message: Message, itemView: View)
-    fun onMessageLongClick(message: Message, itemView: View)
-    fun onImageClick(message: Message, itemView: View)
+    fun onMessageLongClick(itemView: View)
+    fun onImagesClick(images: ArrayList<LocalMedia>, position: Int)
 }
 
 class MessageAdapter(
@@ -190,9 +194,9 @@ class MessageAdapter(
             TYPE_IMAGES_RECEIVER -> MessagesViewHolderImagesReceiver(
                 ItemImagesReceiverBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             )
-            TYPE_IMAGES_SENDER -> MessagesViewHolderImagesSender(
-                ItemImagesSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-            )
+            TYPE_IMAGES_SENDER -> {
+                MessagesViewHolderImagesSender(ItemImagesSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            }
             TYPE_VOICE_RECEIVER -> MessagesViewHolderVoiceReceiver(
                 ItemVoiceReceiverBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             )
@@ -277,7 +281,7 @@ class MessageAdapter(
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
                     onLongClick(message)
-                    actionListener.onMessageLongClick(message, itemView)
+                    actionListener.onMessageLongClick(itemView)
                 }
                 true
             }
@@ -318,7 +322,7 @@ class MessageAdapter(
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
                     onLongClick(message)
-                    actionListener.onMessageLongClick(message, itemView)
+                    actionListener.onMessageLongClick(itemView)
                 }
                 true
             }
@@ -334,13 +338,30 @@ class MessageAdapter(
                 val file = File(filePath.await())
                 if (file.exists()) {
                     val uri = Uri.fromFile(file)
+                    val localMedia = fileToLocalMedia(file)
+                    val chooseModel = localMedia.chooseModel
+                    binding.tvDuration.visibility = if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
+                    if(chooseModel == SelectMimeType.ofAudio()) {
+                        binding.tvDuration.visibility = View.VISIBLE
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
+                    } else {
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
+                    }
+                    binding.tvDuration.text = (DateUtils.formatDurationTime(localMedia.duration))
+                    if(chooseModel == SelectMimeType.ofAudio()) {
+                        binding.receiverImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
+                    } else {
+                        Glide.with(context)
+                            .load(uri)
+                            .centerCrop()
+                            .placeholder(R.color.app_color_f6)
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .into(binding.receiverImageView)
+                    }
                     binding.progressBar.visibility = View.GONE
-                    Glide.with(context)
-                        .load(uri)
-                        .centerCrop()
-                        .placeholder(R.color.app_color_f6)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .into(binding.receiverImageView)
+                    binding.receiverImageView.setOnClickListener {
+                        actionListener.onImagesClick(arrayListOf(localMedia), 0)
+                    }
                 } else {
                     Log.e("ImageError", "File does not exist: $filePath")
                     binding.progressBar.visibility = View.GONE
@@ -374,13 +395,10 @@ class MessageAdapter(
                 else
                     actionListener.onMessageClick(message, itemView)
             }
-            binding.receiverImageView.setOnClickListener {
-                actionListener.onImageClick(message, itemView)
-            }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
                     onLongClick(message)
-                    actionListener.onMessageLongClick(message, itemView)
+                    actionListener.onMessageLongClick(itemView)
                 }
                 true
             }
@@ -391,19 +409,37 @@ class MessageAdapter(
     inner class MessagesViewHolderImageSender(private val binding: ItemImageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message, position: Int) {
             uiScope.launch {
-                withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
+                binding.progressBar.visibility = View.VISIBLE
                 val filePath = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
                 val file = File(filePath.await())
                 if (file.exists()) {
                     val uri = Uri.fromFile(file)
+                    val localMedia = fileToLocalMedia(file)
+                    val chooseModel = localMedia.chooseModel
                     withContext(Dispatchers.Main) {
-                    Glide.with(context)
-                        .load(uri)
-                        .centerCrop()
-                        .placeholder(R.color.app_color_f6)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .into(binding.senderImageView)
-                     binding.progressBar.visibility = View.GONE
+                        binding.tvDuration.visibility =
+                            if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
+                        if (chooseModel == SelectMimeType.ofAudio()) {
+                            binding.tvDuration.visibility = View.VISIBLE
+                            binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
+                        } else {
+                            binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
+                        }
+                        binding.tvDuration.text = (DateUtils.formatDurationTime(localMedia.duration))
+                        if (chooseModel == SelectMimeType.ofAudio()) {
+                            binding.senderImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
+                        } else {
+                                Glide.with(context)
+                                    .load(uri)
+                                    .centerCrop()
+                                    .placeholder(R.color.app_color_f6)
+                                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                    .into(binding.senderImageView)
+                        }
+                        binding.progressBar.visibility = View.GONE
+                        binding.senderImageView.setOnClickListener {
+                            actionListener.onImagesClick(arrayListOf(localMedia), 0)
+                        }
                     }
                 } else {
                     Log.e("ImageError", "File does not exist: $filePath")
@@ -438,13 +474,10 @@ class MessageAdapter(
                 else
                     actionListener.onMessageClick(message, itemView)
             }
-            binding.senderImageView.setOnClickListener {
-                actionListener.onImageClick(message, itemView)
-            }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
                     onLongClick(message)
-                    actionListener.onMessageLongClick(message, itemView)
+                    actionListener.onMessageLongClick(itemView)
                 }
                 true
             }
@@ -453,19 +486,22 @@ class MessageAdapter(
 
     // ViewHolder для множества изображений получателя
     inner class MessagesViewHolderImagesReceiver(private val binding: ItemImagesReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message, position: Int) {
-            val adapter = ImagesAdapter(context, object: ImagesActionListener {
-                override fun onImageClicked(image: LocalMedia, position: Int) {
-                    // todo show full screen image
-                }
 
-                override fun onLongImageClicked(image: LocalMedia, position: Int) {
-                    actionListener.onMessageLongClick(message, itemView)
-                }
-            })
+        private val adapter = ImagesAdapter(context, object: ImagesActionListener {
+            override fun onImageClicked(images: ArrayList<LocalMedia>, position: Int) {
+                actionListener.onImagesClick(images, position)
+            }
+
+            override fun onLongImageClicked(images: ArrayList<LocalMedia>, position: Int) {
+                actionListener.onMessageLongClick(itemView)
+            }
+        })
+        init {
             binding.recyclerview.layoutManager = CustomLayoutManager()
             binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 16, true))
             binding.recyclerview.adapter = adapter
+        }
+        fun bind(message: Message, position: Int) {
             binding.progressBar.visibility = View.VISIBLE
             uiScope.launch {
                 val localMedias = async {
@@ -487,9 +523,38 @@ class MessageAdapter(
                 adapter.images = localMedias.await()
                 binding.progressBar.visibility = View.GONE
             }
-            binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
+            val time = formatMessageTime(message.timestamp)
+            val date = messages.values.elementAt(position)
+            if(date != "") {
+                binding.dateTextView.visibility = View.VISIBLE
+                binding.dateTextView.text = date
+            } else binding.dateTextView.visibility = View.GONE
+            binding.timeTextView.text = time
+            if(!canLongClick) {
+                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                binding.checkbox.isChecked = position in checkedPositions
+                binding.checkbox.setOnClickListener {
+                    savePosition(message)
+                }
+            }
+            else { binding.checkbox.visibility = View.GONE }
+            if (message.isRead) {
+                binding.icCheck.visibility = View.INVISIBLE
+                binding.icCheck2.visibility = View.VISIBLE
+            }
+            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            binding.root.setOnClickListener {
+                if(!canLongClick) {
+                    savePosition(message)
+                }
+                else
+                    actionListener.onMessageClick(message, itemView)
+            }
             binding.root.setOnLongClickListener {
-                actionListener.onMessageLongClick(message, itemView)
+                if(canLongClick) {
+                    onLongClick(message)
+                    actionListener.onMessageLongClick(itemView)
+                }
                 true
             }
         }
@@ -497,19 +562,23 @@ class MessageAdapter(
 
     // ViewHolder для множества изображений отправителя
     inner class MessagesViewHolderImagesSender(private val binding: ItemImagesSenderBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message, position: Int) {
-            val adapter = ImagesAdapter(context, object: ImagesActionListener {
-                override fun onImageClicked(image: LocalMedia, position: Int) {
-                    // todo show full screen image
-                }
 
-                override fun onLongImageClicked(image: LocalMedia, position: Int) {
-                    actionListener.onMessageLongClick(message, itemView)
-                }
-            })
+        private val adapter = ImagesAdapter(context, object: ImagesActionListener {
+            override fun onImageClicked(images: ArrayList<LocalMedia>, position: Int) {
+                actionListener.onImagesClick(images, position)
+            }
+
+            override fun onLongImageClicked(images: ArrayList<LocalMedia>, position: Int) {
+                actionListener.onMessageLongClick(itemView)
+            }
+        })
+        init {
             binding.recyclerview.layoutManager = CustomLayoutManager()
             binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 16, true))
             binding.recyclerview.adapter = adapter
+        }
+
+        fun bind(message: Message, position: Int) {
             binding.progressBar.visibility = View.VISIBLE
             uiScope.launch {
                 val localMedias = async {
@@ -530,12 +599,42 @@ class MessageAdapter(
                 }
                 withContext(Dispatchers.Main) {
                     adapter.images = localMedias.await()
+                    Log.d("testAdapterImages", "${adapter.images}")
                     binding.progressBar.visibility = View.GONE
                 }
             }
-            binding.root.setOnClickListener { actionListener.onMessageClick(message, itemView) }
+            val time = formatMessageTime(message.timestamp)
+            val date = messages.values.elementAt(position)
+            if(date != "") {
+                binding.dateTextView.visibility = View.VISIBLE
+                binding.dateTextView.text = date
+            } else binding.dateTextView.visibility = View.GONE
+            binding.timeTextView.text = time
+            if(!canLongClick) {
+                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                binding.checkbox.isChecked = position in checkedPositions
+                binding.checkbox.setOnClickListener {
+                    savePosition(message)
+                }
+            }
+            else { binding.checkbox.visibility = View.GONE }
+            if (message.isRead) {
+                binding.icCheck.visibility = View.INVISIBLE
+                binding.icCheck2.visibility = View.VISIBLE
+            }
+            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            binding.root.setOnClickListener {
+                if(!canLongClick) {
+                    savePosition(message)
+                }
+                else
+                    actionListener.onMessageClick(message, itemView)
+            }
             binding.root.setOnLongClickListener {
-                actionListener.onMessageLongClick(message, itemView)
+                if(canLongClick) {
+                    onLongClick(message)
+                    actionListener.onMessageLongClick(itemView)
+                }
                 true
             }
         }
@@ -587,82 +686,114 @@ class MessageAdapter(
         }
     }
 
-    class CustomLayoutManager : LayoutManager() {
-        override fun onLayoutChildren(recycler: RecyclerView.Recycler?, state: RecyclerView.State?) {
-            super.onLayoutChildren(recycler, state)
-            // Сначала убираем все старые элементы
-            detachAndScrapAttachedViews(recycler!!)
-            val totalCount = itemCount
-            if (totalCount == 0) return
+    class CustomLayoutManager : RecyclerView.LayoutManager() {
 
-            // Определение числа колонок и строк
+        private var columnWidth = 0
+        private var rowHeight = 0
+
+        override fun onLayoutChildren(recycler: RecyclerView.Recycler, state: RecyclerView.State) {
+            detachAndScrapAttachedViews(recycler)
+
+            if (itemCount == 0) return
+
             val columns = when {
-                totalCount <= 2 -> 2
-                totalCount == 3 -> 2
-                totalCount == 4 -> 2
-                totalCount in 5..6 -> 3
+                itemCount <= 2 -> 2
+                itemCount == 3 -> 2
+                itemCount == 4 -> 2
+                itemCount in 5..6 -> 3
                 else -> 3
             }
 
             val rows = when {
-                totalCount <= 2 -> 1
-                totalCount == 3 -> 2
-                totalCount == 4 -> 3
-                totalCount in 5..6 -> 2
-                totalCount in 7..9 -> 3
+                itemCount <= 2 -> 1
+                itemCount == 3 -> 2
+                itemCount == 4 -> 2
+                itemCount in 5..6 -> 2
+                itemCount in 7..9 -> 3
                 else -> 4
             }
 
-            val columnWidth = width / columns
-            val rowHeight = height / rows
+            columnWidth = width / columns
+            rowHeight = height / rows
 
-            // Располагаем элементы
             var leftOffset = 0
             var topOffset = 0
-            var spanSize = 1
+            var currentColumn = 0
 
-            for (i in 0 until totalCount) {
+            if (itemCount % 2 != 0) {
+
+                for (i in 0 until itemCount) {
+                    val view = recycler.getViewForPosition(i)
+                    val spanSize = if (itemCount % 2 == 0 && i == itemCount - 1) 2 else if (i == 0 && itemCount > 1) 2 else 1
+                    val itemWidth = columnWidth * spanSize
+                    val widthSpec = View.MeasureSpec.makeMeasureSpec(itemWidth, View.MeasureSpec.EXACTLY)
+                    val heightSpec = View.MeasureSpec.makeMeasureSpec(rowHeight, View.MeasureSpec.EXACTLY)
+                    view.measure(widthSpec, heightSpec)
+                    addView(view)
+
+                    if ((currentColumn + spanSize) > columns) {
+                        currentColumn = 0
+                        leftOffset = 0
+                        topOffset += rowHeight
+                    }
+
+                    layoutDecorated(
+                        view,
+                        leftOffset,
+                        topOffset,
+                        leftOffset + itemWidth,
+                        topOffset + rowHeight
+                    )
+
+                    leftOffset += itemWidth
+                    currentColumn += spanSize
+                }
+            } else {
+                for (i in 0 until itemCount) {
                 val view = recycler.getViewForPosition(i)
                 addView(view)
                 measureChildWithMargins(view, 0, 0)
-                val itemWidth = columnWidth * spanSize
+
+                val itemHeight = measuredHeightWithMargins(view)
+                val itemWidth = columnWidth
 
                 layoutDecorated(
                     view,
                     leftOffset,
                     topOffset,
                     leftOffset + itemWidth,
-                    topOffset + rowHeight
+                    topOffset + itemHeight
                 )
 
                 leftOffset += itemWidth
-                if (leftOffset >= width) {
+                currentColumn++
+
+                if (currentColumn >= columns) {
                     leftOffset = 0
                     topOffset += rowHeight
+                    currentColumn = 0
                 }
-
-                // Обновляем количество колонок и строк в зависимости от количества элементов
-                spanSize = if (i == 0 || i == 2 || i == 4) 1 else 2
+            }
             }
         }
 
+        private fun measuredHeightWithMargins(view: View): Int {
+            val lp = view.layoutParams as RecyclerView.LayoutParams
+            val height = view.measuredHeight
+            val marginTop = lp.topMargin
+            val marginBottom = lp.bottomMargin
+            return height + marginTop + marginBottom
+        }
+        override fun measureChildWithMargins(child: View, widthUsed: Int, heightUsed: Int) {
+            val widthSpec = View.MeasureSpec.makeMeasureSpec(columnWidth, View.MeasureSpec.EXACTLY)
+            val heightSpec = View.MeasureSpec.makeMeasureSpec(rowHeight, View.MeasureSpec.EXACTLY)
+            child.measure(widthSpec, heightSpec)
+        }
         override fun generateDefaultLayoutParams(): RecyclerView.LayoutParams {
             return RecyclerView.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.MATCH_PARENT, // Use MATCH_PARENT for width
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
-        }
-
-        override fun canScrollVertically(): Boolean {
-            return false
-        }
-
-        override fun canScrollHorizontally(): Boolean {
-            return false
-        }
-
-        override fun scrollToPosition(position: Int) {
-            return
         }
     }
 
@@ -763,7 +894,7 @@ class MessageAdapter(
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
                     onLongClick(message)
-                    actionListener.onMessageLongClick(message, itemView)
+                    actionListener.onMessageLongClick(itemView)
                 }
                 true
             }
@@ -820,7 +951,7 @@ class MessageAdapter(
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
                     onLongClick(message)
-                    actionListener.onMessageLongClick(message, itemView)
+                    actionListener.onMessageLongClick(itemView)
                 }
                 true
             }

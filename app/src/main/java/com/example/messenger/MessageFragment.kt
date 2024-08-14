@@ -61,9 +61,6 @@ import java.util.Calendar
 import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
 
-
-const val REQUEST_CODE_PICK_FILE = 1
-
 class MessageFragment(
     private val dialog: Dialog
 ) : Fragment(), AudioRecordView.Callback {
@@ -178,7 +175,7 @@ class MessageFragment(
                     showPopupMenuMessage(itemView, R.menu.popup_menu_message, message)
                 }
 
-                override fun onMessageLongClick(message: Message, itemView: View) {
+                override fun onMessageLongClick(itemView: View) {
                     uiScope.launch {
                         stopMessagePolling()
                         binding.floatingActionButtonDelete.visibility = View.VISIBLE
@@ -218,8 +215,26 @@ class MessageFragment(
                     }
                 }
                 }
-                override fun onImageClick(message: Message, itemView: View) {
-                    // todo show full screen image
+                override fun onImagesClick(images: ArrayList<LocalMedia>, position: Int) {
+                    Log.d("testClickImages", "images: $images")
+                    PictureSelector.create(requireContext())
+                        .openPreview()
+                        .setImageEngine(GlideEngine.createGlideEngine())
+                        .setVideoPlayerEngine(ExoPlayerEngine())
+                        .isAutoVideoPlay(false)
+                        .isLoopAutoVideoPlay(false)
+                        .isVideoPauseResumePlay(true)
+                        .setSelectorUIStyle(filePickerManager.selectorStyle)
+                        .isPreviewFullScreenMode(true)
+                        .setInjectLayoutResourceListener(object: OnInjectLayoutResourceListener {
+                            override fun getLayoutResourceId(context: Context?, resourceSource: Int): Int {
+                                @Suppress("DEPRECATED_IDENTITY_EQUALS")
+                                return if (resourceSource === InjectResourceSource.PREVIEW_LAYOUT_RESOURCE
+                                ) R.layout.ps_custom_fragment_preview
+                                else InjectResourceSource.DEFAULT_LAYOUT_RESOURCE
+                            }
+                        })
+                        .startActivityPreview(position, false, images)
                 }
             }, dialog.otherUser.id, requireContext())
         imageAdapter = ImageAdapter(requireContext(), object: ImageActionListener {
@@ -398,7 +413,7 @@ class MessageFragment(
     override val defaultViewModelCreationExtras: CreationExtras
         get() = super.defaultViewModelCreationExtras
 
-    fun getFileFromContentUri(context: Context, contentUri: Uri): File? {
+    private fun getFileFromContentUri(context: Context, contentUri: Uri): File? {
         val projection = arrayOf(MediaStore.Video.Media.DATA)
         val cursor = context.contentResolver.query(contentUri, projection, null, null, null)
         cursor?.use {
