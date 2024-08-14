@@ -38,7 +38,9 @@ import com.example.messenger.picker.DateUtils
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.config.SelectMimeType
 import com.luck.picture.lib.entity.LocalMedia
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -82,22 +84,24 @@ class MessageAdapter(
 
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
+    private var checkedFiles: MutableMap<String, String> = mutableMapOf()
     lateinit var dialogSettings: ConversationSettings
     private val retrofitService: RetrofitService
         get() = Singletons.retrofitRepository as RetrofitService
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.IO + job)
 
-    fun getDeleteList(): List<Int> {
+    fun getDeleteList(): Pair<List<Int>, Map<String, String>> {
         val list = mutableListOf<Int>()
         checkedPositions.forEach { list.add(messages.keys.elementAt(it).id) }
-        return list
+        return Pair(list, checkedFiles)
     }
 
     @SuppressLint("NotifyDataSetChanged")
     fun clearPositions() {
         canLongClick = true
         checkedPositions.clear()
+        checkedFiles.clear()
     }
 
     private fun savePosition(message: Message) {
@@ -114,6 +118,46 @@ class MessageAdapter(
     private fun onLongClick(message: Message) {
         if(canLongClick) {
             savePosition(message)
+            canLongClick = false
+            notifyDataSetChanged()
+        }
+    }
+
+    private fun savePositionFile(message: Message, filePath: String, fileType: String) {
+        val position = messages.keys.indexOf(message)
+        if (position in checkedPositions) {
+            checkedPositions.remove(position)
+            checkedFiles.remove(filePath)
+        } else {
+            checkedPositions.add(position)
+            checkedFiles[filePath] = fileType
+        }
+        notifyItemChanged(position)
+    }
+
+    private fun onLongClickFile(message: Message, filePath: String, fileType: String) {
+        if (canLongClick) {
+            savePositionFile(message, filePath, fileType)
+            canLongClick = false
+            notifyDataSetChanged()
+        }
+    }
+
+    private fun savePositionFiles(message: Message, filePaths: Map<String, String>) {
+        val position = messages.keys.indexOf(message)
+        if (position in checkedPositions) {
+            checkedPositions.remove(position)
+            filePaths.forEach { checkedFiles.remove(it.key) }
+        } else {
+            checkedPositions.add(position)
+            filePaths.forEach { checkedFiles[it.key] = it.value }
+        }
+        notifyItemChanged(position)
+    }
+
+    private fun onLongClickFiles(message: Message, filePaths: Map<String, String>) {
+        if (canLongClick) {
+            savePositionFiles(message, filePaths)
             canLongClick = false
             notifyDataSetChanged()
         }
@@ -331,11 +375,14 @@ class MessageAdapter(
 
     // ViewHolder для изображений получателя
     inner class MessagesViewHolderImageReceiver(private val binding: ItemImageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
+
+        private var filePath: String = ""
         fun bind(message: Message, position: Int) {
             uiScope.launch {
                 binding.progressBar.visibility = View.VISIBLE
-                val filePath = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
-                val file = File(filePath.await())
+                val filePathTemp = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
+                val file = File(filePathTemp.await())
+                filePath = filePathTemp.await()
                 if (file.exists()) {
                     val uri = Uri.fromFile(file)
                     val localMedia = fileToLocalMedia(file)
@@ -379,7 +426,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message)
+                    savePositionFile(message, filePath, "photos")
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -390,14 +437,14 @@ class MessageAdapter(
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message)
+                    savePositionFile(message, filePath, "photos")
                 }
                 else
                     actionListener.onMessageClick(message, itemView)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message)
+                    onLongClickFile(message, filePath, "photos")
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -407,11 +454,14 @@ class MessageAdapter(
 
     // ViewHolder для изображений отправителя
     inner class MessagesViewHolderImageSender(private val binding: ItemImageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
+
+        private var filePath: String = ""
         fun bind(message: Message, position: Int) {
             uiScope.launch {
                 binding.progressBar.visibility = View.VISIBLE
-                val filePath = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
-                val file = File(filePath.await())
+                val filePathTemp = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
+                val file = File(filePathTemp.await())
+                filePath = filePathTemp.await()
                 if (file.exists()) {
                     val uri = Uri.fromFile(file)
                     val localMedia = fileToLocalMedia(file)
@@ -458,7 +508,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message)
+                    savePositionFile(message, filePath, "photos")
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -469,14 +519,14 @@ class MessageAdapter(
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message)
+                    savePositionFile(message, filePath, "photos")
                 }
                 else
                     actionListener.onMessageClick(message, itemView)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message)
+                    onLongClickFile(message, filePath, "photos")
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -496,6 +546,8 @@ class MessageAdapter(
                 actionListener.onMessageLongClick(itemView)
             }
         })
+
+        private var filePaths: MutableMap<String, String> = mutableMapOf()
         init {
             binding.recyclerview.layoutManager = CustomLayoutManager()
             binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 16, true))
@@ -510,6 +562,7 @@ class MessageAdapter(
                         val filePath =
                             async { retrofitService.downloadFile(context, "photos", image) }
                         val file = File(filePath.await())
+                        filePaths[filePath.await()] = "photos"
                         if (file.exists()) {
                             medias += fileToLocalMedia(file)
                         } else {
@@ -534,7 +587,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message)
+                    savePositionFiles(message, filePaths)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -552,7 +605,7 @@ class MessageAdapter(
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message)
+                    onLongClickFiles(message, filePaths)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -572,6 +625,8 @@ class MessageAdapter(
                 actionListener.onMessageLongClick(itemView)
             }
         })
+
+        private var filePaths: MutableMap<String, String> = mutableMapOf()
         init {
             binding.recyclerview.layoutManager = CustomLayoutManager()
             binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 16, true))
@@ -587,6 +642,7 @@ class MessageAdapter(
                         val filePath =
                             async { retrofitService.downloadFile(context, "photos", image) }
                         val file = File(filePath.await())
+                        filePaths[filePath.await()] = "photos"
                         if (file.exists()) {
                             medias += fileToLocalMedia(file)
                         } else {
@@ -614,7 +670,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message)
+                    savePositionFiles(message, filePaths)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -625,14 +681,14 @@ class MessageAdapter(
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message)
+                    savePositionFiles(message, filePaths)
                 }
                 else
                     actionListener.onMessageClick(message, itemView)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message)
+                    onLongClickFiles(message, filePaths)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -822,39 +878,64 @@ class MessageAdapter(
 
     inner class MessagesViewHolderVoiceReceiver(private val binding: ItemVoiceReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message, position: Int) {
-
+            // todo
         }
     }
 
     inner class MessagesViewHolderVoiceSender(private val binding: ItemVoiceSenderBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message, position: Int) {
-
+            // todo
         }
     }
 
     inner class MessagesViewHolderFileReceiver(private val binding: ItemFileReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message, position: Int) {
-
+            // todo
         }
     }
 
     inner class MessagesViewHolderFileSender(private val binding: ItemFileSenderBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message, position: Int) {
-
+            // todo
         }
     }
 
     inner class MessagesViewHolderTextImageReceiver(private val binding: ItemTextImageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
+
+        private var filePath: String = ""
         fun bind(message: Message, position: Int) {
             binding.messageReceiverTextView.text = message.text
             uiScope.launch {
                 binding.progressBar.visibility = View.VISIBLE
-                val filePath = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
-                val file = File(filePath.await())
+                val filePathTemp = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
+                val file = File(filePathTemp.await())
+                filePath = filePathTemp.await()
                 if (file.exists()) {
                     val uri = Uri.fromFile(file)
+                    val localMedia = fileToLocalMedia(file)
+                    val chooseModel = localMedia.chooseModel
+                    binding.tvDuration.visibility = if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
+                    if(chooseModel == SelectMimeType.ofAudio()) {
+                        binding.tvDuration.visibility = View.VISIBLE
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
+                    } else {
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
+                    }
+                    binding.tvDuration.text = (DateUtils.formatDurationTime(localMedia.duration))
+                    if(chooseModel == SelectMimeType.ofAudio()) {
+                        binding.receiverImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
+                    } else {
+                        Glide.with(context)
+                            .load(uri)
+                            .centerCrop()
+                            .placeholder(R.color.app_color_f6)
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .into(binding.receiverImageView)
+                    }
                     binding.progressBar.visibility = View.GONE
-                    binding.receiverImageView.setImageURI(uri)
+                    binding.receiverImageView.setOnClickListener {
+                        actionListener.onImagesClick(arrayListOf(localMedia), 0)
+                    }
                 } else {
                     Log.e("ImageError", "File does not exist: $filePath")
                     binding.progressBar.visibility = View.GONE
@@ -872,7 +953,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message)
+                    savePositionFile(message, filePath, "photos")
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -883,17 +964,14 @@ class MessageAdapter(
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message)
+                    savePositionFile(message, filePath, "photos")
                 }
                 else
                     actionListener.onMessageClick(message, itemView)
             }
-            binding.receiverImageView.setOnClickListener {
-                // todo show image full screen
-            }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message)
+                    onLongClickFile(message, filePath, "photos")
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -902,16 +980,44 @@ class MessageAdapter(
     }
 
     inner class MessagesViewHolderTextImageSender(private val binding: ItemTextImageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
+
+        private var filePath: String = ""
         fun bind(message: Message, position: Int) {
             binding.messageSenderTextView.text = message.text
             uiScope.launch {
                 binding.progressBar.visibility = View.VISIBLE
-                val filePath = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
-                val file = File(filePath.await())
+                val filePathTemp = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
+                val file = File(filePathTemp.await())
+                filePath = filePathTemp.await()
                 if (file.exists()) {
                     val uri = Uri.fromFile(file)
-                    binding.progressBar.visibility = View.GONE
-                    binding.senderImageView.setImageURI(uri)
+                    val localMedia = fileToLocalMedia(file)
+                    val chooseModel = localMedia.chooseModel
+                    withContext(Dispatchers.Main) {
+                        binding.tvDuration.visibility =
+                            if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
+                        if (chooseModel == SelectMimeType.ofAudio()) {
+                            binding.tvDuration.visibility = View.VISIBLE
+                            binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
+                        } else {
+                            binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
+                        }
+                        binding.tvDuration.text = (DateUtils.formatDurationTime(localMedia.duration))
+                        if (chooseModel == SelectMimeType.ofAudio()) {
+                            binding.senderImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
+                        } else {
+                            Glide.with(context)
+                                .load(uri)
+                                .centerCrop()
+                                .placeholder(R.color.app_color_f6)
+                                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                .into(binding.senderImageView)
+                        }
+                        binding.progressBar.visibility = View.GONE
+                        binding.senderImageView.setOnClickListener {
+                            actionListener.onImagesClick(arrayListOf(localMedia), 0)
+                        }
+                    }
                 } else {
                     Log.e("ImageError", "File does not exist: $filePath")
                     binding.progressBar.visibility = View.GONE
@@ -929,7 +1035,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message)
+                    savePositionFile(message, filePath, "photos")
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -940,17 +1046,14 @@ class MessageAdapter(
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message)
+                    savePositionFile(message, filePath, "photos")
                 }
                 else
                     actionListener.onMessageClick(message, itemView)
             }
-            binding.senderImageView.setOnClickListener {
-                // todo show image full screen
-            }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message)
+                    onLongClickFile(message, filePath, "photos")
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -959,14 +1062,162 @@ class MessageAdapter(
     }
 
     inner class MessagesViewHolderTextImagesReceiver(private val binding: ItemTextImagesReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message, position: Int) {
 
+        private val adapter = ImagesAdapter(context, object: ImagesActionListener {
+            override fun onImageClicked(images: ArrayList<LocalMedia>, position: Int) {
+                actionListener.onImagesClick(images, position)
+            }
+
+            override fun onLongImageClicked(images: ArrayList<LocalMedia>, position: Int) {
+                actionListener.onMessageLongClick(itemView)
+            }
+        })
+
+        private var filePaths: MutableMap<String, String> = mutableMapOf()
+        init {
+            binding.recyclerview.layoutManager = CustomLayoutManager()
+            binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 16, true))
+            binding.recyclerview.adapter = adapter
+        }
+        fun bind(message: Message, position: Int) {
+            binding.messageReceiverTextView.text = message.text
+            binding.progressBar.visibility = View.VISIBLE
+            uiScope.launch {
+                val localMedias = async {
+                    val medias = arrayListOf<LocalMedia>()
+                    for (image in message.images!!) {
+                        val filePath =
+                            async { retrofitService.downloadFile(context, "photos", image) }
+                        val file = File(filePath.await())
+                        filePaths[filePath.await()] = "photos"
+                        if (file.exists()) {
+                            medias += fileToLocalMedia(file)
+                        } else {
+                            Log.e("ImageError", "File does not exist: $filePath")
+                            binding.progressBar.visibility = View.GONE
+                            binding.errorImageView.visibility = View.VISIBLE
+                        }
+                    }
+                    return@async medias
+                }
+                adapter.images = localMedias.await()
+                binding.progressBar.visibility = View.GONE
+            }
+            val time = formatMessageTime(message.timestamp)
+            val date = messages.values.elementAt(position)
+            if(date != "") {
+                binding.dateTextView.visibility = View.VISIBLE
+                binding.dateTextView.text = date
+            } else binding.dateTextView.visibility = View.GONE
+            binding.timeTextView.text = time
+            if(!canLongClick) {
+                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                binding.checkbox.isChecked = position in checkedPositions
+                binding.checkbox.setOnClickListener {
+                    savePositionFiles(message, filePaths)
+                }
+            }
+            else { binding.checkbox.visibility = View.GONE }
+            if (message.isRead) {
+                binding.icCheck.visibility = View.INVISIBLE
+                binding.icCheck2.visibility = View.VISIBLE
+            }
+            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            binding.root.setOnClickListener {
+                if(!canLongClick) {
+                    savePositionFiles(message, filePaths)
+                }
+                else
+                    actionListener.onMessageClick(message, itemView)
+            }
+            binding.root.setOnLongClickListener {
+                if(canLongClick) {
+                    onLongClickFiles(message, filePaths)
+                    actionListener.onMessageLongClick(itemView)
+                }
+                true
+            }
         }
     }
 
     inner class MessagesViewHolderTextImagesSender(private val binding: ItemTextImagesSenderBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message, position: Int) {
 
+        private val adapter = ImagesAdapter(context, object: ImagesActionListener {
+            override fun onImageClicked(images: ArrayList<LocalMedia>, position: Int) {
+                actionListener.onImagesClick(images, position)
+            }
+
+            override fun onLongImageClicked(images: ArrayList<LocalMedia>, position: Int) {
+                actionListener.onMessageLongClick(itemView)
+            }
+        })
+
+        private var filePaths: MutableMap<String, String> = mutableMapOf()
+        init {
+            binding.recyclerview.layoutManager = CustomLayoutManager()
+            binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 16, true))
+            binding.recyclerview.adapter = adapter
+        }
+        fun bind(message: Message, position: Int) {
+            binding.messageSenderTextView.text = message.text
+            uiScope.launch {
+                val localMedias = async {
+                    val medias = arrayListOf<LocalMedia>()
+                    for (image in message.images!!) {
+                        val filePath =
+                            async { retrofitService.downloadFile(context, "photos", image) }
+                        val file = File(filePath.await())
+                        filePaths[filePath.await()] = "photos"
+                        if (file.exists()) {
+                            medias += fileToLocalMedia(file)
+                        } else {
+                            Log.e("ImageError", "File does not exist: $filePath")
+                            binding.progressBar.visibility = View.GONE
+                            binding.errorImageView.visibility = View.VISIBLE
+                        }
+                    }
+                    return@async medias
+                }
+                withContext(Dispatchers.Main) {
+                    adapter.images = localMedias.await()
+                    Log.d("testAdapterImages", "${adapter.images}")
+                    binding.progressBar.visibility = View.GONE
+                }
+            }
+            val time = formatMessageTime(message.timestamp)
+            val date = messages.values.elementAt(position)
+            if(date != "") {
+                binding.dateTextView.visibility = View.VISIBLE
+                binding.dateTextView.text = date
+            } else binding.dateTextView.visibility = View.GONE
+            binding.timeTextView.text = time
+            if(!canLongClick) {
+                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                binding.checkbox.isChecked = position in checkedPositions
+                binding.checkbox.setOnClickListener {
+                    savePositionFiles(message, filePaths)
+                }
+            }
+            else { binding.checkbox.visibility = View.GONE }
+            if (message.isRead) {
+                binding.icCheck.visibility = View.INVISIBLE
+                binding.icCheck2.visibility = View.VISIBLE
+            }
+            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            binding.root.setOnClickListener {
+                if(!canLongClick) {
+                    savePositionFiles(message, filePaths)
+                }
+                else
+                    actionListener.onMessageClick(message, itemView)
+            }
+            binding.root.setOnLongClickListener {
+                if(canLongClick) {
+                    onLongClickFiles(message, filePaths)
+                    actionListener.onMessageLongClick(itemView)
+                }
+                true
+            }
         }
     }
 
@@ -998,8 +1249,6 @@ class MessageAdapter(
             else -> dateFormatYear.format(greenwichMessageDate.time)
         }
     }
-
-
 
     private fun isToday(now: Calendar, messageDate: Calendar): Boolean {
         return now.get(Calendar.YEAR) == messageDate.get(Calendar.YEAR) &&

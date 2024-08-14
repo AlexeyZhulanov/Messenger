@@ -50,6 +50,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -198,15 +199,20 @@ class MessageFragment(
                             }
                         })
                     binding.floatingActionButtonDelete.setOnClickListener {
-                        val messagesToDelete = adapter.getDeleteList()
+                       val (messagesToDelete, filesToDelete) = adapter.getDeleteList()
                         if (messagesToDelete.isNotEmpty()) {
                             uiScope.launch {
                                 binding.progressBar.visibility = View.VISIBLE
-                                val response = async { retrofitService.deleteMessages(messagesToDelete) }
+                                val response = async(Dispatchers.IO) { retrofitService.deleteMessages(messagesToDelete) }
+                                val response2 = withContext(Dispatchers.IO) {
+                                    filesToDelete.map {
+                                        async { retrofitService.deleteFile(it.value, it.key) }
+                                    }.awaitAll() // wait all responses
+                                }
                                 binding.floatingActionButtonDelete.visibility = View.GONE
                                 countMsg -= messagesToDelete.size
                                 adapter.clearPositions()
-                                if(response.await()) {
+                                if(response.await() && response2.all { it }) {
                                     startMessagePolling()
                                     binding.progressBar.visibility = View.GONE
                                 }

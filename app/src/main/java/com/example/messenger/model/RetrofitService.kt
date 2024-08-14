@@ -676,6 +676,20 @@ class RetrofitService(
         return@withContext filePath
     }
 
+    override suspend fun deleteFile(folder: String, filename: String): Boolean = withContext(Dispatchers.IO) {
+        val message = try {
+            uploadSource.deleteFile(folder, filename)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw FileNotFoundException(e)
+                400 -> throw InvalidCredentialsException(e)
+                else -> throw e
+            }
+        }
+        Log.d("testDeleteFile", message)
+        return@withContext true
+    }
+
     fun addListener(listener: ConversationsListener) {
         listeners.add(listener)
         listener.invoke(conversations)

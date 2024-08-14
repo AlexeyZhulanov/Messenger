@@ -99,4 +99,6 @@ interface RetrofitRepository {
 
     suspend fun downloadFile(context: Context, folder: String, filename: String) : String
 
+    suspend fun deleteFile(folder: String, filename: String) : Boolean
+
 }

@@ -45,6 +45,8 @@ class UserAlreadyInGroupException(cause: Throwable) : AppException(cause = cause
 
 class UserIsNotAMemberOfGroupException(cause: Throwable) : AppException(cause = cause)
 
+class FileNotFoundException(cause: Throwable) : AppException(cause = cause)
+
 open class BackendException(
     val code: Int,
     message: String
