@@ -76,4 +76,8 @@ class RetrofitUploadsSource(
             return@wrapRetrofitExceptions "Error: ${e.message}"
         }
     }
+
+    override suspend fun deleteFile(folder: String, filename: String): String = wrapRetrofitExceptions {
+        uploadsApi.deleteFile(folder, filename).message
+    }
 }

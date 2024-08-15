@@ -32,6 +32,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.databinding.FragmentMessageBinding
 import com.example.messenger.model.Dialog
+import com.example.messenger.model.FileNotFoundException
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
@@ -50,6 +51,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -172,7 +174,11 @@ class MessageFragment(
         val filePickerManager = FilePickerManager(this)
             adapter = MessageAdapter(object : MessageActionListener {
                 override fun onMessageClick(message: Message, itemView: View) {
-                    showPopupMenuMessage(itemView, R.menu.popup_menu_message, message)
+                    showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, null)
+                }
+
+                override fun onMessageClickImage(message: Message, itemView: View, localMedias: ArrayList<LocalMedia>) {
+                    showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, localMedias)
                 }
 
                 override fun onMessageLongClick(itemView: View) {
@@ -198,15 +204,20 @@ class MessageFragment(
                             }
                         })
                     binding.floatingActionButtonDelete.setOnClickListener {
-                        val messagesToDelete = adapter.getDeleteList()
+                       val (messagesToDelete, filesToDelete) = adapter.getDeleteList()
                         if (messagesToDelete.isNotEmpty()) {
                             uiScope.launch {
                                 binding.progressBar.visibility = View.VISIBLE
-                                val response = async { retrofitService.deleteMessages(messagesToDelete) }
+                                val response = async(Dispatchers.IO) { retrofitService.deleteMessages(messagesToDelete) }
+                                val response2 = withContext(Dispatchers.IO) {
+                                    filesToDelete.map {
+                                        async { retrofitService.deleteFile(it.value, it.key) }
+                                    }.awaitAll() // wait all responses
+                                }
                                 binding.floatingActionButtonDelete.visibility = View.GONE
                                 countMsg -= messagesToDelete.size
                                 adapter.clearPositions()
-                                if(response.await()) {
+                                if(response.await() && response2.all { it }) {
                                     startMessagePolling()
                                     binding.progressBar.visibility = View.GONE
                                 }
@@ -298,7 +309,7 @@ class MessageFragment(
                         imageAdapter.images = res.await()
                         if(res.await().isNotEmpty()) {
                             binding.recordView.visibility = View.INVISIBLE
-                            binding.enterButton.visibility = View.VISIBLE
+                            if(!editFlag) binding.enterButton.visibility = View.VISIBLE
                         }
                     }
                 } catch (e: CancellationException) {
@@ -364,15 +375,16 @@ class MessageFragment(
             val items = imageAdapter.getData()
             uiScope.launch {
                 if (items.isNotEmpty()) {
+                    imageAdapter.clearImages()
                 val listik = async {
                 val list = mutableListOf<String>()
-                    for (item in items) {
-                        if(item.duration > 0) {
-                            val file = getFileFromContentUri(requireContext(), Uri.parse(item.availablePath)) ?: continue
-                            val tmp = async { retrofitService.uploadPhoto(file) }
+                    for (item1 in items) {
+                        if(item1.duration > 0) {
+                            val file = getFileFromContentUri(requireContext(), Uri.parse(item1.availablePath)) ?: continue
+                            val tmp = async(Dispatchers.IO) { retrofitService.uploadPhoto(file) }
                             list += tmp.await()
                         } else {
-                            val tmp = async { retrofitService.uploadPhoto(File(item.availablePath)) }
+                            val tmp = async(Dispatchers.IO) { retrofitService.uploadPhoto(File(item1.availablePath)) }
                             list += tmp.await()
                         }
                     }
@@ -568,7 +580,7 @@ class MessageFragment(
         popupMenu.show()
     }
 
-    private fun showPopupMenuMessage(view: View, menuRes: Int, message: Message) {
+    private fun showPopupMenuMessage(view: View, menuRes: Int, message: Message, localMedias: ArrayList<LocalMedia>?) {
         val popupMenu = PopupMenu(requireContext(), view)
         popupMenu.menuInflater.inflate(menuRes, popupMenu.menu)
         popupMenu.setOnMenuItemClickListener { item ->
@@ -576,24 +588,135 @@ class MessageFragment(
                 R.id.item_edit -> {
                     editFlag = true
                     val editText: EditText = requireView().findViewById(R.id.enter_message)
-                    editText.setText(message.text)
-                    editText.setSelection(message.text?.length ?: 0)
+                    val editButton: ImageView = requireView().findViewById(R.id.edit_button)
+                    requireActivity().onBackPressedDispatcher.addCallback(
+                        viewLifecycleOwner,
+                        object : OnBackPressedCallback(true) {
+                            @SuppressLint("NotifyDataSetChanged")
+                            override fun handleOnBackPressed() {
+                                if (editFlag) {
+                                    editText.setText("")
+                                    editButton.visibility = View.GONE
+                                    binding.recordView.visibility = View.VISIBLE
+                                    imageAdapter.clearImages()
+                                    editFlag = false
+                                } else {
+                                    //Removing this callback
+                                    remove()
+                                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                                }
+                                startMessagePolling()
+                            }
+                        })
+
+                    if(!message.text.isNullOrEmpty()) {
+                        editText.setText(message.text)
+                        editText.setSelection(message.text?.length ?: 0)
+                    } else {
+                        editText.setText("")
+                        editText.setSelection(0)
+                        editButton.visibility = View.VISIBLE
+                        binding.recordView.visibility = View.INVISIBLE
+                    }
+
+                    if(!message.images.isNullOrEmpty()) {
+                        imageAdapter.images = ArrayList(localMedias ?: arrayListOf()) // object copy -> remove link
+                    }
                     val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                     editText.postDelayed({
                         editText.requestFocus()
                         imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
                     }, 100)
-                    val editButton: ImageView = requireView().findViewById(R.id.edit_button)
+
                     editButton.setOnClickListener {
                         uiScope.launch {
                             stopMessagePolling()
-                            val response = async { retrofitService.editMessage(message.id, editText.text.toString(), null, null, null) }
-                            if(response.await()) {
-                                editFlag = false
-                                editText.setText("")
-                                startMessagePolling()
-                            }
+                            val tempItems = imageAdapter.getData()
+                            val text = editText.text.toString()
+                            if(tempItems.isNotEmpty()) {
+                                val itemsToUpload = if (localMedias == null) tempItems
+                                else tempItems.filter { it !in localMedias } as ArrayList<LocalMedia>
+                                // из-за того, что автор библиотеки дохера умный, приходится использовать кастомный компаратор
+                                val itemsToDelete = localMedias?.filter { localItem ->
+                                    tempItems.none { tempItem ->
+                                        tempItem.id == localItem.id
+                                                && tempItem.path == localItem.path
+                                                && tempItem.realPath == localItem.realPath
+                                    }
+                                } ?: arrayListOf()
+                                // ну и ещё один компаратор...... автор красавчик, сразу понять что у тебя не работает equals нереально
+                                val removedItemsIndices: List<Int> = localMedias?.mapIndexedNotNull { index, localItem ->
+                                    if (tempItems.none { tempItem ->
+                                            tempItem.id == localItem.id
+                                                    && tempItem.path == localItem.path
+                                                    && tempItem.realPath == localItem.realPath
+                                        }) index else null
+                                } ?: listOf()
 
+                                Log.d("testItemsToDELETE", itemsToDelete.toString())
+                                // Upload new media
+                                val uploadList = async(Dispatchers.Main) {
+                                    val list = mutableListOf<String>()
+                                    for(uItem in itemsToUpload) {
+                                            if(uItem.duration > 0) {
+                                                val file = getFileFromContentUri(requireContext(), Uri.parse(uItem.availablePath)) ?: continue
+                                                val tmp = async(Dispatchers.IO) { retrofitService.uploadPhoto(file) }
+                                                list += tmp.await()
+                                            } else {
+                                                val tmp = async(Dispatchers.IO) { retrofitService.uploadPhoto(File(uItem.availablePath)) }
+                                                list += tmp.await()
+                                            }
+                                    }
+                                    return@async list
+                                }
+                                // Delete old media
+                                val response = withContext(Dispatchers.IO) {
+                                    itemsToDelete.map {
+                                        val file = if(it.duration > 0) getFileFromContentUri(requireContext(), Uri.parse(it.availablePath)) ?: File(it.availablePath)
+                                        else File(it.availablePath)
+                                        async(Dispatchers.IO) {
+                                            try { retrofitService.deleteFile("photos", file.name) }
+                                            catch (e: FileNotFoundException) {
+                                                return@async true
+                                            }
+                                        }
+                                    }.awaitAll() // wait all responses
+                                }
+                                val imagesMessage = message.images?.filterIndexed { index, _ ->
+                                    index !in removedItemsIndices
+                                } ?: emptyList()
+                                Log.d("testImagesMESSAGE", imagesMessage.toString())
+                                if(response.all { it }) {
+                                    val finalList = imagesMessage + uploadList.await()
+                                    Log.d("testFinalList", finalList.toString())
+                                    val resp = async(Dispatchers.IO) {
+                                        if (text.isNotEmpty()) {
+                                            retrofitService.editMessage(message.id, text, finalList, null, null)
+                                        } else
+                                            retrofitService.editMessage(message.id, null, finalList, null, null)
+                                    }
+                                    if(resp.await()) {
+                                        editFlag = false
+                                        imageAdapter.clearImages()
+                                        editText.setText("")
+                                        startMessagePolling()
+                                    }
+                                }
+                            } else {
+                                if(text.isNotEmpty()) {
+                                    val resp = async(Dispatchers.IO) {
+                                        retrofitService.editMessage(message.id, text, arrayListOf(), null, null)
+                                    }
+                                    if (resp.await()) {
+                                        editFlag = false
+                                        imageAdapter.clearImages()
+                                        editText.setText("")
+                                        editButton.visibility = View.GONE
+                                        binding.recordView.visibility = View.VISIBLE
+                                        startMessagePolling()
+                                    }
+                                } else withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "Сообщение не должно быть пустым", Toast.LENGTH_SHORT).show() }
+                            }
                         }
                     }
                     true

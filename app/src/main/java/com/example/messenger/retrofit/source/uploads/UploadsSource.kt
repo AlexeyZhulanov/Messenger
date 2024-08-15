@@ -12,4 +12,7 @@ interface UploadsSource {
     suspend fun uploadAudio(audio: File) : String
 
     suspend fun downloadFile(context: Context, folder: String, filename: String) : String
+
+    suspend fun deleteFile(folder: String, filename: String) : String
+
 }

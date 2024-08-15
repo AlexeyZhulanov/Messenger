@@ -53,18 +53,39 @@
         >
 
         <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:background="@drawable/message_background_receiver"
             android:layout_height="wrap_content">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerview"
-                android:layout_width="250dp"
-                android:layout_height="match_parent"
+                android:layout_width="match_parent"
+                android:layout_height="400dp"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
                 />
+
+            <ImageView
+                android:id="@+id/errorImageView"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:src="@drawable/ic_error"
+                android:visibility="gone"
+                app:layout_constraintStart_toStartOf="@id/recyclerview"
+                app:layout_constraintTop_toTopOf="@id/recyclerview"
+                app:layout_constraintBottom_toBottomOf="@id/recyclerview"
+                app:layout_constraintEnd_toEndOf="@id/recyclerview" />
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:visibility="gone"
+                app:layout_constraintStart_toStartOf="@id/recyclerview"
+                app:layout_constraintEnd_toEndOf="@id/recyclerview"
+                app:layout_constraintTop_toTopOf="@id/recyclerview"
+                app:layout_constraintBottom_toBottomOf="@id/recyclerview"/>
 
             <TextView
                 android:id="@+id/messageReceiverTextView"
@@ -74,68 +95,79 @@
                 android:gravity="center"
                 android:textStyle="italic"
                 tools:text="Сообщение"
+                android:visibility="visible"
                 android:textColor="#000000"
                 android:layout_marginTop="5dp"
                 app:layout_constraintTop_toBottomOf="@id/recyclerview"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent" />
 
-            <TextView
-                android:id="@+id/editTextView"
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center"
-                android:textSize="13sp"
-                android:textStyle="italic"
-                android:text="изменено"
-                android:textColor="#000000"
-                android:layout_marginEnd="5dp"
-                android:layout_marginStart="5dp"
-                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="1"
+                android:background="@drawable/messenger_item_background"
                 app:layout_constraintStart_toEndOf="@id/messageReceiverTextView"
-                app:layout_constraintTop_toTopOf="@id/timeTextView"
-                app:layout_constraintBottom_toBottomOf="@id/timeTextView"
-                app:layout_constraintEnd_toStartOf="@id/timeTextView" />
+                app:layout_constraintBottom_toBottomOf="parent">
 
-            <TextView
-                android:id="@+id/timeTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="21:35"
-                android:textSize="13sp"
-                android:maxLines="1"
-                android:textStyle="italic"
-                android:textColor="#000000"
-                android:layout_marginStart="5dp"
-                app:layout_constraintVertical_bias="1"
-                app:layout_constraintEnd_toStartOf="@id/ic_check"
-                app:layout_constraintBottom_toBottomOf="parent" />
+                <TextView
+                    android:id="@+id/editTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:textSize="13sp"
+                    android:textStyle="italic"
+                    android:text="изменено"
+                    android:textColor="@color/white"
+                    android:layout_marginEnd="5dp"
+                    android:layout_marginStart="5dp"
+                    android:visibility="gone"
+                    app:layout_constraintHorizontal_bias="1"
+                    app:layout_constraintTop_toTopOf="@id/timeTextView"
+                    app:layout_constraintBottom_toBottomOf="@id/timeTextView"
+                    app:layout_constraintEnd_toStartOf="@id/timeTextView" />
 
-            <ImageView
-                android:id="@+id/ic_check"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_check"
-                android:paddingVertical="3dp"
-                android:layout_marginStart="-10dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@id/timeTextView"
-                app:layout_constraintBottom_toBottomOf="@id/timeTextView"
-                />
+                <TextView
+                    android:id="@+id/timeTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="21:35"
+                    android:textSize="13sp"
+                    android:maxLines="1"
+                    android:textStyle="italic"
+                    android:textColor="@color/white"
+                    android:paddingStart="3dp"
+                    app:layout_constraintVertical_bias="1"
+                    app:layout_constraintEnd_toStartOf="@id/ic_check"
+                    app:layout_constraintBottom_toBottomOf="parent" />
 
-            <ImageView
-                android:id="@+id/ic_check2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_check_two"
-                android:visibility="invisible"
-                android:paddingVertical="3dp"
-                android:layout_marginStart="-10dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@id/timeTextView"
-                app:layout_constraintBottom_toBottomOf="@id/timeTextView"
-                />
+                <ImageView
+                    android:id="@+id/ic_check"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_check"
+                    android:paddingVertical="3dp"
+                    android:layout_marginStart="-10dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/timeTextView"
+                    app:layout_constraintBottom_toBottomOf="@id/timeTextView"
+                    />
+
+                <ImageView
+                    android:id="@+id/ic_check2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_check_two"
+                    android:visibility="invisible"
+                    android:paddingVertical="3dp"
+                    android:layout_marginStart="-10dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/timeTextView"
+                    app:layout_constraintBottom_toBottomOf="@id/timeTextView"
+                    />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
