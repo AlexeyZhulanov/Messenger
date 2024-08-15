@@ -652,8 +652,7 @@ class MessageFragment(
                                                     && tempItem.realPath == localItem.realPath
                                         }) index else null
                                 } ?: listOf()
-
-                                Log.d("testItemsToDELETE", itemsToDelete.toString())
+                                
                                 // Upload new media
                                 val uploadList = async(Dispatchers.Main) {
                                     val list = mutableListOf<String>()
@@ -685,10 +684,8 @@ class MessageFragment(
                                 val imagesMessage = message.images?.filterIndexed { index, _ ->
                                     index !in removedItemsIndices
                                 } ?: emptyList()
-                                Log.d("testImagesMESSAGE", imagesMessage.toString())
                                 if(response.all { it }) {
                                     val finalList = imagesMessage + uploadList.await()
-                                    Log.d("testFinalList", finalList.toString())
                                     val resp = async(Dispatchers.IO) {
                                         if (text.isNotEmpty()) {
                                             retrofitService.editMessage(message.id, text, finalList, null, null)
@@ -699,6 +696,8 @@ class MessageFragment(
                                         editFlag = false
                                         imageAdapter.clearImages()
                                         editText.setText("")
+                                        editButton.visibility = View.GONE
+                                        binding.recordView.visibility = View.VISIBLE
                                         startMessagePolling()
                                     }
                                 }

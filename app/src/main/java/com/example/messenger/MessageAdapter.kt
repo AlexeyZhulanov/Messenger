@@ -19,10 +19,6 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.messenger.databinding.ItemFileReceiverBinding
 import com.example.messenger.databinding.ItemFileSenderBinding
-import com.example.messenger.databinding.ItemImageReceiverBinding
-import com.example.messenger.databinding.ItemImageSenderBinding
-import com.example.messenger.databinding.ItemImagesReceiverBinding
-import com.example.messenger.databinding.ItemImagesSenderBinding
 import com.example.messenger.databinding.ItemMessageReceiverBinding
 import com.example.messenger.databinding.ItemMessageSenderBinding
 import com.example.messenger.databinding.ItemTextImageReceiverBinding
