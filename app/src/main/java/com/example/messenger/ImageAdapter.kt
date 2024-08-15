@@ -34,6 +34,12 @@ class ImageAdapter(
         }
 
 
+    @SuppressLint("NotifyDataSetChanged")
+    fun clearImages() {
+        images.clear()
+        notifyDataSetChanged()
+    }
+
     fun delete(position: Int) {
         try {
             if (position != RecyclerView.NO_POSITION && images.count() > position) {
@@ -57,12 +63,15 @@ class ImageAdapter(
     }
 
     override fun onClick(v: View) {
+        val viewHolder = v.getTag(R.id.view_holder_tag) as ImageViewHolder
+        val position = viewHolder.bindingAdapterPosition
+        if (position == RecyclerView.NO_POSITION) return
         val image = v.tag as LocalMedia
         when(v.id) {
             R.id.delete_button -> {
-                actionListener.onDeleteImage(images.indexOf(image))
+                actionListener.onDeleteImage(position)
             }
-            else -> { actionListener.onImageClicked(image, images.indexOf(image)) }
+            else -> { actionListener.onImageClicked(image, position) }
         }
     }
 
@@ -100,6 +109,9 @@ class ImageAdapter(
             }
             photoImageView.tag = localMedia
             deleteButton.tag = localMedia
+            // Добавление ViewHolder в tag для дальнейшего использования
+            photoImageView.setTag(R.id.view_holder_tag, holder)
+            deleteButton.setTag(R.id.view_holder_tag, holder)
         }
     }
 

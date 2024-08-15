@@ -120,62 +120,72 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent" />
 
-            <TextView
-                android:id="@+id/editTextView"
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center"
-                android:textSize="13sp"
-                android:textStyle="italic"
-                android:text="изменено"
-                android:textColor="#000000"
-                android:layout_marginEnd="5dp"
-                android:layout_marginStart="5dp"
-                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="1"
-                app:layout_constraintStart_toEndOf="@id/messageReceiverTextView"
-                app:layout_constraintTop_toTopOf="@id/timeTextView"
-                app:layout_constraintBottom_toBottomOf="@id/timeTextView"
-                app:layout_constraintEnd_toStartOf="@id/timeTextView" />
+                android:background="@drawable/messenger_item_background"
+                app:layout_constraintStart_toEndOf="@id/messageSenderTextView"
+                app:layout_constraintBottom_toBottomOf="parent">
 
-            <TextView
-                android:id="@+id/timeTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="21:35"
-                android:textSize="13sp"
-                android:maxLines="1"
-                android:textStyle="italic"
-                android:textColor="#000000"
-                android:layout_marginStart="5dp"
-                app:layout_constraintVertical_bias="1"
-                app:layout_constraintEnd_toStartOf="@id/ic_check"
-                app:layout_constraintBottom_toBottomOf="parent" />
+                <TextView
+                    android:id="@+id/editTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:textSize="13sp"
+                    android:textStyle="italic"
+                    android:text="изменено"
+                    android:textColor="@color/white"
+                    android:layout_marginEnd="5dp"
+                    android:layout_marginStart="5dp"
+                    android:visibility="gone"
+                    app:layout_constraintHorizontal_bias="1"
+                    app:layout_constraintTop_toTopOf="@id/timeTextView"
+                    app:layout_constraintBottom_toBottomOf="@id/timeTextView"
+                    app:layout_constraintEnd_toStartOf="@id/timeTextView" />
 
-            <ImageView
-                android:id="@+id/ic_check"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_check"
-                android:paddingVertical="3dp"
-                android:layout_marginStart="-10dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@id/timeTextView"
-                app:layout_constraintBottom_toBottomOf="@id/timeTextView"
-                />
+                <TextView
+                    android:id="@+id/timeTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="21:35"
+                    android:textSize="13sp"
+                    android:maxLines="1"
+                    android:textStyle="italic"
+                    android:textColor="@color/white"
+                    android:paddingStart="3dp"
+                    app:layout_constraintVertical_bias="1"
+                    app:layout_constraintEnd_toStartOf="@id/ic_check"
+                    app:layout_constraintBottom_toBottomOf="parent" />
 
-            <ImageView
-                android:id="@+id/ic_check2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_check_two"
-                android:visibility="invisible"
-                android:paddingVertical="3dp"
-                android:layout_marginStart="-10dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@id/timeTextView"
-                app:layout_constraintBottom_toBottomOf="@id/timeTextView"
-                />
+                <ImageView
+                    android:id="@+id/ic_check"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_check"
+                    android:paddingVertical="3dp"
+                    android:layout_marginStart="-10dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/timeTextView"
+                    app:layout_constraintBottom_toBottomOf="@id/timeTextView"
+                    />
+
+                <ImageView
+                    android:id="@+id/ic_check2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_check_two"
+                    android:visibility="invisible"
+                    android:paddingVertical="3dp"
+                    android:layout_marginStart="-10dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/timeTextView"
+                    app:layout_constraintBottom_toBottomOf="@id/timeTextView"
+                    />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
