@@ -18,9 +18,6 @@ import static android.os.Process.setThreadPriority;
 import androidx.core.app.ActivityCompat;
 
 import com.example.messenger.MessageFragment;
-import com.example.messenger.MessengerFragment;
-
-import org.jetbrains.annotations.NotNull;
 
 
 public class AudioRecorder {
@@ -78,7 +75,7 @@ public class AudioRecorder {
                         }
                         AudioRecord record =
                                 new AudioRecord(
-                                        MediaRecorder.AudioSource.DEFAULT,
+                                        MediaRecorder.AudioSource.VOICE_COMMUNICATION,
                                         buffer.sampleRate,
                                         AudioFormat.CHANNEL_IN_MONO,
                                         AudioFormat.ENCODING_PCM_16BIT,

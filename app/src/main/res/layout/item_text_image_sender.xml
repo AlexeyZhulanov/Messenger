@@ -89,6 +89,7 @@
                 android:layout_width="90dp"
                 android:layout_height="90dp"
                 android:src="@drawable/ic_error"
+                app:tint="?attr/colorError"
                 android:visibility="gone"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"

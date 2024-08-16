@@ -39,7 +39,7 @@ import com.example.messenger.model.RetrofitService
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
-import com.example.messenger.voicerecorder.AudioPlayer
+import com.example.messenger.voicerecorder.AudioConverter
 import com.example.messenger.voicerecorder.AudioRecorder
 import com.luck.picture.lib.basic.PictureSelector
 import com.luck.picture.lib.config.InjectResourceSource
@@ -72,7 +72,6 @@ class MessageFragment(
     private lateinit var preferences: SharedPreferences
     private lateinit var pickFileLauncher: ActivityResultLauncher<Array<String>>
     private var audioRecord: AudioRecorder? = null
-    private var audioPlayer: AudioPlayer? = null
     private var lastSessionString: String = ""
     private var countMsg = dialog.countMsg
     private var editFlag = false
@@ -216,8 +215,8 @@ class MessageFragment(
                                 }
                                 binding.floatingActionButtonDelete.visibility = View.GONE
                                 countMsg -= messagesToDelete.size
-                                adapter.clearPositions()
                                 if(response.await() && response2.all { it }) {
+                                    adapter.clearPositions()
                                     startMessagePolling()
                                     binding.progressBar.visibility = View.GONE
                                 }
@@ -446,8 +445,31 @@ class MessageFragment(
 
     override fun onRecordEnd() {
         audioRecord?.stop()
-
         tmpFile.copyTo(file, true)
+        val pcmFile = file
+        val fileMp3 = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.mp3")
+        val converter = AudioConverter()
+        converter.convertPcmToMp3(pcmFile.absolutePath, fileMp3.absolutePath) {success, message ->
+            Log.d("testConvert", message)
+            if(success) {
+                uiScope.launch {
+                    withContext(Dispatchers.IO) {
+                        val response = async(Dispatchers.IO) { retrofitService.uploadAudio(fileMp3) }
+                        retrofitService.sendMessage(dialog.id, null, null, response.await(), null)
+                        withContext(Dispatchers.Main) {
+                            countMsg += 1
+                            adapter.messages =
+                                retrofitService.getMessages(dialog.id, 0, countMsg).associateWith { "" }
+                            binding.recyclerview.post {
+                                binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
+                            }
+                        }
+                    }
+                }
+            } else {
+                Log.d("testConvert", "Not OK")
+            }
+        }
     }
 
     override fun onRecordStart() {
