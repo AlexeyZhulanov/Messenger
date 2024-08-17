@@ -602,7 +602,7 @@ class MessageAdapter(
                         handler.removeCallbacks(updateSeekBarRunnable)
                     }
                 } else {
-                    Log.e("ImageError", "File does not exist: $filePath")
+                    Log.e("VoiceError", "File does not exist: $filePath")
                     binding.progressBar.visibility = View.GONE
                     binding.errorImageView.visibility = View.VISIBLE
                     binding.playButton.visibility = View.GONE
@@ -706,7 +706,7 @@ class MessageAdapter(
                         handler.removeCallbacks(updateSeekBarRunnable)
                     }
                 } else {
-                        Log.e("ImageError", "File does not exist: $filePath")
+                        Log.e("VoiceError", "File does not exist: $filePath")
                         binding.progressBar.visibility = View.GONE
                         binding.errorImageView.visibility = View.VISIBLE
                         binding.playButton.visibility = View.GONE
@@ -763,8 +763,57 @@ class MessageAdapter(
     }
 
     inner class MessagesViewHolderFileSender(private val binding: ItemFileSenderBinding) : RecyclerView.ViewHolder(binding.root) {
+
+        private var filePath: String = ""
         fun bind(message: Message, position: Int) {
-            // todo
+            uiScope.launch {
+                val filePathTemp = async { retrofitService.downloadFile(context, "files", message.file!!) }
+                val file = File(filePathTemp.await())
+                filePath = filePathTemp.await()
+                if (file.exists()) {
+                    // todo
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Log.e("FileError", "File does not exist: $filePath")
+                        binding.progressBar.visibility = View.GONE
+                        binding.errorImageView.visibility = View.VISIBLE
+                    }
+                }
+            }
+            val time = formatMessageTime(message.timestamp)
+            val date = messages.values.elementAt(position)
+            if(date != "") {
+                binding.dateTextView.visibility = View.VISIBLE
+                binding.dateTextView.text = date
+            } else binding.dateTextView.visibility = View.GONE
+            binding.timeTextView.text = time
+            if(!canLongClick) {
+                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                binding.checkbox.isChecked = position in checkedPositions
+                binding.checkbox.setOnClickListener {
+                    savePositionFile(message, File(filePath).name, "files")
+                }
+            }
+            else { binding.checkbox.visibility = View.GONE }
+            if (message.isRead) {
+                binding.icCheck.visibility = View.INVISIBLE
+                binding.icCheck2.visibility = View.VISIBLE
+            }
+            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            binding.root.setOnClickListener {
+                if(!canLongClick) {
+                    savePositionFile(message, File(filePath).name, "files")
+                }
+                else
+                    actionListener.onMessageClick(message, itemView)
+            }
+            binding.root.setOnLongClickListener {
+                if(canLongClick) {
+                    onLongClickFile(message, File(filePath).name, "files")
+                    actionListener.onMessageLongClick(itemView)
+                }
+                true
+            }
         }
     }
 

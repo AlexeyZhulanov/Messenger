@@ -304,7 +304,6 @@ class MessageFragment(
             uiScopeIO.launch {
                 try {
                     val res = async { filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = false, imageAdapter.getData()) }
-                    Log.d("testRes", res.await().toString())
                     withContext(Dispatchers.Main) {
                         imageAdapter.images = res.await()
                         if(res.await().isNotEmpty()) {
@@ -329,7 +328,6 @@ class MessageFragment(
                     uiScopeIO.launch {
                         try {
                             val res = async { filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = true, imageAdapter.getData()) }
-                            Log.d("testRes", res.await().toString())
                             withContext(Dispatchers.Main) {
                                 imageAdapter.images = res.await()
                                 if(res.await().isNotEmpty()) {
@@ -514,8 +512,19 @@ class MessageFragment(
     }
 
     private fun handleFileUri(uri: Uri) {
-        // Получите путь файла или выполняйте другие действия
         val filePath = getPathFromUri(uri)
+        uiScope.launch {
+            val response = async(Dispatchers.IO) { retrofitService.uploadFile(File(filePath!!)) }
+            withContext(Dispatchers.IO) {
+                retrofitService.sendMessage(dialog.id, null, null, null, response.await())
+            }
+            countMsg += 1
+            adapter.messages =
+                retrofitService.getMessages(dialog.id, 0, countMsg).associateWith { "" }
+            binding.recyclerview.post {
+                binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
+            }
+        }
         Log.d("FilePicker", "Selected file path: $filePath")
     }
 
@@ -609,7 +618,7 @@ class MessageFragment(
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.item_edit -> {
-                    if (message.voice.isNullOrEmpty()) {
+                    if (message.voice.isNullOrEmpty() && message.file.isNullOrEmpty()) {
                         editFlag = true
                     val editText: EditText = requireView().findViewById(R.id.enter_message)
                     val editButton: ImageView = requireView().findViewById(R.id.edit_button)
@@ -781,7 +790,7 @@ class MessageFragment(
                         }
                     }
                 } else {
-                    Toast.makeText(requireContext(), "Нельзя редактировать голосовое", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Файл нельзя редактировать", Toast.LENGTH_SHORT).show()
                     }
                     true
             }
