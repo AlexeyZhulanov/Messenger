@@ -560,6 +560,7 @@ class MessageAdapter(
                     val duration = mediaPlayer.duration
                     binding.waveformSeekBar.setSampleFrom(file)
                     binding.waveformSeekBar.maxProgress = duration.toFloat()
+                    binding.timeVoiceTextView.text = formatTime(duration.toLong())
 
                     val updateSeekBarRunnable = object : Runnable {
                         override fun run() {
@@ -596,7 +597,7 @@ class MessageAdapter(
                     mediaPlayer.setOnCompletionListener {
                         binding.playButton.setImageResource(R.drawable.ic_play)
                         binding.waveformSeekBar.progress = 0f
-                        binding.timeVoiceTextView.text = formatTime(0)
+                        binding.timeVoiceTextView.text = formatTime(duration.toLong())
                         isPlaying = false
                         handler.removeCallbacks(updateSeekBarRunnable)
                     }
@@ -663,6 +664,7 @@ class MessageAdapter(
                     val duration = mediaPlayer.duration
                     binding.waveformSeekBar.setSampleFrom(file)
                     binding.waveformSeekBar.maxProgress = duration.toFloat()
+                    binding.timeVoiceTextView.text = formatTime(duration.toLong())
 
                     val updateSeekBarRunnable = object : Runnable {
                         override fun run() {
@@ -699,7 +701,7 @@ class MessageAdapter(
                     mediaPlayer.setOnCompletionListener {
                         binding.playButton.setImageResource(R.drawable.ic_play)
                         binding.waveformSeekBar.progress = 0f
-                        binding.timeVoiceTextView.text = formatTime(0)
+                        binding.timeVoiceTextView.text = formatTime(duration.toLong())
                         isPlaying = false
                         handler.removeCallbacks(updateSeekBarRunnable)
                     }
