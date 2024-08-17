@@ -101,6 +101,7 @@ dependencies {
     implementation ("androidx.emoji2:emoji2-emojipicker:1.4.0")
     implementation ("com.github.massoudss:waveformSeekBar:5.0.2")
     implementation ("com.github.lincollincol:amplituda:2.2.2")
+    implementation ("com.arthenica:mobile-ffmpeg-full:4.4.LTS")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     debugImplementation(libs.androidx.ui.tooling)

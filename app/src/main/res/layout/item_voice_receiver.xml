@@ -58,6 +58,28 @@
             android:layout_height="wrap_content">
 
             <ImageView
+                android:id="@+id/errorImageView"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:src="@drawable/ic_error"
+                app:tint="?attr/colorError"
+                android:visibility="gone"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:visibility="gone"
+                />
+
+            <ImageView
                 android:id="@+id/play_button"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
@@ -73,12 +95,12 @@
                 android:layout_height="50dp"
                 app:wave_progress="33"
                 app:wave_max_progress="100"
-                app:wave_width="5dp"
+                app:wave_width="3dp"
                 app:wave_gap="2dp"
                 app:wave_min_height="5dp"
                 app:wave_corner_radius="2dp"
-                app:wave_background_color="@color/white"
-                app:wave_progress_color="#42aaff"
+                app:wave_background_color="#42aaff"
+                app:wave_progress_color="#FF0000"
                 app:wave_gravity="center"
                 app:wave_padding_top="2dp"
                 app:wave_padding_Bottom="2dp"
@@ -95,13 +117,13 @@
                 app:marker_text_size="12dp" />
 
             <TextView
-                android:id="@+id/fileDetailsReceiverTextView"
+                android:id="@+id/timeVoiceTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:gravity="center"
                 android:textStyle="italic"
-                tools:text="585 KB"
+                tools:text="00:01"
                 android:textColor="#000000"
                 app:layout_constraintVertical_bias="0.75"
                 app:layout_constraintTop_toBottomOf="@id/waveformSeekBar"

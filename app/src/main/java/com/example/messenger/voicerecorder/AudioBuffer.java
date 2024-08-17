@@ -14,13 +14,9 @@ public abstract class AudioBuffer {
 
         // Iterate over all possible sample rates, and try to find the shortest one. The shorter
         // it is, the faster it'll stream.
-        for (int rate : POSSIBLE_SAMPLE_RATES) {
-            sampleRate = rate;
+            sampleRate = 44100;
             size = getMinBufferSize(sampleRate);
-            if (validSize(size)) {
-                break;
-            }
-        }
+
 
         // If none of them were good, then just pick 1kb
         if (!validSize(size)) {

@@ -39,7 +39,7 @@ import com.example.messenger.model.RetrofitService
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
-import com.example.messenger.voicerecorder.AudioPlayer
+import com.example.messenger.voicerecorder.AudioConverter
 import com.example.messenger.voicerecorder.AudioRecorder
 import com.luck.picture.lib.basic.PictureSelector
 import com.luck.picture.lib.config.InjectResourceSource
@@ -57,6 +57,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
 import java.io.PrintWriter
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -72,7 +73,6 @@ class MessageFragment(
     private lateinit var preferences: SharedPreferences
     private lateinit var pickFileLauncher: ActivityResultLauncher<Array<String>>
     private var audioRecord: AudioRecorder? = null
-    private var audioPlayer: AudioPlayer? = null
     private var lastSessionString: String = ""
     private var countMsg = dialog.countMsg
     private var editFlag = false
@@ -216,8 +216,8 @@ class MessageFragment(
                                 }
                                 binding.floatingActionButtonDelete.visibility = View.GONE
                                 countMsg -= messagesToDelete.size
-                                adapter.clearPositions()
                                 if(response.await() && response2.all { it }) {
+                                    adapter.clearPositions()
                                     startMessagePolling()
                                     binding.progressBar.visibility = View.GONE
                                 }
@@ -446,8 +446,31 @@ class MessageFragment(
 
     override fun onRecordEnd() {
         audioRecord?.stop()
-
         tmpFile.copyTo(file, true)
+
+        val fileOgg = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.ogg")
+        if(fileOgg.exists()) fileOgg.delete()
+        val converter = AudioConverter()
+        converter.convertPcmToOgg(file.path, fileOgg.path) {success, message ->
+            if(success) {
+                uiScope.launch {
+                    withContext(Dispatchers.IO) {
+                        val response = async(Dispatchers.IO) { retrofitService.uploadAudio(fileOgg) }
+                        retrofitService.sendMessage(dialog.id, null, null, response.await(), null)
+                        withContext(Dispatchers.Main) {
+                            countMsg += 1
+                            adapter.messages =
+                                retrofitService.getMessages(dialog.id, 0, countMsg).associateWith { "" }
+                            binding.recyclerview.post {
+                                binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
+                            }
+                        }
+                    }
+                }
+            } else {
+                Log.d("testConvert", "Not OK")
+            }
+        }
     }
 
     override fun onRecordStart() {
@@ -586,7 +609,8 @@ class MessageFragment(
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.item_edit -> {
-                    editFlag = true
+                    if (message.voice.isNullOrEmpty()) {
+                        editFlag = true
                     val editText: EditText = requireView().findViewById(R.id.enter_message)
                     val editButton: ImageView = requireView().findViewById(R.id.edit_button)
                     requireActivity().onBackPressedDispatcher.addCallback(
@@ -609,7 +633,7 @@ class MessageFragment(
                             }
                         })
 
-                    if(!message.text.isNullOrEmpty()) {
+                    if (!message.text.isNullOrEmpty()) {
                         editText.setText(message.text)
                         editText.setSelection(message.text?.length ?: 0)
                     } else {
@@ -619,10 +643,12 @@ class MessageFragment(
                         binding.recordView.visibility = View.INVISIBLE
                     }
 
-                    if(!message.images.isNullOrEmpty()) {
-                        imageAdapter.images = ArrayList(localMedias ?: arrayListOf()) // object copy -> remove link
+                    if (!message.images.isNullOrEmpty()) {
+                        imageAdapter.images =
+                            ArrayList(localMedias ?: arrayListOf()) // object copy -> remove link
                     }
-                    val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    val imm =
+                        requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                     editText.postDelayed({
                         editText.requestFocus()
                         imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
@@ -633,7 +659,7 @@ class MessageFragment(
                             stopMessagePolling()
                             val tempItems = imageAdapter.getData()
                             val text = editText.text.toString()
-                            if(tempItems.isNotEmpty()) {
+                            if (tempItems.isNotEmpty()) {
                                 val itemsToUpload = if (localMedias == null) tempItems
                                 else tempItems.filter { it !in localMedias } as ArrayList<LocalMedia>
                                 // из-за того, что автор библиотеки дохера умный, приходится использовать кастомный компаратор
@@ -645,38 +671,49 @@ class MessageFragment(
                                     }
                                 } ?: arrayListOf()
                                 // ну и ещё один компаратор...... автор красавчик, сразу понять что у тебя не работает equals нереально
-                                val removedItemsIndices: List<Int> = localMedias?.mapIndexedNotNull { index, localItem ->
-                                    if (tempItems.none { tempItem ->
-                                            tempItem.id == localItem.id
-                                                    && tempItem.path == localItem.path
-                                                    && tempItem.realPath == localItem.realPath
-                                        }) index else null
-                                } ?: listOf()
+                                val removedItemsIndices: List<Int> =
+                                    localMedias?.mapIndexedNotNull { index, localItem ->
+                                        if (tempItems.none { tempItem ->
+                                                tempItem.id == localItem.id
+                                                        && tempItem.path == localItem.path
+                                                        && tempItem.realPath == localItem.realPath
+                                            }) index else null
+                                    } ?: listOf()
 
-                                Log.d("testItemsToDELETE", itemsToDelete.toString())
                                 // Upload new media
                                 val uploadList = async(Dispatchers.Main) {
                                     val list = mutableListOf<String>()
-                                    for(uItem in itemsToUpload) {
-                                            if(uItem.duration > 0) {
-                                                val file = getFileFromContentUri(requireContext(), Uri.parse(uItem.availablePath)) ?: continue
-                                                val tmp = async(Dispatchers.IO) { retrofitService.uploadPhoto(file) }
-                                                list += tmp.await()
-                                            } else {
-                                                val tmp = async(Dispatchers.IO) { retrofitService.uploadPhoto(File(uItem.availablePath)) }
-                                                list += tmp.await()
+                                    for (uItem in itemsToUpload) {
+                                        if (uItem.duration > 0) {
+                                            val file = getFileFromContentUri(
+                                                requireContext(),
+                                                Uri.parse(uItem.availablePath)
+                                            ) ?: continue
+                                            val tmp = async(Dispatchers.IO) {
+                                                retrofitService.uploadPhoto(file)
                                             }
+                                            list += tmp.await()
+                                        } else {
+                                            val tmp = async(Dispatchers.IO) {
+                                                retrofitService.uploadPhoto(File(uItem.availablePath))
+                                            }
+                                            list += tmp.await()
+                                        }
                                     }
                                     return@async list
                                 }
                                 // Delete old media
                                 val response = withContext(Dispatchers.IO) {
                                     itemsToDelete.map {
-                                        val file = if(it.duration > 0) getFileFromContentUri(requireContext(), Uri.parse(it.availablePath)) ?: File(it.availablePath)
+                                        val file = if (it.duration > 0) getFileFromContentUri(
+                                            requireContext(),
+                                            Uri.parse(it.availablePath)
+                                        ) ?: File(it.availablePath)
                                         else File(it.availablePath)
                                         async(Dispatchers.IO) {
-                                            try { retrofitService.deleteFile("photos", file.name) }
-                                            catch (e: FileNotFoundException) {
+                                            try {
+                                                retrofitService.deleteFile("photos", file.name)
+                                            } catch (e: FileNotFoundException) {
                                                 return@async true
                                             }
                                         }
@@ -685,27 +722,25 @@ class MessageFragment(
                                 val imagesMessage = message.images?.filterIndexed { index, _ ->
                                     index !in removedItemsIndices
                                 } ?: emptyList()
-                                Log.d("testImagesMESSAGE", imagesMessage.toString())
-                                if(response.all { it }) {
+                                if (response.all { it }) {
                                     val finalList = imagesMessage + uploadList.await()
-                                    Log.d("testFinalList", finalList.toString())
                                     val resp = async(Dispatchers.IO) {
                                         if (text.isNotEmpty()) {
-                                            retrofitService.editMessage(message.id, text, finalList, null, null)
+                                            retrofitService.editMessage(
+                                                message.id,
+                                                text,
+                                                finalList,
+                                                null,
+                                                null
+                                            )
                                         } else
-                                            retrofitService.editMessage(message.id, null, finalList, null, null)
-                                    }
-                                    if(resp.await()) {
-                                        editFlag = false
-                                        imageAdapter.clearImages()
-                                        editText.setText("")
-                                        startMessagePolling()
-                                    }
-                                }
-                            } else {
-                                if(text.isNotEmpty()) {
-                                    val resp = async(Dispatchers.IO) {
-                                        retrofitService.editMessage(message.id, text, arrayListOf(), null, null)
+                                            retrofitService.editMessage(
+                                                message.id,
+                                                null,
+                                                finalList,
+                                                null,
+                                                null
+                                            )
                                     }
                                     if (resp.await()) {
                                         editFlag = false
@@ -715,12 +750,41 @@ class MessageFragment(
                                         binding.recordView.visibility = View.VISIBLE
                                         startMessagePolling()
                                     }
-                                } else withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "Сообщение не должно быть пустым", Toast.LENGTH_SHORT).show() }
+                                }
+                            } else {
+                                if (text.isNotEmpty()) {
+                                    val resp = async(Dispatchers.IO) {
+                                        retrofitService.editMessage(
+                                            message.id,
+                                            text,
+                                            arrayListOf(),
+                                            null,
+                                            null
+                                        )
+                                    }
+                                    if (resp.await()) {
+                                        editFlag = false
+                                        imageAdapter.clearImages()
+                                        editText.setText("")
+                                        editButton.visibility = View.GONE
+                                        binding.recordView.visibility = View.VISIBLE
+                                        startMessagePolling()
+                                    }
+                                } else withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Сообщение не должно быть пустым",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
                             }
                         }
                     }
+                } else {
+                    Toast.makeText(requireContext(), "Нельзя редактировать голосовое", Toast.LENGTH_SHORT).show()
+                    }
                     true
-                }
+            }
                 else -> false
             }
         }

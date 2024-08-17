@@ -5,24 +5,21 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.Rect
 import android.media.MediaMetadataRetriever
+import android.media.MediaPlayer
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
-import androidx.recyclerview.widget.GridLayoutManager
+import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.RecyclerView.LayoutManager
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.messenger.databinding.ItemFileReceiverBinding
 import com.example.messenger.databinding.ItemFileSenderBinding
-import com.example.messenger.databinding.ItemImageReceiverBinding
-import com.example.messenger.databinding.ItemImageSenderBinding
-import com.example.messenger.databinding.ItemImagesReceiverBinding
-import com.example.messenger.databinding.ItemImagesSenderBinding
 import com.example.messenger.databinding.ItemMessageReceiverBinding
 import com.example.messenger.databinding.ItemMessageSenderBinding
 import com.example.messenger.databinding.ItemTextImageReceiverBinding
@@ -38,18 +35,22 @@ import com.example.messenger.picker.DateUtils
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.config.SelectMimeType
 import com.luck.picture.lib.entity.LocalMedia
-import kotlinx.coroutines.CompletableDeferred
+import com.masoudss.lib.SeekBarOnProgressChanged
+import com.masoudss.lib.WaveformSeekBar
+import com.masoudss.lib.utils.WaveGravity
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 interface MessageActionListener {
     fun onMessageClick(message: Message, itemView: View)
@@ -91,6 +92,7 @@ class MessageAdapter(
         get() = Singletons.retrofitRepository as RetrofitService
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.IO + job)
+    private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)
 
     fun getDeleteList(): Pair<List<Int>, Map<String, String>> {
         val list = mutableListOf<Int>()
@@ -541,15 +543,217 @@ class MessageAdapter(
 
 
     inner class MessagesViewHolderVoiceReceiver(private val binding: ItemVoiceReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
+        private var filePath: String = ""
+        private var isPlaying: Boolean = false
+        private val handler = Handler(Looper.getMainLooper())
         fun bind(message: Message, position: Int) {
-            // todo
+            binding.playButton.visibility = View.VISIBLE
+            uiScopeMain.launch {
+                val filePathTemp = async(Dispatchers.IO) { retrofitService.downloadFile(context, "audio", message.voice!!) }
+                val file = File(filePathTemp.await())
+                filePath = filePathTemp.await()
+                if (file.exists()) {
+                    val mediaPlayer = MediaPlayer().apply {
+                        setDataSource(filePath)
+                        prepare()
+                    }
+                    val duration = mediaPlayer.duration
+                    binding.waveformSeekBar.setSampleFrom(file)
+                    binding.waveformSeekBar.maxProgress = duration.toFloat()
+                    binding.timeVoiceTextView.text = formatTime(duration.toLong())
+
+                    val updateSeekBarRunnable = object : Runnable {
+                        override fun run() {
+                            if (isPlaying && mediaPlayer.isPlaying) {
+                                val currentPosition = mediaPlayer.currentPosition.toFloat()
+                                binding.waveformSeekBar.progress = currentPosition
+                                binding.timeVoiceTextView.text = formatTime(currentPosition.toLong())
+                                handler.postDelayed(this, 100)
+                            }
+                        }
+                    }
+                    binding.playButton.setOnClickListener {
+                        if (!isPlaying) {
+                            mediaPlayer.start()
+                            binding.playButton.setImageResource(R.drawable.ic_pause)
+                            isPlaying = true
+                            handler.post(updateSeekBarRunnable) // Запуск обновления SeekBar
+                        } else {
+                            mediaPlayer.pause()
+                            binding.playButton.setImageResource(R.drawable.ic_play)
+                            isPlaying = false
+                            handler.removeCallbacks(updateSeekBarRunnable) // Остановка обновления SeekBar
+                        }
+                    }
+                    // Обработка изменения положения SeekBar
+                    binding.waveformSeekBar.onProgressChanged = object : SeekBarOnProgressChanged {
+                        override fun onProgressChanged(waveformSeekBar: WaveformSeekBar, progress: Float, fromUser: Boolean) {
+                            if (fromUser) {
+                                mediaPlayer.seekTo(progress.toInt())
+                                binding.timeVoiceTextView.text = formatTime(progress.toLong())
+                            }
+                        }
+                    }
+                    mediaPlayer.setOnCompletionListener {
+                        binding.playButton.setImageResource(R.drawable.ic_play)
+                        binding.waveformSeekBar.progress = 0f
+                        binding.timeVoiceTextView.text = formatTime(duration.toLong())
+                        isPlaying = false
+                        handler.removeCallbacks(updateSeekBarRunnable)
+                    }
+                } else {
+                    Log.e("ImageError", "File does not exist: $filePath")
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
+                    binding.playButton.visibility = View.GONE
+                }
+            }
+            val time = formatMessageTime(message.timestamp)
+            val date = messages.values.elementAt(position)
+            if(date != "") {
+                binding.dateTextView.visibility = View.VISIBLE
+                binding.dateTextView.text = date
+            } else binding.dateTextView.visibility = View.GONE
+            binding.timeTextView.text = time
+            if(!canLongClick) {
+                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                binding.checkbox.isChecked = position in checkedPositions
+                binding.checkbox.setOnClickListener {
+                    savePositionFile(message, File(filePath).name, "audio")
+                }
+            }
+            else { binding.checkbox.visibility = View.GONE }
+            if (message.isRead) {
+                binding.icCheck.visibility = View.INVISIBLE
+                binding.icCheck2.visibility = View.VISIBLE
+            }
+            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            binding.root.setOnClickListener {
+                if(!canLongClick) {
+                    savePositionFile(message, File(filePath).name, "audio")
+                }
+                else
+                    actionListener.onMessageClick(message, itemView)
+            }
+            binding.root.setOnLongClickListener {
+                if(canLongClick) {
+                    onLongClickFile(message, File(filePath).name, "audio")
+                    actionListener.onMessageLongClick(itemView)
+                }
+                true
+            }
         }
     }
 
     inner class MessagesViewHolderVoiceSender(private val binding: ItemVoiceSenderBinding) : RecyclerView.ViewHolder(binding.root) {
+
+        private var filePath: String = ""
+        private var isPlaying: Boolean = false
+        private val handler = Handler(Looper.getMainLooper())
         fun bind(message: Message, position: Int) {
-            // todo
+            binding.playButton.visibility = View.VISIBLE
+            uiScopeMain.launch {
+                val filePathTemp = async(Dispatchers.IO) { retrofitService.downloadFile(context, "audio", message.voice!!) }
+                val file = File(filePathTemp.await())
+                filePath = filePathTemp.await()
+                if (file.exists()) {
+                    val mediaPlayer = MediaPlayer().apply {
+                        setDataSource(filePath)
+                        prepare()
+                    }
+                    val duration = mediaPlayer.duration
+                    binding.waveformSeekBar.setSampleFrom(file)
+                    binding.waveformSeekBar.maxProgress = duration.toFloat()
+                    binding.timeVoiceTextView.text = formatTime(duration.toLong())
+
+                    val updateSeekBarRunnable = object : Runnable {
+                        override fun run() {
+                            if (isPlaying && mediaPlayer.isPlaying) {
+                                val currentPosition = mediaPlayer.currentPosition.toFloat()
+                                binding.waveformSeekBar.progress = currentPosition
+                                binding.timeVoiceTextView.text = formatTime(currentPosition.toLong())
+                                handler.postDelayed(this, 100)
+                            }
+                        }
+                    }
+                    binding.playButton.setOnClickListener {
+                        if (!isPlaying) {
+                            mediaPlayer.start()
+                            binding.playButton.setImageResource(R.drawable.ic_pause)
+                            isPlaying = true
+                            handler.post(updateSeekBarRunnable) // Запуск обновления SeekBar
+                        } else {
+                            mediaPlayer.pause()
+                            binding.playButton.setImageResource(R.drawable.ic_play)
+                            isPlaying = false
+                            handler.removeCallbacks(updateSeekBarRunnable) // Остановка обновления SeekBar
+                        }
+                    }
+                    // Обработка изменения положения SeekBar
+                    binding.waveformSeekBar.onProgressChanged = object : SeekBarOnProgressChanged {
+                        override fun onProgressChanged(waveformSeekBar: WaveformSeekBar, progress: Float, fromUser: Boolean) {
+                            if (fromUser) {
+                                mediaPlayer.seekTo(progress.toInt())
+                                binding.timeVoiceTextView.text = formatTime(progress.toLong())
+                            }
+                        }
+                    }
+                    mediaPlayer.setOnCompletionListener {
+                        binding.playButton.setImageResource(R.drawable.ic_play)
+                        binding.waveformSeekBar.progress = 0f
+                        binding.timeVoiceTextView.text = formatTime(duration.toLong())
+                        isPlaying = false
+                        handler.removeCallbacks(updateSeekBarRunnable)
+                    }
+                } else {
+                        Log.e("ImageError", "File does not exist: $filePath")
+                        binding.progressBar.visibility = View.GONE
+                        binding.errorImageView.visibility = View.VISIBLE
+                        binding.playButton.visibility = View.GONE
+                }
+            }
+            val time = formatMessageTime(message.timestamp)
+            val date = messages.values.elementAt(position)
+            if(date != "") {
+                binding.dateTextView.visibility = View.VISIBLE
+                binding.dateTextView.text = date
+            } else binding.dateTextView.visibility = View.GONE
+            binding.timeTextView.text = time
+            if(!canLongClick) {
+                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                binding.checkbox.isChecked = position in checkedPositions
+                binding.checkbox.setOnClickListener {
+                    savePositionFile(message, File(filePath).name, "audio")
+                }
+            }
+            else { binding.checkbox.visibility = View.GONE }
+            if (message.isRead) {
+                binding.icCheck.visibility = View.INVISIBLE
+                binding.icCheck2.visibility = View.VISIBLE
+            }
+            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            binding.root.setOnClickListener {
+                if(!canLongClick) {
+                    savePositionFile(message, File(filePath).name, "audio")
+                }
+                else
+                    actionListener.onMessageClick(message, itemView)
+            }
+            binding.root.setOnLongClickListener {
+                if(canLongClick) {
+                    onLongClickFile(message, File(filePath).name, "audio")
+                    actionListener.onMessageLongClick(itemView)
+                }
+                true
+            }
         }
+    }
+
+    @SuppressLint("DefaultLocale")
+    private fun formatTime(milliseconds: Long): String {
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(milliseconds)
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(milliseconds) % 60
+        return String.format("%02d:%02d", minutes, seconds)
     }
 
     inner class MessagesViewHolderFileReceiver(private val binding: ItemFileReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
@@ -607,9 +811,11 @@ class MessageAdapter(
                         actionListener.onImagesClick(arrayListOf(localMedia), 0)
                     }
                 } else {
-                    Log.e("ImageError", "File does not exist: $filePath")
-                    binding.progressBar.visibility = View.GONE
-                    binding.errorImageView.visibility = View.VISIBLE
+                    withContext(Dispatchers.Main) {
+                        Log.e("ImageError", "File does not exist: $filePath")
+                        binding.progressBar.visibility = View.GONE
+                        binding.errorImageView.visibility = View.VISIBLE
+                    }
                 }
             }
             val time = formatMessageTime(message.timestamp)
@@ -694,9 +900,11 @@ class MessageAdapter(
                         }
                     }
                 } else {
-                    Log.e("ImageError", "File does not exist: $filePath")
-                    binding.progressBar.visibility = View.GONE
-                    binding.errorImageView.visibility = View.VISIBLE
+                    withContext(Dispatchers.Main) {
+                        Log.e("ImageError", "File does not exist: $filePath")
+                        binding.progressBar.visibility = View.GONE
+                        binding.errorImageView.visibility = View.VISIBLE
+                    }
                 }
             }
             val time = formatMessageTime(message.timestamp)
