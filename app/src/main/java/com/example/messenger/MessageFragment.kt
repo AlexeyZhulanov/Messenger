@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
@@ -25,6 +26,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
+import androidx.core.net.toFile
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.CreationExtras
@@ -57,7 +59,9 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.io.PrintWriter
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -304,7 +308,6 @@ class MessageFragment(
             uiScopeIO.launch {
                 try {
                     val res = async { filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = false, imageAdapter.getData()) }
-                    Log.d("testRes", res.await().toString())
                     withContext(Dispatchers.Main) {
                         imageAdapter.images = res.await()
                         if(res.await().isNotEmpty()) {
@@ -329,7 +332,6 @@ class MessageFragment(
                     uiScopeIO.launch {
                         try {
                             val res = async { filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = true, imageAdapter.getData()) }
-                            Log.d("testRes", res.await().toString())
                             withContext(Dispatchers.Main) {
                                 imageAdapter.images = res.await()
                                 if(res.await().isNotEmpty()) {
@@ -514,14 +516,62 @@ class MessageFragment(
     }
 
     private fun handleFileUri(uri: Uri) {
-        // Получите путь файла или выполняйте другие действия
-        val filePath = getPathFromUri(uri)
-        Log.d("FilePicker", "Selected file path: $filePath")
+        val file = uriToFile(uri, requireContext())
+        if(file != null) {
+            uiScope.launch {
+                val response = async(Dispatchers.IO) { retrofitService.uploadFile(file) }
+                withContext(Dispatchers.IO) {
+                    // костыль чтобы отображалось корректное имя файла - кладу его в voice
+                    retrofitService.sendMessage(dialog.id, null, null, file.name, response.await())
+                }
+                countMsg += 1
+                adapter.messages =
+                    retrofitService.getMessages(dialog.id, 0, countMsg).associateWith { "" }
+                binding.recyclerview.post {
+                    binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
+                }
+            }
+        } else Toast.makeText(requireContext(), "Что-то не так с файлом", Toast.LENGTH_SHORT).show()
     }
 
-    private fun getPathFromUri(uri: Uri): String? {
-        // Реализация для получения пути файла из URI
-        return null
+    private fun uriToFile(uri: Uri, context: Context): File? {
+        val fileName = getFileName(uri, context)
+        // Создаем временный файл в кэше приложения
+        val tempFile = File(context.cacheDir, fileName)
+
+        try {
+            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
+            val outputStream = FileOutputStream(tempFile)
+            inputStream?.use { input ->
+                outputStream.use { output ->
+                    input.copyTo(output)
+                }
+            }
+            return tempFile
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
+    private fun getFileName(uri: Uri, context: Context): String {
+        var result: String? = null
+        if (uri.scheme == "content") {
+            val cursor = context.contentResolver.query(uri, null, null, null, null)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    result = it.getString(it.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME))
+                }
+            }
+        }
+        if (result == null) {
+            result = uri.path
+            val cut = result?.lastIndexOf('/')
+            if (cut != -1) {
+                result = result?.substring(cut!! + 1)
+            }
+        }
+        return result ?: "temp_file"
     }
 
     private fun formatUserSessionDate(timestamp: Long?): String {
@@ -609,7 +659,7 @@ class MessageFragment(
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.item_edit -> {
-                    if (message.voice.isNullOrEmpty()) {
+                    if (message.voice.isNullOrEmpty() && message.file.isNullOrEmpty()) {
                         editFlag = true
                     val editText: EditText = requireView().findViewById(R.id.enter_message)
                     val editButton: ImageView = requireView().findViewById(R.id.edit_button)
@@ -781,7 +831,7 @@ class MessageFragment(
                         }
                     }
                 } else {
-                    Toast.makeText(requireContext(), "Нельзя редактировать голосовое", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Файл нельзя редактировать", Toast.LENGTH_SHORT).show()
                     }
                     true
             }
