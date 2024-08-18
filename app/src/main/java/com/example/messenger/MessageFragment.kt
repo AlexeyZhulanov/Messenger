@@ -359,9 +359,13 @@ class MessageFragment(
         binding.emojiButton.setOnClickListener {
             if(binding.emojiPicker.visibility == View.VISIBLE) binding.emojiPicker.visibility = View.GONE
             else {
+                val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 binding.emojiPicker.visibility = View.VISIBLE
                 binding.emojiPicker.setOnEmojiPickedListener { emojicon ->
                     val emoji = emojicon.emoji
+                    val start = enterText.selectionStart
+                    val end = enterText.selectionEnd
+                    enterText.text.replace(start.coerceAtLeast(0), end.coerceAtLeast(0), emoji)
                 }
             }
         }
