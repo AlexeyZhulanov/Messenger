@@ -2,6 +2,7 @@ package com.example.messenger
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Rect
 import android.media.MediaMetadataRetriever
@@ -13,6 +14,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.recyclerview.widget.RecyclerView
@@ -194,8 +196,8 @@ class MessageAdapter(
                 message.text?.isNotEmpty() == true -> TYPE_TEXT_RECEIVER
                 else -> {
                     when {
-                        message.voice?.isNotEmpty() == true -> TYPE_VOICE_RECEIVER
-                        else -> TYPE_FILE_RECEIVER
+                        message.file?.isNotEmpty() == true -> TYPE_FILE_RECEIVER
+                        else -> TYPE_VOICE_RECEIVER
                     }
                 }
             }
@@ -210,8 +212,8 @@ class MessageAdapter(
                 message.text?.isNotEmpty() == true -> TYPE_TEXT_SENDER
                 else -> {
                     when {
-                        message.voice?.isNotEmpty() == true -> TYPE_VOICE_SENDER
-                        else -> TYPE_FILE_SENDER
+                        message.file?.isNotEmpty() == true -> TYPE_FILE_SENDER
+                        else -> TYPE_VOICE_SENDER
                     }
                 }
             }
@@ -771,7 +773,26 @@ class MessageAdapter(
                 val file = File(filePathTemp.await())
                 filePath = filePathTemp.await()
                 if (file.exists()) {
-                    // todo
+                    withContext(Dispatchers.Main) {
+                        // костыль чтобы отображалось корректное имя файла
+                        binding.fileNameSenderTextView.text = message.voice
+                        binding.fileSizeTextView.text = formatFileSize(file.length())
+                        binding.fileButton.setOnClickListener {
+                            try {
+                                val uri: Uri = FileProvider.getUriForFile(context, context.applicationContext.packageName + ".provider", file)
+
+                                val intent = Intent(Intent.ACTION_VIEW)
+                                intent.setDataAndType(uri, context.contentResolver.getType(uri))
+                                intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+
+                                val chooser = Intent.createChooser(intent, "Выберите приложение для открытия файла")
+                                context.startActivity(chooser)
+                            } catch (e: IllegalArgumentException) {
+                                e.printStackTrace()
+                                // Обработка ошибок
+                            }
+                        }
+                    }
                 } else {
                     withContext(Dispatchers.Main) {
                         Log.e("FileError", "File does not exist: $filePath")
@@ -816,6 +837,18 @@ class MessageAdapter(
             }
         }
     }
+
+    @SuppressLint("DefaultLocale")
+    private fun formatFileSize(size: Long): String {
+        val kb = 1024.0
+        val mb = kb * 1024
+        return when {
+            size < kb -> "$size B"
+            size < mb -> "${(size / kb).toInt()} KB"
+            else -> String.format("%.2f MB", size / mb)
+        }
+    }
+
 
     inner class MessagesViewHolderTextImageReceiver(private val binding: ItemTextImageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
 
