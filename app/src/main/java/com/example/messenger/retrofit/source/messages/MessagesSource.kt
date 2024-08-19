@@ -9,7 +9,8 @@ interface MessagesSource {
     suspend fun createDialog(name: String) : String
 
     suspend fun sendMessage(idDialog: Int, text: String? = null, images: List<String>? = null,
-                            voice: String? = null, file: String? = null) : String
+                            voice: String? = null, file: String? = null, referenceToMessageId: Int? = null,
+                            isForwarded: Boolean = false, usernameAuthorOriginal: String? = null) : String
 
     suspend fun getMessages(idDialog: Int, start: Int, end: Int) : List<Message>
 

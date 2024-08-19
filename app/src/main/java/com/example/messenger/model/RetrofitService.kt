@@ -185,9 +185,11 @@ class RetrofitService(
     }
 
     override suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?,
-        voice: String?, file: String?): Boolean = withContext(Dispatchers.IO) {
+        voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
+         usernameAuthorOriginal: String?): Boolean = withContext(Dispatchers.IO) {
         val message = try {
-            messagesSource.sendMessage(idDialog, text, images, voice, file)
+            messagesSource.sendMessage(idDialog, text, images, voice, file, referenceToMessageId,
+                isForwarded, usernameAuthorOriginal)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw DialogNotFoundException(e)
@@ -394,9 +396,11 @@ class RetrofitService(
     }
 
     override suspend fun sendGroupMessage(groupId: Int, text: String?, images: List<String>?,
-        voice: String?, file: String?): Boolean = withContext(Dispatchers.IO) {
+        voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
+        usernameAuthorOriginal: String?): Boolean = withContext(Dispatchers.IO) {
         val message = try {
-            groupsSource.sendGroupMessage(groupId, text, images, voice, file)
+            groupsSource.sendGroupMessage(groupId, text, images, voice, file, referenceToMessageId,
+                isForwarded, usernameAuthorOriginal)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw GroupNotFoundException(e)

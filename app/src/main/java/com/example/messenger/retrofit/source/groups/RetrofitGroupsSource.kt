@@ -26,10 +26,11 @@ class RetrofitGroupsSource(
     }
 
     override suspend fun sendGroupMessage(groupId: Int, text: String?,
-        images: List<String>?, voice: String?,
-        file: String?): String = wrapRetrofitExceptions {
+        images: List<String>?, voice: String?, file: String?, referenceToMessageId: Int?,
+          isForwarded: Boolean, usernameAuthorOriginal: String?): String = wrapRetrofitExceptions {
         val sendGroupMessageRequestEntity = SendGroupMessageRequestEntity(text = text,
-            images = images, voice = voice, file = file)
+            images = images, voice = voice, file = file, referenceToMessageId = referenceToMessageId,
+            isForwarded = isForwarded, usernameAuthorOriginal = usernameAuthorOriginal)
         groupsApi.sendGroupMessage(groupId, sendGroupMessageRequestEntity).message
     }
 

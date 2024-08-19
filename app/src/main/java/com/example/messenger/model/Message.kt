@@ -9,7 +9,10 @@ data class Message(
     var file: String? = null,
     var timestamp: Long,
     var isRead: Boolean,
-    var isEdited: Boolean
+    var isEdited: Boolean,
+    var referenceToMessageId: Int? = null,
+    var isForwarded: Boolean,
+    var usernameAuthorOriginal: String? = null
 )
 
 data class LastMessage(
@@ -28,5 +31,8 @@ data class GroupMessage(
     var file: String? = null,
     var timestamp: Long,
     var isRead: Boolean,
-    var isEdited: Boolean
+    var isEdited: Boolean,
+    var referenceToMessageId: Int? = null,
+    var isForwarded: Boolean,
+    var usernameAuthorOriginal: String? = null
 )
