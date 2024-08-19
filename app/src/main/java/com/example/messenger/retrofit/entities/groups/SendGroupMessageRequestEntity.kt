@@ -8,5 +8,8 @@ data class SendGroupMessageRequestEntity(
     val text: String? = null,
     val images: List<String>? = null,
     val file: String? = null,
-    val voice: String? = null
+    val voice: String? = null,
+    @Json(name = "reference_to_message_id") val referenceToMessageId: Int? = null,
+    @Json(name = "is_forwarded") val isForwarded: Boolean? = false,
+    @Json(name = "username_author_original") val usernameAuthorOriginal: String? = null
 )

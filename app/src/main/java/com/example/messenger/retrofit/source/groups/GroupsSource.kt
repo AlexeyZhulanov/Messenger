@@ -10,8 +10,9 @@ interface GroupsSource {
     suspend fun createGroup(name: String) : String
 
     suspend fun sendGroupMessage(groupId: Int, text: String? = null,
-                                 images: List<String>? = null, voice: String? = null,
-                                 file: String? = null) : String
+                           images: List<String>? = null, voice: String? = null,
+                           file: String? = null, referenceToMessageId: Int? = null,
+                           isForwarded: Boolean = false, usernameAuthorOriginal: String? = null) : String
 
     suspend fun getGroupMessages(groupId: Int, start: Int, end: Int) : List<GroupMessage>
 

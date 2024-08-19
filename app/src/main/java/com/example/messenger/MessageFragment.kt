@@ -359,9 +359,13 @@ class MessageFragment(
         binding.emojiButton.setOnClickListener {
             if(binding.emojiPicker.visibility == View.VISIBLE) binding.emojiPicker.visibility = View.GONE
             else {
+                val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 binding.emojiPicker.visibility = View.VISIBLE
                 binding.emojiPicker.setOnEmojiPickedListener { emojicon ->
                     val emoji = emojicon.emoji
+                    val start = enterText.selectionStart
+                    val end = enterText.selectionEnd
+                    enterText.text.replace(start.coerceAtLeast(0), end.coerceAtLeast(0), emoji)
                 }
             }
         }
@@ -377,7 +381,6 @@ class MessageFragment(
             val items = imageAdapter.getData()
             uiScope.launch {
                 if (items.isNotEmpty()) {
-                    imageAdapter.clearImages()
                 val listik = async {
                 val list = mutableListOf<String>()
                     for (item1 in items) {
@@ -395,15 +398,16 @@ class MessageFragment(
                     val list = listik.await()
                     if(text.isNotEmpty()) {
                         if (list.isNotEmpty()) {
-                            retrofitService.sendMessage(dialog.id, text, list, null, null)
+                            retrofitService.sendMessage(dialog.id, text, list, null, null, null, false, null)
                         } else {
-                            retrofitService.sendMessage(dialog.id, text, null, null, null)
+                            retrofitService.sendMessage(dialog.id, text, null, null, null, null, false, null)
                         }
-                    } else if (list.isNotEmpty()) retrofitService.sendMessage(dialog.id, null, list, null, null)
+                    } else if (list.isNotEmpty()) retrofitService.sendMessage(dialog.id, null, list, null, null, null, false, null)
                     else withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "Ошибка отправки изображений", Toast.LENGTH_SHORT).show() }
-            } else {
+                    imageAdapter.clearImages()
+                } else {
                     if(text.isNotEmpty()) {
-                        retrofitService.sendMessage(dialog.id, text, null, null, null)
+                        retrofitService.sendMessage(dialog.id, text, null, null, null, null, false, null)
                     }
                 }
                 countMsg += 1
@@ -458,7 +462,7 @@ class MessageFragment(
                 uiScope.launch {
                     withContext(Dispatchers.IO) {
                         val response = async(Dispatchers.IO) { retrofitService.uploadAudio(fileOgg) }
-                        retrofitService.sendMessage(dialog.id, null, null, response.await(), null)
+                        retrofitService.sendMessage(dialog.id, null, null, response.await(), null, null, false, null)
                         withContext(Dispatchers.Main) {
                             countMsg += 1
                             adapter.messages =
@@ -522,7 +526,7 @@ class MessageFragment(
                 val response = async(Dispatchers.IO) { retrofitService.uploadFile(file) }
                 withContext(Dispatchers.IO) {
                     // костыль чтобы отображалось корректное имя файла - кладу его в voice
-                    retrofitService.sendMessage(dialog.id, null, null, file.name, response.await())
+                    retrofitService.sendMessage(dialog.id, null, null, file.name, response.await(), null, false, null)
                 }
                 countMsg += 1
                 adapter.messages =
