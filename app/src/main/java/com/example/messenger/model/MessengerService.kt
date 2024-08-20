@@ -1,7 +1,7 @@
 package com.example.messenger.model
 
-import com.example.messenger.room.SettingsDao
-import com.example.messenger.room.SettingsDbEntity
+import com.example.messenger.room.dao.SettingsDao
+import com.example.messenger.room.entities.SettingsDbEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

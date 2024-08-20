@@ -2,6 +2,8 @@ package com.example.messenger.room
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import com.example.messenger.room.dao.SettingsDao
+import com.example.messenger.room.entities.SettingsDbEntity
 
 @Database(
     version = 1,
