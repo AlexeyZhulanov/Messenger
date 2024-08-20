@@ -30,7 +30,7 @@ data class ConversationDbEntity(
         lastMessage = lastMessage?.toLastMessage(), countMsg = conversation.countMsg
     )
     companion object {
-        fun fromUserInput(conversation: Conversation): ConversationDbEntity {
+        fun fromUserInput(conversation: Conversation, orderIndex: Int): ConversationDbEntity {
             val otherUserEntity = conversation.otherUser?.let {
                 UserEntity(
                     id = it.id,
@@ -58,7 +58,8 @@ data class ConversationDbEntity(
                 createdBy = conversation.createdBy,
                 avatar = conversation.avatar,
                 lastMessageId = lastMessageEntity?.id,
-                countMsg = conversation.countMsg
+                countMsg = conversation.countMsg,
+                orderIndex = orderIndex
             )
 
             return ConversationDbEntity(
@@ -72,7 +73,7 @@ data class ConversationDbEntity(
 
 @Entity(tableName = "conversations")
 data class ConversationEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int,
+    @PrimaryKey val id: Int,
     var type: String,
     var key: String? = null,
     @ColumnInfo(name = "other_user_id") var otherUserId: Int? = null,
@@ -80,7 +81,8 @@ data class ConversationEntity(
     @ColumnInfo(name = "created_by") var createdBy: Int? = null,
     var avatar: String? = null,
     @ColumnInfo(name = "last_message_id") var lastMessageId: Int? = null,
-    @ColumnInfo(name = "count_msg") var countMsg: Int
+    @ColumnInfo(name = "count_msg") var countMsg: Int,
+    @ColumnInfo(name = "order_index") var orderIndex: Int
 )
 
 @Entity(

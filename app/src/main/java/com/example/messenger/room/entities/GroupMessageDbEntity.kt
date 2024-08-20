@@ -28,17 +28,14 @@ data class GroupMessageDbEntity(
         usernameAuthorOriginal = usernameAuthorOriginal
     )
     companion object {
-        fun fromUserInput(groupMessage: GroupMessage): GroupMessageDbEntity {
-            val grm = groupMessage.let {
-                GroupMessageDbEntity(
-                    id = it.id, groupId = it.groupId, idSender = it.senderId, text = it.text,
-                    images = it.images, voice = it.voice, file = it.file, isRead = it.isRead,
-                    timestamp = it.timestamp, isEdited = it.isEdited, isForwarded = it.isForwarded,
-                    referenceToMessageId = it.referenceToMessageId,
-                    usernameAuthorOriginal = it.usernameAuthorOriginal
-                )
-            }
-            return grm
+        fun fromUserInput(groupMessage: GroupMessage): GroupMessageDbEntity = groupMessage.let {
+            GroupMessageDbEntity(
+                id = it.id, groupId = it.groupId, idSender = it.senderId, text = it.text,
+                images = it.images, voice = it.voice, file = it.file, isRead = it.isRead,
+                timestamp = it.timestamp, isEdited = it.isEdited, isForwarded = it.isForwarded,
+                referenceToMessageId = it.referenceToMessageId,
+                usernameAuthorOriginal = it.usernameAuthorOriginal
+            )
         }
     }
 }
