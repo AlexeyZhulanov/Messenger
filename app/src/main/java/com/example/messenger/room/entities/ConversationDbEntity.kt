@@ -36,7 +36,8 @@ data class ConversationDbEntity(
                     id = it.id,
                     name = it.name,
                     username = it.username,
-                    avatar = it.avatar
+                    avatar = it.avatar,
+                    lastSession = it.lastSession
                 )
             }
 

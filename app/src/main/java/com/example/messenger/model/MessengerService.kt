@@ -47,17 +47,33 @@ class MessengerService(
         return@withContext messageDao.getMessages(idDialog).map { it.toMessage() }
     }
 
-    override suspend fun replaceMessages(idDialog: Int, messages: List<Message>) = withContext(Dispatchers.IO) {
+    override suspend fun replaceMessages(idDialog: Int, messages: List<Message>, fileManager: FileManager) = withContext(Dispatchers.IO) {
         val messagesDbEntities = messages.map { MessageDbEntity.fromUserInput(it, idDialog) }
         messageDao.replaceMessages(idDialog, messagesDbEntities)
+        val usedFiles = messages.flatMap { message ->
+            mutableListOf<String>().apply {
+                message.images?.let { addAll(it) }
+                message.voice?.let { add(it) }
+                message.file?.let { add(it) }
+            }
+        }.toSet()
+        fileManager.cleanupUnusedFiles(idDialog, usedFiles)
     }
 
     override suspend fun getGroupMessages(idGroup: Int): List<GroupMessage> = withContext(Dispatchers.IO) {
         return@withContext groupMessageDao.getGroupMessages(idGroup).map { it.toGroupMessage() }
     }
 
-    override suspend fun replaceGroupMessages(idGroup: Int, groupMessages: List<GroupMessage>) = withContext(Dispatchers.IO) {
+    override suspend fun replaceGroupMessages(idGroup: Int, groupMessages: List<GroupMessage>, fileManager: FileManager) = withContext(Dispatchers.IO) {
         val groupMessageDbEntities = groupMessages.map { GroupMessageDbEntity.fromUserInput(it) }
         groupMessageDao.replaceGroupMessages(idGroup, groupMessageDbEntities)
+        val usedFiles = groupMessages.flatMap { message ->
+            mutableListOf<String>().apply {
+                message.images?.let { addAll(it) }
+                message.voice?.let { add(it) }
+                message.file?.let { add(it) }
+            }
+        }.toSet()
+        fileManager.cleanupUnusedFiles(idGroup, usedFiles)
     }
 }

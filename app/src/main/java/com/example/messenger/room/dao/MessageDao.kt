@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import com.example.messenger.model.FileManager
 import com.example.messenger.room.entities.MessageDbEntity
 
 @Dao
