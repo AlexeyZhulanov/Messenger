@@ -47,7 +47,8 @@ object Singletons {
     }
 
     val messengerRepository: MessengerRepository by lazy {
-        MessengerService(database.getSettingsDao())
+        MessengerService(database.getSettingsDao(), database.getConversationDao(),
+            database.getMessageDao(), database.getGroupMessageDao())
     }
 
     val retrofitRepository: RetrofitRepository by lazy {
