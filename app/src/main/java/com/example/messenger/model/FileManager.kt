@@ -6,8 +6,8 @@ import java.io.File
 class FileManager(private val context: Context) {
 
     // Получаем директорию для хранения файлов сообщений
-    private fun getMessageDirectory(dirId: Int): File {
-        val dir = File(context.filesDir, "conversations/$dirId") // todo как-то разделить на dialog и group
+    private fun getMessageDirectory(): File {
+        val dir = File(context.filesDir, "conversations")
         if (!dir.exists()) {
             dir.mkdirs()
         }
@@ -15,23 +15,23 @@ class FileManager(private val context: Context) {
     }
 
     // Сохранение файла в директорию сообщений
-    fun saveFile(dialogId: Int, fileName: String, fileData: ByteArray): File {
-        val dir = getMessageDirectory(dialogId)
+    fun saveFile(fileName: String, fileData: ByteArray): File {
+        val dir = getMessageDirectory()
         val file = File(dir, fileName)
         file.writeBytes(fileData)
         return file
     }
 
     // Проверка на существование файла
-    fun isExist(dialogId: Int, fileName: String): Boolean {
-        val dir = getMessageDirectory(dialogId)
+    fun isExist(fileName: String): Boolean {
+        val dir = getMessageDirectory()
         val file = File(dir, fileName)
         return file.exists()
     }
 
     // Получение списка всех файлов в директории сообщений
-    fun getAllFiles(dialogId: Int): List<File> {
-        val dir = getMessageDirectory(dialogId)
+    fun getAllFiles(): List<File> {
+        val dir = getMessageDirectory()
         return dir.listFiles()?.toList() ?: emptyList()
     }
 
@@ -41,12 +41,18 @@ class FileManager(private val context: Context) {
     }
 
     // Удаление всех файлов, не используемых в новых сообщениях
-    fun cleanupUnusedFiles(dialogId: Int, usedFiles: Set<String>) {
-        val allFiles = getAllFiles(dialogId)
+    fun cleanupUnusedFiles(usedFiles: Set<String>) {
+        val allFiles = getAllFiles()
         allFiles.forEach { file ->
             if (file.name !in usedFiles) {
                 deleteFile(file)
             }
         }
+    }
+    // Получение пути к определенному файлу
+    fun getFilePath(fileName: String): String {
+        val dir = getMessageDirectory()
+        val file = File(dir, fileName)
+        return file.absolutePath
     }
 }

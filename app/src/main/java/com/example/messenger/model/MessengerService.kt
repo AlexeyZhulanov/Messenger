@@ -67,7 +67,7 @@ class MessengerService(
                 message.file?.let { add(it) }
             }
         }.toSet()
-        fileManager.cleanupUnusedFiles(idDialog, usedFiles)
+        fileManager.cleanupUnusedFiles(usedFiles)
     }
 
     override suspend fun getGroupMessages(idGroup: Int): List<GroupMessage> = withContext(Dispatchers.IO) {
@@ -84,6 +84,6 @@ class MessengerService(
                 message.file?.let { add(it) }
             }
         }.toSet()
-        fileManager.cleanupUnusedFiles(idGroup, usedFiles)
+        fileManager.cleanupUnusedFiles(usedFiles)
     }
 }
