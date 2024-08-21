@@ -12,9 +12,9 @@ interface MessengerRepository {
 
     suspend fun getMessages(idDialog: Int): List<Message>
 
-    suspend fun replaceMessages(idDialog: Int, messages: List<Message>)
+    suspend fun replaceMessages(idDialog: Int, messages: List<Message>, fileManager: FileManager)
 
     suspend fun getGroupMessages(idGroup: Int): List<GroupMessage>
 
-    suspend fun replaceGroupMessages(idGroup: Int, groupMessages: List<GroupMessage>)
+    suspend fun replaceGroupMessages(idGroup: Int, groupMessages: List<GroupMessage>, fileManager: FileManager)
 }

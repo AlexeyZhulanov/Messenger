@@ -31,6 +31,7 @@ import com.example.messenger.databinding.ItemTextImagesSenderBinding
 import com.example.messenger.databinding.ItemVoiceReceiverBinding
 import com.example.messenger.databinding.ItemVoiceSenderBinding
 import com.example.messenger.model.ConversationSettings
+import com.example.messenger.model.FileManager
 import com.example.messenger.model.Message
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.picker.DateUtils
@@ -64,7 +65,8 @@ interface MessageActionListener {
 class MessageAdapter(
     private val actionListener: MessageActionListener,
     private val otherUserId: Int,
-    private val context: Context
+    private val context: Context,
+    private val fileManager: FileManager
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     var messages: Map<Message, String> = emptyMap()
@@ -82,7 +84,6 @@ class MessageAdapter(
                 }
             }
             field = newMessages
-            Log.d("testAdapterSet", "$field")
             notifyDataSetChanged()
         }
 
@@ -260,17 +261,18 @@ class MessageAdapter(
         val message = messages.keys.elementAt(position)
         var flagText = false
         if(!message.text.isNullOrEmpty()) flagText = true
+        val isInLast30 = position >= itemCount - 30
         when (holder) {
             is MessagesViewHolderReceiver -> holder.bind(message, position)
             is MessagesViewHolderSender -> holder.bind(message, position)
-            is MessagesViewHolderVoiceReceiver -> holder.bind(message, position)
-            is MessagesViewHolderVoiceSender -> holder.bind(message, position)
-            is MessagesViewHolderFileReceiver -> holder.bind(message, position)
-            is MessagesViewHolderFileSender -> holder.bind(message, position)
-            is MessagesViewHolderTextImageReceiver -> holder.bind(message, position, flagText)
-            is MessagesViewHolderTextImageSender -> holder.bind(message, position, flagText)
-            is MessagesViewHolderTextImagesReceiver -> holder.bind(message, position, flagText)
-            is MessagesViewHolderTextImagesSender -> holder.bind(message, position, flagText)
+            is MessagesViewHolderVoiceReceiver -> holder.bind(message, position, isInLast30)
+            is MessagesViewHolderVoiceSender -> holder.bind(message, position, isInLast30)
+            is MessagesViewHolderFileReceiver -> holder.bind(message, position, isInLast30)
+            is MessagesViewHolderFileSender -> holder.bind(message, position, isInLast30)
+            is MessagesViewHolderTextImageReceiver -> holder.bind(message, position, flagText, isInLast30)
+            is MessagesViewHolderTextImageSender -> holder.bind(message, position, flagText, isInLast30)
+            is MessagesViewHolderTextImagesReceiver -> holder.bind(message, position, flagText, isInLast30)
+            is MessagesViewHolderTextImagesSender -> holder.bind(message, position, flagText, isInLast30)
         }
     }
 
@@ -548,13 +550,26 @@ class MessageAdapter(
         private var filePath: String = ""
         private var isPlaying: Boolean = false
         private val handler = Handler(Looper.getMainLooper())
-        fun bind(message: Message, position: Int) {
+        fun bind(message: Message, position: Int, isInLast30: Boolean) {
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
-                val filePathTemp = async(Dispatchers.IO) { retrofitService.downloadFile(context, "audio", message.voice!!) }
-                val file = File(filePathTemp.await())
-                filePath = filePathTemp.await()
+                val filePathTemp = async(Dispatchers.IO) {
+                    if (fileManager.isExist(message.voice!!)) {
+                        return@async Pair(fileManager.getFilePath(message.voice!!), true)
+                    } else {
+                        try {
+                            return@async Pair(retrofitService.downloadFile(context, "audio", message.voice!!), false)
+                        } catch (e: Exception) {
+                            return@async Pair(null, true)
+                        }
+                    }
+                }
+                val (first, second) = filePathTemp.await()
+                if (first != null) {
+                val file = File(first)
+                filePath = first
                 if (file.exists()) {
+                    if (!second && isInLast30) fileManager.saveFile(message.voice!!, file.readBytes())
                     val mediaPlayer = MediaPlayer().apply {
                         setDataSource(filePath)
                         prepare()
@@ -569,7 +584,8 @@ class MessageAdapter(
                             if (isPlaying && mediaPlayer.isPlaying) {
                                 val currentPosition = mediaPlayer.currentPosition.toFloat()
                                 binding.waveformSeekBar.progress = currentPosition
-                                binding.timeVoiceTextView.text = formatTime(currentPosition.toLong())
+                                binding.timeVoiceTextView.text =
+                                    formatTime(currentPosition.toLong())
                                 handler.postDelayed(this, 100)
                             }
                         }
@@ -605,6 +621,11 @@ class MessageAdapter(
                     }
                 } else {
                     Log.e("VoiceError", "File does not exist: $filePath")
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
+                    binding.playButton.visibility = View.GONE
+                }
+                } else {
                     binding.progressBar.visibility = View.GONE
                     binding.errorImageView.visibility = View.VISIBLE
                     binding.playButton.visibility = View.GONE
@@ -652,13 +673,26 @@ class MessageAdapter(
         private var filePath: String = ""
         private var isPlaying: Boolean = false
         private val handler = Handler(Looper.getMainLooper())
-        fun bind(message: Message, position: Int) {
+        fun bind(message: Message, position: Int, isInLast30: Boolean) {
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
-                val filePathTemp = async(Dispatchers.IO) { retrofitService.downloadFile(context, "audio", message.voice!!) }
-                val file = File(filePathTemp.await())
-                filePath = filePathTemp.await()
+                val filePathTemp = async(Dispatchers.IO) {
+                    if (fileManager.isExist(message.voice!!)) {
+                        return@async Pair(fileManager.getFilePath(message.voice!!), true)
+                    } else {
+                        try {
+                            return@async Pair(retrofitService.downloadFile(context, "audio", message.voice!!), false)
+                        } catch (e: Exception) {
+                            return@async Pair(null, true)
+                        }
+                    }
+                }
+                val (first, second) = filePathTemp.await()
+                if (first != null) {
+                val file = File(first)
+                filePath = first
                 if (file.exists()) {
+                    if (!second && isInLast30) fileManager.saveFile(message.voice!!, file.readBytes())
                     val mediaPlayer = MediaPlayer().apply {
                         setDataSource(filePath)
                         prepare()
@@ -673,7 +707,8 @@ class MessageAdapter(
                             if (isPlaying && mediaPlayer.isPlaying) {
                                 val currentPosition = mediaPlayer.currentPosition.toFloat()
                                 binding.waveformSeekBar.progress = currentPosition
-                                binding.timeVoiceTextView.text = formatTime(currentPosition.toLong())
+                                binding.timeVoiceTextView.text =
+                                    formatTime(currentPosition.toLong())
                                 handler.postDelayed(this, 100)
                             }
                         }
@@ -708,10 +743,15 @@ class MessageAdapter(
                         handler.removeCallbacks(updateSeekBarRunnable)
                     }
                 } else {
-                        Log.e("VoiceError", "File does not exist: $filePath")
-                        binding.progressBar.visibility = View.GONE
-                        binding.errorImageView.visibility = View.VISIBLE
-                        binding.playButton.visibility = View.GONE
+                    Log.e("VoiceError", "File does not exist: $filePath")
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
+                    binding.playButton.visibility = View.GONE
+                }
+            } else {
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
+                    binding.playButton.visibility = View.GONE
                 }
             }
             val time = formatMessageTime(message.timestamp)
@@ -760,12 +800,26 @@ class MessageAdapter(
 
     inner class MessagesViewHolderFileReceiver(private val binding: ItemFileReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         private var filePath: String = ""
-        fun bind(message: Message, position: Int) {
+        fun bind(message: Message, position: Int, isInLast30: Boolean) {
             uiScope.launch {
-                val filePathTemp = async { retrofitService.downloadFile(context, "files", message.file!!) }
-                val file = File(filePathTemp.await())
-                filePath = filePathTemp.await()
+                val filePathTemp = async(Dispatchers.IO) {
+                    if (fileManager.isExist(message.file!!)) {
+                        return@async Pair(fileManager.getFilePath(message.file!!), true)
+                    } else {
+                        try {
+                            return@async Pair(retrofitService.downloadFile(context, "files", message.file!!), false)
+                        } catch (e: Exception) {
+                            return@async Pair(null, true)
+                        }
+
+                    }
+                }
+                val (first, second) = filePathTemp.await()
+                if (first != null) {
+                val file = File(first)
+                filePath = first
                 if (file.exists()) {
+                    if (!second && isInLast30) fileManager.saveFile(message.file!!, file.readBytes())
                     withContext(Dispatchers.Main) {
                         // костыль чтобы отображалось корректное имя файла
                         binding.fileNameReceiverTextView.text = message.voice
@@ -782,7 +836,6 @@ class MessageAdapter(
                                 context.startActivity(chooser)
                             } catch (e: IllegalArgumentException) {
                                 e.printStackTrace()
-                                // Обработка ошибок
                             }
                         }
                     }
@@ -792,6 +845,10 @@ class MessageAdapter(
                         binding.progressBar.visibility = View.GONE
                         binding.errorImageView.visibility = View.VISIBLE
                     }
+                }
+            } else {
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
                 }
             }
             val time = formatMessageTime(message.timestamp)
@@ -834,38 +891,55 @@ class MessageAdapter(
     inner class MessagesViewHolderFileSender(private val binding: ItemFileSenderBinding) : RecyclerView.ViewHolder(binding.root) {
 
         private var filePath: String = ""
-        fun bind(message: Message, position: Int) {
+        fun bind(message: Message, position: Int, isInLast30: Boolean) {
             uiScope.launch {
-                val filePathTemp = async { retrofitService.downloadFile(context, "files", message.file!!) }
-                val file = File(filePathTemp.await())
-                filePath = filePathTemp.await()
-                if (file.exists()) {
-                    withContext(Dispatchers.Main) {
-                        // костыль чтобы отображалось корректное имя файла
-                        binding.fileNameSenderTextView.text = message.voice
-                        binding.fileSizeTextView.text = formatFileSize(file.length())
-                        binding.fileButton.setOnClickListener {
-                            try {
-                                val uri: Uri = FileProvider.getUriForFile(context, context.applicationContext.packageName + ".provider", file)
+                val filePathTemp = async(Dispatchers.IO) {
+                    if (fileManager.isExist(message.file!!)) {
+                        return@async Pair(fileManager.getFilePath(message.file!!), true)
+                    } else {
+                        try {
+                            return@async Pair(retrofitService.downloadFile(context, "files", message.file!!), false)
+                        } catch (e: Exception) {
+                            return@async Pair(null, true)
+                        }
 
-                                val intent = Intent(Intent.ACTION_VIEW)
-                                intent.setDataAndType(uri, context.contentResolver.getType(uri))
-                                intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    }
+                }
+                val (first, second) = filePathTemp.await()
+                if (first != null) {
+                    val file = File(first)
+                    filePath = first
+                    if (file.exists()) {
+                        if (!second && isInLast30) fileManager.saveFile(message.file!!, file.readBytes())
+                        withContext(Dispatchers.Main) {
+                            // костыль чтобы отображалось корректное имя файла
+                            binding.fileNameSenderTextView.text = message.voice
+                            binding.fileSizeTextView.text = formatFileSize(file.length())
+                            binding.fileButton.setOnClickListener {
+                                try {
+                                    val uri: Uri = FileProvider.getUriForFile(context, context.applicationContext.packageName + ".provider", file)
 
-                                val chooser = Intent.createChooser(intent, "Выберите приложение для открытия файла")
-                                context.startActivity(chooser)
-                            } catch (e: IllegalArgumentException) {
-                                e.printStackTrace()
-                                // Обработка ошибок
+                                    val intent = Intent(Intent.ACTION_VIEW)
+                                    intent.setDataAndType(uri, context.contentResolver.getType(uri))
+                                    intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+
+                                    val chooser = Intent.createChooser(intent, "Выберите приложение для открытия файла")
+                                    context.startActivity(chooser)
+                                } catch (e: IllegalArgumentException) {
+                                    e.printStackTrace()
+                                }
                             }
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Log.e("FileError", "File does not exist: $filePath")
+                            binding.progressBar.visibility = View.GONE
+                            binding.errorImageView.visibility = View.VISIBLE
                         }
                     }
                 } else {
-                    withContext(Dispatchers.Main) {
-                        Log.e("FileError", "File does not exist: $filePath")
-                        binding.progressBar.visibility = View.GONE
-                        binding.errorImageView.visibility = View.VISIBLE
-                    }
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
                 }
             }
             val time = formatMessageTime(message.timestamp)
@@ -920,7 +994,7 @@ class MessageAdapter(
     inner class MessagesViewHolderTextImageReceiver(private val binding: ItemTextImageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
 
         private var filePath: String = ""
-        fun bind(message: Message, position: Int, flagText: Boolean) {
+        fun bind(message: Message, position: Int, flagText: Boolean, isInLast30: Boolean) {
             if(flagText) {
                 binding.messageReceiverTextView.visibility = View.VISIBLE
                 binding.messageReceiverTextView.text = message.text
@@ -930,22 +1004,36 @@ class MessageAdapter(
 
             uiScope.launch {
                 binding.progressBar.visibility = View.VISIBLE
-                val filePathTemp = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
-                val file = File(filePathTemp.await())
-                filePath = filePathTemp.await()
+                val filePathTemp = async(Dispatchers.IO) {
+                    if (fileManager.isExist(message.images!!.first())) {
+                        return@async Pair(fileManager.getFilePath(message.images!!.first()), true)
+                    } else {
+                        try {
+                            return@async Pair(retrofitService.downloadFile(context, "photos", message.images!!.first()), false)
+                        } catch (e: Exception) {
+                            return@async Pair(null, true)
+                        }
+                    }
+                }
+                val (first, second) = filePathTemp.await()
+                if(first != null) {
+                val file = File(first)
+                filePath = first
                 if (file.exists()) {
+                    if (!second && isInLast30) fileManager.saveFile(message.images!!.first(), file.readBytes())
                     val uri = Uri.fromFile(file)
                     val localMedia = fileToLocalMedia(file)
                     val chooseModel = localMedia.chooseModel
-                    binding.tvDuration.visibility = if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
-                    if(chooseModel == SelectMimeType.ofAudio()) {
+                    binding.tvDuration.visibility =
+                        if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
+                    if (chooseModel == SelectMimeType.ofAudio()) {
                         binding.tvDuration.visibility = View.VISIBLE
                         binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
                     } else {
                         binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
                     }
                     binding.tvDuration.text = (DateUtils.formatDurationTime(localMedia.duration))
-                    if(chooseModel == SelectMimeType.ofAudio()) {
+                    if (chooseModel == SelectMimeType.ofAudio()) {
                         binding.receiverImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
                     } else {
                         Glide.with(context)
@@ -965,6 +1053,10 @@ class MessageAdapter(
                         binding.progressBar.visibility = View.GONE
                         binding.errorImageView.visibility = View.VISIBLE
                     }
+                }
+            } else {
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
                 }
             }
             val time = formatMessageTime(message.timestamp)
@@ -1007,7 +1099,7 @@ class MessageAdapter(
     inner class MessagesViewHolderTextImageSender(private val binding: ItemTextImageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
 
         private var filePath: String = ""
-        fun bind(message: Message, position: Int, flagText: Boolean) {
+        fun bind(message: Message, position: Int, flagText: Boolean, isInLast30: Boolean) {
             if(flagText) {
                 binding.messageSenderTextView.visibility = View.VISIBLE
                 binding.messageSenderTextView.text = message.text
@@ -1016,10 +1108,23 @@ class MessageAdapter(
             }
             uiScope.launch {
                 binding.progressBar.visibility = View.VISIBLE
-                val filePathTemp = async { retrofitService.downloadFile(context, "photos", message.images!!.first()) }
-                val file = File(filePathTemp.await())
-                filePath = filePathTemp.await()
+                val filePathTemp = async(Dispatchers.IO) {
+                    if (fileManager.isExist(message.images!!.first())) {
+                        return@async Pair(fileManager.getFilePath(message.images!!.first()), true)
+                    } else {
+                        try {
+                            return@async Pair(retrofitService.downloadFile(context, "photos", message.images!!.first()), false)
+                        } catch (e: Exception) {
+                            return@async Pair(null, true)
+                        }
+                    }
+                }
+                val (first, second) = filePathTemp.await()
+                if (first != null) {
+                val file = File(first)
+                filePath = first
                 if (file.exists()) {
+                    if (!second && isInLast30) fileManager.saveFile(message.images!!.first(), file.readBytes())
                     val uri = Uri.fromFile(file)
                     val localMedia = fileToLocalMedia(file)
                     val chooseModel = localMedia.chooseModel
@@ -1032,7 +1137,8 @@ class MessageAdapter(
                         } else {
                             binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
                         }
-                        binding.tvDuration.text = (DateUtils.formatDurationTime(localMedia.duration))
+                        binding.tvDuration.text =
+                            (DateUtils.formatDurationTime(localMedia.duration))
                         if (chooseModel == SelectMimeType.ofAudio()) {
                             binding.senderImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
                         } else {
@@ -1054,6 +1160,10 @@ class MessageAdapter(
                         binding.progressBar.visibility = View.GONE
                         binding.errorImageView.visibility = View.VISIBLE
                     }
+                }
+            } else {
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
                 }
             }
             val time = formatMessageTime(message.timestamp)
@@ -1117,7 +1227,7 @@ class MessageAdapter(
             binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 2, true))
             binding.recyclerview.adapter = adapter
         }
-        fun bind(message: Message, position: Int, flagText: Boolean) {
+        fun bind(message: Message, position: Int, flagText: Boolean, isInLast30: Boolean) {
             filePathsForClick = emptyList()
             mes = message
             if(flagText) {
@@ -1131,12 +1241,24 @@ class MessageAdapter(
                 val localMedias = async {
                     val medias = arrayListOf<LocalMedia>()
                     for (image in message.images!!) {
-                        val filePath =
-                            async { retrofitService.downloadFile(context, "photos", image) }
-                        val file = File(filePath.await())
-                        filePaths[File(filePath.await()).name] = "photos"
-                        filePathsForClick += filePath.await()
+                        val filePath = async(Dispatchers.IO) {
+                            if (fileManager.isExist(image)) {
+                                Pair(fileManager.getFilePath(image), true)
+                            } else {
+                                try {
+                                    Pair(retrofitService.downloadFile(context, "photos", image), false)
+                                } catch (e: Exception) {
+                                    Pair(null, true)
+                                }
+                            }
+                        }
+                        val (first, second) = filePath.await()
+                        if (first != null) {
+                        val file = File(first)
+                        filePaths[File(first).name] = "photos"
+                        filePathsForClick += first
                         if (file.exists()) {
+                            if (!second && isInLast30) fileManager.saveFile(image, file.readBytes())
                             medias += fileToLocalMedia(file)
                         } else {
                             withContext(Dispatchers.Main) {
@@ -1144,6 +1266,10 @@ class MessageAdapter(
                                 binding.progressBar.visibility = View.GONE
                                 binding.errorImageView.visibility = View.VISIBLE
                             }
+                        }
+                    } else {
+                            binding.progressBar.visibility = View.GONE
+                            binding.errorImageView.visibility = View.VISIBLE
                         }
                     }
                     return@async medias
@@ -1214,7 +1340,7 @@ class MessageAdapter(
             binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 2, true))
             binding.recyclerview.adapter = adapter
         }
-        fun bind(message: Message, position: Int, flagText: Boolean) {
+        fun bind(message: Message, position: Int, flagText: Boolean, isInLast30: Boolean) {
             filePathsForClick = emptyList()
             mes = message
             if(flagText) {
@@ -1228,26 +1354,41 @@ class MessageAdapter(
                 val localMedias = async {
                     val medias = arrayListOf<LocalMedia>()
                     for (image in message.images!!) {
-                        val filePath =
-                            async { retrofitService.downloadFile(context, "photos", image) }
-                        val file = File(filePath.await())
-                        filePaths[File(filePath.await()).name] = "photos"
-                        filePathsForClick += filePath.await()
-                        if (file.exists()) {
-                            medias += fileToLocalMedia(file)
-                        } else {
-                            withContext(Dispatchers.Main) {
-                                Log.e("ImageError", "File does not exist: $filePath")
-                                binding.progressBar.visibility = View.GONE
-                                binding.errorImageView.visibility = View.VISIBLE
+                        val filePath = async(Dispatchers.IO) {
+                            if (fileManager.isExist(image)) {
+                                Pair(fileManager.getFilePath(image), true)
+                            } else {
+                                try {
+                                    Pair(retrofitService.downloadFile(context, "photos", image), false)
+                                } catch (e: Exception) {
+                                    Pair(null, true)
+                                }
                             }
+                        }
+                        val (first, second) = filePath.await()
+                        if (first != null) {
+                            val file = File(first)
+                            filePaths[File(first).name] = "photos"
+                            filePathsForClick += first
+                            if (file.exists()) {
+                                if (!second && isInLast30) fileManager.saveFile(image, file.readBytes())
+                                medias += fileToLocalMedia(file)
+                            } else {
+                                withContext(Dispatchers.Main) {
+                                    Log.e("ImageError", "File does not exist: $filePath")
+                                    binding.progressBar.visibility = View.GONE
+                                    binding.errorImageView.visibility = View.VISIBLE
+                                }
+                            }
+                        } else {
+                            binding.progressBar.visibility = View.GONE
+                            binding.errorImageView.visibility = View.VISIBLE
                         }
                     }
                     return@async medias
                 }
                 withContext(Dispatchers.Main) {
                     adapter.images = localMedias.await()
-                    Log.d("testAdapterImages", "${adapter.images}")
                     binding.progressBar.visibility = View.GONE
                 }
             }

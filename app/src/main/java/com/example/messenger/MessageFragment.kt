@@ -34,6 +34,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.databinding.FragmentMessageBinding
 import com.example.messenger.model.Dialog
+import com.example.messenger.model.FileManager
 import com.example.messenger.model.FileNotFoundException
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
@@ -76,6 +77,7 @@ class MessageFragment(
     private lateinit var imageAdapter: ImageAdapter
     private lateinit var preferences: SharedPreferences
     private lateinit var pickFileLauncher: ActivityResultLauncher<Array<String>>
+    private lateinit var fileManager: FileManager
     private var audioRecord: AudioRecorder? = null
     private var lastSessionString: String = ""
     private var countMsg = dialog.countMsg
@@ -113,6 +115,7 @@ class MessageFragment(
                 handleFileUri(uri) // обработка выбранного файла
             }
         }
+        fileManager = FileManager(requireContext())
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -150,8 +153,14 @@ class MessageFragment(
         }
         val lastSession: TextView = view.findViewById(R.id.lastSessionTextView)
         lifecycleScope.launch {
-            lastSessionString =
-                formatUserSessionDate(retrofitService.getLastSession(dialog.otherUser.id))
+            val session = async(Dispatchers.IO) {
+                try {
+                    return@async retrofitService.getLastSession(dialog.otherUser.id)
+                } catch(e: Exception) {
+                    return@async 0
+                }
+            }
+            lastSessionString = formatUserSessionDate(session.await())
             lastSession.text = lastSessionString
         }
         val options: ImageView = view.findViewById(R.id.ic_options)
@@ -251,7 +260,7 @@ class MessageFragment(
                         })
                         .startActivityPreview(position, false, images)
                 }
-            }, dialog.otherUser.id, requireContext())
+            }, dialog.otherUser.id, requireContext(), fileManager)
         imageAdapter = ImageAdapter(requireContext(), object: ImageActionListener {
             override fun onImageClicked(image: LocalMedia, position: Int) {
                 Log.d("testClick", "Image clicked: $image")
@@ -495,9 +504,24 @@ class MessageFragment(
 
     private fun startMessagePolling() {
         updateJob = lifecycleScope.launch {
+            var mes = messengerService.getMessages(dialog.id).associateWith { "" }
+            adapter.messages = mes
             while (isActive) {
-                val temp = async(Dispatchers.IO) { retrofitService.getMessages(dialog.id, 0, countMsg).associateWith { "" } } //todo pagination
-                adapter.messages = temp.await()
+                val temp = async(Dispatchers.IO) {
+                    try {
+                        return@async retrofitService.getMessages(dialog.id, 0, countMsg).associateWith { "" }
+                    } catch (e: Exception) {
+                        return@async null
+                    }
+                } //todo pagination
+                val tmp = temp.await()
+                if(tmp != null) {
+                    mes = tmp
+                    adapter.messages = mes
+                    messengerService.replaceMessages(dialog.id, mes.keys.toList().takeLast(30), fileManager)
+                } else {
+                    Toast.makeText(requireContext(), "Ошибка подключения к серверу", Toast.LENGTH_SHORT).show()
+                }
                 delay(30000)
             }
         }

@@ -36,13 +36,14 @@ data class ConversationDbEntity(
                     id = it.id,
                     name = it.name,
                     username = it.username,
-                    avatar = it.avatar
+                    avatar = it.avatar,
+                    lastSession = it.lastSession
                 )
             }
 
             val lastMessageEntity = conversation.lastMessage?.let {
                 LastMessageEntity(
-                    id = 0, // auto increment
+                    id = conversation.id, // todo убедиться, что это не ломает логику
                     text = it.text,
                     timestamp = it.timestamp,
                     isRead = it.isRead
