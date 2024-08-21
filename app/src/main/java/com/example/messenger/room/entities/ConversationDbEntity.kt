@@ -43,7 +43,7 @@ data class ConversationDbEntity(
 
             val lastMessageEntity = conversation.lastMessage?.let {
                 LastMessageEntity(
-                    id = 0, // auto increment
+                    id = conversation.id, // todo убедиться, что это не ломает логику
                     text = it.text,
                     timestamp = it.timestamp,
                     isRead = it.isRead

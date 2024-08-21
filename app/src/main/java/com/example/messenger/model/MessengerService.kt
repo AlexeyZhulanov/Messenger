@@ -30,7 +30,17 @@ class MessengerService(
     }
 
     override suspend fun getConversations(): List<Conversation> = withContext(Dispatchers.IO) {
-        return@withContext conversationDao.getConversations().map { it.toConversation() }
+        val conversationEntities = conversationDao.getConversations()
+
+        val userIds = conversationEntities.mapNotNull { it.otherUserId }
+        val lastMessageIds = conversationEntities.mapNotNull { it.lastMessageId }
+
+        val users = conversationDao.getUsersByIds(userIds)
+        val lastMessages = conversationDao.getLastMessagesByIds(lastMessageIds)
+
+        val conversationDbEntities = conversationDao.mapToConversationDbEntity(conversationEntities, users, lastMessages)
+
+        return@withContext conversationDbEntities.map { it.toConversation() }
     }
 
     override suspend fun replaceConversations(conversations: List<Conversation>) = withContext(Dispatchers.IO) {

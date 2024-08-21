@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
@@ -24,6 +25,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.messenger.databinding.FragmentMessengerBinding
 import com.example.messenger.model.Conversation
+import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +34,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.net.UnknownHostException
 
 class MessengerFragment : Fragment() {
     private lateinit var binding: FragmentMessengerBinding
@@ -43,6 +46,8 @@ class MessengerFragment : Fragment() {
     private val retrofitService: RetrofitService
         get() = Singletons.retrofitRepository as RetrofitService
 
+    private val messengerService: MessengerService
+        get() = Singletons.messengerRepository as MessengerService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -104,8 +109,27 @@ class MessengerFragment : Fragment() {
         retrofitService.initCompleted.observe(viewLifecycleOwner) { initCompleted ->
             if(initCompleted) {
                 updateJob = lifecycleScope.launch {
-                    while(isActive) {
-                        adapter.conversations = retrofitService.getConversations()
+                    var conversations = messengerService.getConversations()
+                    Log.d("testConversations", conversations.toString())
+                    adapter.conversations = conversations
+                    while (isActive) {
+                            val conv = async(Dispatchers.IO) {
+                                try {
+                                    return@async retrofitService.getConversations()
+                                } catch (e: UnknownHostException) {
+                                    return@async null
+                                } catch (e: Exception) {
+                                    return@async null
+                                }
+                            }
+                            val convers = conv.await()
+                            if(convers != null) {
+                                conversations = convers
+                                adapter.conversations = conversations
+                                messengerService.replaceConversations(conversations)
+                            } else {
+                                Toast.makeText(requireContext(), "Ошибка подключения к серверу", Toast.LENGTH_SHORT).show()
+                            }
                         delay(30000)
                     }
                 }
