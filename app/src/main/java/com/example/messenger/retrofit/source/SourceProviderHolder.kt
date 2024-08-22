@@ -1,6 +1,5 @@
 package com.example.messenger.retrofit.source
 
-import com.example.messenger.Singletons
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.appsettings.AppSettings
@@ -9,9 +8,7 @@ import com.example.messenger.retrofit.source.base.RetrofitSourcesProvider
 import com.example.messenger.retrofit.source.base.SourcesProvider
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Semaphore
@@ -21,14 +18,17 @@ import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import javax.inject.Inject
+import javax.inject.Singleton
 
-object SourceProviderHolder {
-
-    private const val BASE_URL = "https://amessenger.ru" // ;)
-    private val messengerService: MessengerService
-        get() = Singletons.messengerRepository as MessengerService
+@Singleton
+class SourceProviderHolder @Inject constructor(
+    private val appSettings: AppSettings,
+    private val messengerService: MessengerService,
     private val retrofitService: RetrofitService
-        get() = Singletons.retrofitRepository as RetrofitService
+) {
+
+    private val BASE_URL = "https://amessenger.ru" // ;)
 
     val sourcesProvider: SourcesProvider by lazy {
         val moshi = Moshi.Builder()
@@ -58,7 +58,7 @@ object SourceProviderHolder {
      */
     private fun createOkHttpClient(): OkHttpClient {
         return OkHttpClient.Builder()
-            .addInterceptor(createAuthorizationInterceptor(Singletons.appSettings))
+            .addInterceptor(createAuthorizationInterceptor(appSettings))
             .addInterceptor(createLoggingInterceptor())
             .build()
     }
