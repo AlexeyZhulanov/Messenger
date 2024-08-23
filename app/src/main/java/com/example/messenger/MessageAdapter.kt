@@ -80,6 +80,7 @@ class MessageAdapter(
             }
             field = newMessages
             notifyDataSetChanged()
+            Log.d("testAdapterMessages", field.toString())
         }
 
     var canLongClick: Boolean = true

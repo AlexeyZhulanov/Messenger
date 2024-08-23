@@ -25,8 +25,6 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MessageViewModel @Inject constructor(
-    private val dialogId: Int,
-    private val otherUserId: Int,
     private val messengerService: MessengerService,
     private val retrofitService: RetrofitService,
     private val fileManager: FileManager
@@ -43,11 +41,14 @@ class MessageViewModel @Inject constructor(
 
     private var updateJob: Job? = null
 
-    init {
-        loadMessages()
-        fetchLastSession()
-    }
+    private var dialogId: Int = -1
+    private var otherUserId: Int = -1
 
+
+    fun setDialogInfo(dialogId: Int, otherUserId: Int) {
+        this.dialogId = dialogId
+        this.otherUserId = otherUserId
+    }
     fun setCountMsg(value: Int) {
         _countMsg.value = value
     }
@@ -60,7 +61,7 @@ class MessageViewModel @Inject constructor(
         _countMsg.value = (_countMsg.value ?: 0) - value
     }
 
-    private fun fetchLastSession() {
+    fun fetchLastSession() {
         viewModelScope.launch {
             try {
                 val session = withContext(Dispatchers.IO) {
@@ -73,14 +74,14 @@ class MessageViewModel @Inject constructor(
         }
     }
 
-    private fun loadMessages() {
+    fun loadMessages() {
         updateJob = viewModelScope.launch {
             var mes = messengerService.getMessages(dialogId).associateWith { "" }
             _messages.value = mes
             while (isActive) {
                 val temp = withContext(Dispatchers.IO) {
                     try {
-                        retrofitService.getMessages(dialogId, 0, _countMsg.value ?: 0).associateWith { "" }
+                        retrofitService.getMessages(dialogId, 0, -1).associateWith { "" }
                     } catch (e: Exception) {
                         null
                     }
@@ -95,8 +96,12 @@ class MessageViewModel @Inject constructor(
         }
     }
 
+    suspend fun replaceMessages(messages: List<Message>) = withContext(Dispatchers.IO) {
+        messengerService.replaceMessages(dialogId, messages.takeLast(30), fileManager)
+    }
+
     suspend fun getMessages(idDialog: Int, start: Int, end: Int?): List<Message> = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.getMessages(idDialog, start, end ?: _countMsg.value ?: 0)
+        return@withContext retrofitService.getMessages(idDialog, start, -1)
     }
 
     suspend fun getDialogSettings(idDialog: Int): ConversationSettings = withContext(Dispatchers.IO) {

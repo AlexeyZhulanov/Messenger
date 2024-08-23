@@ -105,6 +105,9 @@ class MessageFragment(
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        viewModel.setDialogInfo(dialog.id, dialog.otherUser.id)
+        viewModel.loadMessages() // todo проверить нужно
+        viewModel.fetchLastSession() // и это тоже
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.custom_action_bar, toolbarContainer, false)
@@ -140,6 +143,7 @@ class MessageFragment(
         viewModel.lastSessionString.observe(viewLifecycleOwner) { sessionString ->
             lastSession.text = sessionString
         }
+        startMessagePolling()
         val options: ImageView = view.findViewById(R.id.ic_options)
         options.setOnClickListener {
             showPopupMenu(it, R.menu.popup_menu_dialog)
@@ -389,7 +393,9 @@ class MessageFragment(
                         } else {
                             viewModel.sendMessage(dialog.id, text, null, null, null, null, false, null)
                         }
-                    } else if (list.isNotEmpty()) viewModel.sendMessage(dialog.id, null, list, null, null, null, false, null)
+                    } else if (list.isNotEmpty()) {
+                        viewModel.sendMessage(dialog.id, null, list, null, null, null, false, null)
+                    }
                     else withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "Ошибка отправки изображений", Toast.LENGTH_SHORT).show() }
                     imageAdapter.clearImages()
                 } else {
@@ -404,6 +410,7 @@ class MessageFragment(
                 binding.recyclerview.post {
                     binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
                 }
+                viewModel.replaceMessages(adapter.messages.keys.toList())
             }
         }
         return binding.root
@@ -451,6 +458,7 @@ class MessageFragment(
                             binding.recyclerview.post {
                                 binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
                             }
+                            viewModel.replaceMessages(adapter.messages.keys.toList())
                         }
                     }
                 }
@@ -507,6 +515,7 @@ class MessageFragment(
                 binding.recyclerview.post {
                     binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
                 }
+                viewModel.replaceMessages(adapter.messages.keys.toList())
             }
         } else Toast.makeText(requireContext(), "Что-то не так с файлом", Toast.LENGTH_SHORT).show()
     }

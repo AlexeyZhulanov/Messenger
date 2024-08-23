@@ -19,16 +19,20 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Inject
+import javax.inject.Provider
 import javax.inject.Singleton
 
 @Singleton
 class SourceProviderHolder @Inject constructor(
     private val appSettings: AppSettings,
     private val messengerService: MessengerService,
-    private val retrofitService: RetrofitService
+    private val retrofitServiceProvider: Provider<RetrofitService>
 ) {
 
     private val BASE_URL = "https://amessenger.ru" // ;)
+
+    @Inject
+    lateinit var retrofitService: RetrofitService
 
     val sourcesProvider: SourcesProvider by lazy {
         val moshi = Moshi.Builder()
@@ -82,6 +86,7 @@ class SourceProviderHolder @Inject constructor(
                 if (initialResponse.code == 401) { // Unauthorized
                     semaphore.acquire()
                     try {
+                        val retrofitService = retrofitServiceProvider.get()
                         // Выполняем асинхронный запрос для обновления токена
                         val job = async(Dispatchers.IO) {
                             val settingsResponse = messengerService.getSettings()
