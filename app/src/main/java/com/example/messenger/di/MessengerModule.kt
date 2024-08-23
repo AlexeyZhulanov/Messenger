@@ -2,6 +2,7 @@ package com.example.messenger.di
 
 import android.content.Context
 import androidx.room.Room
+import com.example.messenger.model.FileManager
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.appsettings.AppSettings
@@ -111,5 +112,11 @@ object MessengerModule {
     @Singleton
     fun provideSourcesProvider(holder: SourceProviderHolder): SourcesProvider {
         return holder.sourcesProvider
+    }
+
+    @Provides
+    @Singleton
+    fun provideFileManager(@ApplicationContext context: Context): FileManager {
+        return FileManager(context)
     }
 }
