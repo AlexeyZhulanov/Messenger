@@ -102,6 +102,8 @@ dependencies {
     implementation ("com.github.massoudss:waveformSeekBar:5.0.2")
     implementation ("com.github.lincollincol:amplituda:2.2.2")
     implementation ("com.arthenica:mobile-ffmpeg-full:4.4.LTS")
+    implementation ("androidx.paging:paging-runtime:3.3.2")
+    implementation ("androidx.paging:paging-common-ktx:3.3.2")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     debugImplementation(libs.androidx.ui.tooling)

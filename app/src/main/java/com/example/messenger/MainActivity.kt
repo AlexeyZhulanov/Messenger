@@ -14,26 +14,28 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.messenger.databinding.ActivityMainBinding
 import com.example.messenger.model.MessengerService
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 const val APP_PREFERENCES = "APP_PREFERENCES"
 const val PREF_WALLPAPER = "PREF_WALLPAPER"
 const val PREF_THEME = "PREF_THEME"
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.Main + job)
-    private val messengerService: MessengerService
-        get() = Singletons.messengerRepository as MessengerService
+    @Inject
+    lateinit var messengerService: MessengerService
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        Singletons.init(applicationContext)
         val preferences = getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
         val themeNumber = preferences.getInt(PREF_THEME, 0)
         when(themeNumber) {
@@ -53,10 +55,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater).also { setContentView(it.root) }
         setContentView(binding.root)
         uiScope.launch {
-            Log.d("testBeforeRoomMain", "OK")
             val s = async { messengerService.getSettings() }
             val settings = s.await()
-            Log.d("testAfterRoomMain", settings.toString())
             if (savedInstanceState == null) {
                 if (settings.remember == 1) {
                     if (settings.name != "" && settings.password != "" && settings.name != "empty" && settings.password != "empty") {

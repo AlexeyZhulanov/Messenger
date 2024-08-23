@@ -3,7 +3,6 @@ package com.example.messenger
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.graphics.Rect
 import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
@@ -16,7 +15,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
-import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -40,13 +38,10 @@ import com.luck.picture.lib.config.SelectMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import com.masoudss.lib.SeekBarOnProgressChanged
 import com.masoudss.lib.WaveformSeekBar
-import com.masoudss.lib.utils.WaveGravity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -66,7 +61,7 @@ class MessageAdapter(
     private val actionListener: MessageActionListener,
     private val otherUserId: Int,
     private val context: Context,
-    private val fileManager: FileManager
+    private val messageViewModel: MessageViewModel
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     var messages: Map<Message, String> = emptyMap()
@@ -85,14 +80,13 @@ class MessageAdapter(
             }
             field = newMessages
             notifyDataSetChanged()
+            Log.d("testAdapterMessages", field.toString())
         }
 
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
     private var checkedFiles: MutableMap<String, String> = mutableMapOf()
     lateinit var dialogSettings: ConversationSettings
-    private val retrofitService: RetrofitService
-        get() = Singletons.retrofitRepository as RetrofitService
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.IO + job)
     private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)
@@ -554,11 +548,11 @@ class MessageAdapter(
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
                 val filePathTemp = async(Dispatchers.IO) {
-                    if (fileManager.isExist(message.voice!!)) {
-                        return@async Pair(fileManager.getFilePath(message.voice!!), true)
+                    if (messageViewModel.fManagerIsExist(message.voice!!)) {
+                        return@async Pair(messageViewModel.fManagerGetFilePath(message.voice!!), true)
                     } else {
                         try {
-                            return@async Pair(retrofitService.downloadFile(context, "audio", message.voice!!), false)
+                            return@async Pair(messageViewModel.downloadFile(context, "audio", message.voice!!), false)
                         } catch (e: Exception) {
                             return@async Pair(null, true)
                         }
@@ -569,7 +563,7 @@ class MessageAdapter(
                 val file = File(first)
                 filePath = first
                 if (file.exists()) {
-                    if (!second && isInLast30) fileManager.saveFile(message.voice!!, file.readBytes())
+                    if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.voice!!, file.readBytes())
                     val mediaPlayer = MediaPlayer().apply {
                         setDataSource(filePath)
                         prepare()
@@ -677,11 +671,11 @@ class MessageAdapter(
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
                 val filePathTemp = async(Dispatchers.IO) {
-                    if (fileManager.isExist(message.voice!!)) {
-                        return@async Pair(fileManager.getFilePath(message.voice!!), true)
+                    if (messageViewModel.fManagerIsExist(message.voice!!)) {
+                        return@async Pair(messageViewModel.fManagerGetFilePath(message.voice!!), true)
                     } else {
                         try {
-                            return@async Pair(retrofitService.downloadFile(context, "audio", message.voice!!), false)
+                            return@async Pair(messageViewModel.downloadFile(context, "audio", message.voice!!), false)
                         } catch (e: Exception) {
                             return@async Pair(null, true)
                         }
@@ -692,7 +686,7 @@ class MessageAdapter(
                 val file = File(first)
                 filePath = first
                 if (file.exists()) {
-                    if (!second && isInLast30) fileManager.saveFile(message.voice!!, file.readBytes())
+                    if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.voice!!, file.readBytes())
                     val mediaPlayer = MediaPlayer().apply {
                         setDataSource(filePath)
                         prepare()
@@ -803,11 +797,11 @@ class MessageAdapter(
         fun bind(message: Message, position: Int, isInLast30: Boolean) {
             uiScope.launch {
                 val filePathTemp = async(Dispatchers.IO) {
-                    if (fileManager.isExist(message.file!!)) {
-                        return@async Pair(fileManager.getFilePath(message.file!!), true)
+                    if (messageViewModel.fManagerIsExist(message.file!!)) {
+                        return@async Pair(messageViewModel.fManagerGetFilePath(message.file!!), true)
                     } else {
                         try {
-                            return@async Pair(retrofitService.downloadFile(context, "files", message.file!!), false)
+                            return@async Pair(messageViewModel.downloadFile(context, "files", message.file!!), false)
                         } catch (e: Exception) {
                             return@async Pair(null, true)
                         }
@@ -819,7 +813,7 @@ class MessageAdapter(
                 val file = File(first)
                 filePath = first
                 if (file.exists()) {
-                    if (!second && isInLast30) fileManager.saveFile(message.file!!, file.readBytes())
+                    if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.file!!, file.readBytes())
                     withContext(Dispatchers.Main) {
                         // костыль чтобы отображалось корректное имя файла
                         binding.fileNameReceiverTextView.text = message.voice
@@ -894,11 +888,11 @@ class MessageAdapter(
         fun bind(message: Message, position: Int, isInLast30: Boolean) {
             uiScope.launch {
                 val filePathTemp = async(Dispatchers.IO) {
-                    if (fileManager.isExist(message.file!!)) {
-                        return@async Pair(fileManager.getFilePath(message.file!!), true)
+                    if (messageViewModel.fManagerIsExist(message.file!!)) {
+                        return@async Pair(messageViewModel.fManagerGetFilePath(message.file!!), true)
                     } else {
                         try {
-                            return@async Pair(retrofitService.downloadFile(context, "files", message.file!!), false)
+                            return@async Pair(messageViewModel.downloadFile(context, "files", message.file!!), false)
                         } catch (e: Exception) {
                             return@async Pair(null, true)
                         }
@@ -910,7 +904,7 @@ class MessageAdapter(
                     val file = File(first)
                     filePath = first
                     if (file.exists()) {
-                        if (!second && isInLast30) fileManager.saveFile(message.file!!, file.readBytes())
+                        if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.file!!, file.readBytes())
                         withContext(Dispatchers.Main) {
                             // костыль чтобы отображалось корректное имя файла
                             binding.fileNameSenderTextView.text = message.voice
@@ -1005,11 +999,11 @@ class MessageAdapter(
             uiScope.launch {
                 binding.progressBar.visibility = View.VISIBLE
                 val filePathTemp = async(Dispatchers.IO) {
-                    if (fileManager.isExist(message.images!!.first())) {
-                        return@async Pair(fileManager.getFilePath(message.images!!.first()), true)
+                    if (messageViewModel.fManagerIsExist(message.images!!.first())) {
+                        return@async Pair(messageViewModel.fManagerGetFilePath(message.images!!.first()), true)
                     } else {
                         try {
-                            return@async Pair(retrofitService.downloadFile(context, "photos", message.images!!.first()), false)
+                            return@async Pair(messageViewModel.downloadFile(context, "photos", message.images!!.first()), false)
                         } catch (e: Exception) {
                             return@async Pair(null, true)
                         }
@@ -1020,7 +1014,7 @@ class MessageAdapter(
                 val file = File(first)
                 filePath = first
                 if (file.exists()) {
-                    if (!second && isInLast30) fileManager.saveFile(message.images!!.first(), file.readBytes())
+                    if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.images!!.first(), file.readBytes())
                     val uri = Uri.fromFile(file)
                     val localMedia = fileToLocalMedia(file)
                     val chooseModel = localMedia.chooseModel
@@ -1109,11 +1103,11 @@ class MessageAdapter(
             uiScope.launch {
                 binding.progressBar.visibility = View.VISIBLE
                 val filePathTemp = async(Dispatchers.IO) {
-                    if (fileManager.isExist(message.images!!.first())) {
-                        return@async Pair(fileManager.getFilePath(message.images!!.first()), true)
+                    if (messageViewModel.fManagerIsExist(message.images!!.first())) {
+                        return@async Pair(messageViewModel.fManagerGetFilePath(message.images!!.first()), true)
                     } else {
                         try {
-                            return@async Pair(retrofitService.downloadFile(context, "photos", message.images!!.first()), false)
+                            return@async Pair(messageViewModel.downloadFile(context, "photos", message.images!!.first()), false)
                         } catch (e: Exception) {
                             return@async Pair(null, true)
                         }
@@ -1124,7 +1118,7 @@ class MessageAdapter(
                 val file = File(first)
                 filePath = first
                 if (file.exists()) {
-                    if (!second && isInLast30) fileManager.saveFile(message.images!!.first(), file.readBytes())
+                    if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.images!!.first(), file.readBytes())
                     val uri = Uri.fromFile(file)
                     val localMedia = fileToLocalMedia(file)
                     val chooseModel = localMedia.chooseModel
@@ -1242,11 +1236,11 @@ class MessageAdapter(
                     val medias = arrayListOf<LocalMedia>()
                     for (image in message.images!!) {
                         val filePath = async(Dispatchers.IO) {
-                            if (fileManager.isExist(image)) {
-                                Pair(fileManager.getFilePath(image), true)
+                            if (messageViewModel.fManagerIsExist(image)) {
+                                Pair(messageViewModel.fManagerGetFilePath(image), true)
                             } else {
                                 try {
-                                    Pair(retrofitService.downloadFile(context, "photos", image), false)
+                                    Pair(messageViewModel.downloadFile(context, "photos", image), false)
                                 } catch (e: Exception) {
                                     Pair(null, true)
                                 }
@@ -1258,7 +1252,7 @@ class MessageAdapter(
                         filePaths[File(first).name] = "photos"
                         filePathsForClick += first
                         if (file.exists()) {
-                            if (!second && isInLast30) fileManager.saveFile(image, file.readBytes())
+                            if (!second && isInLast30) messageViewModel.fManagerSaveFile(image, file.readBytes())
                             medias += fileToLocalMedia(file)
                         } else {
                             withContext(Dispatchers.Main) {
@@ -1355,11 +1349,11 @@ class MessageAdapter(
                     val medias = arrayListOf<LocalMedia>()
                     for (image in message.images!!) {
                         val filePath = async(Dispatchers.IO) {
-                            if (fileManager.isExist(image)) {
-                                Pair(fileManager.getFilePath(image), true)
+                            if (messageViewModel.fManagerIsExist(image)) {
+                                Pair(messageViewModel.fManagerGetFilePath(image), true)
                             } else {
                                 try {
-                                    Pair(retrofitService.downloadFile(context, "photos", image), false)
+                                    Pair(messageViewModel.downloadFile(context, "photos", image), false)
                                 } catch (e: Exception) {
                                     Pair(null, true)
                                 }
@@ -1371,7 +1365,7 @@ class MessageAdapter(
                             filePaths[File(first).name] = "photos"
                             filePathsForClick += first
                             if (file.exists()) {
-                                if (!second && isInLast30) fileManager.saveFile(image, file.readBytes())
+                                if (!second && isInLast30) messageViewModel.fManagerSaveFile(image, file.readBytes())
                                 medias += fileToLocalMedia(file)
                             } else {
                                 withContext(Dispatchers.Main) {

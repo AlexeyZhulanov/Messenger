@@ -26,19 +26,15 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
-import androidx.core.net.toFile
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.databinding.FragmentMessageBinding
 import com.example.messenger.model.Dialog
-import com.example.messenger.model.FileManager
 import com.example.messenger.model.FileNotFoundException
 import com.example.messenger.model.Message
-import com.example.messenger.model.MessengerService
-import com.example.messenger.model.RetrofitService
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
@@ -50,25 +46,21 @@ import com.luck.picture.lib.entity.LocalMedia
 import com.luck.picture.lib.interfaces.OnExternalPreviewEventListener
 import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
 import com.tougee.recorderview.AudioRecordView
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.io.IOException
 import java.io.InputStream
 import java.io.PrintWriter
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
 
+@AndroidEntryPoint
 class MessageFragment(
     private val dialog: Dialog
 ) : Fragment(), AudioRecordView.Callback {
@@ -77,19 +69,13 @@ class MessageFragment(
     private lateinit var imageAdapter: ImageAdapter
     private lateinit var preferences: SharedPreferences
     private lateinit var pickFileLauncher: ActivityResultLauncher<Array<String>>
-    private lateinit var fileManager: FileManager
     private var audioRecord: AudioRecorder? = null
     private var lastSessionString: String = ""
-    private var countMsg = dialog.countMsg
     private var editFlag = false
-    private var updateJob: Job? = null
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.Main + job)
     private val uiScopeIO = CoroutineScope(Dispatchers.IO + job)
-    private val messengerService: MessengerService
-        get() = Singletons.messengerRepository as MessengerService
-    private val retrofitService: RetrofitService
-        get() = Singletons.retrofitRepository as RetrofitService
+    private val viewModel: MessageViewModel by viewModels()
 
     private val file: File by lazy {
         val f = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.pcm")
@@ -115,11 +101,13 @@ class MessageFragment(
                 handleFileUri(uri) // обработка выбранного файла
             }
         }
-        fileManager = FileManager(requireContext())
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        viewModel.setDialogInfo(dialog.id, dialog.otherUser.id)
+        viewModel.loadMessages() // todo проверить нужно
+        viewModel.fetchLastSession() // и это тоже
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.custom_action_bar, toolbarContainer, false)
@@ -152,17 +140,10 @@ class MessageFragment(
                 .commit()
         }
         val lastSession: TextView = view.findViewById(R.id.lastSessionTextView)
-        lifecycleScope.launch {
-            val session = async(Dispatchers.IO) {
-                try {
-                    return@async retrofitService.getLastSession(dialog.otherUser.id)
-                } catch(e: Exception) {
-                    return@async 0
-                }
-            }
-            lastSessionString = formatUserSessionDate(session.await())
-            lastSession.text = lastSessionString
+        viewModel.lastSessionString.observe(viewLifecycleOwner) { sessionString ->
+            lastSession.text = sessionString
         }
+        startMessagePolling()
         val options: ImageView = view.findViewById(R.id.ic_options)
         options.setOnClickListener {
             showPopupMenu(it, R.menu.popup_menu_dialog)
@@ -177,6 +158,7 @@ class MessageFragment(
     ): View {
         binding = FragmentMessageBinding.inflate(inflater, container, false)
         preferences = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
+        viewModel.setCountMsg(dialog.countMsg)
         val wallpaper = preferences.getString(PREF_WALLPAPER, "")
         if (wallpaper != "") {
             val resId = resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
@@ -196,9 +178,9 @@ class MessageFragment(
 
                 override fun onMessageLongClick(itemView: View) {
                     uiScope.launch {
-                        stopMessagePolling()
+                        viewModel.stopMessagePolling()
                         binding.floatingActionButtonDelete.visibility = View.VISIBLE
-                        val dialogSettings = async(Dispatchers.IO) {retrofitService.getDialogSettings(dialog.id)}
+                        val dialogSettings = async(Dispatchers.IO) { viewModel.getDialogSettings(dialog.id) }
                         adapter.dialogSettings = dialogSettings.await()
                     requireActivity().onBackPressedDispatcher.addCallback(
                         viewLifecycleOwner,
@@ -221,14 +203,14 @@ class MessageFragment(
                         if (messagesToDelete.isNotEmpty()) {
                             uiScope.launch {
                                 binding.progressBar.visibility = View.VISIBLE
-                                val response = async(Dispatchers.IO) { retrofitService.deleteMessages(messagesToDelete) }
+                                val response = async(Dispatchers.IO) { viewModel.deleteMessages(messagesToDelete) }
                                 val response2 = withContext(Dispatchers.IO) {
                                     filesToDelete.map {
-                                        async { retrofitService.deleteFile(it.value, it.key) }
+                                        async { viewModel.deleteFile(it.value, it.key) }
                                     }.awaitAll() // wait all responses
                                 }
                                 binding.floatingActionButtonDelete.visibility = View.GONE
-                                countMsg -= messagesToDelete.size
+                                viewModel.decrementCountMsg(messagesToDelete.size)
                                 if(response.await() && response2.all { it }) {
                                     adapter.clearPositions()
                                     startMessagePolling()
@@ -260,7 +242,7 @@ class MessageFragment(
                         })
                         .startActivityPreview(position, false, images)
                 }
-            }, dialog.otherUser.id, requireContext(), fileManager)
+            }, dialog.otherUser.id, requireContext(), viewModel)
         imageAdapter = ImageAdapter(requireContext(), object: ImageActionListener {
             override fun onImageClicked(image: LocalMedia, position: Int) {
                 Log.d("testClick", "Image clicked: $image")
@@ -395,10 +377,10 @@ class MessageFragment(
                     for (item1 in items) {
                         if(item1.duration > 0) {
                             val file = getFileFromContentUri(requireContext(), Uri.parse(item1.availablePath)) ?: continue
-                            val tmp = async(Dispatchers.IO) { retrofitService.uploadPhoto(file) }
+                            val tmp = async(Dispatchers.IO) { viewModel.uploadPhoto(file) }
                             list += tmp.await()
                         } else {
-                            val tmp = async(Dispatchers.IO) { retrofitService.uploadPhoto(File(item1.availablePath)) }
+                            val tmp = async(Dispatchers.IO) { viewModel.uploadPhoto(File(item1.availablePath)) }
                             list += tmp.await()
                         }
                     }
@@ -407,33 +389,30 @@ class MessageFragment(
                     val list = listik.await()
                     if(text.isNotEmpty()) {
                         if (list.isNotEmpty()) {
-                            retrofitService.sendMessage(dialog.id, text, list, null, null, null, false, null)
+                            viewModel.sendMessage(dialog.id, text, list, null, null, null, false, null)
                         } else {
-                            retrofitService.sendMessage(dialog.id, text, null, null, null, null, false, null)
+                            viewModel.sendMessage(dialog.id, text, null, null, null, null, false, null)
                         }
-                    } else if (list.isNotEmpty()) retrofitService.sendMessage(dialog.id, null, list, null, null, null, false, null)
+                    } else if (list.isNotEmpty()) {
+                        viewModel.sendMessage(dialog.id, null, list, null, null, null, false, null)
+                    }
                     else withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "Ошибка отправки изображений", Toast.LENGTH_SHORT).show() }
                     imageAdapter.clearImages()
                 } else {
                     if(text.isNotEmpty()) {
-                        retrofitService.sendMessage(dialog.id, text, null, null, null, null, false, null)
+                        viewModel.sendMessage(dialog.id, text, null, null, null, null, false, null)
                     }
                 }
-                countMsg += 1
+                viewModel.incrementCountMsg()
                 val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 enterText.setText("")
-                adapter.messages = retrofitService.getMessages(dialog.id, 0, countMsg).associateWith { "" }
+                adapter.messages = viewModel.getMessages(dialog.id, 0, null).associateWith { "" }
                 binding.recyclerview.post {
                     binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
                 }
+                viewModel.replaceMessages(adapter.messages.keys.toList())
             }
         }
-        retrofitService.initCompleted.observe(viewLifecycleOwner) { initCompleted ->
-            if (initCompleted) {
-                startMessagePolling()
-            }
-        }
-
         return binding.root
     }
 
@@ -470,15 +449,16 @@ class MessageFragment(
             if(success) {
                 uiScope.launch {
                     withContext(Dispatchers.IO) {
-                        val response = async(Dispatchers.IO) { retrofitService.uploadAudio(fileOgg) }
-                        retrofitService.sendMessage(dialog.id, null, null, response.await(), null, null, false, null)
+                        val response = async(Dispatchers.IO) { viewModel.uploadAudio(fileOgg) }
+                        viewModel.sendMessage(dialog.id, null, null, response.await(), null, null, false, null)
                         withContext(Dispatchers.Main) {
-                            countMsg += 1
+                            viewModel.incrementCountMsg()
                             adapter.messages =
-                                retrofitService.getMessages(dialog.id, 0, countMsg).associateWith { "" }
+                                viewModel.getMessages(dialog.id, 0, null).associateWith { "" }
                             binding.recyclerview.post {
                                 binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
                             }
+                            viewModel.replaceMessages(adapter.messages.keys.toList())
                         }
                     }
                 }
@@ -503,61 +483,39 @@ class MessageFragment(
     }
 
     private fun startMessagePolling() {
-        updateJob = lifecycleScope.launch {
-            var mes = messengerService.getMessages(dialog.id).associateWith { "" }
-            adapter.messages = mes
-            while (isActive) {
-                val temp = async(Dispatchers.IO) {
-                    try {
-                        return@async retrofitService.getMessages(dialog.id, 0, countMsg).associateWith { "" }
-                    } catch (e: Exception) {
-                        return@async null
-                    }
-                } //todo pagination
-                val tmp = temp.await()
-                if(tmp != null) {
-                    mes = tmp
-                    adapter.messages = mes
-                    messengerService.replaceMessages(dialog.id, mes.keys.toList().takeLast(30), fileManager)
-                } else {
-                    Toast.makeText(requireContext(), "Ошибка подключения к серверу", Toast.LENGTH_SHORT).show()
-                }
-                delay(30000)
-            }
+        viewModel.startMessagePolling()
+        viewModel.messages.observe(viewLifecycleOwner) { messages ->
+            adapter.messages = messages
+            binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
         }
     }
 
-    private fun stopMessagePolling() {
-        updateJob?.cancel()
-        updateJob = null
-    }
-
-
     override fun onDestroyView() {
         super.onDestroyView()
-        updateJob?.cancel()
+        viewModel.stopMessagePolling()
     }
 
     override fun onPause() {
         super.onPause()
-        updateJob?.cancel()
+        viewModel.stopMessagePolling()
     }
 
     private fun handleFileUri(uri: Uri) {
         val file = uriToFile(uri, requireContext())
         if(file != null) {
             uiScope.launch {
-                val response = async(Dispatchers.IO) { retrofitService.uploadFile(file) }
+                val response = async(Dispatchers.IO) { viewModel.uploadFile(file) }
                 withContext(Dispatchers.IO) {
                     // костыль чтобы отображалось корректное имя файла - кладу его в voice
-                    retrofitService.sendMessage(dialog.id, null, null, file.name, response.await(), null, false, null)
+                    viewModel.sendMessage(dialog.id, null, null, file.name, response.await(), null, false, null)
                 }
-                countMsg += 1
+                viewModel.incrementCountMsg()
                 adapter.messages =
-                    retrofitService.getMessages(dialog.id, 0, countMsg).associateWith { "" }
+                    viewModel.getMessages(dialog.id, 0, null).associateWith { "" }
                 binding.recyclerview.post {
                     binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
                 }
+                viewModel.replaceMessages(adapter.messages.keys.toList())
             }
         } else Toast.makeText(requireContext(), "Что-то не так с файлом", Toast.LENGTH_SHORT).show()
     }
@@ -600,43 +558,6 @@ class MessageFragment(
             }
         }
         return result ?: "temp_file"
-    }
-
-    private fun formatUserSessionDate(timestamp: Long?): String {
-        if (timestamp == null) return "Никогда не был в сети"
-
-        // Приведение серверного времени (МСК GMT+3) к GMT
-        val greenwichSessionDate = Calendar.getInstance().apply {
-            timeInMillis = timestamp - 10800000
-        }
-        val now = Calendar.getInstance()
-
-        val diffInMillis = now.timeInMillis - greenwichSessionDate.timeInMillis
-        val diffInMinutes = (diffInMillis / 60000).toInt()
-
-        val dateFormatTime = SimpleDateFormat("HH:mm", Locale.getDefault())
-        val dateFormatDayMonth = SimpleDateFormat("d MMM", Locale.getDefault())
-        val dateFormatYear = SimpleDateFormat("d.MM.yyyy", Locale.getDefault())
-
-        return when {
-            diffInMinutes < 2 -> "в сети"
-            diffInMinutes < 5 -> "был в сети только что"
-            diffInMinutes < 60 -> "был в сети $diffInMinutes минут назад"
-            diffInMinutes < 120 -> "был в сети час назад"
-            diffInMinutes < 180 -> "был в сети два часа назад"
-            diffInMinutes < 240 -> "был в сети три часа назад"
-            diffInMinutes < 1440 -> "был в сети в ${dateFormatTime.format(greenwichSessionDate.time)}"
-            else -> {
-                // Проверка года
-                val currentYear = now.get(Calendar.YEAR)
-                val sessionYear = greenwichSessionDate.get(Calendar.YEAR)
-                if (currentYear == sessionYear) {
-                    "был в сети ${dateFormatDayMonth.format(greenwichSessionDate.time)}"
-                } else {
-                    "был в сети ${dateFormatYear.format(greenwichSessionDate.time)}"
-                }
-            }
-        }
     }
 
     private fun showPopupMenu(view: View, menuRes: Int) {
@@ -734,7 +655,7 @@ class MessageFragment(
 
                     editButton.setOnClickListener {
                         uiScope.launch {
-                            stopMessagePolling()
+                            viewModel.stopMessagePolling()
                             val tempItems = imageAdapter.getData()
                             val text = editText.text.toString()
                             if (tempItems.isNotEmpty()) {
@@ -768,12 +689,12 @@ class MessageFragment(
                                                 Uri.parse(uItem.availablePath)
                                             ) ?: continue
                                             val tmp = async(Dispatchers.IO) {
-                                                retrofitService.uploadPhoto(file)
+                                                viewModel.uploadPhoto(file)
                                             }
                                             list += tmp.await()
                                         } else {
                                             val tmp = async(Dispatchers.IO) {
-                                                retrofitService.uploadPhoto(File(uItem.availablePath))
+                                                viewModel.uploadPhoto(File(uItem.availablePath))
                                             }
                                             list += tmp.await()
                                         }
@@ -790,7 +711,7 @@ class MessageFragment(
                                         else File(it.availablePath)
                                         async(Dispatchers.IO) {
                                             try {
-                                                retrofitService.deleteFile("photos", file.name)
+                                                viewModel.deleteFile("photos", file.name)
                                             } catch (e: FileNotFoundException) {
                                                 return@async true
                                             }
@@ -804,21 +725,9 @@ class MessageFragment(
                                     val finalList = imagesMessage + uploadList.await()
                                     val resp = async(Dispatchers.IO) {
                                         if (text.isNotEmpty()) {
-                                            retrofitService.editMessage(
-                                                message.id,
-                                                text,
-                                                finalList,
-                                                null,
-                                                null
-                                            )
+                                            viewModel.editMessage(message.id, text, finalList, null, null)
                                         } else
-                                            retrofitService.editMessage(
-                                                message.id,
-                                                null,
-                                                finalList,
-                                                null,
-                                                null
-                                            )
+                                            viewModel.editMessage(message.id, null, finalList, null, null)
                                     }
                                     if (resp.await()) {
                                         editFlag = false
@@ -832,13 +741,7 @@ class MessageFragment(
                             } else {
                                 if (text.isNotEmpty()) {
                                     val resp = async(Dispatchers.IO) {
-                                        retrofitService.editMessage(
-                                            message.id,
-                                            text,
-                                            arrayListOf(),
-                                            null,
-                                            null
-                                        )
+                                        viewModel.editMessage(message.id, text, arrayListOf(), null, null)
                                     }
                                     if (resp.await()) {
                                         editFlag = false
@@ -878,9 +781,9 @@ class MessageFragment(
     private fun searchMessages(query: CharSequence?) {
         uiScope.launch {
             if (query.isNullOrEmpty()) {
-                adapter.messages = retrofitService.getMessages(dialog.id, 0, countMsg).associateWith { "" }
+                adapter.messages = viewModel.getMessages(dialog.id, 0, null).associateWith { "" }
             } else {
-                adapter.messages = retrofitService.searchMessagesInDialog(dialog.id, query.toString()).associateWith { "" }
+                adapter.messages = viewModel.searchMessagesInDialog(dialog.id, query.toString()).associateWith { "" }
             }
         }
     }

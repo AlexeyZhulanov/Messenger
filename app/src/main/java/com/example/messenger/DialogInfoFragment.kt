@@ -31,10 +31,6 @@ class DialogInfoFragment(
     private lateinit var preferences: SharedPreferences
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.Main + job)
-    private val messengerService: MessengerService
-        get() = Singletons.messengerRepository as MessengerService
-    private val retrofitService: RetrofitService
-        get() = Singletons.retrofitRepository as RetrofitService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

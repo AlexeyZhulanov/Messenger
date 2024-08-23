@@ -21,12 +21,14 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.messenger.databinding.FragmentMessengerBinding
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,6 +38,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.net.UnknownHostException
 
+@AndroidEntryPoint
 class MessengerFragment : Fragment() {
     private lateinit var binding: FragmentMessengerBinding
     private lateinit var adapter: MessengerAdapter
@@ -43,11 +46,7 @@ class MessengerFragment : Fragment() {
     private var updateJob: Job? = null
     private val job = Job()
     private var uiScope = CoroutineScope(Dispatchers.Main + job)
-    private val retrofitService: RetrofitService
-        get() = Singletons.retrofitRepository as RetrofitService
-
-    private val messengerService: MessengerService
-        get() = Singletons.messengerRepository as MessengerService
+    private val messengerViewModel: MessengerViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -70,6 +69,7 @@ class MessengerFragment : Fragment() {
         addImageView.setOnClickListener {
             showPopupMenu(it, R.menu.popup_menu_add)
         }
+        observeViewModel()
     }
 
     @SuppressLint("DiscouragedApi")
@@ -82,7 +82,28 @@ class MessengerFragment : Fragment() {
             if(resId != 0)
                 binding.messengerLayout.background = ContextCompat.getDrawable(requireContext(), resId)
         }
-        adapter = MessengerAdapter(object: MessengerActionListener {
+        setupRecyclerView()
+        return binding.root
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        updateJob?.cancel()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        updateJob?.cancel()
+    }
+
+    private fun observeViewModel() {
+        messengerViewModel.conversations.observe(viewLifecycleOwner) { conversations ->
+            adapter.conversations = conversations
+        }
+    }
+
+    private fun setupRecyclerView() {
+        adapter = MessengerAdapter(object : MessengerActionListener {
             override fun onConversationClicked(conversation: Conversation, index: Int) {
                 when (conversation.type) {
                     "dialog" -> {
@@ -103,51 +124,10 @@ class MessengerFragment : Fragment() {
                 }
             }
         })
-        val layoutManager = LinearLayoutManager(requireContext())
-        binding.recyclerview.layoutManager = layoutManager
+        binding.recyclerview.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerview.adapter = adapter
-        retrofitService.initCompleted.observe(viewLifecycleOwner) { initCompleted ->
-            if(initCompleted) {
-                updateJob = lifecycleScope.launch {
-                    var conversations = messengerService.getConversations()
-                    Log.d("testConversations", conversations.toString())
-                    adapter.conversations = conversations
-                    while (isActive) {
-                            val conv = async(Dispatchers.IO) {
-                                try {
-                                    return@async retrofitService.getConversations()
-                                } catch (e: UnknownHostException) {
-                                    return@async null
-                                } catch (e: Exception) {
-                                    return@async null
-                                }
-                            }
-                            val convers = conv.await()
-                            if(convers != null) {
-                                conversations = convers
-                                adapter.conversations = conversations
-                                messengerService.replaceConversations(conversations)
-                            } else {
-                                Toast.makeText(requireContext(), "Ошибка подключения к серверу", Toast.LENGTH_SHORT).show()
-                            }
-                        delay(30000)
-                    }
-                }
-            }
-        }
-
-        return binding.root
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        updateJob?.cancel()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        updateJob?.cancel()
-    }
     private fun showPopupMenu(view: View, menuRes: Int) {
         val popupMenu = PopupMenu(requireContext(), view)
         popupMenu.menuInflater.inflate(menuRes, popupMenu.menu)
@@ -199,8 +179,7 @@ class MessengerFragment : Fragment() {
             .setView(dialogView)
             .setPositiveButton("Добавить") { dialogInterface, _ ->
                 val input = dialogView.findViewById<EditText>(R.id.dialog_input).text.toString()
-                // Handle the "Add" button click here
-                handleAddButtonClick(input)
+                messengerViewModel.createDialog(input)
                 dialogInterface.dismiss()
             }
             .setNegativeButton("Назад") { dialogInterface, _ ->
@@ -208,18 +187,9 @@ class MessengerFragment : Fragment() {
             }
             .create()
 
-        // Show the dialog
         dialog.show()
     }
 
-    private fun handleAddButtonClick(input: String) {
-        uiScope.launch {
-            val res = async(Dispatchers.IO) { retrofitService.createDialog(input) }
-            if(res.await()) {
-                adapter.conversations = retrofitService.getConversations()
-            }
-        }
-    }
     private fun showAddGroup() {
         // Inflate the custom layout for the dialog
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_item, null)
@@ -230,8 +200,7 @@ class MessengerFragment : Fragment() {
             .setView(dialogView)
             .setPositiveButton("Создать") { dialogInterface, _ ->
                 val input = dialogView.findViewById<EditText>(R.id.dialog_input).text.toString()
-                // Handle the "Add" button click here
-                handleAddButtonClickGroup(input)
+                messengerViewModel.createGroup(input)
                 dialogInterface.dismiss()
             }
             .setNegativeButton("Назад") { dialogInterface, _ ->
@@ -239,16 +208,6 @@ class MessengerFragment : Fragment() {
             }
             .create()
 
-        // Show the dialog
         dialog.show()
-    }
-
-    private fun handleAddButtonClickGroup(input: String) {
-        uiScope.launch {
-            val res = async(Dispatchers.IO) { retrofitService.createGroup(input) }
-            if(res.await()) {
-                adapter.conversations = retrofitService.getConversations()
-            }
-        }
     }
 }
