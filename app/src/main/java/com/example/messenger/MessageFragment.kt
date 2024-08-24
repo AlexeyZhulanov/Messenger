@@ -110,6 +110,7 @@ class MessageFragment(
         viewModel.setDialogInfo(dialog.id, dialog.otherUser.id)
         lifecycleScope.launch {
             viewModel.mes.collectLatest {
+                adapter.dates.clear()
                 adapter.submitData(it)
             }
         }

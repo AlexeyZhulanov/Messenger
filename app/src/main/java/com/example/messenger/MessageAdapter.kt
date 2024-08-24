@@ -84,6 +84,7 @@ class MessageAdapter(
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.IO + job)
     private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)
+    val dates = mutableSetOf<String>()
 
     fun getDeleteList(): Pair<List<Int>, Map<String, String>> {
         val list = mutableListOf<Int>()
@@ -286,9 +287,10 @@ class MessageAdapter(
             binding.messageReceiverTextView.text = message.text
             val time = formatMessageTime(message.timestamp)
             val date = formatMessageDate(getItem(position)!!.timestamp)
-            if(date != "") {
+            if(date !in dates) {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
+                dates.add(date)
             } else binding.dateTextView.visibility = View.GONE
             binding.timeTextView.text = time
             if(!canLongClick && dialogSettings.canDelete) {
@@ -327,9 +329,10 @@ class MessageAdapter(
             binding.messageSenderTextView.text = message.text
             val time = formatMessageTime(message.timestamp)
             val date = formatMessageDate(getItem(position)!!.timestamp)
-            if(date != "") {
+            if(date !in dates) {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
+                dates.add(date)
             } else binding.dateTextView.visibility = View.GONE
             binding.timeTextView.text = time
             if(!canLongClick) {
@@ -635,9 +638,10 @@ class MessageAdapter(
             }
             val time = formatMessageTime(message.timestamp)
             val date = formatMessageDate(getItem(position)!!.timestamp)
-            if(date != "") {
+            if(date !in dates) {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
+                dates.add(date)
             } else binding.dateTextView.visibility = View.GONE
             binding.timeTextView.text = time
             if(!canLongClick) {
@@ -758,9 +762,10 @@ class MessageAdapter(
             }
             val time = formatMessageTime(message.timestamp)
             val date = formatMessageDate(getItem(position)!!.timestamp)
-            if(date != "") {
+            if(date !in dates) {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
+                dates.add(date)
             } else binding.dateTextView.visibility = View.GONE
             binding.timeTextView.text = time
             if(!canLongClick) {
@@ -855,9 +860,10 @@ class MessageAdapter(
             }
             val time = formatMessageTime(message.timestamp)
             val date = formatMessageDate(getItem(position)!!.timestamp)
-            if(date != "") {
+            if(date !in dates) {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
+                dates.add(date)
             } else binding.dateTextView.visibility = View.GONE
             binding.timeTextView.text = time
             if(!canLongClick) {
@@ -946,9 +952,10 @@ class MessageAdapter(
             }
             val time = formatMessageTime(message.timestamp)
             val date = formatMessageDate(getItem(position)!!.timestamp)
-            if(date != "") {
+            if(date !in dates) {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
+                dates.add(date)
             } else binding.dateTextView.visibility = View.GONE
             binding.timeTextView.text = time
             if(!canLongClick) {
@@ -1063,9 +1070,10 @@ class MessageAdapter(
             }
             val time = formatMessageTime(message.timestamp)
             val date = formatMessageDate(getItem(position)!!.timestamp)
-            if(date != "") {
+            if(date !in dates) {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
+                dates.add(date)
             } else binding.dateTextView.visibility = View.GONE
             binding.timeTextView.text = time
             if(!canLongClick && dialogSettings.canDelete) {
@@ -1170,9 +1178,10 @@ class MessageAdapter(
             }
             val time = formatMessageTime(message.timestamp)
             val date = formatMessageDate(getItem(position)!!.timestamp)
-            if(date != "") {
+            if(date !in dates) {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
+                dates.add(date)
             } else binding.dateTextView.visibility = View.GONE
             binding.timeTextView.text = time
             if(!canLongClick) {
@@ -1281,9 +1290,10 @@ class MessageAdapter(
             }
             val time = formatMessageTime(message.timestamp)
             val date = formatMessageDate(getItem(position)!!.timestamp)
-            if(date != "") {
+            if(date !in dates) {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
+                dates.add(date)
             } else binding.dateTextView.visibility = View.GONE
             binding.timeTextView.text = time
             if(!canLongClick) {
@@ -1396,9 +1406,10 @@ class MessageAdapter(
             }
             val time = formatMessageTime(message.timestamp)
             val date = formatMessageDate(getItem(position)!!.timestamp)
-            if(date != "") {
+            if(date !in dates) {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
+                dates.add(date)
             } else binding.dateTextView.visibility = View.GONE
             binding.timeTextView.text = time
             if(!canLongClick) {

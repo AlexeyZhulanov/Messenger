@@ -57,7 +57,7 @@ class MessageViewModel @Inject constructor(
     private val refreshTrigger: StateFlow<Unit> = _refreshTrigger.asStateFlow()
 
     val mes = Pager(PagingConfig(pageSize = 30, initialLoadSize = 30)) {
-        MessagePagingSource(retrofitService, dialogId, currentQuery)
+        MessagePagingSource(retrofitService, dialogId, _countMsg.value, currentQuery)
     }.flow
         .cachedIn(viewModelScope)
         .combine(refreshTrigger) { pagingData, _ -> pagingData } // PagingSource&refreshTrigger
