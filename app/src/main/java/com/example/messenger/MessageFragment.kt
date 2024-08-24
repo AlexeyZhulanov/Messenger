@@ -28,6 +28,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -52,6 +53,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -106,8 +108,12 @@ class MessageFragment(
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel.setDialogInfo(dialog.id, dialog.otherUser.id)
-        viewModel.loadMessages() // todo проверить нужно
-        viewModel.fetchLastSession() // и это тоже
+        lifecycleScope.launch {
+            viewModel.mes.collectLatest {
+                adapter.submitData(it)
+            }
+        }
+        viewModel.fetchLastSession()
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.custom_action_bar, toolbarContainer, false)
@@ -143,7 +149,6 @@ class MessageFragment(
         viewModel.lastSessionString.observe(viewLifecycleOwner) { sessionString ->
             lastSession.text = sessionString
         }
-        startMessagePolling()
         val options: ImageView = view.findViewById(R.id.ic_options)
         options.setOnClickListener {
             showPopupMenu(it, R.menu.popup_menu_dialog)
@@ -195,7 +200,7 @@ class MessageFragment(
                                     remove()
                                     requireActivity().onBackPressedDispatcher.onBackPressed()
                                 }
-                                startMessagePolling()
+                                //startMessagePolling()
                             }
                         })
                     binding.floatingActionButtonDelete.setOnClickListener {
@@ -213,7 +218,7 @@ class MessageFragment(
                                 viewModel.decrementCountMsg(messagesToDelete.size)
                                 if(response.await() && response2.all { it }) {
                                     adapter.clearPositions()
-                                    startMessagePolling()
+                                    //startMessagePolling()
                                     binding.progressBar.visibility = View.GONE
                                 }
                             }
@@ -406,11 +411,11 @@ class MessageFragment(
                 viewModel.incrementCountMsg()
                 val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 enterText.setText("")
-                adapter.messages = viewModel.getMessages(dialog.id, 0, null).associateWith { "" }
+                viewModel.doTrigger()
                 binding.recyclerview.post {
                     binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
                 }
-                viewModel.replaceMessages(adapter.messages.keys.toList())
+                viewModel.replaceMessages(adapter.getCurrentMessages())
             }
         }
         return binding.root
@@ -453,12 +458,11 @@ class MessageFragment(
                         viewModel.sendMessage(dialog.id, null, null, response.await(), null, null, false, null)
                         withContext(Dispatchers.Main) {
                             viewModel.incrementCountMsg()
-                            adapter.messages =
-                                viewModel.getMessages(dialog.id, 0, null).associateWith { "" }
+                            viewModel.doTrigger()
                             binding.recyclerview.post {
                                 binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
                             }
-                            viewModel.replaceMessages(adapter.messages.keys.toList())
+                            viewModel.replaceMessages(adapter.getCurrentMessages())
                         }
                     }
                 }
@@ -482,14 +486,6 @@ class MessageFragment(
         }
     }
 
-    private fun startMessagePolling() {
-        viewModel.startMessagePolling()
-        viewModel.messages.observe(viewLifecycleOwner) { messages ->
-            adapter.messages = messages
-            binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
-        }
-    }
-
     override fun onDestroyView() {
         super.onDestroyView()
         viewModel.stopMessagePolling()
@@ -510,12 +506,11 @@ class MessageFragment(
                     viewModel.sendMessage(dialog.id, null, null, file.name, response.await(), null, false, null)
                 }
                 viewModel.incrementCountMsg()
-                adapter.messages =
-                    viewModel.getMessages(dialog.id, 0, null).associateWith { "" }
+                viewModel.doTrigger()
                 binding.recyclerview.post {
                     binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
                 }
-                viewModel.replaceMessages(adapter.messages.keys.toList())
+                viewModel.replaceMessages(adapter.getCurrentMessages())
             }
         } else Toast.makeText(requireContext(), "Что-то не так с файлом", Toast.LENGTH_SHORT).show()
     }
@@ -628,7 +623,7 @@ class MessageFragment(
                                     remove()
                                     requireActivity().onBackPressedDispatcher.onBackPressed()
                                 }
-                                startMessagePolling()
+                                //startMessagePolling()
                             }
                         })
 
@@ -735,7 +730,7 @@ class MessageFragment(
                                         editText.setText("")
                                         editButton.visibility = View.GONE
                                         binding.recordView.visibility = View.VISIBLE
-                                        startMessagePolling()
+                                        //startMessagePolling()
                                     }
                                 }
                             } else {
@@ -749,7 +744,7 @@ class MessageFragment(
                                         editText.setText("")
                                         editButton.visibility = View.GONE
                                         binding.recordView.visibility = View.VISIBLE
-                                        startMessagePolling()
+                                        //startMessagePolling()
                                     }
                                 } else withContext(Dispatchers.Main) {
                                     Toast.makeText(
@@ -781,9 +776,9 @@ class MessageFragment(
     private fun searchMessages(query: CharSequence?) {
         uiScope.launch {
             if (query.isNullOrEmpty()) {
-                adapter.messages = viewModel.getMessages(dialog.id, 0, null).associateWith { "" }
+                viewModel.doTrigger()
             } else {
-                adapter.messages = viewModel.searchMessagesInDialog(dialog.id, query.toString()).associateWith { "" }
+                viewModel.searchMessagesInDialog(query.toString())
             }
         }
     }

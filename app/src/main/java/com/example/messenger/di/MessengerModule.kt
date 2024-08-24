@@ -104,7 +104,7 @@ object MessengerModule {
     fun provideSourceProviderHolder(
         appSettings: AppSettings,
         messengerService: MessengerService,
-        retrofitServiceProvider: Provider<RetrofitService>
+        retrofitServiceProvider: Provider<RetrofitService> // если передать просто retrofitService то будет цикл
     ): SourceProviderHolder {
         return SourceProviderHolder(appSettings, messengerService, retrofitServiceProvider)
     }

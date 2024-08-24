@@ -15,6 +15,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
+import androidx.paging.PagingDataAdapter
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -57,31 +59,23 @@ interface MessageActionListener {
     fun onImagesClick(images: ArrayList<LocalMedia>, position: Int)
 }
 
+
+class MessageDiffCallback : DiffUtil.ItemCallback<Message>() {
+    override fun areItemsTheSame(oldItem: Message, newItem: Message): Boolean {
+        return oldItem.id == newItem.id
+    }
+
+    override fun areContentsTheSame(oldItem: Message, newItem: Message): Boolean {
+        return oldItem == newItem
+    }
+}
+
 class MessageAdapter(
     private val actionListener: MessageActionListener,
     private val otherUserId: Int,
     private val context: Context,
     private val messageViewModel: MessageViewModel
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-
-    var messages: Map<Message, String> = emptyMap()
-        @SuppressLint("NotifyDataSetChanged")
-        set(value) {
-            val dates = mutableSetOf<String>()
-            val newMessages = mutableMapOf<Message, String>()
-            for((message, _) in value) {
-                val date = formatMessageDate(message.timestamp)
-                if(date !in dates) {
-                    dates.add(date)
-                    newMessages[message] = date
-                } else {
-                    newMessages[message] = ""
-                }
-            }
-            field = newMessages
-            notifyDataSetChanged()
-            Log.d("testAdapterMessages", field.toString())
-        }
+) : PagingDataAdapter<Message, RecyclerView.ViewHolder>(MessageDiffCallback()) {
 
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
@@ -93,7 +87,12 @@ class MessageAdapter(
 
     fun getDeleteList(): Pair<List<Int>, Map<String, String>> {
         val list = mutableListOf<Int>()
-        checkedPositions.forEach { list.add(messages.keys.elementAt(it).id) }
+        checkedPositions.forEach {
+            val message = getItem(it)
+            if(message != null) {
+                list.add(message.id)
+            }
+        }
         return Pair(list, checkedFiles)
     }
 
@@ -104,8 +103,17 @@ class MessageAdapter(
         checkedFiles.clear()
     }
 
+    fun getCurrentMessages(): List<Message> {
+        return snapshot().items // Возвращаем текущие элементы из адаптера
+    }
+
+    private fun getItemPosition(message: Message): Int {
+        val index = (0 until itemCount).firstOrNull { getItem(it) == message }
+        return index ?: -1
+    }
+
     private fun savePosition(message: Message) {
-        val position = messages.keys.indexOf(message)
+        val position = getItemPosition(message)
         if (position in checkedPositions) {
             checkedPositions.remove(position)
         } else {
@@ -124,7 +132,7 @@ class MessageAdapter(
     }
 
     private fun savePositionFile(message: Message, filePath: String, fileType: String) {
-        val position = messages.keys.indexOf(message)
+        val position = getItemPosition(message)
         if (position in checkedPositions) {
             checkedPositions.remove(position)
             checkedFiles.remove(filePath)
@@ -145,7 +153,7 @@ class MessageAdapter(
     }
 
     private fun savePositionFiles(message: Message, filePaths: Map<String, String>) {
-        val position = messages.keys.indexOf(message)
+        val position = getItemPosition(message)
         if (position in checkedPositions) {
             checkedPositions.remove(position)
             filePaths.forEach { checkedFiles.remove(it.key) }
@@ -179,7 +187,7 @@ class MessageAdapter(
     }
 
     override fun getItemViewType(position: Int): Int {
-        val message = messages.keys.elementAt(position)
+        val message = getItem(position) ?: return -1
         if(message.idSender == otherUserId) {
             return when {
                 message.images?.isNotEmpty() == true -> {
@@ -252,7 +260,7 @@ class MessageAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val message = messages.keys.elementAt(position)
+        val message = getItem(position) ?: return
         var flagText = false
         if(!message.text.isNullOrEmpty()) flagText = true
         val isInLast30 = position >= itemCount - 30
@@ -270,14 +278,14 @@ class MessageAdapter(
         }
     }
 
-    override fun getItemCount(): Int = messages.size
+    override fun getItemCount(): Int { return super.getItemCount() }
 
     // ViewHolder для текстовых сообщений получателя
     inner class MessagesViewHolderReceiver(private val binding: ItemMessageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: Message, position: Int) {
             binding.messageReceiverTextView.text = message.text
             val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val date = formatMessageDate(getItem(position)!!.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
@@ -318,7 +326,7 @@ class MessageAdapter(
         fun bind(message: Message, position: Int) {
             binding.messageSenderTextView.text = message.text
             val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val date = formatMessageDate(getItem(position)!!.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
@@ -626,7 +634,7 @@ class MessageAdapter(
                 }
             }
             val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val date = formatMessageDate(getItem(position)!!.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
@@ -749,7 +757,7 @@ class MessageAdapter(
                 }
             }
             val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val date = formatMessageDate(getItem(position)!!.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
@@ -846,7 +854,7 @@ class MessageAdapter(
                 }
             }
             val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val date = formatMessageDate(getItem(position)!!.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
@@ -937,7 +945,7 @@ class MessageAdapter(
                 }
             }
             val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val date = formatMessageDate(getItem(position)!!.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
@@ -1054,7 +1062,7 @@ class MessageAdapter(
                 }
             }
             val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val date = formatMessageDate(getItem(position)!!.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
@@ -1161,7 +1169,7 @@ class MessageAdapter(
                 }
             }
             val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val date = formatMessageDate(getItem(position)!!.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
@@ -1272,7 +1280,7 @@ class MessageAdapter(
                 binding.progressBar.visibility = View.GONE
             }
             val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val date = formatMessageDate(getItem(position)!!.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
@@ -1387,7 +1395,7 @@ class MessageAdapter(
                 }
             }
             val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val date = formatMessageDate(getItem(position)!!.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date

@@ -5,16 +5,26 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import androidx.paging.map
 import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.Message
+import com.example.messenger.model.MessagePagingSource
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -30,9 +40,6 @@ class MessageViewModel @Inject constructor(
     private val fileManager: FileManager
 ) : ViewModel() {
 
-    private val _messages = MutableLiveData<Map<Message, String>>()
-    val messages: LiveData<Map<Message, String>> get() = _messages
-
     private val _countMsg = MutableLiveData<Int>()
     val countMsg: LiveData<Int> get() = _countMsg
 
@@ -44,6 +51,29 @@ class MessageViewModel @Inject constructor(
     private var dialogId: Int = -1
     private var otherUserId: Int = -1
 
+    private var currentQuery: String? = null
+
+    private var _refreshTrigger = MutableStateFlow(Unit)
+    private val refreshTrigger: StateFlow<Unit> = _refreshTrigger.asStateFlow()
+
+    val mes = Pager(PagingConfig(pageSize = 30, initialLoadSize = 30)) {
+        MessagePagingSource(retrofitService, dialogId, currentQuery)
+    }.flow
+        .cachedIn(viewModelScope)
+        .combine(refreshTrigger) { pagingData, _ -> pagingData } // PagingSource&refreshTrigger
+
+    fun doTrigger() {
+        _refreshTrigger.value = Unit
+    }
+
+    init {
+        viewModelScope.launch {
+            while (true) {
+                delay(30000) // Каждые 30 секунд
+                _refreshTrigger.value = Unit // Триггер обновления
+            }
+        }
+    }
 
     fun setDialogInfo(dialogId: Int, otherUserId: Int) {
         this.dialogId = dialogId
@@ -74,34 +104,14 @@ class MessageViewModel @Inject constructor(
         }
     }
 
-    fun loadMessages() {
-        updateJob = viewModelScope.launch {
-            var mes = messengerService.getMessages(dialogId).associateWith { "" }
-            _messages.value = mes
-            while (isActive) {
-                val temp = withContext(Dispatchers.IO) {
-                    try {
-                        retrofitService.getMessages(dialogId, 0, -1).associateWith { "" }
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
-                temp?.let {
-                    mes = it
-                    _messages.value = mes
-                    messengerService.replaceMessages(dialogId, mes.keys.toList().takeLast(30), fileManager)
-                }
-                delay(30000)
-            }
-        }
+    fun searchMessagesInDialog(query: String) {
+        currentQuery = query
+        _refreshTrigger.value = Unit
+        currentQuery = null //todo возможно нужно добавить delay
     }
 
     suspend fun replaceMessages(messages: List<Message>) = withContext(Dispatchers.IO) {
         messengerService.replaceMessages(dialogId, messages.takeLast(30), fileManager)
-    }
-
-    suspend fun getMessages(idDialog: Int, start: Int, end: Int?): List<Message> = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.getMessages(idDialog, start, -1)
     }
 
     suspend fun getDialogSettings(idDialog: Int): ConversationSettings = withContext(Dispatchers.IO) {
@@ -139,10 +149,6 @@ class MessageViewModel @Inject constructor(
         retrofitService.editMessage(messageId, text, images, voice, file)
     }
 
-    suspend fun searchMessagesInDialog(dialogId: Int, word: String): List<Message> = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.searchMessagesInDialog(dialogId, word)
-    }
-
     suspend fun downloadFile(context: Context, folder: String, filename: String): String = withContext(Dispatchers.IO) {
         return@withContext retrofitService.downloadFile(context, folder, filename)
     }
@@ -164,9 +170,6 @@ class MessageViewModel @Inject constructor(
         updateJob = null
     }
 
-    fun startMessagePolling() {
-        loadMessages()
-    }
     private fun formatUserSessionDate(timestamp: Long?): String {
         if (timestamp == null) return "Никогда не был в сети"
 
