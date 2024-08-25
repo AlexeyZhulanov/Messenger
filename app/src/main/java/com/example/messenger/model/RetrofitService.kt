@@ -200,16 +200,15 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun getMessages(idDialog: Int, start: Int, end: Int): List<Message> = withContext(Dispatchers.IO) {
+    override suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int): List<Message> = withContext(Dispatchers.IO) {
         messages = try {
-            messagesSource.getMessages(idDialog, start, end)
+            messagesSource.getMessages(idDialog, pageIndex, pageSize)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw DialogNotFoundException(e)
                 403 -> throw NoPermissionException(e)
                 400 -> throw InvalidStartEndValuesException(e)
                 else -> throw e
-
             }
         }
         Log.d("testGetMessages", messages.toString())

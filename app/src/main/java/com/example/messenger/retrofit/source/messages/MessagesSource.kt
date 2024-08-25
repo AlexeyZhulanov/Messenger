@@ -12,7 +12,7 @@ interface MessagesSource {
                             voice: String? = null, file: String? = null, referenceToMessageId: Int? = null,
                             isForwarded: Boolean = false, usernameAuthorOriginal: String? = null) : String
 
-    suspend fun getMessages(idDialog: Int, start: Int, end: Int) : List<Message>
+    suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int) : List<Message>
 
     suspend fun addKeyToDialog(dialogId: Int, key: String) : String
 

@@ -40,9 +40,6 @@ class MessageViewModel @Inject constructor(
     private val fileManager: FileManager
 ) : ViewModel() {
 
-    private val _countMsg = MutableLiveData<Int>()
-    val countMsg: LiveData<Int> get() = _countMsg
-
     private val _lastSessionString = MutableLiveData<String>()
     val lastSessionString: LiveData<String> get() = _lastSessionString
 
@@ -57,7 +54,7 @@ class MessageViewModel @Inject constructor(
     private val refreshTrigger: StateFlow<Unit> = _refreshTrigger.asStateFlow()
 
     val mes = Pager(PagingConfig(pageSize = 30, initialLoadSize = 30)) {
-        MessagePagingSource(retrofitService, dialogId, _countMsg.value, currentQuery)
+        MessagePagingSource(retrofitService, messengerService, dialogId, currentQuery)
     }.flow
         .cachedIn(viewModelScope)
         .combine(refreshTrigger) { pagingData, _ -> pagingData } // PagingSource&refreshTrigger
@@ -78,17 +75,6 @@ class MessageViewModel @Inject constructor(
     fun setDialogInfo(dialogId: Int, otherUserId: Int) {
         this.dialogId = dialogId
         this.otherUserId = otherUserId
-    }
-    fun setCountMsg(value: Int) {
-        _countMsg.value = value
-    }
-
-    fun incrementCountMsg() {
-        _countMsg.value = (_countMsg.value ?: 0) + 1
-    }
-
-    fun decrementCountMsg(value: Int) {
-        _countMsg.value = (_countMsg.value ?: 0) - value
     }
 
     fun fetchLastSession() {

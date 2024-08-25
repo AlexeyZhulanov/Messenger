@@ -5,8 +5,8 @@ import androidx.paging.PagingState
 
 class MessagePagingSource(
     private val retrofitService: RetrofitService,
+    private val messengerService: MessengerService,
     private val dialogId: Int,
-    private val countMsg: Int?,
     private val query: String? = null
 ) : PagingSource<Int, Message>() {
 
@@ -14,10 +14,7 @@ class MessagePagingSource(
         return try {
             val pageIndex = params.key ?: 0
             val messages = if (query.isNullOrEmpty()) {
-                val start = if(countMsg != null && (countMsg - (pageIndex+1)*params.loadSize > 0))
-                    countMsg - (pageIndex+1) * params.loadSize else 0
-                val end = if(countMsg != null) countMsg - pageIndex * params.loadSize else -1
-                retrofitService.getMessages(dialogId, start, end)
+                retrofitService.getMessages(dialogId, pageIndex, params.loadSize)
             } else {
                 retrofitService.searchMessagesInDialog(dialogId, query)
             }
@@ -28,7 +25,15 @@ class MessagePagingSource(
                 nextKey = if (messages.size == params.loadSize) pageIndex + 1 else null
             )
         } catch (e: Exception) {
-            LoadResult.Error(e)
+            val pageIndex = params.key ?: 0
+            if (query.isNullOrEmpty()) {
+                val messages = messengerService.getMessages(dialogId)
+                LoadResult.Page(
+                    data = messages,
+                    prevKey = if (pageIndex == 0) null else pageIndex - 1,
+                    nextKey = if (messages.size == params.loadSize) pageIndex + 1 else null
+                )
+            } else LoadResult.Error(e)
         }
     }
 

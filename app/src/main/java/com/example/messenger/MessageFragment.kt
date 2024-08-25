@@ -164,7 +164,6 @@ class MessageFragment(
     ): View {
         binding = FragmentMessageBinding.inflate(inflater, container, false)
         preferences = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
-        viewModel.setCountMsg(dialog.countMsg)
         val wallpaper = preferences.getString(PREF_WALLPAPER, "")
         if (wallpaper != "") {
             val resId = resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
@@ -216,7 +215,6 @@ class MessageFragment(
                                     }.awaitAll() // wait all responses
                                 }
                                 binding.floatingActionButtonDelete.visibility = View.GONE
-                                viewModel.decrementCountMsg(messagesToDelete.size)
                                 if(response.await() && response2.all { it }) {
                                     adapter.clearPositions()
                                     //startMessagePolling()
@@ -409,7 +407,6 @@ class MessageFragment(
                         viewModel.sendMessage(dialog.id, text, null, null, null, null, false, null)
                     }
                 }
-                viewModel.incrementCountMsg()
                 val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 enterText.setText("")
                 viewModel.doTrigger()
@@ -458,7 +455,6 @@ class MessageFragment(
                         val response = async(Dispatchers.IO) { viewModel.uploadAudio(fileOgg) }
                         viewModel.sendMessage(dialog.id, null, null, response.await(), null, null, false, null)
                         withContext(Dispatchers.Main) {
-                            viewModel.incrementCountMsg()
                             viewModel.doTrigger()
                             binding.recyclerview.post {
                                 binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
@@ -506,7 +502,6 @@ class MessageFragment(
                     // костыль чтобы отображалось корректное имя файла - кладу его в voice
                     viewModel.sendMessage(dialog.id, null, null, file.name, response.await(), null, false, null)
                 }
-                viewModel.incrementCountMsg()
                 viewModel.doTrigger()
                 binding.recyclerview.post {
                     binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
