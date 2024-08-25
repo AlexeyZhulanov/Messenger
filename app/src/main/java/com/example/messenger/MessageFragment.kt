@@ -110,7 +110,6 @@ class MessageFragment(
         viewModel.setDialogInfo(dialog.id, dialog.otherUser.id)
         lifecycleScope.launch {
             viewModel.mes.collectLatest {
-                adapter.dates.clear()
                 adapter.submitData(it)
             }
         }
@@ -183,7 +182,7 @@ class MessageFragment(
 
                 override fun onMessageLongClick(itemView: View) {
                     uiScope.launch {
-                        viewModel.stopMessagePolling()
+                        viewModel.stopRefresh()
                         binding.floatingActionButtonDelete.visibility = View.VISIBLE
                         val dialogSettings = async(Dispatchers.IO) { viewModel.getDialogSettings(dialog.id) }
                         adapter.dialogSettings = dialogSettings.await()
@@ -200,7 +199,7 @@ class MessageFragment(
                                     remove()
                                     requireActivity().onBackPressedDispatcher.onBackPressed()
                                 }
-                                //startMessagePolling()
+                                viewModel.startRefresh()
                             }
                         })
                     binding.floatingActionButtonDelete.setOnClickListener {
@@ -217,7 +216,7 @@ class MessageFragment(
                                 binding.floatingActionButtonDelete.visibility = View.GONE
                                 if(response.await() && response2.all { it }) {
                                     adapter.clearPositions()
-                                    //startMessagePolling()
+                                    viewModel.startRefresh()
                                     binding.progressBar.visibility = View.GONE
                                 }
                             }
@@ -411,11 +410,10 @@ class MessageFragment(
                 }
                 val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 enterText.setText("")
-                viewModel.doTrigger()
+                viewModel.refresh()
                 binding.recyclerview.post {
                     binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
                 }
-                viewModel.replaceMessages(adapter.getCurrentMessages())
             }
         }
         return binding.root
@@ -457,11 +455,10 @@ class MessageFragment(
                         val response = async(Dispatchers.IO) { viewModel.uploadAudio(fileOgg) }
                         viewModel.sendMessage(dialog.id, null, null, response.await(), null, null, false, null)
                         withContext(Dispatchers.Main) {
-                            viewModel.doTrigger()
+                            viewModel.refresh()
                             binding.recyclerview.post {
                                 binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
                             }
-                            viewModel.replaceMessages(adapter.getCurrentMessages())
                         }
                     }
                 }
@@ -487,12 +484,12 @@ class MessageFragment(
 
     override fun onDestroyView() {
         super.onDestroyView()
-        viewModel.stopMessagePolling()
+        viewModel.stopRefresh()
     }
 
     override fun onPause() {
         super.onPause()
-        viewModel.stopMessagePolling()
+        viewModel.stopRefresh()
     }
 
     private fun handleFileUri(uri: Uri) {
@@ -504,11 +501,10 @@ class MessageFragment(
                     // костыль чтобы отображалось корректное имя файла - кладу его в voice
                     viewModel.sendMessage(dialog.id, null, null, file.name, response.await(), null, false, null)
                 }
-                viewModel.doTrigger()
+                viewModel.refresh()
                 binding.recyclerview.post {
                     binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
                 }
-                viewModel.replaceMessages(adapter.getCurrentMessages())
             }
         } else Toast.makeText(requireContext(), "Что-то не так с файлом", Toast.LENGTH_SHORT).show()
     }
@@ -621,7 +617,7 @@ class MessageFragment(
                                     remove()
                                     requireActivity().onBackPressedDispatcher.onBackPressed()
                                 }
-                                //startMessagePolling()
+                                viewModel.startRefresh()
                             }
                         })
 
@@ -648,7 +644,7 @@ class MessageFragment(
 
                     editButton.setOnClickListener {
                         uiScope.launch {
-                            viewModel.stopMessagePolling()
+                            viewModel.stopRefresh()
                             val tempItems = imageAdapter.getData()
                             val text = editText.text.toString()
                             if (tempItems.isNotEmpty()) {
@@ -728,7 +724,7 @@ class MessageFragment(
                                         editText.setText("")
                                         editButton.visibility = View.GONE
                                         binding.recordView.visibility = View.VISIBLE
-                                        //startMessagePolling()
+                                        viewModel.startRefresh()
                                     }
                                 }
                             } else {
@@ -742,7 +738,7 @@ class MessageFragment(
                                         editText.setText("")
                                         editButton.visibility = View.GONE
                                         binding.recordView.visibility = View.VISIBLE
-                                        //startMessagePolling()
+                                        viewModel.startRefresh()
                                     }
                                 } else withContext(Dispatchers.Main) {
                                     Toast.makeText(
@@ -774,7 +770,7 @@ class MessageFragment(
     private fun searchMessages(query: CharSequence?) {
         uiScope.launch {
             if (query.isNullOrEmpty()) {
-                viewModel.doTrigger()
+                viewModel.refresh()
             } else {
                 viewModel.searchMessagesInDialog(query.toString())
             }

@@ -1,9 +1,11 @@
 package com.example.messenger
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -18,12 +20,15 @@ import com.example.messenger.model.RetrofitService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -43,34 +48,42 @@ class MessageViewModel @Inject constructor(
     private val _lastSessionString = MutableLiveData<String>()
     val lastSessionString: LiveData<String> get() = _lastSessionString
 
-    private var updateJob: Job? = null
-
     private var dialogId: Int = -1
     private var otherUserId: Int = -1
     private var isFirst = true
+    private var disableRefresh: Boolean = false
 
-    private var currentQuery: String? = null
+    val dates = mutableSetOf<String>()
 
-    private var _refreshTrigger = MutableStateFlow(Unit)
-    private val refreshTrigger: StateFlow<Unit> = _refreshTrigger.asStateFlow()
+    private val searchBy = MutableLiveData("")
 
-    val mes = Pager(PagingConfig(pageSize = 30, initialLoadSize = 30)) {
-        MessagePagingSource(retrofitService, messengerService, dialogId, currentQuery, isFirst)
-    }.flow
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    val mes = searchBy.asFlow()
+        .debounce(500)
+        .flatMapLatest { Pager(PagingConfig(pageSize = 20, initialLoadSize = 20)) {
+        MessagePagingSource(retrofitService, messengerService, dialogId, it, isFirst, fileManager)
+        }.flow }
         .cachedIn(viewModelScope)
-        .combine(refreshTrigger) { pagingData, _ -> pagingData } // PagingSource&refreshTrigger
 
-    fun doTrigger() {
-        _refreshTrigger.value = Unit
+    fun refresh() {
         isFirst = false
+        dates.clear()
+        this.searchBy.postValue(this.searchBy.value)
+    }
+
+    fun stopRefresh() {
+        disableRefresh = true
+    }
+
+    fun startRefresh() {
+        disableRefresh = false
     }
 
     init {
         viewModelScope.launch {
             while (true) {
-                delay(30000) // Каждые 30 секунд
-                _refreshTrigger.value = Unit // Триггер обновления
-                isFirst = false
+                delay(30000)
+                if(!disableRefresh) refresh()
             }
         }
     }
@@ -94,13 +107,9 @@ class MessageViewModel @Inject constructor(
     }
 
     fun searchMessagesInDialog(query: String) {
-        currentQuery = query
-        _refreshTrigger.value = Unit
-        currentQuery = null //todo возможно нужно добавить delay
-    }
-
-    suspend fun replaceMessages(messages: List<Message>) = withContext(Dispatchers.IO) {
-        messengerService.replaceMessages(dialogId, messages.takeLast(30), fileManager)
+        if(this.searchBy.value == query) return
+        dates.clear()
+        this.searchBy.value = query
     }
 
     suspend fun getDialogSettings(idDialog: Int): ConversationSettings = withContext(Dispatchers.IO) {
@@ -152,11 +161,6 @@ class MessageViewModel @Inject constructor(
 
     suspend fun fManagerSaveFile(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
         fileManager.saveFile(fileName, fileData)
-    }
-
-    fun stopMessagePolling() {
-        updateJob?.cancel()
-        updateJob = null
     }
 
     private fun formatUserSessionDate(timestamp: Long?): String {
