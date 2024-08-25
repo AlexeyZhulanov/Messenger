@@ -364,8 +364,10 @@ class MessageFragment(
                 }
             }
         }
-
-        val layoutManager = LinearLayoutManager(requireContext())
+        val layoutManager = LinearLayoutManager(requireContext()).apply {
+            stackFromEnd = false
+            reverseLayout = true
+        }
         binding.recyclerview.layoutManager = layoutManager
         binding.recyclerview.adapter = adapter
         binding.recyclerview.addItemDecoration(VerticalSpaceItemDecoration(15))

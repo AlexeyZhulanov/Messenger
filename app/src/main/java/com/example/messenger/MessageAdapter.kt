@@ -86,6 +86,7 @@ class MessageAdapter(
     private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)
     val dates = mutableSetOf<String>()
 
+
     fun getDeleteList(): Pair<List<Int>, Map<String, String>> {
         val list = mutableListOf<Int>()
         checkedPositions.forEach {

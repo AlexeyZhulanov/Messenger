@@ -47,6 +47,7 @@ class MessageViewModel @Inject constructor(
 
     private var dialogId: Int = -1
     private var otherUserId: Int = -1
+    private var isFirst = true
 
     private var currentQuery: String? = null
 
@@ -54,13 +55,14 @@ class MessageViewModel @Inject constructor(
     private val refreshTrigger: StateFlow<Unit> = _refreshTrigger.asStateFlow()
 
     val mes = Pager(PagingConfig(pageSize = 30, initialLoadSize = 30)) {
-        MessagePagingSource(retrofitService, messengerService, dialogId, currentQuery)
+        MessagePagingSource(retrofitService, messengerService, dialogId, currentQuery, isFirst)
     }.flow
         .cachedIn(viewModelScope)
         .combine(refreshTrigger) { pagingData, _ -> pagingData } // PagingSource&refreshTrigger
 
     fun doTrigger() {
         _refreshTrigger.value = Unit
+        isFirst = false
     }
 
     init {
@@ -68,6 +70,7 @@ class MessageViewModel @Inject constructor(
             while (true) {
                 delay(30000) // Каждые 30 секунд
                 _refreshTrigger.value = Unit // Триггер обновления
+                isFirst = false
             }
         }
     }
