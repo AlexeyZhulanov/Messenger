@@ -30,6 +30,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.paging.map
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.databinding.FragmentMessageBinding
@@ -53,6 +54,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -109,8 +111,8 @@ class MessageFragment(
         super.onViewCreated(view, savedInstanceState)
         viewModel.setDialogInfo(dialog.id, dialog.otherUser.id)
         lifecycleScope.launch {
-            viewModel.mes.collectLatest {
-                adapter.submitData(it)
+            viewModel.mes.collectLatest {message ->
+                adapter.submitData(message)
             }
         }
         viewModel.fetchLastSession()
@@ -576,9 +578,7 @@ class MessageFragment(
                         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
                         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                            if (!s.isNullOrEmpty() && s.length >= 2) {
-                                searchMessages(s)
-                            }
+                            searchMessages(s)
                         }
 
                         override fun afterTextChanged(s: Editable?) {}
@@ -771,7 +771,9 @@ class MessageFragment(
         uiScope.launch {
             if (query.isNullOrEmpty()) {
                 viewModel.refresh()
-            } else {
+            }
+            else if(query.length <= 1) return@launch
+            else {
                 viewModel.searchMessagesInDialog(query.toString())
             }
         }

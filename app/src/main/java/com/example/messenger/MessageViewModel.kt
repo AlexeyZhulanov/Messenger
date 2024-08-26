@@ -1,6 +1,7 @@
 package com.example.messenger
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -9,6 +10,7 @@ import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
+import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.map
 import com.example.messenger.model.ConversationSettings
@@ -23,6 +25,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,8 +55,8 @@ class MessageViewModel @Inject constructor(
     private var otherUserId: Int = -1
     private var isFirst = true
     private var disableRefresh: Boolean = false
-
-    val dates = mutableSetOf<String>()
+    val dates = mutableMapOf<String, Int>()
+    val correctDateIndexes = mutableSetOf<Int>()
 
     private val searchBy = MutableLiveData("")
 
@@ -68,6 +71,7 @@ class MessageViewModel @Inject constructor(
     fun refresh() {
         isFirst = false
         dates.clear()
+        correctDateIndexes.clear()
         this.searchBy.postValue(this.searchBy.value)
     }
 
@@ -108,7 +112,6 @@ class MessageViewModel @Inject constructor(
 
     fun searchMessagesInDialog(query: String) {
         if(this.searchBy.value == query) return
-        dates.clear()
         this.searchBy.value = query
     }
 
@@ -161,6 +164,17 @@ class MessageViewModel @Inject constructor(
 
     suspend fun fManagerSaveFile(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
         fileManager.saveFile(fileName, fileData)
+    }
+
+    fun formatMessageTime(timestamp: Long?): String {
+        if (timestamp == null) return "-"
+
+        // Приведение серверного времени (МСК GMT+3) к GMT
+        val greenwichMessageDate = Calendar.getInstance().apply {
+            timeInMillis = timestamp - 10800000
+        }
+        val dateFormatToday = SimpleDateFormat("HH:mm", Locale.getDefault())
+        return dateFormatToday.format(greenwichMessageDate.time)
     }
 
     private fun formatUserSessionDate(timestamp: Long?): String {
