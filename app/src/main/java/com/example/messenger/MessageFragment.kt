@@ -30,7 +30,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.CreationExtras
-import androidx.paging.map
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.databinding.FragmentMessageBinding
@@ -51,11 +50,12 @@ import com.tougee.recorderview.AudioRecordView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -157,7 +157,8 @@ class MessageFragment(
         }
     }
 
-    @SuppressLint("InflateParams")
+    @OptIn(FlowPreview::class)
+    @SuppressLint("InflateParams", "NotifyDataSetChanged")
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -369,11 +370,21 @@ class MessageFragment(
             stackFromEnd = false
             reverseLayout = true
         }
+        val tryAgainAction: TryAgainAction = { adapter.retry() }
+        val headerAdapter = DefaultLoadStateAdapter(tryAgainAction)
+        val footerAdapter = DefaultLoadStateAdapter(tryAgainAction)
+        val adapterWithLoadStates = adapter.withLoadStateHeaderAndFooter(headerAdapter, footerAdapter)
         binding.recyclerview.layoutManager = layoutManager
-        binding.recyclerview.adapter = adapter
+        binding.recyclerview.adapter = adapterWithLoadStates
         binding.recyclerview.addItemDecoration(VerticalSpaceItemDecoration(15))
         binding.selectedPhotosRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         binding.selectedPhotosRecyclerView.adapter = imageAdapter
+        lifecycleScope.launch {
+            adapter.loadStateFlow.debounce(200).collectLatest { _ ->
+                headerAdapter.notifyDataSetChanged()
+                footerAdapter.notifyDataSetChanged()
+            }
+        }
         binding.enterButton.setOnClickListener {
             val text = binding.enterMessage.text.toString()
             val items = imageAdapter.getData()
