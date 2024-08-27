@@ -97,6 +97,13 @@ class MessageFragment(
         f
     }
 
+    private val adapterDataObserver = object : RecyclerView.AdapterDataObserver() {
+        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+            binding.recyclerview.scrollToPosition(0)
+            binding.recyclerview.adapter?.unregisterAdapterDataObserver(this)
+        }
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -229,7 +236,7 @@ class MessageFragment(
                 }
                 override fun onImagesClick(images: ArrayList<LocalMedia>, position: Int) {
                     Log.d("testClickImages", "images: $images")
-                    PictureSelector.create(requireContext())
+                    PictureSelector.create(requireActivity())
                         .openPreview()
                         .setImageEngine(GlideEngine.createGlideEngine())
                         .setVideoPlayerEngine(ExoPlayerEngine())
@@ -252,7 +259,7 @@ class MessageFragment(
         imageAdapter = ImageAdapter(requireContext(), object: ImageActionListener {
             override fun onImageClicked(image: LocalMedia, position: Int) {
                 Log.d("testClick", "Image clicked: $image")
-                PictureSelector.create(requireContext())
+                PictureSelector.create(requireActivity())
                     .openPreview()
                     .setImageEngine(GlideEngine.createGlideEngine())
                     .setVideoPlayerEngine(ExoPlayerEngine())
@@ -421,12 +428,10 @@ class MessageFragment(
                         viewModel.sendMessage(dialog.id, text, null, null, null, null, false, null)
                     }
                 }
+                binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
                 val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 enterText.setText("")
                 viewModel.refresh()
-                binding.recyclerview.post {
-                    binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
-                }
             }
         }
         return binding.root
@@ -468,10 +473,8 @@ class MessageFragment(
                         val response = async(Dispatchers.IO) { viewModel.uploadAudio(fileOgg) }
                         viewModel.sendMessage(dialog.id, null, null, response.await(), null, null, false, null)
                         withContext(Dispatchers.Main) {
+                            binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
                             viewModel.refresh()
-                            binding.recyclerview.post {
-                                binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
-                            }
                         }
                     }
                 }
@@ -496,13 +499,14 @@ class MessageFragment(
     }
 
     override fun onDestroyView() {
-        super.onDestroyView()
         viewModel.stopRefresh()
+        binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterDataObserver)
+        super.onDestroyView()
     }
 
     override fun onPause() {
-        super.onPause()
         viewModel.stopRefresh()
+        super.onPause()
     }
 
     private fun handleFileUri(uri: Uri) {
@@ -514,10 +518,8 @@ class MessageFragment(
                     // костыль чтобы отображалось корректное имя файла - кладу его в voice
                     viewModel.sendMessage(dialog.id, null, null, file.name, response.await(), null, false, null)
                 }
+                binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
                 viewModel.refresh()
-                binding.recyclerview.post {
-                    binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
-                }
             }
         } else Toast.makeText(requireContext(), "Что-то не так с файлом", Toast.LENGTH_SHORT).show()
     }

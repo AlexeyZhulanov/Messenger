@@ -55,23 +55,19 @@ class MessageViewModel @Inject constructor(
     private var otherUserId: Int = -1
     private var isFirst = true
     private var disableRefresh: Boolean = false
-    val dates = mutableMapOf<String, Int>()
-    val correctDateIndexes = mutableSetOf<Int>()
 
     private val searchBy = MutableLiveData("")
 
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     val mes = searchBy.asFlow()
         .debounce(500)
-        .flatMapLatest { Pager(PagingConfig(pageSize = 20, initialLoadSize = 20)) {
+        .flatMapLatest { Pager(PagingConfig(pageSize = 30, initialLoadSize = 30, prefetchDistance = 5)) {
         MessagePagingSource(retrofitService, messengerService, dialogId, it, isFirst, fileManager)
         }.flow }
         .cachedIn(viewModelScope)
 
     fun refresh() {
         isFirst = false
-        dates.clear()
-        correctDateIndexes.clear()
         this.searchBy.postValue(this.searchBy.value)
     }
 

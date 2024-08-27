@@ -276,20 +276,10 @@ class MessageAdapter(
         fun bind(message: Message, date: String, position: Int) {
             binding.messageReceiverTextView.text = message.text
             val time = messageViewModel.formatMessageTime(message.timestamp)
-            if(date != "" && position !in messageViewModel.correctDateIndexes) {
-                if(date in messageViewModel.dates.keys) {
-                    val idx = messageViewModel.dates[date]
-                    messageViewModel.dates.remove(date)
-                    messageViewModel.correctDateIndexes.add(idx!!)
-                    binding.root.post {
-                        notifyItemChanged(idx)
-                    }
-                }
+            if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-                messageViewModel.dates[date] = position
             } else {
-                if(position in messageViewModel.correctDateIndexes) messageViewModel.correctDateIndexes.remove(position)
                 binding.dateTextView.visibility = View.GONE
             }
             binding.timeTextView.text = time
@@ -328,20 +318,10 @@ class MessageAdapter(
         fun bind(message: Message, date: String, position: Int) {
             binding.messageSenderTextView.text = message.text
             val time = messageViewModel.formatMessageTime(message.timestamp)
-            if(date != "" && position !in messageViewModel.correctDateIndexes) {
-                if(date in messageViewModel.dates.keys) {
-                    val idx = messageViewModel.dates[date]
-                    messageViewModel.dates.remove(date)
-                    messageViewModel.correctDateIndexes.add(idx!!)
-                    binding.root.post {
-                        notifyItemChanged(idx)
-                    }
-                }
+            if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-                messageViewModel.dates[date] = position
             } else {
-                if(position in messageViewModel.correctDateIndexes) messageViewModel.correctDateIndexes.remove(position)
                 binding.dateTextView.visibility = View.GONE
             }
             binding.timeTextView.text = time
@@ -647,20 +627,10 @@ class MessageAdapter(
                 }
             }
             val time = messageViewModel.formatMessageTime(message.timestamp)
-            if(date != "" && position !in messageViewModel.correctDateIndexes) {
-                if(date in messageViewModel.dates.keys) {
-                    val idx = messageViewModel.dates[date]
-                    messageViewModel.dates.remove(date)
-                    messageViewModel.correctDateIndexes.add(idx!!)
-                    binding.root.post {
-                        notifyItemChanged(idx)
-                    }
-                }
+            if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-                messageViewModel.dates[date] = position
             } else {
-                if(position in messageViewModel.correctDateIndexes) messageViewModel.correctDateIndexes.remove(position)
                 binding.dateTextView.visibility = View.GONE
             }
             binding.timeTextView.text = time
@@ -781,20 +751,10 @@ class MessageAdapter(
                 }
             }
             val time = messageViewModel.formatMessageTime(message.timestamp)
-            if(date != "" && position !in messageViewModel.correctDateIndexes) {
-                if(date in messageViewModel.dates.keys) {
-                    val idx = messageViewModel.dates[date]
-                    messageViewModel.dates.remove(date)
-                    messageViewModel.correctDateIndexes.add(idx!!)
-                    binding.root.post {
-                        notifyItemChanged(idx)
-                    }
-                }
+            if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-                messageViewModel.dates[date] = position
             } else {
-                if(position in messageViewModel.correctDateIndexes) messageViewModel.correctDateIndexes.remove(position)
                 binding.dateTextView.visibility = View.GONE
             }
             binding.timeTextView.text = time
@@ -889,20 +849,10 @@ class MessageAdapter(
                 }
             }
             val time = messageViewModel.formatMessageTime(message.timestamp)
-            if(date != "" && position !in messageViewModel.correctDateIndexes) {
-                if(date in messageViewModel.dates.keys) {
-                    val idx = messageViewModel.dates[date]
-                    messageViewModel.dates.remove(date)
-                    messageViewModel.correctDateIndexes.add(idx!!)
-                    binding.root.post {
-                        notifyItemChanged(idx)
-                    }
-                }
+            if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-                messageViewModel.dates[date] = position
             } else {
-                if(position in messageViewModel.correctDateIndexes) messageViewModel.correctDateIndexes.remove(position)
                 binding.dateTextView.visibility = View.GONE
             }
             binding.timeTextView.text = time
@@ -991,20 +941,10 @@ class MessageAdapter(
                 }
             }
             val time = messageViewModel.formatMessageTime(message.timestamp)
-            if(date != "" && position !in messageViewModel.correctDateIndexes) {
-                if(date in messageViewModel.dates.keys) {
-                    val idx = messageViewModel.dates[date]
-                    messageViewModel.dates.remove(date)
-                    messageViewModel.correctDateIndexes.add(idx!!)
-                    binding.root.post {
-                        notifyItemChanged(idx)
-                    }
-                }
+            if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-                messageViewModel.dates[date] = position
             } else {
-                if(position in messageViewModel.correctDateIndexes) messageViewModel.correctDateIndexes.remove(position)
                 binding.dateTextView.visibility = View.GONE
             }
             binding.timeTextView.text = time
@@ -1118,20 +1058,10 @@ class MessageAdapter(
                 }
             }
             val time = messageViewModel.formatMessageTime(message.timestamp)
-            if(date != "" && position !in messageViewModel.correctDateIndexes) {
-                if(date in messageViewModel.dates.keys) {
-                    val idx = messageViewModel.dates[date]
-                    messageViewModel.dates.remove(date)
-                    messageViewModel.correctDateIndexes.add(idx!!)
-                    binding.root.post {
-                        notifyItemChanged(idx)
-                    }
-                }
+            if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-                messageViewModel.dates[date] = position
             } else {
-                if(position in messageViewModel.correctDateIndexes) messageViewModel.correctDateIndexes.remove(position)
                 binding.dateTextView.visibility = View.GONE
             }
             binding.timeTextView.text = time
@@ -1236,20 +1166,10 @@ class MessageAdapter(
                 }
             }
             val time = messageViewModel.formatMessageTime(message.timestamp)
-            if(date != "" && position !in messageViewModel.correctDateIndexes) {
-                if(date in messageViewModel.dates.keys) {
-                    val idx = messageViewModel.dates[date]
-                    messageViewModel.dates.remove(date)
-                    messageViewModel.correctDateIndexes.add(idx!!)
-                    binding.root.post {
-                        notifyItemChanged(idx)
-                    }
-                }
+            if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-                messageViewModel.dates[date] = position
             } else {
-                if(position in messageViewModel.correctDateIndexes) messageViewModel.correctDateIndexes.remove(position)
                 binding.dateTextView.visibility = View.GONE
             }
             binding.timeTextView.text = time
@@ -1358,20 +1278,10 @@ class MessageAdapter(
                 binding.progressBar.visibility = View.GONE
             }
             val time = messageViewModel.formatMessageTime(message.timestamp)
-            if(date != "" && position !in messageViewModel.correctDateIndexes) {
-                if(date in messageViewModel.dates.keys) {
-                    val idx = messageViewModel.dates[date]
-                    messageViewModel.dates.remove(date)
-                    messageViewModel.correctDateIndexes.add(idx!!)
-                    binding.root.post {
-                        notifyItemChanged(idx)
-                    }
-                }
+            if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-                messageViewModel.dates[date] = position
             } else {
-                if(position in messageViewModel.correctDateIndexes) messageViewModel.correctDateIndexes.remove(position)
                 binding.dateTextView.visibility = View.GONE
             }
             binding.timeTextView.text = time
@@ -1484,18 +1394,10 @@ class MessageAdapter(
                 }
             }
             val time = messageViewModel.formatMessageTime(message.timestamp)
-            if(date != "" && position !in messageViewModel.correctDateIndexes) {
-                if(date in messageViewModel.dates.keys) {
-                    val idx = messageViewModel.dates[date]
-                    messageViewModel.dates.remove(date)
-                    messageViewModel.correctDateIndexes.add(idx!!)
-                    notifyItemChanged(idx)
-                }
+            if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-                messageViewModel.dates[date] = position
             } else {
-                if(position in messageViewModel.correctDateIndexes) messageViewModel.correctDateIndexes.remove(position)
                 binding.dateTextView.visibility = View.GONE
             }
             binding.timeTextView.text = time
