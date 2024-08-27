@@ -768,6 +768,9 @@ class MessageFragment(
                     }
                     true
             }
+                R.id.item_answer -> {
+                    true
+                }
                 else -> false
             }
         }
