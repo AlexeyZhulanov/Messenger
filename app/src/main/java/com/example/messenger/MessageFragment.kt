@@ -28,6 +28,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -49,9 +50,12 @@ import com.tougee.recorderview.AudioRecordView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -93,6 +97,13 @@ class MessageFragment(
         f
     }
 
+    private val adapterDataObserver = object : RecyclerView.AdapterDataObserver() {
+        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+            binding.recyclerview.scrollToPosition(0)
+            binding.recyclerview.adapter?.unregisterAdapterDataObserver(this)
+        }
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,8 +117,12 @@ class MessageFragment(
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel.setDialogInfo(dialog.id, dialog.otherUser.id)
-        viewModel.loadMessages() // todo проверить нужно
-        viewModel.fetchLastSession() // и это тоже
+        lifecycleScope.launch {
+            viewModel.mes.collectLatest {message ->
+                adapter.submitData(message)
+            }
+        }
+        viewModel.fetchLastSession()
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.custom_action_bar, toolbarContainer, false)
@@ -143,14 +158,14 @@ class MessageFragment(
         viewModel.lastSessionString.observe(viewLifecycleOwner) { sessionString ->
             lastSession.text = sessionString
         }
-        startMessagePolling()
         val options: ImageView = view.findViewById(R.id.ic_options)
         options.setOnClickListener {
             showPopupMenu(it, R.menu.popup_menu_dialog)
         }
     }
 
-    @SuppressLint("InflateParams")
+    @OptIn(FlowPreview::class)
+    @SuppressLint("InflateParams", "NotifyDataSetChanged")
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -158,7 +173,6 @@ class MessageFragment(
     ): View {
         binding = FragmentMessageBinding.inflate(inflater, container, false)
         preferences = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
-        viewModel.setCountMsg(dialog.countMsg)
         val wallpaper = preferences.getString(PREF_WALLPAPER, "")
         if (wallpaper != "") {
             val resId = resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
@@ -178,7 +192,7 @@ class MessageFragment(
 
                 override fun onMessageLongClick(itemView: View) {
                     uiScope.launch {
-                        viewModel.stopMessagePolling()
+                        viewModel.stopRefresh()
                         binding.floatingActionButtonDelete.visibility = View.VISIBLE
                         val dialogSettings = async(Dispatchers.IO) { viewModel.getDialogSettings(dialog.id) }
                         adapter.dialogSettings = dialogSettings.await()
@@ -195,7 +209,7 @@ class MessageFragment(
                                     remove()
                                     requireActivity().onBackPressedDispatcher.onBackPressed()
                                 }
-                                startMessagePolling()
+                                viewModel.startRefresh()
                             }
                         })
                     binding.floatingActionButtonDelete.setOnClickListener {
@@ -210,10 +224,9 @@ class MessageFragment(
                                     }.awaitAll() // wait all responses
                                 }
                                 binding.floatingActionButtonDelete.visibility = View.GONE
-                                viewModel.decrementCountMsg(messagesToDelete.size)
                                 if(response.await() && response2.all { it }) {
                                     adapter.clearPositions()
-                                    startMessagePolling()
+                                    viewModel.startRefresh()
                                     binding.progressBar.visibility = View.GONE
                                 }
                             }
@@ -223,7 +236,7 @@ class MessageFragment(
                 }
                 override fun onImagesClick(images: ArrayList<LocalMedia>, position: Int) {
                     Log.d("testClickImages", "images: $images")
-                    PictureSelector.create(requireContext())
+                    PictureSelector.create(requireActivity())
                         .openPreview()
                         .setImageEngine(GlideEngine.createGlideEngine())
                         .setVideoPlayerEngine(ExoPlayerEngine())
@@ -246,7 +259,7 @@ class MessageFragment(
         imageAdapter = ImageAdapter(requireContext(), object: ImageActionListener {
             override fun onImageClicked(image: LocalMedia, position: Int) {
                 Log.d("testClick", "Image clicked: $image")
-                PictureSelector.create(requireContext())
+                PictureSelector.create(requireActivity())
                     .openPreview()
                     .setImageEngine(GlideEngine.createGlideEngine())
                     .setVideoPlayerEngine(ExoPlayerEngine())
@@ -360,13 +373,25 @@ class MessageFragment(
                 }
             }
         }
-
-        val layoutManager = LinearLayoutManager(requireContext())
+        val layoutManager = LinearLayoutManager(requireContext()).apply {
+            stackFromEnd = false
+            reverseLayout = true
+        }
+        val tryAgainAction: TryAgainAction = { adapter.retry() }
+        val headerAdapter = DefaultLoadStateAdapter(tryAgainAction)
+        val footerAdapter = DefaultLoadStateAdapter(tryAgainAction)
+        val adapterWithLoadStates = adapter.withLoadStateHeaderAndFooter(headerAdapter, footerAdapter)
         binding.recyclerview.layoutManager = layoutManager
-        binding.recyclerview.adapter = adapter
+        binding.recyclerview.adapter = adapterWithLoadStates
         binding.recyclerview.addItemDecoration(VerticalSpaceItemDecoration(15))
         binding.selectedPhotosRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         binding.selectedPhotosRecyclerView.adapter = imageAdapter
+        lifecycleScope.launch {
+            adapter.loadStateFlow.debounce(200).collectLatest { _ ->
+                headerAdapter.notifyDataSetChanged()
+                footerAdapter.notifyDataSetChanged()
+            }
+        }
         binding.enterButton.setOnClickListener {
             val text = binding.enterMessage.text.toString()
             val items = imageAdapter.getData()
@@ -403,14 +428,10 @@ class MessageFragment(
                         viewModel.sendMessage(dialog.id, text, null, null, null, null, false, null)
                     }
                 }
-                viewModel.incrementCountMsg()
+                binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
                 val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 enterText.setText("")
-                adapter.messages = viewModel.getMessages(dialog.id, 0, null).associateWith { "" }
-                binding.recyclerview.post {
-                    binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
-                }
-                viewModel.replaceMessages(adapter.messages.keys.toList())
+                viewModel.refresh()
             }
         }
         return binding.root
@@ -452,13 +473,8 @@ class MessageFragment(
                         val response = async(Dispatchers.IO) { viewModel.uploadAudio(fileOgg) }
                         viewModel.sendMessage(dialog.id, null, null, response.await(), null, null, false, null)
                         withContext(Dispatchers.Main) {
-                            viewModel.incrementCountMsg()
-                            adapter.messages =
-                                viewModel.getMessages(dialog.id, 0, null).associateWith { "" }
-                            binding.recyclerview.post {
-                                binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
-                            }
-                            viewModel.replaceMessages(adapter.messages.keys.toList())
+                            binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+                            viewModel.refresh()
                         }
                     }
                 }
@@ -482,22 +498,15 @@ class MessageFragment(
         }
     }
 
-    private fun startMessagePolling() {
-        viewModel.startMessagePolling()
-        viewModel.messages.observe(viewLifecycleOwner) { messages ->
-            adapter.messages = messages
-            binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
-        }
-    }
-
     override fun onDestroyView() {
+        viewModel.stopRefresh()
+        binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterDataObserver)
         super.onDestroyView()
-        viewModel.stopMessagePolling()
     }
 
     override fun onPause() {
+        viewModel.stopRefresh()
         super.onPause()
-        viewModel.stopMessagePolling()
     }
 
     private fun handleFileUri(uri: Uri) {
@@ -509,13 +518,8 @@ class MessageFragment(
                     // костыль чтобы отображалось корректное имя файла - кладу его в voice
                     viewModel.sendMessage(dialog.id, null, null, file.name, response.await(), null, false, null)
                 }
-                viewModel.incrementCountMsg()
-                adapter.messages =
-                    viewModel.getMessages(dialog.id, 0, null).associateWith { "" }
-                binding.recyclerview.post {
-                    binding.recyclerview.scrollToPosition(adapter.itemCount - 1)
-                }
-                viewModel.replaceMessages(adapter.messages.keys.toList())
+                binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+                viewModel.refresh()
             }
         } else Toast.makeText(requireContext(), "Что-то не так с файлом", Toast.LENGTH_SHORT).show()
     }
@@ -587,9 +591,7 @@ class MessageFragment(
                         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
                         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                            if (!s.isNullOrEmpty() && s.length >= 2) {
-                                searchMessages(s)
-                            }
+                            searchMessages(s)
                         }
 
                         override fun afterTextChanged(s: Editable?) {}
@@ -628,7 +630,7 @@ class MessageFragment(
                                     remove()
                                     requireActivity().onBackPressedDispatcher.onBackPressed()
                                 }
-                                startMessagePolling()
+                                viewModel.startRefresh()
                             }
                         })
 
@@ -655,7 +657,7 @@ class MessageFragment(
 
                     editButton.setOnClickListener {
                         uiScope.launch {
-                            viewModel.stopMessagePolling()
+                            viewModel.stopRefresh()
                             val tempItems = imageAdapter.getData()
                             val text = editText.text.toString()
                             if (tempItems.isNotEmpty()) {
@@ -735,7 +737,7 @@ class MessageFragment(
                                         editText.setText("")
                                         editButton.visibility = View.GONE
                                         binding.recordView.visibility = View.VISIBLE
-                                        startMessagePolling()
+                                        viewModel.startRefresh()
                                     }
                                 }
                             } else {
@@ -749,7 +751,7 @@ class MessageFragment(
                                         editText.setText("")
                                         editButton.visibility = View.GONE
                                         binding.recordView.visibility = View.VISIBLE
-                                        startMessagePolling()
+                                        viewModel.startRefresh()
                                     }
                                 } else withContext(Dispatchers.Main) {
                                     Toast.makeText(
@@ -781,9 +783,11 @@ class MessageFragment(
     private fun searchMessages(query: CharSequence?) {
         uiScope.launch {
             if (query.isNullOrEmpty()) {
-                adapter.messages = viewModel.getMessages(dialog.id, 0, null).associateWith { "" }
-            } else {
-                adapter.messages = viewModel.searchMessagesInDialog(dialog.id, query.toString()).associateWith { "" }
+                viewModel.refresh()
+            }
+            else if(query.length <= 1) return@launch
+            else {
+                viewModel.searchMessagesInDialog(query.toString())
             }
         }
     }

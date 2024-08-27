@@ -15,6 +15,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
+import androidx.paging.PagingDataAdapter
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -29,9 +31,7 @@ import com.example.messenger.databinding.ItemTextImagesSenderBinding
 import com.example.messenger.databinding.ItemVoiceReceiverBinding
 import com.example.messenger.databinding.ItemVoiceSenderBinding
 import com.example.messenger.model.ConversationSettings
-import com.example.messenger.model.FileManager
 import com.example.messenger.model.Message
-import com.example.messenger.model.RetrofitService
 import com.example.messenger.picker.DateUtils
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.config.SelectMimeType
@@ -45,8 +45,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -57,31 +55,23 @@ interface MessageActionListener {
     fun onImagesClick(images: ArrayList<LocalMedia>, position: Int)
 }
 
+
+class MessageDiffCallback : DiffUtil.ItemCallback<Pair<Message, String>>() {
+    override fun areItemsTheSame(oldItem: Pair<Message, String>, newItem: Pair<Message, String>): Boolean {
+        return oldItem.first.id == newItem.first.id
+    }
+
+    override fun areContentsTheSame(oldItem: Pair<Message, String>, newItem: Pair<Message, String>): Boolean {
+        return oldItem == newItem
+    }
+}
+
 class MessageAdapter(
     private val actionListener: MessageActionListener,
     private val otherUserId: Int,
     private val context: Context,
     private val messageViewModel: MessageViewModel
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-
-    var messages: Map<Message, String> = emptyMap()
-        @SuppressLint("NotifyDataSetChanged")
-        set(value) {
-            val dates = mutableSetOf<String>()
-            val newMessages = mutableMapOf<Message, String>()
-            for((message, _) in value) {
-                val date = formatMessageDate(message.timestamp)
-                if(date !in dates) {
-                    dates.add(date)
-                    newMessages[message] = date
-                } else {
-                    newMessages[message] = ""
-                }
-            }
-            field = newMessages
-            notifyDataSetChanged()
-            Log.d("testAdapterMessages", field.toString())
-        }
+) : PagingDataAdapter<Pair<Message, String>, RecyclerView.ViewHolder>(MessageDiffCallback()) {
 
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
@@ -93,7 +83,12 @@ class MessageAdapter(
 
     fun getDeleteList(): Pair<List<Int>, Map<String, String>> {
         val list = mutableListOf<Int>()
-        checkedPositions.forEach { list.add(messages.keys.elementAt(it).id) }
+        checkedPositions.forEach {
+            val message = getItem(it)?.first
+            if(message != null) {
+                list.add(message.id)
+            }
+        }
         return Pair(list, checkedFiles)
     }
 
@@ -104,8 +99,13 @@ class MessageAdapter(
         checkedFiles.clear()
     }
 
+    private fun getItemPosition(message: Message): Int {
+        val index = (0 until itemCount).firstOrNull { getItem(it)!!.first == message }
+        return index ?: -1
+    }
+
     private fun savePosition(message: Message) {
-        val position = messages.keys.indexOf(message)
+        val position = getItemPosition(message)
         if (position in checkedPositions) {
             checkedPositions.remove(position)
         } else {
@@ -124,7 +124,7 @@ class MessageAdapter(
     }
 
     private fun savePositionFile(message: Message, filePath: String, fileType: String) {
-        val position = messages.keys.indexOf(message)
+        val position = getItemPosition(message)
         if (position in checkedPositions) {
             checkedPositions.remove(position)
             checkedFiles.remove(filePath)
@@ -145,7 +145,7 @@ class MessageAdapter(
     }
 
     private fun savePositionFiles(message: Message, filePaths: Map<String, String>) {
-        val position = messages.keys.indexOf(message)
+        val position = getItemPosition(message)
         if (position in checkedPositions) {
             checkedPositions.remove(position)
             filePaths.forEach { checkedFiles.remove(it.key) }
@@ -179,7 +179,7 @@ class MessageAdapter(
     }
 
     override fun getItemViewType(position: Int): Int {
-        val message = messages.keys.elementAt(position)
+        val message = getItem(position)?.first ?: return -1
         if(message.idSender == otherUserId) {
             return when {
                 message.images?.isNotEmpty() == true -> {
@@ -252,36 +252,36 @@ class MessageAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val message = messages.keys.elementAt(position)
+        val message = getItem(position)?.first ?: return
+        val date = getItem(position)?.second ?: return
         var flagText = false
         if(!message.text.isNullOrEmpty()) flagText = true
         val isInLast30 = position >= itemCount - 30
         when (holder) {
-            is MessagesViewHolderReceiver -> holder.bind(message, position)
-            is MessagesViewHolderSender -> holder.bind(message, position)
-            is MessagesViewHolderVoiceReceiver -> holder.bind(message, position, isInLast30)
-            is MessagesViewHolderVoiceSender -> holder.bind(message, position, isInLast30)
-            is MessagesViewHolderFileReceiver -> holder.bind(message, position, isInLast30)
-            is MessagesViewHolderFileSender -> holder.bind(message, position, isInLast30)
-            is MessagesViewHolderTextImageReceiver -> holder.bind(message, position, flagText, isInLast30)
-            is MessagesViewHolderTextImageSender -> holder.bind(message, position, flagText, isInLast30)
-            is MessagesViewHolderTextImagesReceiver -> holder.bind(message, position, flagText, isInLast30)
-            is MessagesViewHolderTextImagesSender -> holder.bind(message, position, flagText, isInLast30)
+            is MessagesViewHolderReceiver -> holder.bind(message, date, position)
+            is MessagesViewHolderSender -> holder.bind(message, date, position)
+            is MessagesViewHolderVoiceReceiver -> holder.bind(message, date, position, isInLast30)
+            is MessagesViewHolderVoiceSender -> holder.bind(message, date, position, isInLast30)
+            is MessagesViewHolderFileReceiver -> holder.bind(message, date, position, isInLast30)
+            is MessagesViewHolderFileSender -> holder.bind(message, date, position, isInLast30)
+            is MessagesViewHolderTextImageReceiver -> holder.bind(message, date, position, flagText, isInLast30)
+            is MessagesViewHolderTextImageSender -> holder.bind(message, date, position, flagText, isInLast30)
+            is MessagesViewHolderTextImagesReceiver -> holder.bind(message, date, position, flagText, isInLast30)
+            is MessagesViewHolderTextImagesSender -> holder.bind(message, date, position, flagText, isInLast30)
         }
     }
 
-    override fun getItemCount(): Int = messages.size
-
     // ViewHolder для текстовых сообщений получателя
     inner class MessagesViewHolderReceiver(private val binding: ItemMessageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message, position: Int) {
+        fun bind(message: Message, date: String, position: Int) {
             binding.messageReceiverTextView.text = message.text
-            val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+            }
             binding.timeTextView.text = time
             if(!canLongClick && dialogSettings.canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
@@ -315,14 +315,15 @@ class MessageAdapter(
 
     // ViewHolder для текстовых сообщений отправителя
     inner class MessagesViewHolderSender(private val binding: ItemMessageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message, position: Int) {
+        fun bind(message: Message, date: String, position: Int) {
             binding.messageSenderTextView.text = message.text
-            val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+            }
             binding.timeTextView.text = time
             if(!canLongClick) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
@@ -544,7 +545,7 @@ class MessageAdapter(
         private var filePath: String = ""
         private var isPlaying: Boolean = false
         private val handler = Handler(Looper.getMainLooper())
-        fun bind(message: Message, position: Int, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean) {
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
                 val filePathTemp = async(Dispatchers.IO) {
@@ -625,12 +626,13 @@ class MessageAdapter(
                     binding.playButton.visibility = View.GONE
                 }
             }
-            val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+            }
             binding.timeTextView.text = time
             if(!canLongClick) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
@@ -667,7 +669,7 @@ class MessageAdapter(
         private var filePath: String = ""
         private var isPlaying: Boolean = false
         private val handler = Handler(Looper.getMainLooper())
-        fun bind(message: Message, position: Int, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean) {
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
                 val filePathTemp = async(Dispatchers.IO) {
@@ -748,12 +750,13 @@ class MessageAdapter(
                     binding.playButton.visibility = View.GONE
                 }
             }
-            val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+            }
             binding.timeTextView.text = time
             if(!canLongClick) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
@@ -794,7 +797,7 @@ class MessageAdapter(
 
     inner class MessagesViewHolderFileReceiver(private val binding: ItemFileReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         private var filePath: String = ""
-        fun bind(message: Message, position: Int, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean) {
             uiScope.launch {
                 val filePathTemp = async(Dispatchers.IO) {
                     if (messageViewModel.fManagerIsExist(message.file!!)) {
@@ -845,12 +848,13 @@ class MessageAdapter(
                     binding.errorImageView.visibility = View.VISIBLE
                 }
             }
-            val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+            }
             binding.timeTextView.text = time
             if(!canLongClick) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
@@ -885,7 +889,7 @@ class MessageAdapter(
     inner class MessagesViewHolderFileSender(private val binding: ItemFileSenderBinding) : RecyclerView.ViewHolder(binding.root) {
 
         private var filePath: String = ""
-        fun bind(message: Message, position: Int, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean) {
             uiScope.launch {
                 val filePathTemp = async(Dispatchers.IO) {
                     if (messageViewModel.fManagerIsExist(message.file!!)) {
@@ -936,12 +940,13 @@ class MessageAdapter(
                     binding.errorImageView.visibility = View.VISIBLE
                 }
             }
-            val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+            }
             binding.timeTextView.text = time
             if(!canLongClick) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
@@ -984,11 +989,10 @@ class MessageAdapter(
         }
     }
 
-
     inner class MessagesViewHolderTextImageReceiver(private val binding: ItemTextImageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
 
         private var filePath: String = ""
-        fun bind(message: Message, position: Int, flagText: Boolean, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean) {
             if(flagText) {
                 binding.messageReceiverTextView.visibility = View.VISIBLE
                 binding.messageReceiverTextView.text = message.text
@@ -1053,12 +1057,13 @@ class MessageAdapter(
                     binding.errorImageView.visibility = View.VISIBLE
                 }
             }
-            val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+            }
             binding.timeTextView.text = time
             if(!canLongClick && dialogSettings.canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
@@ -1093,7 +1098,7 @@ class MessageAdapter(
     inner class MessagesViewHolderTextImageSender(private val binding: ItemTextImageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
 
         private var filePath: String = ""
-        fun bind(message: Message, position: Int, flagText: Boolean, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean) {
             if(flagText) {
                 binding.messageSenderTextView.visibility = View.VISIBLE
                 binding.messageSenderTextView.text = message.text
@@ -1160,12 +1165,13 @@ class MessageAdapter(
                     binding.errorImageView.visibility = View.VISIBLE
                 }
             }
-            val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+            }
             binding.timeTextView.text = time
             if(!canLongClick) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
@@ -1221,7 +1227,7 @@ class MessageAdapter(
             binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 2, true))
             binding.recyclerview.adapter = adapter
         }
-        fun bind(message: Message, position: Int, flagText: Boolean, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean) {
             filePathsForClick = emptyList()
             mes = message
             if(flagText) {
@@ -1271,12 +1277,13 @@ class MessageAdapter(
                 adapter.images = localMedias.await()
                 binding.progressBar.visibility = View.GONE
             }
-            val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+            }
             binding.timeTextView.text = time
             if(!canLongClick) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
@@ -1334,7 +1341,7 @@ class MessageAdapter(
             binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 2, true))
             binding.recyclerview.adapter = adapter
         }
-        fun bind(message: Message, position: Int, flagText: Boolean, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean) {
             filePathsForClick = emptyList()
             mes = message
             if(flagText) {
@@ -1386,12 +1393,13 @@ class MessageAdapter(
                     binding.progressBar.visibility = View.GONE
                 }
             }
-            val time = formatMessageTime(message.timestamp)
-            val date = messages.values.elementAt(position)
+            val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+            }
             binding.timeTextView.text = time
             if(!canLongClick) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
@@ -1423,43 +1431,5 @@ class MessageAdapter(
                 true
             }
         }
-    }
-
-    private fun formatMessageTime(timestamp: Long?): String {
-        if (timestamp == null) return "-"
-
-        // Приведение серверного времени (МСК GMT+3) к GMT
-        val greenwichMessageDate = Calendar.getInstance().apply {
-            timeInMillis = timestamp - 10800000
-        }
-        val dateFormatToday = SimpleDateFormat("HH:mm", Locale.getDefault())
-        return dateFormatToday.format(greenwichMessageDate.time)
-    }
-
-    private fun formatMessageDate(timestamp: Long?): String {
-        if (timestamp == null) return ""
-
-        // Приведение серверного времени (МСК GMT+3) к GMT
-        val greenwichMessageDate = Calendar.getInstance().apply {
-            timeInMillis = timestamp - 10800000
-        }
-        val dateFormatMonthDay = SimpleDateFormat("d MMMM", Locale.getDefault())
-        val dateFormatYear = SimpleDateFormat("d MMMM yyyy", Locale.getDefault())
-        val localNow = Calendar.getInstance()
-
-        return when {
-            isToday(localNow, greenwichMessageDate) -> dateFormatMonthDay.format(greenwichMessageDate.time)
-            isThisYear(localNow, greenwichMessageDate) -> dateFormatMonthDay.format(greenwichMessageDate.time)
-            else -> dateFormatYear.format(greenwichMessageDate.time)
-        }
-    }
-
-    private fun isToday(now: Calendar, messageDate: Calendar): Boolean {
-        return now.get(Calendar.YEAR) == messageDate.get(Calendar.YEAR) &&
-                now.get(Calendar.DAY_OF_YEAR) == messageDate.get(Calendar.DAY_OF_YEAR)
-    }
-
-    private fun isThisYear(now: Calendar, messageDate: Calendar): Boolean {
-        return now.get(Calendar.YEAR) == messageDate.get(Calendar.YEAR)
     }
 }
