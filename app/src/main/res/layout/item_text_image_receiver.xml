@@ -57,6 +57,16 @@
             android:background="@drawable/message_background_receiver"
             android:layout_height="wrap_content">
 
+            <include
+                layout="@layout/answer_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:layout_marginBottom="5dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/receiverImageView" />
+
             <ImageView
                 android:id="@+id/receiverImageView"
                 android:layout_width="250dp"
@@ -114,6 +124,7 @@
                 android:textSize="16sp"
                 android:gravity="center"
                 tools:text="Сообщение"
+                android:maxWidth="270dp"
                 android:textColor="#000000"
                 android:layout_marginTop="5dp"
                 app:layout_constraintTop_toBottomOf="@id/receiverImageView"

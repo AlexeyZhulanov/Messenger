@@ -21,7 +21,7 @@
         app:layout_constraintEnd_toEndOf="parent" />
 
     <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/receiverGuideLine"
+        android:id="@+id/senderGuideLine"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -44,8 +44,8 @@
         android:id="@+id/layout_message"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="5dp"
-        app:layout_constraintStart_toEndOf="@id/receiverGuideLine"
+        android:layout_marginStart="5dp"
+        app:layout_constraintStart_toEndOf="@id/senderGuideLine"
         app:layout_constraintTop_toBottomOf="@id/dateTextView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -57,13 +57,15 @@
             android:background="@drawable/message_background_sender"
             android:layout_height="wrap_content">
 
-            <androidx.constraintlayout.widget.Guideline
-                android:id="@+id/centerGuideLine"
+            <include
+                layout="@layout/answer_layout"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                app:layout_constraintGuide_percent="0.5"
-                />
+                android:visibility="gone"
+                android:layout_marginBottom="5dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/file_button" />
 
             <ImageView
                 android:id="@+id/file_button"
@@ -72,7 +74,7 @@
                 android:background="@drawable/checkbox_background"
                 android:padding="10dp"
                 android:src="@drawable/ic_file"
-                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/answer_layout"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 />
@@ -84,7 +86,7 @@
                 android:src="@drawable/ic_error"
                 app:tint="?attr/colorError"
                 android:visibility="gone"
-                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/answer_layout"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent" />
 
@@ -111,8 +113,8 @@
                 android:ellipsize="middle"
                 android:singleLine="true"
                 android:textColor="#000000"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toTopOf="@id/centerGuideLine"
+                android:layout_marginTop="3dp"
+                app:layout_constraintTop_toTopOf="@id/file_button"
                 app:layout_constraintStart_toEndOf="@id/file_button"
                 android:layout_marginStart="10dp" />
 
@@ -125,7 +127,7 @@
                 android:textStyle="italic"
                 tools:text="585 KB"
                 android:textColor="#000000"
-                app:layout_constraintTop_toBottomOf="@id/centerGuideLine"
+                app:layout_constraintTop_toBottomOf="@id/fileNameSenderTextView"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toEndOf="@id/file_button"
                 android:layout_marginStart="10dp" />
@@ -156,10 +158,8 @@
                 android:textStyle="italic"
                 android:textColor="#000000"
                 android:layout_marginStart="5dp"
-                app:layout_constraintVertical_bias="1"
                 app:layout_constraintStart_toEndOf="@id/editTextView"
                 app:layout_constraintEnd_toStartOf="@id/ic_check"
-                app:layout_constraintTop_toBottomOf="@id/centerGuideLine"
                 app:layout_constraintBottom_toBottomOf="parent" />
 
             <ImageView
