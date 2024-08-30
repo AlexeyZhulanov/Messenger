@@ -2,8 +2,9 @@ package com.example.messenger
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.SharedPreferences
-import android.util.Log
+import android.net.Uri
+import android.view.View
+import android.widget.ImageView
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -11,11 +12,11 @@ import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
-import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import androidx.paging.map
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.Message
@@ -26,16 +27,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -256,4 +251,33 @@ class MessageViewModel @Inject constructor(
             }
         }
     }
+
+    suspend fun imageSet(image: String, imageView: ImageView, context: Context) = withContext(Dispatchers.IO) {
+        val filePathTemp = async(Dispatchers.IO) {
+            if (fManagerIsExist(image)) {
+                return@async fManagerGetFilePath(image)
+            } else {
+                try {
+                    return@async downloadFile(context, "photos", image)
+                } catch (e: Exception) {
+                    return@async null
+                }
+            }
+        }
+        val first = filePathTemp.await()
+        if (first != null) {
+            val file = File(first)
+            if (file.exists()) {
+                val uri = Uri.fromFile(file)
+                imageView.visibility = View.VISIBLE
+                Glide.with(context)
+                    .load(uri)
+                    .centerCrop()
+                    .placeholder(R.color.app_color_f6)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .into(imageView)
+            }
+        }
+    }
+
 }

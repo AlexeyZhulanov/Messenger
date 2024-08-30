@@ -76,6 +76,8 @@ class MessageFragment(
     private var audioRecord: AudioRecorder? = null
     private var lastSessionString: String = ""
     private var editFlag = false
+    private var answerFlag = false
+    private var answerMessage: Pair<Int, String>? = null
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.Main + job)
     private val uiScopeIO = CoroutineScope(Dispatchers.IO + job)
@@ -165,7 +167,7 @@ class MessageFragment(
     }
 
     @OptIn(FlowPreview::class)
-    @SuppressLint("InflateParams", "NotifyDataSetChanged")
+    @SuppressLint("InflateParams", "NotifyDataSetChanged", "DiscouragedApi")
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -182,12 +184,12 @@ class MessageFragment(
         }
         val filePickerManager = FilePickerManager(this)
             adapter = MessageAdapter(object : MessageActionListener {
-                override fun onMessageClick(message: Message, itemView: View) {
-                    showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, null)
+                override fun onMessageClick(message: Message, itemView: View, isSender: Boolean) {
+                    showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, null, isSender)
                 }
 
-                override fun onMessageClickImage(message: Message, itemView: View, localMedias: ArrayList<LocalMedia>) {
-                    showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, localMedias)
+                override fun onMessageClickImage(message: Message, itemView: View, localMedias: ArrayList<LocalMedia>, isSender: Boolean) {
+                    showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, localMedias, isSender)
                 }
 
                 override fun onMessageLongClick(itemView: View) {
@@ -415,7 +417,8 @@ class MessageFragment(
                     val list = listik.await()
                     if(text.isNotEmpty()) {
                         if (list.isNotEmpty()) {
-                            viewModel.sendMessage(dialog.id, text, list, null, null, null, false, null)
+                            if(!answerFlag) viewModel.sendMessage(dialog.id, text, list, null, null, null, false, null)
+                            else viewModel.sendMessage(dialog.id, text, list, null, null, null, false, null)
                         } else {
                             viewModel.sendMessage(dialog.id, text, null, null, null, null, false, null)
                         }
@@ -605,7 +608,7 @@ class MessageFragment(
         popupMenu.show()
     }
 
-    private fun showPopupMenuMessage(view: View, menuRes: Int, message: Message, localMedias: ArrayList<LocalMedia>?) {
+    private fun showPopupMenuMessage(view: View, menuRes: Int, message: Message, localMedias: ArrayList<LocalMedia>?, isSender: Boolean) {
         val popupMenu = PopupMenu(requireContext(), view)
         popupMenu.menuInflater.inflate(menuRes, popupMenu.menu)
         popupMenu.setOnMenuItemClickListener { item ->
@@ -770,6 +773,30 @@ class MessageFragment(
                     true
             }
                 R.id.item_answer -> {
+                    answerFlag = true
+                    //answerMessage = Pair(message.id, message.) //todo вытащить ник обязательно
+                    binding.layoutAnswer.visibility = View.VISIBLE
+                    if(isSender) binding.answerUsername.text = "Я" //todo можно заменить на ник(нужно его откуда-то взять)
+                    else binding.answerUsername.text = dialog.otherUser.username
+                    if(message.images != null) {
+                        binding.answerImageView.visibility = View.VISIBLE
+                        uiScope.launch {
+                            viewModel.imageSet(message.images!!.first(), binding.answerImageView, requireContext())
+                        }
+                    }
+                    binding.answerMessage.text = when {
+                        message.text != null -> message.text
+                        message.images != null -> "Фотография"
+                        message.file != null -> message.voice //имя файла(костыль)
+                        message.voice != null -> "Голосовое сообщение"
+                        else -> "?????????"
+                    }
+                    binding.icClearAnswer.setOnClickListener {
+                        binding.answerUsername.text = ""
+                        binding.answerImageView.visibility = View.GONE
+                        binding.layoutAnswer.visibility = View.GONE
+                        answerFlag = false
+                    }
                     true
                 }
                 else -> false
