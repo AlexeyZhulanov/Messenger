@@ -384,6 +384,7 @@ class MessageFragment(
         binding.recyclerview.layoutManager = layoutManager
         binding.recyclerview.adapter = adapterWithLoadStates
         binding.recyclerview.addItemDecoration(VerticalSpaceItemDecoration(15))
+        viewModel.setRecyclerView(binding.recyclerview)
         binding.selectedPhotosRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         binding.selectedPhotosRecyclerView.adapter = imageAdapter
         lifecycleScope.launch {

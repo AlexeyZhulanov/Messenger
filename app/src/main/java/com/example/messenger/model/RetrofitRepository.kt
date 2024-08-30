@@ -26,7 +26,9 @@ interface RetrofitRepository {
     suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?, voice: String?,
      file: String?, referenceToMessageId: Int?, isForwarded: Boolean, usernameAuthorOriginal: String?) : Boolean
 
-    suspend fun getMessages(idDialog: Int, start: Int, end: Int) : List<Message>
+    suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int) : List<Message>
+
+    suspend fun findMessage(idMessage: Int) : Pair<Message, Int>
 
     suspend fun addKeyToDialog(dialogId: Int, key: String) : Boolean
 

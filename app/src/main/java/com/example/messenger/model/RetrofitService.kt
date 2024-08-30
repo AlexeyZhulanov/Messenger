@@ -215,6 +215,20 @@ class RetrofitService(
         return@withContext messages
     }
 
+    override suspend fun findMessage(idMessage: Int): Pair<Message, Int> = withContext(Dispatchers.IO) {
+        val message = try {
+            messagesSource.findMessage(idMessage)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw MessageNotFoundException(e)
+                403 -> throw NoPermissionException(e)
+                else -> throw e
+            }
+        }
+        Log.d("testFindMessage", message.toString())
+        return@withContext message
+    }
+
     override suspend fun addKeyToDialog(dialogId: Int, key: String): Boolean = withContext(Dispatchers.IO) {
         val message = try {
             messagesSource.addKeyToDialog(dialogId, key)

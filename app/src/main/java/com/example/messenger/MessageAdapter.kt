@@ -3,6 +3,7 @@ package com.example.messenger
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.Rect
 import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
@@ -13,6 +14,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
 import androidx.paging.PagingDataAdapter
@@ -77,6 +79,7 @@ class MessageAdapter(
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
     private var checkedFiles: MutableMap<String, String> = mutableMapOf()
     lateinit var dialogSettings: ConversationSettings
+    private var highlightedPosition: Int? = null
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.IO + job)
     private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)
@@ -101,6 +104,11 @@ class MessageAdapter(
 
     private fun getItemPosition(message: Message): Int {
         val index = (0 until itemCount).firstOrNull { getItem(it)!!.first == message }
+        return index ?: -1
+    }
+
+    private fun getItemPositionId(idMessage: Int): Int {
+        val index = (0 until itemCount).firstOrNull { getItem(it)!!.first.id == idMessage }
         return index ?: -1
     }
 
@@ -257,23 +265,112 @@ class MessageAdapter(
         var flagText = false
         if(!message.text.isNullOrEmpty()) flagText = true
         val isInLast30 = position >= itemCount - 30
+        val isAnswer = message.referenceToMessageId != null
+
+        if (position == highlightedPosition) {
+            holder.itemView.setBackgroundColor(Color.YELLOW)
+            // Убираем подсветку через 1 секунду
+            holder.itemView.postDelayed({
+                holder.itemView.setBackgroundColor(Color.TRANSPARENT)
+            }, 1000)
+        }
+//        else {
+//            holder.itemView.setBackgroundColor(Color.TRANSPARENT)
+//        }
         when (holder) {
-            is MessagesViewHolderReceiver -> holder.bind(message, date, position)
-            is MessagesViewHolderSender -> holder.bind(message, date, position)
-            is MessagesViewHolderVoiceReceiver -> holder.bind(message, date, position, isInLast30)
-            is MessagesViewHolderVoiceSender -> holder.bind(message, date, position, isInLast30)
-            is MessagesViewHolderFileReceiver -> holder.bind(message, date, position, isInLast30)
-            is MessagesViewHolderFileSender -> holder.bind(message, date, position, isInLast30)
-            is MessagesViewHolderTextImageReceiver -> holder.bind(message, date, position, flagText, isInLast30)
-            is MessagesViewHolderTextImageSender -> holder.bind(message, date, position, flagText, isInLast30)
-            is MessagesViewHolderTextImagesReceiver -> holder.bind(message, date, position, flagText, isInLast30)
-            is MessagesViewHolderTextImagesSender -> holder.bind(message, date, position, flagText, isInLast30)
+            is MessagesViewHolderReceiver -> holder.bind(message, date, position, isAnswer)
+            is MessagesViewHolderSender -> holder.bind(message, date, position, isAnswer)
+            is MessagesViewHolderVoiceReceiver -> holder.bind(message, date, position, isInLast30, isAnswer)
+            is MessagesViewHolderVoiceSender -> holder.bind(message, date, position, isInLast30, isAnswer)
+            is MessagesViewHolderFileReceiver -> holder.bind(message, date, position, isInLast30, isAnswer)
+            is MessagesViewHolderFileSender -> holder.bind(message, date, position, isInLast30, isAnswer)
+            is MessagesViewHolderTextImageReceiver -> holder.bind(message, date, position, flagText, isInLast30, isAnswer)
+            is MessagesViewHolderTextImageSender -> holder.bind(message, date, position, flagText, isInLast30, isAnswer)
+            is MessagesViewHolderTextImagesReceiver -> holder.bind(message, date, position, flagText, isInLast30, isAnswer)
+            is MessagesViewHolderTextImagesSender -> holder.bind(message, date, position, flagText, isInLast30, isAnswer)
+        }
+    }
+
+    fun highlightPosition(position: Int) {
+        highlightedPosition = position
+        notifyItemChanged(position)
+    }
+
+    private suspend fun imageSet(image: String, imageView: ImageView) = withContext(Dispatchers.IO) {
+        val filePathTemp = async(Dispatchers.IO) {
+            if (messageViewModel.fManagerIsExist(image)) {
+                return@async messageViewModel.fManagerGetFilePath(image)
+            } else {
+                try {
+                    return@async messageViewModel.downloadFile(context, "photos", image)
+                } catch (e: Exception) {
+                    return@async null
+                }
+            }
+        }
+        val first = filePathTemp.await()
+        if (first != null) {
+            val file = File(first)
+            if (file.exists()) {
+                val uri = Uri.fromFile(file)
+                imageView.visibility = View.VISIBLE
+                Glide.with(context)
+                    .load(uri)
+                    .centerCrop()
+                    .placeholder(R.color.app_color_f6)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .into(imageView)
+            }
         }
     }
 
     // ViewHolder для текстовых сообщений получателя
     inner class MessagesViewHolderReceiver(private val binding: ItemMessageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message, date: String, position: Int) {
+        fun bind(message: Message, date: String, position: Int, isAnswer: Boolean) {
+            if(isAnswer) {
+                binding.answerLayout.root.visibility = View.VISIBLE
+                binding.answerLayout.answerUsername.text = message.usernameAuthorOriginal
+                val tmpId = message.referenceToMessageId
+                if(tmpId == null) {
+                    binding.answerLayout.answerMessage.text = "??????????"
+                } else {
+                    val chk = getItemPositionId(tmpId)
+                    if(chk == -1) {
+                        uiScopeMain.launch {
+                            val mes = async(Dispatchers.IO) { messageViewModel.findMessage(tmpId) }
+                            val (m, p) = mes.await()
+                            if(m.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m.text != null -> m.text
+                                m.file != null -> m.voice //имя файла(костыль)
+                                m.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(p)
+                            }
+                        }
+                    } else {
+                        val m = getItem(chk)?.first
+                        uiScopeMain.launch {
+                            if(m?.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m?.text != null -> m.text
+                                m?.file != null -> m.voice //имя файла(костыль)
+                                m?.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(chk)
+                            }
+                        }
+                    }
+                }
+            }
             binding.messageReceiverTextView.text = message.text
             val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
@@ -315,7 +412,51 @@ class MessageAdapter(
 
     // ViewHolder для текстовых сообщений отправителя
     inner class MessagesViewHolderSender(private val binding: ItemMessageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message, date: String, position: Int) {
+        fun bind(message: Message, date: String, position: Int, isAnswer: Boolean) {
+            if(isAnswer) {
+                binding.answerLayout.root.visibility = View.VISIBLE
+                binding.answerLayout.answerUsername.text = message.usernameAuthorOriginal
+                val tmpId = message.referenceToMessageId
+                if(tmpId == null) {
+                    binding.answerLayout.answerMessage.text = "??????????"
+                } else {
+                    val chk = getItemPositionId(tmpId)
+                    if(chk == -1) {
+                        uiScopeMain.launch {
+                            val mes = async(Dispatchers.IO) { messageViewModel.findMessage(tmpId) }
+                            val (m, p) = mes.await()
+                            if(m.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m.text != null -> m.text
+                                m.file != null -> m.voice //имя файла(костыль)
+                                m.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(p)
+                            }
+                        }
+                    } else {
+                        val m = getItem(chk)?.first
+                        uiScopeMain.launch {
+                            if(m?.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m?.text != null -> m.text
+                                m?.file != null -> m.voice //имя файла(костыль)
+                                m?.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(chk)
+                            }
+                        }
+                    }
+                }
+            }
             binding.messageSenderTextView.text = message.text
             val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
@@ -545,7 +686,51 @@ class MessageAdapter(
         private var filePath: String = ""
         private var isPlaying: Boolean = false
         private val handler = Handler(Looper.getMainLooper())
-        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) {
+                binding.answerLayout.root.visibility = View.VISIBLE
+                binding.answerLayout.answerUsername.text = message.usernameAuthorOriginal
+                val tmpId = message.referenceToMessageId
+                if(tmpId == null) {
+                    binding.answerLayout.answerMessage.text = "??????????"
+                } else {
+                    val chk = getItemPositionId(tmpId)
+                    if(chk == -1) {
+                        uiScopeMain.launch {
+                            val mes = async(Dispatchers.IO) { messageViewModel.findMessage(tmpId) }
+                            val (m, p) = mes.await()
+                            if(m.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m.text != null -> m.text
+                                m.file != null -> m.voice //имя файла(костыль)
+                                m.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(p)
+                            }
+                        }
+                    } else {
+                        val m = getItem(chk)?.first
+                        uiScopeMain.launch {
+                            if(m?.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m?.text != null -> m.text
+                                m?.file != null -> m.voice //имя файла(костыль)
+                                m?.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(chk)
+                            }
+                        }
+                    }
+                }
+            }
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
                 val filePathTemp = async(Dispatchers.IO) {
@@ -669,7 +854,51 @@ class MessageAdapter(
         private var filePath: String = ""
         private var isPlaying: Boolean = false
         private val handler = Handler(Looper.getMainLooper())
-        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) {
+                binding.answerLayout.root.visibility = View.VISIBLE
+                binding.answerLayout.answerUsername.text = message.usernameAuthorOriginal
+                val tmpId = message.referenceToMessageId
+                if(tmpId == null) {
+                    binding.answerLayout.answerMessage.text = "??????????"
+                } else {
+                    val chk = getItemPositionId(tmpId)
+                    if(chk == -1) {
+                        uiScopeMain.launch {
+                            val mes = async(Dispatchers.IO) { messageViewModel.findMessage(tmpId) }
+                            val (m, p) = mes.await()
+                            if(m.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m.text != null -> m.text
+                                m.file != null -> m.voice //имя файла(костыль)
+                                m.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(p)
+                            }
+                        }
+                    } else {
+                        val m = getItem(chk)?.first
+                        uiScopeMain.launch {
+                            if(m?.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m?.text != null -> m.text
+                                m?.file != null -> m.voice //имя файла(костыль)
+                                m?.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(chk)
+                            }
+                        }
+                    }
+                }
+            }
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
                 val filePathTemp = async(Dispatchers.IO) {
@@ -797,7 +1026,51 @@ class MessageAdapter(
 
     inner class MessagesViewHolderFileReceiver(private val binding: ItemFileReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         private var filePath: String = ""
-        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) {
+                binding.answerLayout.root.visibility = View.VISIBLE
+                binding.answerLayout.answerUsername.text = message.usernameAuthorOriginal
+                val tmpId = message.referenceToMessageId
+                if(tmpId == null) {
+                    binding.answerLayout.answerMessage.text = "??????????"
+                } else {
+                    val chk = getItemPositionId(tmpId)
+                    if(chk == -1) {
+                        uiScopeMain.launch {
+                            val mes = async(Dispatchers.IO) { messageViewModel.findMessage(tmpId) }
+                            val (m, p) = mes.await()
+                            if(m.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m.text != null -> m.text
+                                m.file != null -> m.voice //имя файла(костыль)
+                                m.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(p)
+                            }
+                        }
+                    } else {
+                        val m = getItem(chk)?.first
+                        uiScopeMain.launch {
+                            if(m?.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m?.text != null -> m.text
+                                m?.file != null -> m.voice //имя файла(костыль)
+                                m?.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(chk)
+                            }
+                        }
+                    }
+                }
+            }
             uiScope.launch {
                 val filePathTemp = async(Dispatchers.IO) {
                     if (messageViewModel.fManagerIsExist(message.file!!)) {
@@ -889,7 +1162,51 @@ class MessageAdapter(
     inner class MessagesViewHolderFileSender(private val binding: ItemFileSenderBinding) : RecyclerView.ViewHolder(binding.root) {
 
         private var filePath: String = ""
-        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) {
+                binding.answerLayout.root.visibility = View.VISIBLE
+                binding.answerLayout.answerUsername.text = message.usernameAuthorOriginal
+                val tmpId = message.referenceToMessageId
+                if(tmpId == null) {
+                    binding.answerLayout.answerMessage.text = "??????????"
+                } else {
+                    val chk = getItemPositionId(tmpId)
+                    if(chk == -1) {
+                        uiScopeMain.launch {
+                            val mes = async(Dispatchers.IO) { messageViewModel.findMessage(tmpId) }
+                            val (m, p) = mes.await()
+                            if(m.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m.text != null -> m.text
+                                m.file != null -> m.voice //имя файла(костыль)
+                                m.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(p)
+                            }
+                        }
+                    } else {
+                        val m = getItem(chk)?.first
+                        uiScopeMain.launch {
+                            if(m?.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m?.text != null -> m.text
+                                m?.file != null -> m.voice //имя файла(костыль)
+                                m?.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(chk)
+                            }
+                        }
+                    }
+                }
+            }
             uiScope.launch {
                 val filePathTemp = async(Dispatchers.IO) {
                     if (messageViewModel.fManagerIsExist(message.file!!)) {
@@ -992,7 +1309,51 @@ class MessageAdapter(
     inner class MessagesViewHolderTextImageReceiver(private val binding: ItemTextImageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
 
         private var filePath: String = ""
-        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) {
+                binding.answerLayout.root.visibility = View.VISIBLE
+                binding.answerLayout.answerUsername.text = message.usernameAuthorOriginal
+                val tmpId = message.referenceToMessageId
+                if(tmpId == null) {
+                    binding.answerLayout.answerMessage.text = "??????????"
+                } else {
+                    val chk = getItemPositionId(tmpId)
+                    if(chk == -1) {
+                        uiScopeMain.launch {
+                            val mes = async(Dispatchers.IO) { messageViewModel.findMessage(tmpId) }
+                            val (m, p) = mes.await()
+                            if(m.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m.text != null -> m.text
+                                m.file != null -> m.voice //имя файла(костыль)
+                                m.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(p)
+                            }
+                        }
+                    } else {
+                        val m = getItem(chk)?.first
+                        uiScopeMain.launch {
+                            if(m?.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m?.text != null -> m.text
+                                m?.file != null -> m.voice //имя файла(костыль)
+                                m?.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(chk)
+                            }
+                        }
+                    }
+                }
+            }
             if(flagText) {
                 binding.messageReceiverTextView.visibility = View.VISIBLE
                 binding.messageReceiverTextView.text = message.text
@@ -1098,7 +1459,51 @@ class MessageAdapter(
     inner class MessagesViewHolderTextImageSender(private val binding: ItemTextImageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
 
         private var filePath: String = ""
-        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) {
+                binding.answerLayout.root.visibility = View.VISIBLE
+                binding.answerLayout.answerUsername.text = message.usernameAuthorOriginal
+                val tmpId = message.referenceToMessageId
+                if(tmpId == null) {
+                    binding.answerLayout.answerMessage.text = "??????????"
+                } else {
+                    val chk = getItemPositionId(tmpId)
+                    if(chk == -1) {
+                        uiScopeMain.launch {
+                            val mes = async(Dispatchers.IO) { messageViewModel.findMessage(tmpId) }
+                            val (m, p) = mes.await()
+                            if(m.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m.text != null -> m.text
+                                m.file != null -> m.voice //имя файла(костыль)
+                                m.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(p)
+                            }
+                        }
+                    } else {
+                        val m = getItem(chk)?.first
+                        uiScopeMain.launch {
+                            if(m?.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m?.text != null -> m.text
+                                m?.file != null -> m.voice //имя файла(костыль)
+                                m?.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(chk)
+                            }
+                        }
+                    }
+                }
+            }
             if(flagText) {
                 binding.messageSenderTextView.visibility = View.VISIBLE
                 binding.messageSenderTextView.text = message.text
@@ -1227,7 +1632,51 @@ class MessageAdapter(
             binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 2, true))
             binding.recyclerview.adapter = adapter
         }
-        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) {
+                binding.answerLayout.root.visibility = View.VISIBLE
+                binding.answerLayout.answerUsername.text = message.usernameAuthorOriginal
+                val tmpId = message.referenceToMessageId
+                if(tmpId == null) {
+                    binding.answerLayout.answerMessage.text = "??????????"
+                } else {
+                    val chk = getItemPositionId(tmpId)
+                    if(chk == -1) {
+                        uiScopeMain.launch {
+                            val mes = async(Dispatchers.IO) { messageViewModel.findMessage(tmpId) }
+                            val (m, p) = mes.await()
+                            if(m.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m.text != null -> m.text
+                                m.file != null -> m.voice //имя файла(костыль)
+                                m.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(p)
+                            }
+                        }
+                    } else {
+                        val m = getItem(chk)?.first
+                        uiScopeMain.launch {
+                            if(m?.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m?.text != null -> m.text
+                                m?.file != null -> m.voice //имя файла(костыль)
+                                m?.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(chk)
+                            }
+                        }
+                    }
+                }
+            }
             filePathsForClick = emptyList()
             mes = message
             if(flagText) {
@@ -1341,7 +1790,51 @@ class MessageAdapter(
             binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 2, true))
             binding.recyclerview.adapter = adapter
         }
-        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean) {
+        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) {
+                binding.answerLayout.root.visibility = View.VISIBLE
+                binding.answerLayout.answerUsername.text = message.usernameAuthorOriginal
+                val tmpId = message.referenceToMessageId
+                if(tmpId == null) {
+                    binding.answerLayout.answerMessage.text = "??????????"
+                } else {
+                    val chk = getItemPositionId(tmpId)
+                    if(chk == -1) {
+                        uiScopeMain.launch {
+                            val mes = async(Dispatchers.IO) { messageViewModel.findMessage(tmpId) }
+                            val (m, p) = mes.await()
+                            if(m.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m.text != null -> m.text
+                                m.file != null -> m.voice //имя файла(костыль)
+                                m.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(p)
+                            }
+                        }
+                    } else {
+                        val m = getItem(chk)?.first
+                        uiScopeMain.launch {
+                            if(m?.images != null) {
+                                imageSet(m.images!!.first(), binding.answerLayout.answerImageView)
+                            }
+                            binding.answerLayout.answerMessage.text = when {
+                                m?.text != null -> m.text
+                                m?.file != null -> m.voice //имя файла(костыль)
+                                m?.voice != null -> "Голосовое сообщение"
+                                else -> "?????????"
+                            }
+                            binding.answerLayout.root.setOnClickListener {
+                                messageViewModel.smartScrollToPosition(chk)
+                            }
+                        }
+                    }
+                }
+            }
             filePathsForClick = emptyList()
             mes = message
             if(flagText) {

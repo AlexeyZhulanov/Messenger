@@ -1,5 +1,6 @@
 package com.example.messenger
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
@@ -13,6 +14,8 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.map
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.Message
@@ -55,6 +58,8 @@ class MessageViewModel @Inject constructor(
     private var otherUserId: Int = -1
     private var isFirst = true
     private var disableRefresh: Boolean = false
+    @SuppressLint("StaticFieldLeak")
+    private lateinit var recyclerView: RecyclerView
 
     private val searchBy = MutableLiveData("")
 
@@ -91,6 +96,44 @@ class MessageViewModel @Inject constructor(
     fun setDialogInfo(dialogId: Int, otherUserId: Int) {
         this.dialogId = dialogId
         this.otherUserId = otherUserId
+    }
+    fun setRecyclerView(recyclerView: RecyclerView) {
+        this.recyclerView = recyclerView
+    }
+
+    private fun highlightItem(position: Int) {
+        (recyclerView.adapter as? MessageAdapter)?.highlightPosition(position)
+    }
+
+    fun smartScrollToPosition(targetPosition: Int) {
+        val currentPos = (recyclerView.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition()
+
+        if (currentPos >= targetPosition) {
+            // Целевая позиция уже на экране
+            recyclerView.scrollToPosition(targetPosition)
+            highlightItem(targetPosition)
+            return
+        }
+
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+
+                val lastVisiblePosition = (recyclerView.layoutManager as LinearLayoutManager).findLastVisibleItemPosition()
+
+                if (lastVisiblePosition >= targetPosition) {
+                    // Достигли целевой позиции, остановим скролл
+                    recyclerView.removeOnScrollListener(this)
+                    highlightItem(targetPosition)
+                } else {
+                    // Если не достигли целевой позиции, продолжаем скролл
+                    recyclerView.scrollToPosition(lastVisiblePosition + 1)
+                }
+            }
+        })
+
+        // Начинаем скролл
+        recyclerView.scrollToPosition(currentPos + 1)
     }
 
     fun fetchLastSession() {
@@ -160,6 +203,10 @@ class MessageViewModel @Inject constructor(
 
     suspend fun fManagerSaveFile(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
         fileManager.saveFile(fileName, fileData)
+    }
+
+    suspend fun findMessage(idMessage: Int): Pair<Message, Int> = withContext(Dispatchers.IO) {
+        return@withContext retrofitService.findMessage(idMessage)
     }
 
     fun formatMessageTime(timestamp: Long?): String {

@@ -58,6 +58,7 @@
             android:layout_height="wrap_content">
 
             <include
+                android:id="@+id/answer_layout"
                 layout="@layout/answer_layout"
                 android:visibility="gone"
                 app:layout_constraintStart_toStartOf="parent"
