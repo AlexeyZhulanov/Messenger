@@ -36,6 +36,7 @@ import com.example.messenger.databinding.FragmentMessageBinding
 import com.example.messenger.model.Dialog
 import com.example.messenger.model.FileNotFoundException
 import com.example.messenger.model.Message
+import com.example.messenger.model.User
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
@@ -66,7 +67,8 @@ import kotlin.coroutines.cancellation.CancellationException
 
 @AndroidEntryPoint
 class MessageFragment(
-    private val dialog: Dialog
+    private val dialog: Dialog,
+    private val currentUser: User
 ) : Fragment(), AudioRecordView.Callback {
     private lateinit var binding: FragmentMessageBinding
     private lateinit var adapter: MessageAdapter
@@ -418,18 +420,33 @@ class MessageFragment(
                     if(text.isNotEmpty()) {
                         if (list.isNotEmpty()) {
                             if(!answerFlag) viewModel.sendMessage(dialog.id, text, list, null, null, null, false, null)
-                            else viewModel.sendMessage(dialog.id, text, list, null, null, null, false, null)
+                            else {
+                                viewModel.sendMessage(dialog.id, text, list, null, null, answerMessage?.first, false, answerMessage?.second)
+                                disableAnswer()
+                            }
                         } else {
-                            viewModel.sendMessage(dialog.id, text, null, null, null, null, false, null)
+                            if(!answerFlag) viewModel.sendMessage(dialog.id, text, null, null, null, null, false, null)
+                            else {
+                                viewModel.sendMessage(dialog.id, text, null, null, null, answerMessage?.first, false, answerMessage?.second)
+                                disableAnswer()
+                            }
                         }
                     } else if (list.isNotEmpty()) {
-                        viewModel.sendMessage(dialog.id, null, list, null, null, null, false, null)
+                        if(!answerFlag) viewModel.sendMessage(dialog.id, null, list, null, null, null, false, null)
+                        else {
+                            viewModel.sendMessage(dialog.id, null, list, null, null, answerMessage?.first, false, answerMessage?.second)
+                            disableAnswer()
+                        }
                     }
                     else withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "Ошибка отправки изображений", Toast.LENGTH_SHORT).show() }
                     imageAdapter.clearImages()
                 } else {
                     if(text.isNotEmpty()) {
-                        viewModel.sendMessage(dialog.id, text, null, null, null, null, false, null)
+                        if(!answerFlag) viewModel.sendMessage(dialog.id, text, null, null, null, null, false, null)
+                        else {
+                            viewModel.sendMessage(dialog.id, text, null, null, null, answerMessage?.first, false, answerMessage?.second)
+                            disableAnswer()
+                        }
                     }
                 }
                 binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
@@ -475,7 +492,13 @@ class MessageFragment(
                 uiScope.launch {
                     withContext(Dispatchers.IO) {
                         val response = async(Dispatchers.IO) { viewModel.uploadAudio(fileOgg) }
-                        viewModel.sendMessage(dialog.id, null, null, response.await(), null, null, false, null)
+                        if(!answerFlag) viewModel.sendMessage(dialog.id, null, null, response.await(), null, null, false, null)
+                        else {
+                            viewModel.sendMessage(dialog.id, null, null, response.await(), null, answerMessage?.first, false, answerMessage?.second)
+                            withContext(Dispatchers.Main) {
+                                disableAnswer()
+                            }
+                        }
                         withContext(Dispatchers.Main) {
                             binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
                             viewModel.refresh()
@@ -520,7 +543,13 @@ class MessageFragment(
                 val response = async(Dispatchers.IO) { viewModel.uploadFile(file) }
                 withContext(Dispatchers.IO) {
                     // костыль чтобы отображалось корректное имя файла - кладу его в voice
-                    viewModel.sendMessage(dialog.id, null, null, file.name, response.await(), null, false, null)
+                    if(!answerFlag) viewModel.sendMessage(dialog.id, null, null, file.name, response.await(), null, false, null)
+                    else {
+                        viewModel.sendMessage(dialog.id, null, null, file.name, response.await(), answerMessage?.first, false, answerMessage?.second)
+                        withContext(Dispatchers.Main) {
+                            disableAnswer()
+                        }
+                    }
                 }
                 binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
                 viewModel.refresh()
@@ -582,7 +611,7 @@ class MessageFragment(
                     toolbarContainer.addView(alternateToolbar)
                     val backArrow: ImageView = requireView().findViewById(R.id.back_arrow)
                     backArrow.setOnClickListener {
-                        replaceFragment(MessageFragment(dialog))
+                        replaceFragment(MessageFragment(dialog, currentUser))
                     }
                     val icClear: ImageView = requireView().findViewById(R.id.ic_clear)
                     icClear.setOnClickListener {
@@ -774,10 +803,15 @@ class MessageFragment(
             }
                 R.id.item_answer -> {
                     answerFlag = true
-                    //answerMessage = Pair(message.id, message.) //todo вытащить ник обязательно
                     binding.layoutAnswer.visibility = View.VISIBLE
-                    if(isSender) binding.answerUsername.text = "Я" //todo можно заменить на ник(нужно его откуда-то взять)
-                    else binding.answerUsername.text = dialog.otherUser.username
+                    if(isSender) {
+                        binding.answerUsername.text = currentUser.username
+                        answerMessage = Pair(message.id, currentUser.username)
+                    }
+                    else {
+                        binding.answerUsername.text = dialog.otherUser.username
+                        answerMessage = Pair(message.id, dialog.otherUser.username)
+                    }
                     if(message.images != null) {
                         binding.answerImageView.visibility = View.VISIBLE
                         uiScope.launch {
@@ -803,6 +837,13 @@ class MessageFragment(
             }
         }
         popupMenu.show()
+    }
+
+    private fun disableAnswer() {
+        binding.answerUsername.text = ""
+        binding.answerImageView.visibility = View.GONE
+        binding.layoutAnswer.visibility = View.GONE
+        answerFlag = false
     }
 
     private fun replaceFragment(newFragment: Fragment) {

@@ -1,5 +1,7 @@
 package com.example.messenger.retrofit.source.users
 
+import com.example.messenger.model.User
+
 interface UsersSource {
     suspend fun register(name: String, username: String, password: String) : String
 
@@ -13,4 +15,5 @@ interface UsersSource {
 
     suspend fun getLastSession(userId: Int) : Long
 
+    suspend fun getUser(userId: Int) : User
 }

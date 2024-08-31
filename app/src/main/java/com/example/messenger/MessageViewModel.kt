@@ -268,14 +268,16 @@ class MessageViewModel @Inject constructor(
         if (first != null) {
             val file = File(first)
             if (file.exists()) {
-                val uri = Uri.fromFile(file)
-                imageView.visibility = View.VISIBLE
-                Glide.with(context)
-                    .load(uri)
-                    .centerCrop()
-                    .placeholder(R.color.app_color_f6)
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .into(imageView)
+                withContext(Dispatchers.Main) {
+                    val uri = Uri.fromFile(file)
+                    imageView.visibility = View.VISIBLE
+                    Glide.with(context)
+                        .load(uri)
+                        .centerCrop()
+                        .placeholder(R.color.app_color_f6)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .into(imageView)
+                }
             }
         }
     }
