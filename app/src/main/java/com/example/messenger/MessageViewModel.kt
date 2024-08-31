@@ -3,6 +3,7 @@ package com.example.messenger
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import androidx.lifecycle.LiveData
@@ -13,6 +14,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -38,6 +40,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import javax.inject.Inject
+import kotlin.math.abs
 
 @HiltViewModel
 class MessageViewModel @Inject constructor(
@@ -97,15 +100,26 @@ class MessageViewModel @Inject constructor(
     }
 
     private fun highlightItem(position: Int) {
-        (recyclerView.adapter as? MessageAdapter)?.highlightPosition(position)
+        val adapterWithLoadStates = recyclerView.adapter
+        if (adapterWithLoadStates is ConcatAdapter) {
+            // Найдите оригинальный MessageAdapter внутри ConcatAdapter
+            adapterWithLoadStates.adapters.forEach { adapter ->
+                if (adapter is MessageAdapter) {
+                    adapter.highlightPosition(position)
+                }
+            }
+        } else {
+            Log.e("highlightItem", "Adapter is not of type ConcatAdapter")
+        }
     }
 
     fun smartScrollToPosition(targetPosition: Int) {
+        recyclerView.clearOnScrollListeners()
         val currentPos = (recyclerView.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition()
 
         if (currentPos >= targetPosition) {
             // Целевая позиция уже на экране
-            recyclerView.scrollToPosition(targetPosition)
+            recyclerView.smoothScrollToPosition(targetPosition)
             highlightItem(targetPosition)
             return
         }
@@ -122,13 +136,18 @@ class MessageViewModel @Inject constructor(
                     highlightItem(targetPosition)
                 } else {
                     // Если не достигли целевой позиции, продолжаем скролл
-                    recyclerView.scrollToPosition(lastVisiblePosition + 1)
+                    recyclerView.smoothScrollToPosition(lastVisiblePosition + 1)
                 }
             }
         })
 
         // Начинаем скролл
-        recyclerView.scrollToPosition(currentPos + 1)
+        if(abs(targetPosition - currentPos) > 10)
+            recyclerView.smoothScrollToPosition(currentPos + 10)
+        else {
+            recyclerView.smoothScrollToPosition(targetPosition)
+            highlightItem(targetPosition)
+        }
     }
 
     fun fetchLastSession() {
