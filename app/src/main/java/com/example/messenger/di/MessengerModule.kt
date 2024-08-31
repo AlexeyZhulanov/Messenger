@@ -14,6 +14,7 @@ import com.example.messenger.room.dao.ConversationDao
 import com.example.messenger.room.dao.GroupMessageDao
 import com.example.messenger.room.dao.MessageDao
 import com.example.messenger.room.dao.SettingsDao
+import com.example.messenger.room.dao.UserDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -62,13 +63,20 @@ object MessengerModule {
 
     @Provides
     @Singleton
+    fun provideUserDao(appDatabase: AppDatabase): UserDao {
+        return appDatabase.getUserDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideMessengerService(
         settingsDao: SettingsDao,
         conversationDao: ConversationDao,
         messageDao: MessageDao,
-        groupMessageDao: GroupMessageDao
+        groupMessageDao: GroupMessageDao,
+        userDao: UserDao
     ): MessengerService {
-        return MessengerService(settingsDao, conversationDao, messageDao, groupMessageDao)
+        return MessengerService(settingsDao, conversationDao, messageDao, groupMessageDao, userDao)
     }
 
     @Provides

@@ -36,6 +36,11 @@ interface MessagesApi {
         @Query("size") pageSize: Int
         ) : List<Message>
 
+    @GET("message/{message_id}")
+    suspend fun findMessage(
+        @Path("message_id") messageId: Int
+    ) : Message
+
     @PUT("dialogs/{dialog_id}/key")
     suspend fun addKeyToDialog(
         @Path("dialog_id") dialogId: Int,

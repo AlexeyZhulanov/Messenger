@@ -1,5 +1,6 @@
 package com.example.messenger.retrofit.source.users
 
+import com.example.messenger.model.User
 import com.example.messenger.retrofit.api.UsersApi
 import com.example.messenger.retrofit.entities.users.LoginRequestEntity
 import com.example.messenger.retrofit.entities.users.RegisterRequestEntity
@@ -40,5 +41,9 @@ class RetrofitUsersSource(
 
     override suspend fun getLastSession(userId: Int): Long = wrapRetrofitExceptions {
         usersApi.getLastSession(userId).timestamp!!
+    }
+
+    override suspend fun getUser(userId: Int): User = wrapRetrofitExceptions {
+        usersApi.getUser(userId).toUser()
     }
 }

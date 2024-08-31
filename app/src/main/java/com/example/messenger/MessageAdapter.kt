@@ -3,6 +3,7 @@ package com.example.messenger
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.Rect
 import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
@@ -18,6 +19,7 @@ import androidx.core.view.isVisible
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewbinding.ViewBinding
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.messenger.databinding.ItemFileReceiverBinding
@@ -49,8 +51,8 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 interface MessageActionListener {
-    fun onMessageClick(message: Message, itemView: View)
-    fun onMessageClickImage(message: Message, itemView: View, localMedias: ArrayList<LocalMedia>)
+    fun onMessageClick(message: Message, itemView: View, isSender: Boolean)
+    fun onMessageClickImage(message: Message, itemView: View, localMedias: ArrayList<LocalMedia>, isSender: Boolean)
     fun onMessageLongClick(itemView: View)
     fun onImagesClick(images: ArrayList<LocalMedia>, position: Int)
 }
@@ -77,6 +79,7 @@ class MessageAdapter(
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
     private var checkedFiles: MutableMap<String, String> = mutableMapOf()
     lateinit var dialogSettings: ConversationSettings
+    private var highlightedPosition: Int? = null
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.IO + job)
     private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)
@@ -101,6 +104,11 @@ class MessageAdapter(
 
     private fun getItemPosition(message: Message): Int {
         val index = (0 until itemCount).firstOrNull { getItem(it)!!.first == message }
+        return index ?: -1
+    }
+
+    private fun getItemPositionId(idMessage: Int): Int {
+        val index = (0 until itemCount).firstOrNull { getItem(it)!!.first.id == idMessage }
         return index ?: -1
     }
 
@@ -257,23 +265,136 @@ class MessageAdapter(
         var flagText = false
         if(!message.text.isNullOrEmpty()) flagText = true
         val isInLast30 = position >= itemCount - 30
+        val isAnswer = message.referenceToMessageId != null
+        if (position == highlightedPosition) {
+            holder.itemView.setBackgroundColor(Color.YELLOW)
+            // Убираем подсветку через 1 секунду
+            holder.itemView.postDelayed({
+                holder.itemView.setBackgroundColor(Color.TRANSPARENT)
+            }, 1300)
+        } else {
+            holder.itemView.setBackgroundColor(Color.TRANSPARENT)
+        }
         when (holder) {
-            is MessagesViewHolderReceiver -> holder.bind(message, date, position)
-            is MessagesViewHolderSender -> holder.bind(message, date, position)
-            is MessagesViewHolderVoiceReceiver -> holder.bind(message, date, position, isInLast30)
-            is MessagesViewHolderVoiceSender -> holder.bind(message, date, position, isInLast30)
-            is MessagesViewHolderFileReceiver -> holder.bind(message, date, position, isInLast30)
-            is MessagesViewHolderFileSender -> holder.bind(message, date, position, isInLast30)
-            is MessagesViewHolderTextImageReceiver -> holder.bind(message, date, position, flagText, isInLast30)
-            is MessagesViewHolderTextImageSender -> holder.bind(message, date, position, flagText, isInLast30)
-            is MessagesViewHolderTextImagesReceiver -> holder.bind(message, date, position, flagText, isInLast30)
-            is MessagesViewHolderTextImagesSender -> holder.bind(message, date, position, flagText, isInLast30)
+            is MessagesViewHolderReceiver ->  {
+                holder.bind(message, date, position, isAnswer)
+                if (!isAnswer) holder.clearAnswerLayout()
+            }
+            is MessagesViewHolderSender -> {
+                holder.bind(message, date, position, isAnswer)
+                if (!isAnswer) holder.clearAnswerLayout()
+            }
+            is MessagesViewHolderVoiceReceiver -> {
+                holder.bind(message, date, position, isInLast30, isAnswer)
+                if (!isAnswer) holder.clearAnswerLayout()
+            }
+            is MessagesViewHolderVoiceSender -> {
+                holder.bind(message, date, position, isInLast30, isAnswer)
+                if (!isAnswer) holder.clearAnswerLayout()
+            }
+            is MessagesViewHolderFileReceiver -> {
+                holder.bind(message, date, position, isInLast30, isAnswer)
+                if (!isAnswer) holder.clearAnswerLayout()
+            }
+            is MessagesViewHolderFileSender -> {
+                holder.bind(message, date, position, isInLast30, isAnswer)
+                if (!isAnswer) holder.clearAnswerLayout()
+            }
+            is MessagesViewHolderTextImageReceiver -> {
+                holder.bind(message, date, position, flagText, isInLast30, isAnswer)
+                if (!isAnswer) holder.clearAnswerLayout()
+            }
+            is MessagesViewHolderTextImageSender -> {
+                holder.bind(message, date, position, flagText, isInLast30, isAnswer)
+                if (!isAnswer) holder.clearAnswerLayout()
+            }
+            is MessagesViewHolderTextImagesReceiver -> {
+                holder.bind(message, date, position, flagText, isInLast30, isAnswer)
+                if (!isAnswer) holder.clearAnswerLayout()
+            }
+            is MessagesViewHolderTextImagesSender -> {
+                holder.bind(message, date, position, flagText, isInLast30, isAnswer)
+                if (!isAnswer) holder.clearAnswerLayout()
+            }
+        }
+    }
+
+    fun highlightPosition(position: Int) {
+        highlightedPosition = position
+        notifyItemChanged(position)
+    }
+
+    private inline fun <reified T : ViewBinding> handleAnswerLayout(binder: T, message: Message) {
+        // choose viewHolder type
+        val binding = when(binder) {
+            is ItemMessageReceiverBinding -> binder.answerLayout
+            is ItemMessageSenderBinding -> binder.answerLayout
+            is ItemVoiceReceiverBinding -> binder.answerLayout
+            is ItemVoiceSenderBinding -> binder.answerLayout
+            is ItemFileReceiverBinding -> binder.answerLayout
+            is ItemFileSenderBinding -> binder.answerLayout
+            is ItemTextImageReceiverBinding -> binder.answerLayout
+            is ItemTextImageSenderBinding -> binder.answerLayout
+            is ItemTextImagesReceiverBinding -> binder.answerLayout
+            is ItemTextImagesSenderBinding -> binder.answerLayout
+            else -> throw IllegalArgumentException("Unknown binding type")
+        }
+        binding.root.visibility = View.VISIBLE
+        binding.answerUsername.text = message.usernameAuthorOriginal
+        val tmpId = message.referenceToMessageId
+        if(tmpId == null) {
+            binding.answerMessage.text = "??????????"
+        } else {
+            val chk = getItemPositionId(tmpId)
+            if(chk == -1) {
+                uiScopeMain.launch {
+                    val mes = async(Dispatchers.IO) { messageViewModel.findMessage(tmpId) }
+                    val (m, p) = mes.await()
+                    if(m.images != null) {
+                        messageViewModel.imageSet(m.images!!.first(), binding.answerImageView, context)
+                    }
+                    binding.answerMessage.text = when {
+                        m.text != null -> m.text
+                        m.images != null -> "Фотография"
+                        m.file != null -> m.voice //имя файла(костыль)
+                        m.voice != null -> "Голосовое сообщение"
+                        else -> "?????????"
+                    }
+                    binding.root.setOnClickListener {
+                        messageViewModel.smartScrollToPosition(p)
+                    }
+                }
+            } else {
+                val m = getItem(chk)?.first
+                uiScopeMain.launch {
+                    if(m?.images != null) {
+                        messageViewModel.imageSet(m.images!!.first(), binding.answerImageView, context)
+                    }
+                    binding.answerMessage.text = when {
+                        m?.text != null -> m.text
+                        m?.images != null -> "Фотография"
+                        m?.file != null -> m.voice //имя файла(костыль)
+                        m?.voice != null -> "Голосовое сообщение"
+                        else -> "?????????"
+                    }
+                    binding.root.setOnClickListener {
+                        messageViewModel.smartScrollToPosition(chk)
+                    }
+                }
+            }
         }
     }
 
     // ViewHolder для текстовых сообщений получателя
     inner class MessagesViewHolderReceiver(private val binding: ItemMessageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message, date: String, position: Int) {
+        fun clearAnswerLayout() {
+            binding.answerLayout.root.visibility = View.GONE
+            binding.answerLayout.answerMessage.text = ""
+            binding.answerLayout.answerUsername.text = ""
+            binding.answerLayout.answerImageView.setImageDrawable(null)
+        }
+        fun bind(message: Message, date: String, position: Int, isAnswer: Boolean) {
+            if(isAnswer) handleAnswerLayout(binding, message)
             binding.messageReceiverTextView.text = message.text
             val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
@@ -301,7 +422,7 @@ class MessageAdapter(
                     savePosition(message)
                 }
                 else
-                    actionListener.onMessageClick(message, itemView)
+                    actionListener.onMessageClick(message, itemView, false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
@@ -315,7 +436,14 @@ class MessageAdapter(
 
     // ViewHolder для текстовых сообщений отправителя
     inner class MessagesViewHolderSender(private val binding: ItemMessageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(message: Message, date: String, position: Int) {
+        fun clearAnswerLayout() {
+            binding.answerLayout.root.visibility = View.GONE
+            binding.answerLayout.answerMessage.text = ""
+            binding.answerLayout.answerUsername.text = ""
+            binding.answerLayout.answerImageView.setImageDrawable(null)
+        }
+        fun bind(message: Message, date: String, position: Int, isAnswer: Boolean) {
+            if(isAnswer) handleAnswerLayout(binding, message)
             binding.messageSenderTextView.text = message.text
             val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
@@ -343,7 +471,7 @@ class MessageAdapter(
                     savePosition(message)
                 }
                 else
-                    actionListener.onMessageClick(message, itemView)
+                    actionListener.onMessageClick(message, itemView, true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
@@ -545,7 +673,14 @@ class MessageAdapter(
         private var filePath: String = ""
         private var isPlaying: Boolean = false
         private val handler = Handler(Looper.getMainLooper())
-        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean) {
+        fun clearAnswerLayout() {
+            binding.answerLayout.root.visibility = View.GONE
+            binding.answerLayout.answerMessage.text = ""
+            binding.answerLayout.answerUsername.text = ""
+            binding.answerLayout.answerImageView.setImageDrawable(null)
+        }
+        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) handleAnswerLayout(binding, message)
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
                 val filePathTemp = async(Dispatchers.IO) {
@@ -652,7 +787,7 @@ class MessageAdapter(
                     savePositionFile(message, File(filePath).name, "audio")
                 }
                 else
-                    actionListener.onMessageClick(message, itemView)
+                    actionListener.onMessageClick(message, itemView, false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
@@ -669,7 +804,14 @@ class MessageAdapter(
         private var filePath: String = ""
         private var isPlaying: Boolean = false
         private val handler = Handler(Looper.getMainLooper())
-        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean) {
+        fun clearAnswerLayout() {
+            binding.answerLayout.root.visibility = View.GONE
+            binding.answerLayout.answerMessage.text = ""
+            binding.answerLayout.answerUsername.text = ""
+            binding.answerLayout.answerImageView.setImageDrawable(null)
+        }
+        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) handleAnswerLayout(binding, message)
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
                 val filePathTemp = async(Dispatchers.IO) {
@@ -776,7 +918,7 @@ class MessageAdapter(
                     savePositionFile(message, File(filePath).name, "audio")
                 }
                 else
-                    actionListener.onMessageClick(message, itemView)
+                    actionListener.onMessageClick(message, itemView, true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
@@ -797,7 +939,14 @@ class MessageAdapter(
 
     inner class MessagesViewHolderFileReceiver(private val binding: ItemFileReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         private var filePath: String = ""
-        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean) {
+        fun clearAnswerLayout() {
+            binding.answerLayout.root.visibility = View.GONE
+            binding.answerLayout.answerMessage.text = ""
+            binding.answerLayout.answerUsername.text = ""
+            binding.answerLayout.answerImageView.setImageDrawable(null)
+        }
+        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) handleAnswerLayout(binding, message)
             uiScope.launch {
                 val filePathTemp = async(Dispatchers.IO) {
                     if (messageViewModel.fManagerIsExist(message.file!!)) {
@@ -874,7 +1023,7 @@ class MessageAdapter(
                     savePositionFile(message, File(filePath).name, "files")
                 }
                 else
-                    actionListener.onMessageClick(message, itemView)
+                    actionListener.onMessageClick(message, itemView, false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
@@ -889,7 +1038,14 @@ class MessageAdapter(
     inner class MessagesViewHolderFileSender(private val binding: ItemFileSenderBinding) : RecyclerView.ViewHolder(binding.root) {
 
         private var filePath: String = ""
-        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean) {
+        fun clearAnswerLayout() {
+            binding.answerLayout.root.visibility = View.GONE
+            binding.answerLayout.answerMessage.text = ""
+            binding.answerLayout.answerUsername.text = ""
+            binding.answerLayout.answerImageView.setImageDrawable(null)
+        }
+        fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) handleAnswerLayout(binding, message)
             uiScope.launch {
                 val filePathTemp = async(Dispatchers.IO) {
                     if (messageViewModel.fManagerIsExist(message.file!!)) {
@@ -966,7 +1122,7 @@ class MessageAdapter(
                     savePositionFile(message, File(filePath).name, "files")
                 }
                 else
-                    actionListener.onMessageClick(message, itemView)
+                    actionListener.onMessageClick(message, itemView, true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
@@ -992,7 +1148,14 @@ class MessageAdapter(
     inner class MessagesViewHolderTextImageReceiver(private val binding: ItemTextImageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
 
         private var filePath: String = ""
-        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean) {
+        fun clearAnswerLayout() {
+            binding.answerLayout.root.visibility = View.GONE
+            binding.answerLayout.answerMessage.text = ""
+            binding.answerLayout.answerUsername.text = ""
+            binding.answerLayout.answerImageView.setImageDrawable(null)
+        }
+        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) handleAnswerLayout(binding, message)
             if(flagText) {
                 binding.messageReceiverTextView.visibility = View.VISIBLE
                 binding.messageReceiverTextView.text = message.text
@@ -1001,7 +1164,7 @@ class MessageAdapter(
             }
 
             uiScope.launch {
-                binding.progressBar.visibility = View.VISIBLE
+                withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
                 val filePathTemp = async(Dispatchers.IO) {
                     if (messageViewModel.fManagerIsExist(message.images!!.first())) {
                         return@async Pair(messageViewModel.fManagerGetFilePath(message.images!!.first()), true)
@@ -1083,7 +1246,7 @@ class MessageAdapter(
                     savePositionFile(message, File(filePath).name, "photos")
                 }
                 else
-                    actionListener.onMessageClickImage(message, itemView, arrayListOf(fileToLocalMedia(File(filePath))))
+                    actionListener.onMessageClickImage(message, itemView, arrayListOf(fileToLocalMedia(File(filePath))), false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
@@ -1098,7 +1261,14 @@ class MessageAdapter(
     inner class MessagesViewHolderTextImageSender(private val binding: ItemTextImageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
 
         private var filePath: String = ""
-        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean) {
+        fun clearAnswerLayout() {
+            binding.answerLayout.root.visibility = View.GONE
+            binding.answerLayout.answerMessage.text = ""
+            binding.answerLayout.answerUsername.text = ""
+            binding.answerLayout.answerImageView.setImageDrawable(null)
+        }
+        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) handleAnswerLayout(binding, message)
             if(flagText) {
                 binding.messageSenderTextView.visibility = View.VISIBLE
                 binding.messageSenderTextView.text = message.text
@@ -1106,7 +1276,7 @@ class MessageAdapter(
                 binding.messageSenderTextView.visibility = View.GONE
             }
             uiScope.launch {
-                binding.progressBar.visibility = View.VISIBLE
+                withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
                 val filePathTemp = async(Dispatchers.IO) {
                     if (messageViewModel.fManagerIsExist(message.images!!.first())) {
                         return@async Pair(messageViewModel.fManagerGetFilePath(message.images!!.first()), true)
@@ -1191,7 +1361,7 @@ class MessageAdapter(
                     savePositionFile(message, File(filePath).name, "photos")
                 }
                 else
-                    actionListener.onMessageClickImage(message, itemView, arrayListOf(fileToLocalMedia(File(filePath))))
+                    actionListener.onMessageClickImage(message, itemView, arrayListOf(fileToLocalMedia(File(filePath))), true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
@@ -1227,7 +1397,14 @@ class MessageAdapter(
             binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 2, true))
             binding.recyclerview.adapter = adapter
         }
-        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean) {
+        fun clearAnswerLayout() {
+            binding.answerLayout.root.visibility = View.GONE
+            binding.answerLayout.answerMessage.text = ""
+            binding.answerLayout.answerUsername.text = ""
+            binding.answerLayout.answerImageView.setImageDrawable(null)
+        }
+        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) handleAnswerLayout(binding, message)
             filePathsForClick = emptyList()
             mes = message
             if(flagText) {
@@ -1304,7 +1481,7 @@ class MessageAdapter(
                 }
                 else {
                     val medias: ArrayList<LocalMedia> = filePathsForClick.map { fileToLocalMedia(File(it)) } as ArrayList<LocalMedia>
-                    actionListener.onMessageClickImage(message, itemView, medias)
+                    actionListener.onMessageClickImage(message, itemView, medias, false)
                 }
             }
             binding.root.setOnLongClickListener {
@@ -1341,7 +1518,14 @@ class MessageAdapter(
             binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 2, true))
             binding.recyclerview.adapter = adapter
         }
-        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean) {
+        fun clearAnswerLayout() {
+            binding.answerLayout.root.visibility = View.GONE
+            binding.answerLayout.answerMessage.text = ""
+            binding.answerLayout.answerUsername.text = ""
+            binding.answerLayout.answerImageView.setImageDrawable(null)
+        }
+        fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
+            if(isAnswer) handleAnswerLayout(binding, message)
             filePathsForClick = emptyList()
             mes = message
             if(flagText) {
@@ -1420,7 +1604,7 @@ class MessageAdapter(
                 }
                 else {
                     val medias: ArrayList<LocalMedia> = filePathsForClick.map { fileToLocalMedia(File(it)) } as ArrayList<LocalMedia>
-                    actionListener.onMessageClickImage(message, itemView, medias)
+                    actionListener.onMessageClickImage(message, itemView, medias, true)
                 }
             }
             binding.root.setOnLongClickListener {

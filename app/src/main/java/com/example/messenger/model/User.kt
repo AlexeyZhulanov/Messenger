@@ -4,7 +4,7 @@ data class User(
     val id: Int,
     val name: String,
     val username: String,
-    val avatar: String? = "default",
+    val avatar: String? = null,
     val lastSession: Long? = 0
 )
 

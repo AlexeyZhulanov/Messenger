@@ -28,6 +28,7 @@ import com.example.messenger.databinding.FragmentMessengerBinding
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.model.User
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +44,7 @@ class MessengerFragment : Fragment() {
     private lateinit var binding: FragmentMessengerBinding
     private lateinit var adapter: MessengerAdapter
     private lateinit var preferences: SharedPreferences
+    private lateinit var currentUser: User
     private var updateJob: Job? = null
     private val job = Job()
     private var uiScope = CoroutineScope(Dispatchers.Main + job)
@@ -100,6 +102,9 @@ class MessengerFragment : Fragment() {
         messengerViewModel.conversations.observe(viewLifecycleOwner) { conversations ->
             adapter.conversations = conversations
         }
+        messengerViewModel.currentUser.observe(viewLifecycleOwner) { user ->
+            currentUser = user
+        }
     }
 
     private fun setupRecyclerView() {
@@ -108,13 +113,13 @@ class MessengerFragment : Fragment() {
                 when (conversation.type) {
                     "dialog" -> {
                         parentFragmentManager.beginTransaction()
-                            .replace(R.id.fragmentContainer, MessageFragment(conversation.toDialog()), "MESSAGE_FRAGMENT_TAG")
+                            .replace(R.id.fragmentContainer, MessageFragment(conversation.toDialog(), currentUser), "MESSAGE_FRAGMENT_TAG")
                             .addToBackStack(null)
                             .commit()
                     }
                     "group" -> {
                         parentFragmentManager.beginTransaction()
-                            .replace(R.id.fragmentContainer, GroupFragment(conversation.toGroup()), "GROUP_FRAGMENT_TAG")
+                            .replace(R.id.fragmentContainer, GroupFragment(conversation.toGroup(), currentUser), "GROUP_FRAGMENT_TAG")
                             .addToBackStack(null)
                             .commit()
                     }

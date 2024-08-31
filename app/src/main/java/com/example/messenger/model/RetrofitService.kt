@@ -169,6 +169,20 @@ class RetrofitService(
         return@withContext time
     }
 
+    override suspend fun getUser(userId: Int): User = withContext(Dispatchers.IO) {
+        val user = try {
+            usersSource.getUser(userId)
+        } catch (e: BackendException) {
+            if (e.code == 404) {
+                throw UserNotFoundException(e)
+            } else {
+                throw e
+            }
+        }
+        Log.d("testGetUser", user.toString())
+        return@withContext user
+    }
+
     override suspend fun createDialog(name: String): Boolean = withContext(Dispatchers.IO) {
         val message = try {
             messagesSource.createDialog(name)
@@ -213,6 +227,20 @@ class RetrofitService(
         }
         Log.d("testGetMessages", messages.toString())
         return@withContext messages
+    }
+
+    override suspend fun findMessage(idMessage: Int): Pair<Message, Int> = withContext(Dispatchers.IO) {
+        val message = try {
+            messagesSource.findMessage(idMessage)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw MessageNotFoundException(e)
+                403 -> throw NoPermissionException(e)
+                else -> throw e
+            }
+        }
+        Log.d("testFindMessage", message.toString())
+        return@withContext message
     }
 
     override suspend fun addKeyToDialog(dialogId: Int, key: String): Boolean = withContext(Dispatchers.IO) {

@@ -4,10 +4,12 @@ import com.example.messenger.room.dao.ConversationDao
 import com.example.messenger.room.dao.GroupMessageDao
 import com.example.messenger.room.dao.MessageDao
 import com.example.messenger.room.dao.SettingsDao
+import com.example.messenger.room.dao.UserDao
 import com.example.messenger.room.entities.ConversationDbEntity
 import com.example.messenger.room.entities.GroupMessageDbEntity
 import com.example.messenger.room.entities.MessageDbEntity
 import com.example.messenger.room.entities.SettingsDbEntity
+import com.example.messenger.room.entities.UserDbEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -16,7 +18,8 @@ class MessengerService(
     private val settingsDao: SettingsDao,
     private val conversationDao: ConversationDao,
     private val messageDao: MessageDao,
-    private val groupMessageDao: GroupMessageDao
+    private val groupMessageDao: GroupMessageDao,
+    private val userDao: UserDao
 ) : MessengerRepository {
     private var settings = Settings(0)
     override suspend fun getSettings(): Settings = withContext(Dispatchers.IO) {
@@ -85,5 +88,13 @@ class MessengerService(
             }
         }.toSet()
         fileManager.cleanupUnusedFiles(usedFiles)
+    }
+
+    override suspend fun getUser(): User = withContext(Dispatchers.IO) {
+        return@withContext userDao.getUser().toUser()
+    }
+
+    override suspend fun updateUser(user: User) = withContext(Dispatchers.IO) {
+        userDao.updateUser(UserDbEntity.fromUserInput(user))
     }
 }

@@ -1,5 +1,6 @@
 package com.example.messenger
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -7,9 +8,11 @@ import androidx.lifecycle.viewModelScope
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.model.User
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.net.UnknownHostException
 import javax.inject.Inject
 
@@ -21,9 +24,32 @@ class MessengerViewModel @Inject constructor(
 
     private val _conversations = MutableLiveData<List<Conversation>>()
     val conversations: LiveData<List<Conversation>> = _conversations
+    private val _currentUser = MutableLiveData<User>()
+    val currentUser: LiveData<User> = _currentUser
 
     init {
+        fetchCurrentUser()
         fetchConversations()
+    }
+
+    private fun fetchCurrentUser() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                var initialUser: User? = null
+                try {
+                    val initUser = messengerService.getUser()
+                    _currentUser.postValue(initUser)
+                    initialUser = initUser
+                } catch (e: Exception) {Log.e("Can't take user in db", e.toString())}
+                val user = retrofitService.getUser(0)
+                _currentUser.postValue(user)
+                if(user.username != initialUser?.username || user.avatar != initialUser.avatar) {
+                    messengerService.updateUser(user)
+                }
+            } catch (e: Exception) {
+                // skip
+            }
+        }
     }
 
     private fun fetchConversations() {

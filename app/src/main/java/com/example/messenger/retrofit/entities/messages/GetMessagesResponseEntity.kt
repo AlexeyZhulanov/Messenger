@@ -19,7 +19,8 @@ data class Message(
     @Json(name = "is_edited") var isEdited: Boolean,
     @Json(name = "is_forwarded") var isForwarded: Boolean,
     @Json(name = "reference_to_message_id") var referenceToMessageId: Int? = null,
-    @Json(name = "username_author_original") var usernameAuthorOriginal: String? = null
+    @Json(name = "username_author_original") var usernameAuthorOriginal: String? = null,
+    var position: Int? = null
 ) {
     fun toMessage(): com.example.messenger.model.Message  {
         val longTimestamp = parseTimestampToLong(timestamp)

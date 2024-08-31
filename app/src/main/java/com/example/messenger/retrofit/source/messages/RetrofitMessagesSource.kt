@@ -38,6 +38,11 @@ class RetrofitMessagesSource(
         response.map { it.toMessage() }
     }
 
+    override suspend fun findMessage(idMessage: Int): Pair<Message, Int> = wrapRetrofitExceptions {
+        val response = messagesApi.findMessage(idMessage)
+        Pair(response.toMessage(), response.position ?: -1)
+    }
+
     override suspend fun addKeyToDialog(dialogId: Int, key: String): String = wrapRetrofitExceptions {
         val addKeyToDialogRequestEntity = AddKeyToDialogRequestEntity(key = key)
         messagesApi.addKeyToDialog(dialogId, addKeyToDialogRequestEntity).message
