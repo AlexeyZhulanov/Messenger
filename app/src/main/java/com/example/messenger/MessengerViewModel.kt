@@ -1,5 +1,6 @@
 package com.example.messenger
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -34,8 +35,17 @@ class MessengerViewModel @Inject constructor(
     private fun fetchCurrentUser() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                var initialUser: User? = null
+                try {
+                    val initUser = messengerService.getUser()
+                    _currentUser.postValue(initUser)
+                    initialUser = initUser
+                } catch (e: Exception) {Log.e("Can't take user in db", e.toString())}
                 val user = retrofitService.getUser(0)
                 _currentUser.postValue(user)
+                if(user.username != initialUser?.username || user.avatar != initialUser.avatar) {
+                    messengerService.updateUser(user)
+                }
             } catch (e: Exception) {
                 // skip
             }

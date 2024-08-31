@@ -272,6 +272,8 @@ class MessageAdapter(
             holder.itemView.postDelayed({
                 holder.itemView.setBackgroundColor(Color.TRANSPARENT)
             }, 1300)
+        } else {
+            holder.itemView.setBackgroundColor(Color.TRANSPARENT)
         }
         when (holder) {
             is MessagesViewHolderReceiver ->  {

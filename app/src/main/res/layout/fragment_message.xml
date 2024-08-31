@@ -71,8 +71,8 @@
         android:orientation="horizontal"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        tools:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/layout_enter"
+        tools:visibility="visible"
+        app:layout_constraintBottom_toTopOf="@id/layout_answer"
         tools:listitem="@layout/item_image"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
