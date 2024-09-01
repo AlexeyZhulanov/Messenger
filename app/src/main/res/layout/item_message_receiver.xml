@@ -32,7 +32,7 @@
         android:id="@+id/checkbox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:button="@drawable/ic_trash_basic"
+        android:button="@drawable/ic_flag"
         style="@style/CustomCheckBox"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/layout_message"
@@ -58,11 +58,24 @@
             android:layout_height="wrap_content">
 
             <include
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
                 android:id="@+id/answer_layout"
                 layout="@layout/answer_layout"
                 android:visibility="gone"
                 app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/messageReceiverTextView"
                 app:layout_constraintTop_toTopOf="parent" />
+
+            <include
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
+                android:id="@+id/forward_layout"
+                layout="@layout/forward_layout"
+                android:visibility="gone"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/messageReceiverTextView" />
 
             <TextView
                 android:id="@+id/messageReceiverTextView"
@@ -75,7 +88,6 @@
                 android:layout_marginEnd="6dp"
                 android:maxWidth="270dp"
                 app:layout_constraintHorizontal_bias="0.1"
-                app:layout_constraintTop_toBottomOf="@id/answer_layout"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@id/editTextView"
                 app:layout_constraintStart_toStartOf="parent" />
