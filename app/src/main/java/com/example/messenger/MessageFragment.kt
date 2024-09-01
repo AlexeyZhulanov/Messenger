@@ -198,6 +198,7 @@ class MessageFragment(
                     uiScope.launch {
                         viewModel.stopRefresh()
                         binding.floatingActionButtonDelete.visibility = View.VISIBLE
+                        binding.floatingActionButtonForward.visibility = View.VISIBLE
                         val dialogSettings = async(Dispatchers.IO) { viewModel.getDialogSettings(dialog.id) }
                         adapter.dialogSettings = dialogSettings.await()
                     requireActivity().onBackPressedDispatcher.addCallback(
@@ -208,6 +209,7 @@ class MessageFragment(
                                 if (!adapter.canLongClick) {
                                     adapter.clearPositions()
                                     binding.floatingActionButtonDelete.visibility = View.GONE
+                                    binding.floatingActionButtonForward.visibility = View.GONE
                                 } else {
                                     //Removing this callback
                                     remove()
@@ -236,7 +238,10 @@ class MessageFragment(
                             }
                         }
                     }
-                }
+                        binding.floatingActionButtonForward.setOnClickListener {
+
+                        }
+                    }
                 }
                 override fun onImagesClick(images: ArrayList<LocalMedia>, position: Int) {
                     Log.d("testClickImages", "images: $images")

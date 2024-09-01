@@ -32,7 +32,7 @@
         android:id="@+id/checkbox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:button="@drawable/ic_trash_basic"
+        android:button="@drawable/ic_flag"
         style="@style/CustomCheckBox"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@id/layout_message"
@@ -60,6 +60,17 @@
             <include
                 android:id="@+id/answer_layout"
                 layout="@layout/answer_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:layout_marginBottom="5dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/play_button" />
+
+            <include
+                android:id="@+id/forward_layout"
+                layout="@layout/forward_layout"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:visibility="gone"

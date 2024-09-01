@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/forward_layout"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/ps_select_complete_normal_bg"
+    android:minWidth="170dp">
+
+    <TextView
+        android:id="@+id/forwardText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Forwarded from"
+        android:textColor="?attr/colorAccent"
+        android:fontFamily="casual"
+        android:textSize="14sp"
+        android:textStyle="bold|italic"
+        android:layout_marginTop="3dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <TextView
+        android:id="@+id/forwardUsername"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:text="Алексей"
+        android:textColor="?attr/colorPrimary"
+        android:fontFamily="casual"
+        android:textSize="14sp"
+        android:textStyle="bold|italic"
+        android:layout_marginTop="3dp"
+        android:layout_marginStart="10dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toEndOf="@id/forwardText"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

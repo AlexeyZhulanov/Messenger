@@ -56,6 +56,7 @@
         app:layout_constraintBottom_toTopOf="@id/layout_enter"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.1"
         android:src="@drawable/ic_trash"
         app:tint="?attr/colorPrimary"
         android:backgroundTint="?attr/colorAccent"
@@ -63,6 +64,22 @@
         android:visibility="gone"
         />
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/floatingActionButtonForward"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        android:layout_marginBottom="10dp"
+        app:layout_constraintBottom_toTopOf="@id/layout_enter"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.9"
+        android:src="@drawable/ic_forward_floating"
+        app:tint="?attr/colorPrimary"
+        android:backgroundTint="?attr/colorAccent"
+        app:borderWidth="0dp"
+        android:visibility="gone"
+        />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/selected_photos_recycler_view"
