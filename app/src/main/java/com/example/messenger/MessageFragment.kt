@@ -239,7 +239,14 @@ class MessageFragment(
                         }
                     }
                         binding.floatingActionButtonForward.setOnClickListener {
-
+                         val fMessages = adapter.getForwardList()
+                         if(fMessages.isNotEmpty()) {
+                             val bundle = Bundle().apply {
+                                 putParcelableArrayList("forwardedMessages", ArrayList(fMessages))
+                             }
+                             parentFragmentManager.setFragmentResult("forwardMessagesRequestKey", bundle)
+                             requireActivity().onBackPressedDispatcher.onBackPressed()
+                         }
                         }
                     }
                 }

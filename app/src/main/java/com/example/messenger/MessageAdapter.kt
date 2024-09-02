@@ -77,6 +77,7 @@ class MessageAdapter(
 
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
+    private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
     private var checkedFiles: MutableMap<String, String> = mutableMapOf()
     lateinit var dialogSettings: ConversationSettings
     private var highlightedPosition: Int? = null
@@ -93,6 +94,18 @@ class MessageAdapter(
             }
         }
         return Pair(list, checkedFiles)
+    }
+
+    // todo mapForwarded
+    fun getForwardList(): List<Message> {
+        val list = mutableListOf<Message>()
+        checkedPositions.forEach {
+            val message = getItem(it)?.first
+            if(message != null) {
+                list.add(message)
+            }
+        }
+        return list
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -112,62 +125,68 @@ class MessageAdapter(
         return index ?: -1
     }
 
-    private fun savePosition(message: Message) {
+    private fun savePosition(message: Message, isSender: Boolean) {
         val position = getItemPosition(message)
         if (position in checkedPositions) {
             checkedPositions.remove(position)
+            mapPositions.remove(position)
         } else {
             checkedPositions.add(position)
+            mapPositions[position] = isSender
         }
         notifyItemChanged(position)
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    private fun onLongClick(message: Message) {
+    private fun onLongClick(message: Message, isSender: Boolean) {
         if(canLongClick) {
-            savePosition(message)
+            savePosition(message, isSender)
             canLongClick = false
             notifyDataSetChanged()
         }
     }
 
-    private fun savePositionFile(message: Message, filePath: String, fileType: String) {
+    private fun savePositionFile(message: Message, filePath: String, fileType: String, isSender: Boolean) {
         val position = getItemPosition(message)
         if (position in checkedPositions) {
             checkedPositions.remove(position)
             checkedFiles.remove(filePath)
+            mapPositions.remove(position)
         } else {
             checkedPositions.add(position)
             checkedFiles[filePath] = fileType
+            mapPositions[position] = isSender
         }
         notifyItemChanged(position)
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    private fun onLongClickFile(message: Message, filePath: String, fileType: String) {
+    private fun onLongClickFile(message: Message, filePath: String, fileType: String, isSender: Boolean) {
         if (canLongClick) {
-            savePositionFile(message, filePath, fileType)
+            savePositionFile(message, filePath, fileType, isSender)
             canLongClick = false
             notifyDataSetChanged()
         }
     }
 
-    private fun savePositionFiles(message: Message, filePaths: Map<String, String>) {
+    private fun savePositionFiles(message: Message, filePaths: Map<String, String>, isSender: Boolean) {
         val position = getItemPosition(message)
         if (position in checkedPositions) {
             checkedPositions.remove(position)
+            mapPositions.remove(position)
             filePaths.forEach { checkedFiles.remove(it.key) }
         } else {
             checkedPositions.add(position)
+            mapPositions[position] = isSender
             filePaths.forEach { checkedFiles[it.key] = it.value }
         }
         notifyItemChanged(position)
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    private fun onLongClickFiles(message: Message, filePaths: Map<String, String>) {
+    private fun onLongClickFiles(message: Message, filePaths: Map<String, String>, isSender: Boolean) {
         if (canLongClick) {
-            savePositionFiles(message, filePaths)
+            savePositionFiles(message, filePaths, isSender)
             canLongClick = false
             notifyDataSetChanged()
         }
@@ -395,6 +414,7 @@ class MessageAdapter(
         }
         fun bind(message: Message, date: String, position: Int, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
+            if(message.isForwarded) // todo
             binding.messageReceiverTextView.text = message.text
             val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
@@ -408,7 +428,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message)
+                    savePosition(message, false)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -419,14 +439,14 @@ class MessageAdapter(
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message)
+                    savePosition(message, false)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message)
+                    onLongClick(message, false)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -457,7 +477,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message)
+                    savePosition(message, true)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -468,14 +488,14 @@ class MessageAdapter(
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message)
+                    savePosition(message, true)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message)
+                    onLongClick(message, true)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -773,7 +793,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFile(message, File(filePath).name, "audio")
+                    savePositionFile(message, File(filePath).name, "audio", false)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -784,14 +804,14 @@ class MessageAdapter(
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFile(message, File(filePath).name, "audio")
+                    savePositionFile(message, File(filePath).name, "audio", false)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFile(message, File(filePath).name, "audio")
+                    onLongClickFile(message, File(filePath).name, "audio", false)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -904,7 +924,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFile(message, File(filePath).name, "audio")
+                    savePositionFile(message, File(filePath).name, "audio", true)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -915,14 +935,14 @@ class MessageAdapter(
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFile(message, File(filePath).name, "audio")
+                    savePositionFile(message, File(filePath).name, "audio", true)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFile(message, File(filePath).name, "audio")
+                    onLongClickFile(message, File(filePath).name, "audio", true)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1009,7 +1029,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFile(message, File(filePath).name, "files")
+                    savePositionFile(message, File(filePath).name, "files", false)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1020,14 +1040,14 @@ class MessageAdapter(
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFile(message, File(filePath).name, "files")
+                    savePositionFile(message, File(filePath).name, "files", false)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFile(message, File(filePath).name, "files")
+                    onLongClickFile(message, File(filePath).name, "files", false)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1108,7 +1128,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFile(message, File(filePath).name, "files")
+                    savePositionFile(message, File(filePath).name, "files", true)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1119,14 +1139,14 @@ class MessageAdapter(
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFile(message, File(filePath).name, "files")
+                    savePositionFile(message, File(filePath).name, "files", true)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFile(message, File(filePath).name, "files")
+                    onLongClickFile(message, File(filePath).name, "files", true)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1232,7 +1252,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFile(message, File(filePath).name, "photos")
+                    savePositionFile(message, File(filePath).name, "photos", false)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1243,14 +1263,14 @@ class MessageAdapter(
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFile(message, File(filePath).name, "photos")
+                    savePositionFile(message, File(filePath).name, "photos", false)
                 }
                 else
                     actionListener.onMessageClickImage(message, itemView, arrayListOf(fileToLocalMedia(File(filePath))), false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFile(message, File(filePath).name, "photos")
+                    onLongClickFile(message, File(filePath).name, "photos", false)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1347,7 +1367,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFile(message, File(filePath).name, "photos")
+                    savePositionFile(message, File(filePath).name, "photos", true)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1358,14 +1378,14 @@ class MessageAdapter(
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFile(message, File(filePath).name, "photos")
+                    savePositionFile(message, File(filePath).name, "photos", true)
                 }
                 else
                     actionListener.onMessageClickImage(message, itemView, arrayListOf(fileToLocalMedia(File(filePath))), true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFile(message, File(filePath).name, "photos")
+                    onLongClickFile(message, File(filePath).name, "photos", true)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1384,7 +1404,7 @@ class MessageAdapter(
 
             override fun onLongImageClicked(images: ArrayList<LocalMedia>, position: Int) {
                 if(canLongClick) {
-                    onLongClickFiles(mes, filePaths)
+                    onLongClickFiles(mes, filePaths, false)
                     actionListener.onMessageLongClick(itemView)
                 }
             }
@@ -1466,7 +1486,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFiles(message, filePaths)
+                    savePositionFiles(message, filePaths, false)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1477,7 +1497,7 @@ class MessageAdapter(
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFiles(message, filePaths)
+                    savePositionFiles(message, filePaths, false)
                 }
                 else {
                     val medias: ArrayList<LocalMedia> = filePathsForClick.map { fileToLocalMedia(File(it)) } as ArrayList<LocalMedia>
@@ -1486,7 +1506,7 @@ class MessageAdapter(
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFiles(message, filePaths)
+                    onLongClickFiles(message, filePaths, false)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1505,7 +1525,7 @@ class MessageAdapter(
 
             override fun onLongImageClicked(images: ArrayList<LocalMedia>, position: Int) {
                 if(canLongClick) {
-                    onLongClickFiles(mes, filePaths)
+                    onLongClickFiles(mes, filePaths, true)
                     actionListener.onMessageLongClick(itemView)
                 }
             }
@@ -1589,7 +1609,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFiles(message, filePaths)
+                    savePositionFiles(message, filePaths, true)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1600,7 +1620,7 @@ class MessageAdapter(
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFiles(message, filePaths)
+                    savePositionFiles(message, filePaths, true)
                 }
                 else {
                     val medias: ArrayList<LocalMedia> = filePathsForClick.map { fileToLocalMedia(File(it)) } as ArrayList<LocalMedia>
@@ -1609,7 +1629,7 @@ class MessageAdapter(
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFiles(message, filePaths)
+                    onLongClickFiles(message, filePaths, true)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true

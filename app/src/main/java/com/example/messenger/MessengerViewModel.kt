@@ -1,11 +1,13 @@
 package com.example.messenger
 
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.messenger.model.Conversation
+import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.User
@@ -47,7 +49,7 @@ class MessengerViewModel @Inject constructor(
                     messengerService.updateUser(user)
                 }
             } catch (e: Exception) {
-                // skip
+                // todo Toast error
             }
         }
     }
@@ -89,5 +91,21 @@ class MessengerViewModel @Inject constructor(
                 _conversations.postValue(retrofitService.getConversations())
             }
         }
+    }
+
+    fun forwardMessages(list: List<Message>?, id: Int) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                list?.forEach {
+                    forwardMessage(id, it.text, it.images, it.voice, it.file, it.referenceToMessageId, it.usernameAuthorOriginal)
+                }
+            }
+        }
+    }
+
+    private suspend fun forwardMessage(idDialog: Int, text: String?, images: List<String>?,
+                            voice: String?, file: String?, referenceToMessageId: Int?,
+                            usernameAuthorOriginal: String?) = withContext(Dispatchers.IO) {
+        retrofitService.sendMessage(idDialog, text, images, voice, file, referenceToMessageId, true, usernameAuthorOriginal)
     }
 }

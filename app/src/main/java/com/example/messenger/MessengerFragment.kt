@@ -3,6 +3,7 @@ package com.example.messenger
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 import android.os.Bundle
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
@@ -26,6 +27,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.messenger.databinding.FragmentMessengerBinding
 import com.example.messenger.model.Conversation
+import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.User
@@ -37,6 +39,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.net.UnknownHostException
 
 @AndroidEntryPoint
@@ -45,6 +48,8 @@ class MessengerFragment : Fragment() {
     private lateinit var adapter: MessengerAdapter
     private lateinit var preferences: SharedPreferences
     private lateinit var currentUser: User
+    private var forwardFlag: Boolean = false
+    private var forwardMessages: List<Message>? = null
     private var updateJob: Job? = null
     private val job = Job()
     private var uiScope = CoroutineScope(Dispatchers.Main + job)
@@ -52,6 +57,16 @@ class MessengerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        parentFragmentManager.setFragmentResultListener("forwardMessagesRequestKey", viewLifecycleOwner) { requestKey, bundle ->
+            val messages: ArrayList<Message>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                bundle.getParcelableArrayList("forwardedMessages", Message::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                bundle.getParcelableArrayList("forwardedMessages")
+            }
+            forwardMessages = messages
+            forwardFlag = true
+        }
         val toolbar: Toolbar = view.findViewById(R.id.toolbar)
         (activity as AppCompatActivity).setSupportActionBar(toolbar)
         (activity as AppCompatActivity).supportActionBar?.setDisplayShowTitleEnabled(false)
@@ -112,16 +127,31 @@ class MessengerFragment : Fragment() {
             override fun onConversationClicked(conversation: Conversation, index: Int) {
                 when (conversation.type) {
                     "dialog" -> {
-                        parentFragmentManager.beginTransaction()
-                            .replace(R.id.fragmentContainer, MessageFragment(conversation.toDialog(), currentUser), "MESSAGE_FRAGMENT_TAG")
-                            .addToBackStack(null)
-                            .commit()
+                        if (!forwardFlag) {
+                            parentFragmentManager.beginTransaction()
+                                .replace(R.id.fragmentContainer, MessageFragment(conversation.toDialog(), currentUser), "MESSAGE_FRAGMENT_TAG")
+                                .addToBackStack(null)
+                                .commit()
+                        } else {
+                            if(forwardMessages != null) {
+                                val list = forwardMessages
+                                messengerViewModel.forwardMessages(list, conversation.toDialog().id)
+                            }
+                        }
                     }
                     "group" -> {
-                        parentFragmentManager.beginTransaction()
-                            .replace(R.id.fragmentContainer, GroupFragment(conversation.toGroup(), currentUser), "GROUP_FRAGMENT_TAG")
-                            .addToBackStack(null)
-                            .commit()
+                        if (!forwardFlag) {
+                            parentFragmentManager.beginTransaction()
+                                .replace(R.id.fragmentContainer, GroupFragment(conversation.toGroup(), currentUser), "GROUP_FRAGMENT_TAG")
+                                .addToBackStack(null)
+                                .commit()
+                        } else {
+                            if(forwardMessages != null) {
+                                val list = forwardMessages
+                                //messengerViewModel.forwardMessages(list, conversation.toGroup().id)
+                                // todo forward Group Messages
+                            }
+                        }
                     }
                     else -> {
                         Toast.makeText(requireContext(), "Unknown conversation type", Toast.LENGTH_SHORT).show()
