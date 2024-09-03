@@ -240,9 +240,17 @@ class MessageFragment(
                     }
                         binding.floatingActionButtonForward.setOnClickListener {
                          val fMessages = adapter.getForwardList()
+                            fMessages.sortedBy { it.first.timestamp }
+                            val (messages, booleans) = fMessages.unzip()
                          if(fMessages.isNotEmpty()) {
+                             val strings = mutableListOf<String>()
+                             booleans.forEach {
+                                 if(it) strings.add(currentUser.username)
+                                 else strings.add(dialog.otherUser.username)
+                             }
                              val bundle = Bundle().apply {
-                                 putParcelableArrayList("forwardedMessages", ArrayList(fMessages))
+                                 putParcelableArrayList("forwardedMessages", ArrayList(messages))
+                                 putStringArrayList("forwardedUsernames", ArrayList(strings))
                              }
                              parentFragmentManager.setFragmentResult("forwardMessagesRequestKey", bundle)
                              requireActivity().onBackPressedDispatcher.onBackPressed()

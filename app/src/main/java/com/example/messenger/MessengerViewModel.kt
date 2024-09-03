@@ -93,11 +93,17 @@ class MessengerViewModel @Inject constructor(
         }
     }
 
-    fun forwardMessages(list: List<Message>?, id: Int) {
+    fun forwardMessages(list: List<Message>?, usernames: List<String>?, id: Int) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                list?.forEach {
-                    forwardMessage(id, it.text, it.images, it.voice, it.file, it.referenceToMessageId, it.usernameAuthorOriginal)
+                list?.forEachIndexed { index, message ->
+                    if(message.usernameAuthorOriginal == null) {
+                        forwardMessage(id, message.text, message.images, message.voice, message.file,
+                            message.referenceToMessageId, usernames?.get(index))
+                    } else {
+                        forwardMessage(id, message.text, message.images, message.voice, message.file,
+                            message.referenceToMessageId, message.usernameAuthorOriginal)
+                    }
                 }
             }
         }

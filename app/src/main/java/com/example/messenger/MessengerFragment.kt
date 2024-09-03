@@ -50,6 +50,7 @@ class MessengerFragment : Fragment() {
     private lateinit var currentUser: User
     private var forwardFlag: Boolean = false
     private var forwardMessages: List<Message>? = null
+    private var forwardUsernames: List<String>? = null
     private var updateJob: Job? = null
     private val job = Job()
     private var uiScope = CoroutineScope(Dispatchers.Main + job)
@@ -64,7 +65,9 @@ class MessengerFragment : Fragment() {
                 @Suppress("DEPRECATION")
                 bundle.getParcelableArrayList("forwardedMessages")
             }
+            val usernames: ArrayList<String>? = bundle.getStringArrayList("forwardedUsernames")
             forwardMessages = messages
+            forwardUsernames = usernames
             forwardFlag = true
         }
         val toolbar: Toolbar = view.findViewById(R.id.toolbar)
@@ -135,7 +138,8 @@ class MessengerFragment : Fragment() {
                         } else {
                             if(forwardMessages != null) {
                                 val list = forwardMessages
-                                messengerViewModel.forwardMessages(list, conversation.toDialog().id)
+                                val list2 = forwardUsernames
+                                messengerViewModel.forwardMessages(list, list2, conversation.toDialog().id)
                             }
                         }
                     }

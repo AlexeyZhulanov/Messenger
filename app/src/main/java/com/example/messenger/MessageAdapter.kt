@@ -96,13 +96,12 @@ class MessageAdapter(
         return Pair(list, checkedFiles)
     }
 
-    // todo mapForwarded
-    fun getForwardList(): List<Message> {
-        val list = mutableListOf<Message>()
+    fun getForwardList(): List<Pair<Message, Boolean>> {
+        val list = mutableListOf<Pair<Message, Boolean>>()
         checkedPositions.forEach {
             val message = getItem(it)?.first
             if(message != null) {
-                list.add(message)
+                list.add(Pair(message, mapPositions[it] ?: true))
             }
         }
         return list
@@ -411,10 +410,15 @@ class MessageAdapter(
             binding.answerLayout.answerMessage.text = ""
             binding.answerLayout.answerUsername.text = ""
             binding.answerLayout.answerImageView.setImageDrawable(null)
+            binding.forwardLayout.root.visibility = View.GONE
+            binding.forwardLayout.forwardUsername.text = ""
         }
         fun bind(message: Message, date: String, position: Int, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
-            if(message.isForwarded) // todo
+            if(message.isForwarded) {
+                binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
+            }
             binding.messageReceiverTextView.text = message.text
             val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
@@ -461,9 +465,15 @@ class MessageAdapter(
             binding.answerLayout.answerMessage.text = ""
             binding.answerLayout.answerUsername.text = ""
             binding.answerLayout.answerImageView.setImageDrawable(null)
+            binding.forwardLayout.root.visibility = View.GONE
+            binding.forwardLayout.forwardUsername.text = ""
         }
         fun bind(message: Message, date: String, position: Int, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
+            if(message.isForwarded) {
+                binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
+            }
             binding.messageSenderTextView.text = message.text
             val time = messageViewModel.formatMessageTime(message.timestamp)
             if(date != "") {
@@ -698,9 +708,15 @@ class MessageAdapter(
             binding.answerLayout.answerMessage.text = ""
             binding.answerLayout.answerUsername.text = ""
             binding.answerLayout.answerImageView.setImageDrawable(null)
+            binding.forwardLayout.root.visibility = View.GONE
+            binding.forwardLayout.forwardUsername.text = ""
         }
         fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
+            if(message.isForwarded) {
+                binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
+            }
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
                 val filePathTemp = async(Dispatchers.IO) {
@@ -829,9 +845,15 @@ class MessageAdapter(
             binding.answerLayout.answerMessage.text = ""
             binding.answerLayout.answerUsername.text = ""
             binding.answerLayout.answerImageView.setImageDrawable(null)
+            binding.forwardLayout.root.visibility = View.GONE
+            binding.forwardLayout.forwardUsername.text = ""
         }
         fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
+            if(message.isForwarded) {
+                binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
+            }
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
                 val filePathTemp = async(Dispatchers.IO) {
@@ -964,9 +986,15 @@ class MessageAdapter(
             binding.answerLayout.answerMessage.text = ""
             binding.answerLayout.answerUsername.text = ""
             binding.answerLayout.answerImageView.setImageDrawable(null)
+            binding.forwardLayout.root.visibility = View.GONE
+            binding.forwardLayout.forwardUsername.text = ""
         }
         fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
+            if(message.isForwarded) {
+                binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
+            }
             uiScope.launch {
                 val filePathTemp = async(Dispatchers.IO) {
                     if (messageViewModel.fManagerIsExist(message.file!!)) {
@@ -1063,9 +1091,15 @@ class MessageAdapter(
             binding.answerLayout.answerMessage.text = ""
             binding.answerLayout.answerUsername.text = ""
             binding.answerLayout.answerImageView.setImageDrawable(null)
+            binding.forwardLayout.root.visibility = View.GONE
+            binding.forwardLayout.forwardUsername.text = ""
         }
         fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
+            if(message.isForwarded) {
+                binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
+            }
             uiScope.launch {
                 val filePathTemp = async(Dispatchers.IO) {
                     if (messageViewModel.fManagerIsExist(message.file!!)) {
@@ -1173,9 +1207,15 @@ class MessageAdapter(
             binding.answerLayout.answerMessage.text = ""
             binding.answerLayout.answerUsername.text = ""
             binding.answerLayout.answerImageView.setImageDrawable(null)
+            binding.forwardLayout.root.visibility = View.GONE
+            binding.forwardLayout.forwardUsername.text = ""
         }
         fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
+            if(message.isForwarded) {
+                binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
+            }
             if(flagText) {
                 binding.messageReceiverTextView.visibility = View.VISIBLE
                 binding.messageReceiverTextView.text = message.text
@@ -1286,9 +1326,15 @@ class MessageAdapter(
             binding.answerLayout.answerMessage.text = ""
             binding.answerLayout.answerUsername.text = ""
             binding.answerLayout.answerImageView.setImageDrawable(null)
+            binding.forwardLayout.root.visibility = View.GONE
+            binding.forwardLayout.forwardUsername.text = ""
         }
         fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
+            if(message.isForwarded) {
+                binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
+            }
             if(flagText) {
                 binding.messageSenderTextView.visibility = View.VISIBLE
                 binding.messageSenderTextView.text = message.text
@@ -1422,9 +1468,15 @@ class MessageAdapter(
             binding.answerLayout.answerMessage.text = ""
             binding.answerLayout.answerUsername.text = ""
             binding.answerLayout.answerImageView.setImageDrawable(null)
+            binding.forwardLayout.root.visibility = View.GONE
+            binding.forwardLayout.forwardUsername.text = ""
         }
         fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
+            if(message.isForwarded) {
+                binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
+            }
             filePathsForClick = emptyList()
             mes = message
             if(flagText) {
@@ -1543,9 +1595,15 @@ class MessageAdapter(
             binding.answerLayout.answerMessage.text = ""
             binding.answerLayout.answerUsername.text = ""
             binding.answerLayout.answerImageView.setImageDrawable(null)
+            binding.forwardLayout.root.visibility = View.GONE
+            binding.forwardLayout.forwardUsername.text = ""
         }
         fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
+            if(message.isForwarded) {
+                binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
+            }
             filePathsForClick = emptyList()
             mes = message
             if(flagText) {
