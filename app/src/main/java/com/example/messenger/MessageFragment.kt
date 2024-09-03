@@ -195,6 +195,7 @@ class MessageFragment(
                 }
 
                 override fun onMessageLongClick(itemView: View) {
+                    var flag = true
                     uiScope.launch {
                         viewModel.stopRefresh()
                         binding.floatingActionButtonDelete.visibility = View.VISIBLE
@@ -206,7 +207,7 @@ class MessageFragment(
                         object : OnBackPressedCallback(true) {
                             @SuppressLint("NotifyDataSetChanged")
                             override fun handleOnBackPressed() {
-                                if (!adapter.canLongClick) {
+                                if (!adapter.canLongClick && flag) {
                                     adapter.clearPositions()
                                     binding.floatingActionButtonDelete.visibility = View.GONE
                                     binding.floatingActionButtonForward.visibility = View.GONE
@@ -239,7 +240,24 @@ class MessageFragment(
                         }
                     }
                         binding.floatingActionButtonForward.setOnClickListener {
-
+                            flag = false
+                            val fMessages = adapter.getForwardList()
+                            fMessages.sortedBy { it.first.timestamp }
+                            val (messages, booleans) = fMessages.unzip()
+                         if(fMessages.isNotEmpty()) {
+                             Log.d("testForwardItems", fMessages.toString())
+                             val strings = mutableListOf<String>()
+                             booleans.forEach {
+                                 if(it) strings.add(currentUser.username)
+                                 else strings.add(dialog.otherUser.username)
+                             }
+                             val bundle = Bundle().apply {
+                                 putParcelableArrayList("forwardedMessages", ArrayList(messages))
+                                 putStringArrayList("forwardedUsernames", ArrayList(strings))
+                             }
+                             parentFragmentManager.setFragmentResult("forwardMessagesRequestKey", bundle)
+                             requireActivity().onBackPressedDispatcher.onBackPressed()
+                         }
                         }
                     }
                 }
@@ -532,7 +550,6 @@ class MessageFragment(
 
     override fun onDestroyView() {
         viewModel.stopRefresh()
-        binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterDataObserver)
         super.onDestroyView()
     }
 

@@ -1,5 +1,9 @@
 package com.example.messenger.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
+@Parcelize
 data class Message(
     val id: Int,
     val idSender: Int,
@@ -13,7 +17,7 @@ data class Message(
     var referenceToMessageId: Int? = null,
     var isForwarded: Boolean,
     var usernameAuthorOriginal: String? = null
-)
+) : Parcelable
 
 data class LastMessage(
     val text: String? = null,

@@ -18,7 +18,7 @@ interface MessengerRepository {
 
     suspend fun replaceGroupMessages(idGroup: Int, groupMessages: List<GroupMessage>, fileManager: FileManager)
 
-    suspend fun getUser(): User
+    suspend fun getUser(): User?
 
     suspend fun updateUser(user: User)
 }

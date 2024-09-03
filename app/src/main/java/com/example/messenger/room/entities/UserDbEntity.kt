@@ -12,17 +12,17 @@ import com.example.messenger.model.User
     ]
 )
 data class UserDbEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int,
+    @PrimaryKey(autoGenerate = true) val id: Int = 1,
     val name: String,
     val username: String,
     val avatar: String? = null
 ) {
     fun toUser() : User = User(
-        id = id, name = name, username = username, avatar = avatar
+        id = 1, name = name, username = username, avatar = avatar
     )
 
     companion object {
         fun fromUserInput(user: User) : UserDbEntity = UserDbEntity(
-            id = user.id, name = user.name, username = user.username, avatar = user.avatar)
+            id = 1, name = user.name, username = user.username, avatar = user.avatar)
     }
 }

@@ -225,7 +225,13 @@ class RetrofitService(
                 else -> throw e
             }
         }
-        Log.d("testGetMessages", messages.toString())
+        val largeMessage = messages.toString()
+        val maxLogSize = 1000
+        for (i in 0..largeMessage.length / maxLogSize) {
+            val start = i * maxLogSize
+            val end = ((i + 1) * maxLogSize).coerceAtMost(largeMessage.length)
+            Log.d("testGetMessages", largeMessage.substring(start, end))
+        }
         return@withContext messages
     }
 

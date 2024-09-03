@@ -90,11 +90,16 @@ class MessengerService(
         fileManager.cleanupUnusedFiles(usedFiles)
     }
 
-    override suspend fun getUser(): User = withContext(Dispatchers.IO) {
-        return@withContext userDao.getUser().toUser()
+    override suspend fun getUser(): User? = withContext(Dispatchers.IO) {
+        return@withContext userDao.getUser()?.toUser()
     }
 
     override suspend fun updateUser(user: User) = withContext(Dispatchers.IO) {
-        userDao.updateUser(UserDbEntity.fromUserInput(user))
+        val existingUser = userDao.getUser()
+        if(existingUser != null) {
+            userDao.updateUser(UserDbEntity.fromUserInput(user))
+        } else {
+            userDao.insertUser(UserDbEntity.fromUserInput(user))
+        }
     }
 }
