@@ -136,6 +136,7 @@ class MessengerFragment : Fragment() {
                                 .addToBackStack(null)
                                 .commit()
                         } else {
+                            forwardFlag = false
                             if(forwardMessages != null) {
                                 val list = forwardMessages
                                 val list2 = forwardUsernames
@@ -150,6 +151,7 @@ class MessengerFragment : Fragment() {
                                 .addToBackStack(null)
                                 .commit()
                         } else {
+                            forwardFlag = false
                             if(forwardMessages != null) {
                                 val list = forwardMessages
                                 //messengerViewModel.forwardMessages(list, conversation.toGroup().id)

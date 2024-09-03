@@ -40,12 +40,17 @@ class MessengerViewModel @Inject constructor(
                 var initialUser: User? = null
                 try {
                     val initUser = messengerService.getUser()
-                    _currentUser.postValue(initUser)
-                    initialUser = initUser
+                    Log.d("testInitUser", initUser.toString())
+                    if(initUser != null) {
+                        _currentUser.postValue(initUser!!)
+                        initialUser = initUser
+                    }
                 } catch (e: Exception) {Log.e("Can't take user in db", e.toString())}
                 val user = retrofitService.getUser(0)
                 _currentUser.postValue(user)
-                if(user.username != initialUser?.username || user.avatar != initialUser.avatar) {
+                if(user.username != initialUser?.username || user.avatar != initialUser.avatar ||
+                    initialUser == null) {
+                    Log.d("testUpdateCurUser", user.toString())
                     messengerService.updateUser(user)
                 }
             } catch (e: Exception) {
