@@ -20,11 +20,18 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.messenger.model.ConversationSettings
+import com.example.messenger.model.DeletedMessagesEvent
+import com.example.messenger.model.DialogCreatedEvent
+import com.example.messenger.model.DialogDeletedEvent
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessagePagingSource
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.model.TypingEvent
+import com.example.messenger.model.UserSessionUpdatedEvent
+import com.example.messenger.model.WebSocketListenerInterface
+import com.example.messenger.model.WebSocketService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -46,8 +53,9 @@ import kotlin.math.abs
 class MessageViewModel @Inject constructor(
     private val messengerService: MessengerService,
     private val retrofitService: RetrofitService,
-    private val fileManager: FileManager
-) : ViewModel() {
+    private val fileManager: FileManager,
+    private val webSocketService: WebSocketService
+) : ViewModel(), WebSocketListenerInterface {
 
     private val _lastSessionString = MutableLiveData<String>()
     val lastSessionString: LiveData<String> get() = _lastSessionString
@@ -83,6 +91,7 @@ class MessageViewModel @Inject constructor(
     }
 
     init {
+        webSocketService.setListener(this)
         viewModelScope.launch {
             while (true) {
                 delay(30000)
@@ -301,4 +310,35 @@ class MessageViewModel @Inject constructor(
         }
     }
 
+    override fun onNewMessage(message: Message) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onEditedMessage(message: Message) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onMessagesDeleted(deletedMessagesEvent: DeletedMessagesEvent) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onDialogCreated(dialogCreatedEvent: DialogCreatedEvent) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onDialogDeleted(dialogDeletedEvent: DialogDeletedEvent) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onUserSessionUpdated(userSessionUpdatedEvent: UserSessionUpdatedEvent) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onStartTyping(typingEvent: TypingEvent) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onStopTyping(typingEvent: TypingEvent) {
+        TODO("Not yet implemented")
+    }
 }
