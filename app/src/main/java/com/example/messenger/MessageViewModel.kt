@@ -23,10 +23,12 @@ import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.DeletedMessagesEvent
 import com.example.messenger.model.DialogCreatedEvent
 import com.example.messenger.model.DialogDeletedEvent
+import com.example.messenger.model.DialogMessagesAllDeleted
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessagePagingSource
 import com.example.messenger.model.MessengerService
+import com.example.messenger.model.ReadMessagesEvent
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.TypingEvent
 import com.example.messenger.model.UserSessionUpdatedEvent
@@ -42,6 +44,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -91,6 +94,7 @@ class MessageViewModel @Inject constructor(
     }
 
     init {
+        webSocketService.connect()
         webSocketService.setListener(this)
         viewModelScope.launch {
             while (true) {
@@ -103,6 +107,7 @@ class MessageViewModel @Inject constructor(
     fun setDialogInfo(dialogId: Int, otherUserId: Int) {
         this.dialogId = dialogId
         this.otherUserId = otherUserId
+        joinDialog()
     }
     fun setRecyclerView(recyclerView: RecyclerView) {
         this.recyclerView = recyclerView
@@ -111,7 +116,7 @@ class MessageViewModel @Inject constructor(
     private fun highlightItem(position: Int) {
         val adapterWithLoadStates = recyclerView.adapter
         if (adapterWithLoadStates is ConcatAdapter) {
-            // Найдите оригинальный MessageAdapter внутри ConcatAdapter
+            // Ищем оригинальный MessageAdapter внутри ConcatAdapter(без load states)
             adapterWithLoadStates.adapters.forEach { adapter ->
                 if (adapter is MessageAdapter) {
                     adapter.highlightPosition(position)
@@ -310,35 +315,61 @@ class MessageViewModel @Inject constructor(
         }
     }
 
+    private fun joinDialog() {
+        val joinData = JSONObject()
+        joinData.put("dialog_id", dialogId)
+        Log.d("testJoinSocket", dialogId.toString())
+        webSocketService.send("join_dialog", joinData.toString())
+    }
+
+    private fun leaveDialog() {
+        val leaveData = JSONObject()
+        leaveData.put("dialog_id", dialogId)
+        webSocketService.send("leave_dialog", leaveData.toString())
+    }
+
     override fun onNewMessage(message: Message) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessage", "New Message: $message")
     }
 
     override fun onEditedMessage(message: Message) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessage", "Edited Message: $message")
     }
 
     override fun onMessagesDeleted(deletedMessagesEvent: DeletedMessagesEvent) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessage", "Deleted messages")
     }
 
     override fun onDialogCreated(dialogCreatedEvent: DialogCreatedEvent) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessage", "Dialog created")
     }
 
     override fun onDialogDeleted(dialogDeletedEvent: DialogDeletedEvent) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessage", "Dialog deleted")
     }
 
     override fun onUserSessionUpdated(userSessionUpdatedEvent: UserSessionUpdatedEvent) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessage", "Session updated")
     }
 
     override fun onStartTyping(typingEvent: TypingEvent) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessage", "Typing started")
     }
 
     override fun onStopTyping(typingEvent: TypingEvent) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessage", "Typing stopped")
+    }
+
+    override fun onMessagesRead(readMessagesEvent: ReadMessagesEvent) {
+        Log.d("testSocketsMessage", "Messages read")
+    }
+
+    override fun onAllMessagesDeleted(dialogMessagesAllDeleted: DialogMessagesAllDeleted) {
+        Log.d("testSocketsMessage", "All messages deleted")
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        leaveDialog()
     }
 }

@@ -3,6 +3,7 @@ package com.example.messenger.model
 import android.util.Log
 import com.example.messenger.model.appsettings.AppSettings
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.adapter
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.WebSocket
@@ -15,6 +16,8 @@ interface WebSocketListenerInterface {
     fun onNewMessage(message: Message)
     fun onEditedMessage(message: Message)
     fun onMessagesDeleted(deletedMessagesEvent: DeletedMessagesEvent)
+    fun onMessagesRead(readMessagesEvent: ReadMessagesEvent)
+    fun onAllMessagesDeleted(dialogMessagesAllDeleted: DialogMessagesAllDeleted)
     fun onDialogCreated(dialogCreatedEvent: DialogCreatedEvent)
     fun onDialogDeleted(dialogDeletedEvent: DialogDeletedEvent)
     fun onUserSessionUpdated(userSessionUpdatedEvent: UserSessionUpdatedEvent)
@@ -26,7 +29,7 @@ class WebSocketService @Inject constructor(
     private val appSettings: AppSettings
 ) {
     private lateinit var webSocket: WebSocket
-    private val BASE_URL = "https://amessenger.ru"
+    private val BASE_URL = "wss://amessenger.ru"
     private var listener: WebSocketListenerInterface? = null
 
     fun setListener(listener: WebSocketListenerInterface) {
@@ -44,11 +47,12 @@ class WebSocketService @Inject constructor(
         val listener = object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: okhttp3.Response) {
                 super.onOpen(webSocket, response)
-                // здесь можно вызвать join_dialog на сервере
+                Log.d("testWebSocket", "Connected successfully")
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
                 super.onMessage(webSocket, text)
+                Log.d("testWebSocket", "Received message: $text")
                 handleIncomingMessage(text)
             }
 
@@ -62,7 +66,7 @@ class WebSocketService @Inject constructor(
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: okhttp3.Response?) {
-                Log.e("SocketFailure", t.message ?: "Error")
+                Log.d("testWebSocket", t.message ?: "Error")
             }
         }
 
@@ -71,16 +75,24 @@ class WebSocketService @Inject constructor(
 
     fun disconnect() {
         webSocket.close(1000, "Closing connection")
-        // здесь можно вызвать leave_dialog на сервере
+    }
+
+    fun send(event: String, data: Any) {
+        val jsonObject = JSONObject()
+        jsonObject.put("event", event)
+        jsonObject.put("data", data)
+        webSocket.send(jsonObject.toString())
     }
 
     private fun handleIncomingMessage(message: String) {
+        Log.d("IncomingMessage", "Works")
         val moshi = Moshi.Builder().build()
 
         val json = JSONObject(message)
 
         when (json.getString("event")) {
             "new_message" -> {
+                Log.d("testNewMessage", "OK")
                 val messageAdapter = moshi.adapter(Message::class.java)
                 val messageData = json.getJSONObject("data")
                 val newMessageEvent = messageAdapter.fromJson(messageData.toString())
@@ -127,6 +139,18 @@ class WebSocketService @Inject constructor(
                 val messageData = json.getJSONObject("data")
                 val typingEvent = typingAdapter.fromJson(messageData.toString())
                 listener?.onStopTyping(typingEvent!!)
+            }
+            "messages_read" -> {
+                val readAdapter = moshi.adapter(ReadMessagesEvent::class.java)
+                val messageData = json.getJSONObject("data")
+                val readEvent = readAdapter.fromJson(messageData.toString())
+                listener?.onMessagesRead(readEvent!!)
+            }
+            "dialog_messages_all_deleted" -> {
+                val deleteAdapter = moshi.adapter(DialogMessagesAllDeleted::class.java)
+                val messageData = json.getJSONObject("data")
+                val deleteEvent = deleteAdapter.fromJson(messageData.toString())
+                listener?.onAllMessagesDeleted(deleteEvent!!)
             }
         }
     }

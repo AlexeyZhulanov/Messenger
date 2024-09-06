@@ -10,8 +10,10 @@ import com.example.messenger.model.Conversation
 import com.example.messenger.model.DeletedMessagesEvent
 import com.example.messenger.model.DialogCreatedEvent
 import com.example.messenger.model.DialogDeletedEvent
+import com.example.messenger.model.DialogMessagesAllDeleted
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
+import com.example.messenger.model.ReadMessagesEvent
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.TypingEvent
 import com.example.messenger.model.User
@@ -136,34 +138,42 @@ class MessengerViewModel @Inject constructor(
     }
 
     override fun onNewMessage(message: Message) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessenger", "New Message: $message")
     }
 
     override fun onEditedMessage(message: Message) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessenger", "Edited Message: $message")
     }
 
     override fun onMessagesDeleted(deletedMessagesEvent: DeletedMessagesEvent) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessenger", "Messages deleted")
     }
 
     override fun onDialogCreated(dialogCreatedEvent: DialogCreatedEvent) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessenger", "Dialog created")
     }
 
     override fun onDialogDeleted(dialogDeletedEvent: DialogDeletedEvent) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessenger", "Dialog deleted")
     }
 
     override fun onUserSessionUpdated(userSessionUpdatedEvent: UserSessionUpdatedEvent) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessenger", "Session updated")
     }
 
     override fun onStartTyping(typingEvent: TypingEvent) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessenger", "Typing started")
     }
 
     override fun onStopTyping(typingEvent: TypingEvent) {
-        TODO("Not yet implemented")
+        Log.d("testSocketsMessenger", "Typing stopped")
+    }
+
+    override fun onMessagesRead(readMessagesEvent: ReadMessagesEvent) {
+        Log.d("testSocketsMessenger", "Messages read")
+    }
+
+    override fun onAllMessagesDeleted(dialogMessagesAllDeleted: DialogMessagesAllDeleted) {
+        Log.d("testSocketsMessenger", "All messages deleted")
     }
 }
