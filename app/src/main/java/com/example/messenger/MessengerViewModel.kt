@@ -42,8 +42,8 @@ class MessengerViewModel @Inject constructor(
     init {
         fetchCurrentUser()
         fetchConversations()
-        webSocketService.connect()
-        webSocketService.setListener(this)
+        //webSocketService.connect() временное отключение
+        //webSocketService.setListener(this) временное отключение
     }
 
     override fun onCleared() {

@@ -319,13 +319,13 @@ class MessageViewModel @Inject constructor(
         val joinData = JSONObject()
         joinData.put("dialog_id", dialogId)
         Log.d("testJoinSocket", dialogId.toString())
-        webSocketService.send("join_dialog", joinData.toString())
+        webSocketService.send("join_dialog", joinData)
     }
 
     private fun leaveDialog() {
         val leaveData = JSONObject()
         leaveData.put("dialog_id", dialogId)
-        webSocketService.send("leave_dialog", leaveData.toString())
+        webSocketService.send("leave_dialog", leaveData)
     }
 
     override fun onNewMessage(message: Message) {

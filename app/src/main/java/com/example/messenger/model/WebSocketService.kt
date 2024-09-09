@@ -3,13 +3,12 @@ package com.example.messenger.model
 import android.util.Log
 import com.example.messenger.model.appsettings.AppSettings
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.adapter
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.WebSocket
-import okhttp3.WebSocketListener
-import okio.ByteString
+import io.socket.client.IO
+import io.socket.client.Socket
+import io.socket.emitter.Emitter
+import io.socket.engineio.client.transports.WebSocket
 import org.json.JSONObject
+import java.net.URISyntaxException
 import javax.inject.Inject
 
 interface WebSocketListenerInterface {
@@ -28,8 +27,7 @@ interface WebSocketListenerInterface {
 class WebSocketService @Inject constructor(
     private val appSettings: AppSettings
 ) {
-    private lateinit var webSocket: WebSocket
-    private val BASE_URL = "wss://amessenger.ru"
+    private lateinit var socket: Socket
     private var listener: WebSocketListenerInterface? = null
 
     fun setListener(listener: WebSocketListenerInterface) {
@@ -37,121 +35,143 @@ class WebSocketService @Inject constructor(
     }
 
     fun connect() {
-        val client = OkHttpClient()
+        val options = IO.Options()
+        options.transports = arrayOf(WebSocket.NAME)
+        options.query = "token=${appSettings.getCurrentToken() ?: ""}"
 
-        val request = Request.Builder()
-            .url(BASE_URL)
-            .addHeader("Authorization", appSettings.getCurrentToken() ?: "")
-            .build()
-
-        val listener = object : WebSocketListener() {
-            override fun onOpen(webSocket: WebSocket, response: okhttp3.Response) {
-                super.onOpen(webSocket, response)
-                Log.d("testWebSocket", "Connected successfully")
+        try {
+            Log.d("testStartSocket", "In process...")
+            socket = IO.socket("https://amessenger.ru", options)
+            socket.on(Socket.EVENT_CONNECT) {
+                Log.d("testSocketIO", "Connected successfully")
+            }.on(Socket.EVENT_CONNECT_ERROR) { args ->
+                Log.d("testSocketIO", "Connection error: ${args[0]}")
             }
+            // Register additional event listeners here
+            registerEventListeners()
 
-            override fun onMessage(webSocket: WebSocket, text: String) {
-                super.onMessage(webSocket, text)
-                Log.d("testWebSocket", "Received message: $text")
-                handleIncomingMessage(text)
-            }
-
-            override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
-                super.onMessage(webSocket, bytes)
-                // Обработка полученных сообщений
-            }
-
-            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                webSocket.close(1000, null)
-            }
-
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: okhttp3.Response?) {
-                Log.d("testWebSocket", t.message ?: "Error")
-            }
+            socket.connect()
+        } catch (e: URISyntaxException) {
+            e.printStackTrace()
         }
+    }
 
-        webSocket = client.newWebSocket(request, listener)
+    private fun registerEventListeners() {
+        // Registering the "user_joined" event listener
+        socket.on("user_joined", onUserJoined)
+
+        // Registering message-related event listeners
+        socket.on("new_message", onNewMessage)
+        socket.on("message_edited", onEditedMessage)
+        socket.on("messages_deleted", onMessagesDeleted)
+
+        // Register more events
+        socket.on("dialog_created", onDialogCreated)
+        socket.on("dialog_deleted", onDialogDeleted)
+        socket.on("user_session_updated", onUserSessionUpdated)
+        socket.on("typing", onStartTyping)
+        socket.on("stop_typing", onStopTyping)
+        socket.on("messages_read", onMessagesRead)
+        socket.on("dialog_messages_all_deleted", onAllMessagesDeleted)
+    }
+
+    private val onUserJoined = Emitter.Listener { args ->
+        val data = args[0] as JSONObject
+        val dialogId = data.getString("dialog_id")
+        val userId = data.getInt("user_id")
+        Log.d("testSocketIO", "User joined dialog $dialogId, user id: $userId")
     }
 
     fun disconnect() {
-        webSocket.close(1000, "Closing connection")
+        socket.disconnect()
     }
 
     fun send(event: String, data: Any) {
         val jsonObject = JSONObject()
         jsonObject.put("event", event)
         jsonObject.put("data", data)
-        webSocket.send(jsonObject.toString())
+        socket.emit(event, jsonObject)
     }
 
-    private fun handleIncomingMessage(message: String) {
-        Log.d("IncomingMessage", "Works")
+    private val onNewMessage = Emitter.Listener { args ->
+        Log.d("testNewMessageCall", "Works!")
         val moshi = Moshi.Builder().build()
+        val messageAdapter = moshi.adapter(Message::class.java)
+        val messageData = args[0] as JSONObject
+        val newMessage = messageAdapter.fromJson(messageData.toString())
+        listener?.onNewMessage(newMessage!!)
+    }
 
-        val json = JSONObject(message)
+    private val onEditedMessage = Emitter.Listener { args ->
+        val moshi = Moshi.Builder().build()
+        val messageAdapter = moshi.adapter(Message::class.java)
+        val messageData = args[0] as JSONObject
+        val editedMessage = messageAdapter.fromJson(messageData.toString())
+        listener?.onEditedMessage(editedMessage!!)
+    }
 
-        when (json.getString("event")) {
-            "new_message" -> {
-                Log.d("testNewMessage", "OK")
-                val messageAdapter = moshi.adapter(Message::class.java)
-                val messageData = json.getJSONObject("data")
-                val newMessageEvent = messageAdapter.fromJson(messageData.toString())
-                listener?.onNewMessage(newMessageEvent!!)
-            }
-            "message_edited" -> {
-                val messageAdapter = moshi.adapter(Message::class.java)
-                val messageData = json.getJSONObject("data")
-                val editedMessageEvent = messageAdapter.fromJson(messageData.toString())
-                listener?.onEditedMessage(editedMessageEvent!!)
-            }
-            "messages_deleted" -> {
-                val messageAdapter = moshi.adapter(DeletedMessagesEvent::class.java)
-                val messageData = json.getJSONObject("data")
-                val deletesMessagesEvent = messageAdapter.fromJson(messageData.toString())
-                listener?.onMessagesDeleted(deletesMessagesEvent!!)
-            }
-            "dialog_created" -> {
-                val dialogAdapter = moshi.adapter(DialogCreatedEvent::class.java)
-                val messageData = json.getJSONObject("data")
-                val dialogCreatedEvent = dialogAdapter.fromJson(messageData.toString())
-                listener?.onDialogCreated(dialogCreatedEvent!!)
-            }
-            "dialog_deleted" -> {
-                val dialogAdapter = moshi.adapter(DialogDeletedEvent::class.java)
-                val messageData = json.getJSONObject("data")
-                val dialogDeletedEvent = dialogAdapter.fromJson(messageData.toString())
-                listener?.onDialogDeleted(dialogDeletedEvent!!)
-            }
-            "user_session_updated" -> {
-                val userAdapter = moshi.adapter(UserSessionUpdatedEvent::class.java)
-                val messageData = json.getJSONObject("data")
-                val lastSessionUpdatedEvent = userAdapter.fromJson(messageData.toString())
-                listener?.onUserSessionUpdated(lastSessionUpdatedEvent!!)
-            }
-            "typing" -> {
-                val typingAdapter = moshi.adapter(TypingEvent::class.java)
-                val messageData = json.getJSONObject("data")
-                val typingEvent = typingAdapter.fromJson(messageData.toString())
-                listener?.onStartTyping(typingEvent!!)
-            }
-            "stop_typing" -> {
-                val typingAdapter = moshi.adapter(TypingEvent::class.java)
-                val messageData = json.getJSONObject("data")
-                val typingEvent = typingAdapter.fromJson(messageData.toString())
-                listener?.onStopTyping(typingEvent!!)
-            }
-            "messages_read" -> {
-                val readAdapter = moshi.adapter(ReadMessagesEvent::class.java)
-                val messageData = json.getJSONObject("data")
-                val readEvent = readAdapter.fromJson(messageData.toString())
-                listener?.onMessagesRead(readEvent!!)
-            }
-            "dialog_messages_all_deleted" -> {
-                val deleteAdapter = moshi.adapter(DialogMessagesAllDeleted::class.java)
-                val messageData = json.getJSONObject("data")
-                val deleteEvent = deleteAdapter.fromJson(messageData.toString())
-                listener?.onAllMessagesDeleted(deleteEvent!!)
-            }
-        }
+    private val onMessagesDeleted = Emitter.Listener { args ->
+        val moshi = Moshi.Builder().build()
+        val deletedAdapter = moshi.adapter(DeletedMessagesEvent::class.java)
+        val messageData = args[0] as JSONObject
+        val deletedEvent = deletedAdapter.fromJson(messageData.toString())
+        listener?.onMessagesDeleted(deletedEvent!!)
+    }
+
+    private val onDialogCreated = Emitter.Listener { args ->
+        val moshi = Moshi.Builder().build()
+        val dialogAdapter = moshi.adapter(DialogCreatedEvent::class.java)
+        val messageData = args[0] as JSONObject
+        val dialogCreatedEvent = dialogAdapter.fromJson(messageData.toString())
+        listener?.onDialogCreated(dialogCreatedEvent!!)
+    }
+
+    private val onDialogDeleted = Emitter.Listener { args ->
+        val moshi = Moshi.Builder().build()
+        val dialogAdapter = moshi.adapter(DialogDeletedEvent::class.java)
+        val messageData = args[0] as JSONObject
+        val dialogDeletedEvent = dialogAdapter.fromJson(messageData.toString())
+        listener?.onDialogDeleted(dialogDeletedEvent!!)
+
+    }
+
+    private val onUserSessionUpdated = Emitter.Listener { args ->
+        val moshi = Moshi.Builder().build()
+        val userAdapter = moshi.adapter(UserSessionUpdatedEvent::class.java)
+        val messageData = args[0] as JSONObject
+        val lastSessionUpdatedEvent = userAdapter.fromJson(messageData.toString())
+        listener?.onUserSessionUpdated(lastSessionUpdatedEvent!!)
+    }
+
+    private val onStartTyping = Emitter.Listener { args ->
+        val moshi = Moshi.Builder().build()
+        val typingAdapter = moshi.adapter(TypingEvent::class.java)
+        val messageData = args[0] as JSONObject
+        val typingEvent = typingAdapter.fromJson(messageData.toString())
+        listener?.onStartTyping(typingEvent!!)
+    }
+
+    private val onStopTyping = Emitter.Listener { args ->
+        val moshi = Moshi.Builder().build()
+        val typingAdapter = moshi.adapter(TypingEvent::class.java)
+        val messageData = args[0] as JSONObject
+        val typingEvent = typingAdapter.fromJson(messageData.toString())
+        listener?.onStopTyping(typingEvent!!)
+    }
+
+    private val onMessagesRead = Emitter.Listener { args ->
+        val moshi = Moshi.Builder().build()
+        val readAdapter = moshi.adapter(ReadMessagesEvent::class.java)
+        val messageData = args[0] as JSONObject
+        val readEvent = readAdapter.fromJson(messageData.toString())
+        listener?.onMessagesRead(readEvent!!)
+    }
+
+    private val onAllMessagesDeleted = Emitter.Listener { args ->
+        val moshi = Moshi.Builder().build()
+        val deleteAdapter = moshi.adapter(DialogMessagesAllDeleted::class.java)
+        val messageData = args[0] as JSONObject
+        val deleteEvent = deleteAdapter.fromJson(messageData.toString())
+        listener?.onAllMessagesDeleted(deleteEvent!!)
     }
 }
