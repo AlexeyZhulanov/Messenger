@@ -37,7 +37,9 @@ class WebSocketService @Inject constructor(
     fun connect() {
         val options = IO.Options()
         options.transports = arrayOf(WebSocket.NAME)
-        options.query = "token=${appSettings.getCurrentToken() ?: ""}"
+        //options.query = "token=${appSettings.getCurrentToken() ?: ""}"
+        options.extraHeaders = mapOf("Authorization" to listOf(appSettings.getCurrentToken() ?: ""))
+
 
         try {
             Log.d("testStartSocket", "In process...")
@@ -86,11 +88,10 @@ class WebSocketService @Inject constructor(
         socket.disconnect()
     }
 
-    fun send(event: String, data: Any) {
-        val jsonObject = JSONObject()
-        jsonObject.put("event", event)
-        jsonObject.put("data", data)
-        socket.emit(event, jsonObject)
+    fun send(event: String, data: JSONObject) {
+        Log.d("testSendSocket", event)
+        Log.d("testSendSocket", data.toString())
+        socket.emit(event, data)
     }
 
     private val onNewMessage = Emitter.Listener { args ->
