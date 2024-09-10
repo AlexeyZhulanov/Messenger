@@ -3,6 +3,7 @@ package com.example.messenger.model
 import android.util.Log
 import com.example.messenger.model.appsettings.AppSettings
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
@@ -22,6 +23,8 @@ interface WebSocketListenerInterface {
     fun onUserSessionUpdated(userSessionUpdatedEvent: UserSessionUpdatedEvent)
     fun onStartTyping(typingEvent: TypingEvent)
     fun onStopTyping(typingEvent: TypingEvent)
+    fun onUserJoinedDialog(dialogId: Int, userId: Int)
+    fun onUserLeftDialog(dialogId: Int, userId: Int)
 }
 
 class WebSocketService @Inject constructor(
@@ -37,12 +40,10 @@ class WebSocketService @Inject constructor(
     fun connect() {
         val options = IO.Options()
         options.transports = arrayOf(WebSocket.NAME)
-        //options.query = "token=${appSettings.getCurrentToken() ?: ""}"
         options.extraHeaders = mapOf("Authorization" to listOf(appSettings.getCurrentToken() ?: ""))
 
 
         try {
-            Log.d("testStartSocket", "In process...")
             socket = IO.socket("https://amessenger.ru", options)
             socket.on(Socket.EVENT_CONNECT) {
                 Log.d("testSocketIO", "Connected successfully")
@@ -61,6 +62,7 @@ class WebSocketService @Inject constructor(
     private fun registerEventListeners() {
         // Registering the "user_joined" event listener
         socket.on("user_joined", onUserJoined)
+        socket.on("user_left", onUserLeft)
 
         // Registering message-related event listeners
         socket.on("new_message", onNewMessage)
@@ -79,9 +81,16 @@ class WebSocketService @Inject constructor(
 
     private val onUserJoined = Emitter.Listener { args ->
         val data = args[0] as JSONObject
-        val dialogId = data.getString("dialog_id")
+        val dialogId = data.getInt("dialog_id")
         val userId = data.getInt("user_id")
-        Log.d("testSocketIO", "User joined dialog $dialogId, user id: $userId")
+        listener?.onUserJoinedDialog(dialogId, userId)
+    }
+
+    private val onUserLeft = Emitter.Listener { args ->
+        val data = args[0] as JSONObject
+        val dialogId = data.getInt("dialog_id")
+        val userId = data.getInt("user_id")
+        listener?.onUserLeftDialog(dialogId, userId)
     }
 
     fun disconnect() {
@@ -89,14 +98,13 @@ class WebSocketService @Inject constructor(
     }
 
     fun send(event: String, data: JSONObject) {
-        Log.d("testSendSocket", event)
-        Log.d("testSendSocket", data.toString())
         socket.emit(event, data)
     }
 
     private val onNewMessage = Emitter.Listener { args ->
-        Log.d("testNewMessageCall", "Works!")
-        val moshi = Moshi.Builder().build()
+        val moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory()) // support serializable kt class
+            .build()
         val messageAdapter = moshi.adapter(Message::class.java)
         val messageData = args[0] as JSONObject
         val newMessage = messageAdapter.fromJson(messageData.toString())
@@ -104,7 +112,9 @@ class WebSocketService @Inject constructor(
     }
 
     private val onEditedMessage = Emitter.Listener { args ->
-        val moshi = Moshi.Builder().build()
+        val moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .build()
         val messageAdapter = moshi.adapter(Message::class.java)
         val messageData = args[0] as JSONObject
         val editedMessage = messageAdapter.fromJson(messageData.toString())
@@ -112,7 +122,9 @@ class WebSocketService @Inject constructor(
     }
 
     private val onMessagesDeleted = Emitter.Listener { args ->
-        val moshi = Moshi.Builder().build()
+        val moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .build()
         val deletedAdapter = moshi.adapter(DeletedMessagesEvent::class.java)
         val messageData = args[0] as JSONObject
         val deletedEvent = deletedAdapter.fromJson(messageData.toString())
@@ -120,7 +132,9 @@ class WebSocketService @Inject constructor(
     }
 
     private val onDialogCreated = Emitter.Listener { args ->
-        val moshi = Moshi.Builder().build()
+        val moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .build()
         val dialogAdapter = moshi.adapter(DialogCreatedEvent::class.java)
         val messageData = args[0] as JSONObject
         val dialogCreatedEvent = dialogAdapter.fromJson(messageData.toString())
@@ -128,7 +142,9 @@ class WebSocketService @Inject constructor(
     }
 
     private val onDialogDeleted = Emitter.Listener { args ->
-        val moshi = Moshi.Builder().build()
+        val moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .build()
         val dialogAdapter = moshi.adapter(DialogDeletedEvent::class.java)
         val messageData = args[0] as JSONObject
         val dialogDeletedEvent = dialogAdapter.fromJson(messageData.toString())
@@ -137,7 +153,9 @@ class WebSocketService @Inject constructor(
     }
 
     private val onUserSessionUpdated = Emitter.Listener { args ->
-        val moshi = Moshi.Builder().build()
+        val moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .build()
         val userAdapter = moshi.adapter(UserSessionUpdatedEvent::class.java)
         val messageData = args[0] as JSONObject
         val lastSessionUpdatedEvent = userAdapter.fromJson(messageData.toString())
@@ -145,7 +163,9 @@ class WebSocketService @Inject constructor(
     }
 
     private val onStartTyping = Emitter.Listener { args ->
-        val moshi = Moshi.Builder().build()
+        val moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .build()
         val typingAdapter = moshi.adapter(TypingEvent::class.java)
         val messageData = args[0] as JSONObject
         val typingEvent = typingAdapter.fromJson(messageData.toString())
@@ -153,7 +173,9 @@ class WebSocketService @Inject constructor(
     }
 
     private val onStopTyping = Emitter.Listener { args ->
-        val moshi = Moshi.Builder().build()
+        val moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .build()
         val typingAdapter = moshi.adapter(TypingEvent::class.java)
         val messageData = args[0] as JSONObject
         val typingEvent = typingAdapter.fromJson(messageData.toString())
@@ -161,7 +183,9 @@ class WebSocketService @Inject constructor(
     }
 
     private val onMessagesRead = Emitter.Listener { args ->
-        val moshi = Moshi.Builder().build()
+        val moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .build()
         val readAdapter = moshi.adapter(ReadMessagesEvent::class.java)
         val messageData = args[0] as JSONObject
         val readEvent = readAdapter.fromJson(messageData.toString())
@@ -169,7 +193,9 @@ class WebSocketService @Inject constructor(
     }
 
     private val onAllMessagesDeleted = Emitter.Listener { args ->
-        val moshi = Moshi.Builder().build()
+        val moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .build()
         val deleteAdapter = moshi.adapter(DialogMessagesAllDeleted::class.java)
         val messageData = args[0] as JSONObject
         val deleteEvent = deleteAdapter.fromJson(messageData.toString())

@@ -176,4 +176,12 @@ class MessengerViewModel @Inject constructor(
     override fun onAllMessagesDeleted(dialogMessagesAllDeleted: DialogMessagesAllDeleted) {
         Log.d("testSocketsMessenger", "All messages deleted")
     }
+
+    override fun onUserJoinedDialog(dialogId: Int, userId: Int) {
+        Log.d("testSocketsMessenger", "User $userId joined Dialog $dialogId")
+    }
+
+    override fun onUserLeftDialog(dialogId: Int, userId: Int) {
+        Log.d("testSocketsMessenger", "User $userId left Dialog $dialogId")
+    }
 }
