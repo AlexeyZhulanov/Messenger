@@ -8,6 +8,7 @@ import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.appsettings.AppSettings
 import com.example.messenger.model.appsettings.SharedPreferencesAppSettings
 import com.example.messenger.retrofit.source.SourceProviderHolder
+import com.example.messenger.model.WebSocketService
 import com.example.messenger.retrofit.source.base.SourcesProvider
 import com.example.messenger.room.AppDatabase
 import com.example.messenger.room.dao.ConversationDao
@@ -127,5 +128,11 @@ object MessengerModule {
     @Singleton
     fun provideFileManager(@ApplicationContext context: Context): FileManager {
         return FileManager(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideWebSocketService(appSettings: AppSettings): WebSocketService {
+        return WebSocketService(appSettings)
     }
 }

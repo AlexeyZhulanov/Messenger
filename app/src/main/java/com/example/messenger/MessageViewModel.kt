@@ -20,11 +20,20 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.messenger.model.ConversationSettings
+import com.example.messenger.model.DeletedMessagesEvent
+import com.example.messenger.model.DialogCreatedEvent
+import com.example.messenger.model.DialogDeletedEvent
+import com.example.messenger.model.DialogMessagesAllDeleted
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessagePagingSource
 import com.example.messenger.model.MessengerService
+import com.example.messenger.model.ReadMessagesEvent
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.model.TypingEvent
+import com.example.messenger.model.UserSessionUpdatedEvent
+import com.example.messenger.model.WebSocketListenerInterface
+import com.example.messenger.model.WebSocketService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,6 +44,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -46,8 +56,9 @@ import kotlin.math.abs
 class MessageViewModel @Inject constructor(
     private val messengerService: MessengerService,
     private val retrofitService: RetrofitService,
-    private val fileManager: FileManager
-) : ViewModel() {
+    private val fileManager: FileManager,
+    private val webSocketService: WebSocketService
+) : ViewModel(), WebSocketListenerInterface {
 
     private val _lastSessionString = MutableLiveData<String>()
     val lastSessionString: LiveData<String> get() = _lastSessionString
@@ -83,6 +94,8 @@ class MessageViewModel @Inject constructor(
     }
 
     init {
+        webSocketService.connect()
+        webSocketService.setListener(this)
         viewModelScope.launch {
             while (true) {
                 delay(30000)
@@ -94,6 +107,7 @@ class MessageViewModel @Inject constructor(
     fun setDialogInfo(dialogId: Int, otherUserId: Int) {
         this.dialogId = dialogId
         this.otherUserId = otherUserId
+        joinDialog()
     }
     fun setRecyclerView(recyclerView: RecyclerView) {
         this.recyclerView = recyclerView
@@ -102,7 +116,7 @@ class MessageViewModel @Inject constructor(
     private fun highlightItem(position: Int) {
         val adapterWithLoadStates = recyclerView.adapter
         if (adapterWithLoadStates is ConcatAdapter) {
-            // Найдите оригинальный MessageAdapter внутри ConcatAdapter
+            // Ищем оригинальный MessageAdapter внутри ConcatAdapter(без load states)
             adapterWithLoadStates.adapters.forEach { adapter ->
                 if (adapter is MessageAdapter) {
                     adapter.highlightPosition(position)
@@ -301,4 +315,61 @@ class MessageViewModel @Inject constructor(
         }
     }
 
+    private fun joinDialog() {
+        val joinData = JSONObject()
+        joinData.put("dialog_id", dialogId)
+        Log.d("testJoinSocket", dialogId.toString())
+        webSocketService.send("join_dialog", joinData)
+    }
+
+    private fun leaveDialog() {
+        val leaveData = JSONObject()
+        leaveData.put("dialog_id", dialogId)
+        webSocketService.send("leave_dialog", leaveData)
+    }
+
+    override fun onNewMessage(message: Message) {
+        Log.d("testSocketsMessage", "New Message: $message")
+    }
+
+    override fun onEditedMessage(message: Message) {
+        Log.d("testSocketsMessage", "Edited Message: $message")
+    }
+
+    override fun onMessagesDeleted(deletedMessagesEvent: DeletedMessagesEvent) {
+        Log.d("testSocketsMessage", "Deleted messages")
+    }
+
+    override fun onDialogCreated(dialogCreatedEvent: DialogCreatedEvent) {
+        Log.d("testSocketsMessage", "Dialog created")
+    }
+
+    override fun onDialogDeleted(dialogDeletedEvent: DialogDeletedEvent) {
+        Log.d("testSocketsMessage", "Dialog deleted")
+    }
+
+    override fun onUserSessionUpdated(userSessionUpdatedEvent: UserSessionUpdatedEvent) {
+        Log.d("testSocketsMessage", "Session updated")
+    }
+
+    override fun onStartTyping(typingEvent: TypingEvent) {
+        Log.d("testSocketsMessage", "Typing started")
+    }
+
+    override fun onStopTyping(typingEvent: TypingEvent) {
+        Log.d("testSocketsMessage", "Typing stopped")
+    }
+
+    override fun onMessagesRead(readMessagesEvent: ReadMessagesEvent) {
+        Log.d("testSocketsMessage", "Messages read")
+    }
+
+    override fun onAllMessagesDeleted(dialogMessagesAllDeleted: DialogMessagesAllDeleted) {
+        Log.d("testSocketsMessage", "All messages deleted")
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        leaveDialog()
+    }
 }

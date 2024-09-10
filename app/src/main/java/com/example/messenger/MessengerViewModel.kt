@@ -7,10 +7,19 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.messenger.model.Conversation
+import com.example.messenger.model.DeletedMessagesEvent
+import com.example.messenger.model.DialogCreatedEvent
+import com.example.messenger.model.DialogDeletedEvent
+import com.example.messenger.model.DialogMessagesAllDeleted
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
+import com.example.messenger.model.ReadMessagesEvent
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.model.TypingEvent
 import com.example.messenger.model.User
+import com.example.messenger.model.UserSessionUpdatedEvent
+import com.example.messenger.model.WebSocketListenerInterface
+import com.example.messenger.model.WebSocketService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -21,8 +30,9 @@ import javax.inject.Inject
 @HiltViewModel
 class MessengerViewModel @Inject constructor(
     private val messengerService: MessengerService,
-    private val retrofitService: RetrofitService
-) : ViewModel() {
+    private val retrofitService: RetrofitService,
+    private val webSocketService: WebSocketService
+) : ViewModel(), WebSocketListenerInterface {
 
     private val _conversations = MutableLiveData<List<Conversation>>()
     val conversations: LiveData<List<Conversation>> = _conversations
@@ -32,6 +42,13 @@ class MessengerViewModel @Inject constructor(
     init {
         fetchCurrentUser()
         fetchConversations()
+        //webSocketService.connect() временное отключение
+        //webSocketService.setListener(this) временное отключение
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        webSocketService.disconnect() // todo надо тестировать, не факт что здесь
     }
 
     private fun fetchCurrentUser() {
@@ -118,5 +135,45 @@ class MessengerViewModel @Inject constructor(
                             voice: String?, file: String?, referenceToMessageId: Int?,
                             usernameAuthorOriginal: String?) = withContext(Dispatchers.IO) {
         retrofitService.sendMessage(idDialog, text, images, voice, file, referenceToMessageId, true, usernameAuthorOriginal)
+    }
+
+    override fun onNewMessage(message: Message) {
+        Log.d("testSocketsMessenger", "New Message: $message")
+    }
+
+    override fun onEditedMessage(message: Message) {
+        Log.d("testSocketsMessenger", "Edited Message: $message")
+    }
+
+    override fun onMessagesDeleted(deletedMessagesEvent: DeletedMessagesEvent) {
+        Log.d("testSocketsMessenger", "Messages deleted")
+    }
+
+    override fun onDialogCreated(dialogCreatedEvent: DialogCreatedEvent) {
+        Log.d("testSocketsMessenger", "Dialog created")
+    }
+
+    override fun onDialogDeleted(dialogDeletedEvent: DialogDeletedEvent) {
+        Log.d("testSocketsMessenger", "Dialog deleted")
+    }
+
+    override fun onUserSessionUpdated(userSessionUpdatedEvent: UserSessionUpdatedEvent) {
+        Log.d("testSocketsMessenger", "Session updated")
+    }
+
+    override fun onStartTyping(typingEvent: TypingEvent) {
+        Log.d("testSocketsMessenger", "Typing started")
+    }
+
+    override fun onStopTyping(typingEvent: TypingEvent) {
+        Log.d("testSocketsMessenger", "Typing stopped")
+    }
+
+    override fun onMessagesRead(readMessagesEvent: ReadMessagesEvent) {
+        Log.d("testSocketsMessenger", "Messages read")
+    }
+
+    override fun onAllMessagesDeleted(dialogMessagesAllDeleted: DialogMessagesAllDeleted) {
+        Log.d("testSocketsMessenger", "All messages deleted")
     }
 }
