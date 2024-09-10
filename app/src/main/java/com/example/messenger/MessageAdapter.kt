@@ -416,6 +416,7 @@ class MessageAdapter(
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
+
             } else {
                 binding.forwardLayout.root.visibility = View.GONE
                 binding.forwardLayout.forwardUsername.text = ""
