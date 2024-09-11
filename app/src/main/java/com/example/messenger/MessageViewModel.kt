@@ -94,8 +94,8 @@ class MessageViewModel @Inject constructor(
     }
 
     init {
-        webSocketService.connect()
         webSocketService.setListener(this)
+        webSocketService.connect()
         viewModelScope.launch {
             while (true) {
                 delay(30000)
@@ -318,7 +318,6 @@ class MessageViewModel @Inject constructor(
     private fun joinDialog() {
         val joinData = JSONObject()
         joinData.put("dialog_id", dialogId)
-        Log.d("testJoinSocket", dialogId.toString())
         webSocketService.send("join_dialog", joinData)
     }
 
@@ -366,6 +365,14 @@ class MessageViewModel @Inject constructor(
 
     override fun onAllMessagesDeleted(dialogMessagesAllDeleted: DialogMessagesAllDeleted) {
         Log.d("testSocketsMessage", "All messages deleted")
+    }
+
+    override fun onUserJoinedDialog(dialogId: Int, userId: Int) {
+        Log.d("testSocketsMessage", "User $userId joined Dialog $dialogId")
+    }
+
+    override fun onUserLeftDialog(dialogId: Int, userId: Int) {
+        Log.d("testSocketsMessage", "User $userId left Dialog $dialogId")
     }
 
     override fun onCleared() {
