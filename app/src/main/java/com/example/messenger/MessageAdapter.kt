@@ -81,9 +81,20 @@ class MessageAdapter(
     private var checkedFiles: MutableMap<String, String> = mutableMapOf()
     lateinit var dialogSettings: ConversationSettings
     private var highlightedPosition: Int? = null
+    private val newMessages = mutableListOf<Pair<Message, String>>()
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.IO + job)
     private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)
+
+    fun addNewMessages(messages: List<Pair<Message, String>>) {
+        newMessages.addAll(0, messages)
+        Log.d("testFlow3", newMessages.toString())
+        notifyItemRangeInserted(0, messages.size)
+    }
+
+    override fun getItemCount(): Int {
+        return newMessages.size + super.getItemCount()
+    }
 
     fun getDeleteList(): Pair<List<Int>, Map<String, String>> {
         val list = mutableListOf<Int>()
@@ -278,8 +289,15 @@ class MessageAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val message = getItem(position)?.first ?: return
-        val date = getItem(position)?.second ?: return
+        val message: Message
+        val date: String
+        if (position < newMessages.size) {
+            message = newMessages[position].first
+            date = newMessages[position].second
+        } else {
+            message = getItem(position - newMessages.size)?.first ?: return
+            date = getItem(position - newMessages.size)?.second ?: return
+        }
         var flagText = false
         if(!message.text.isNullOrEmpty()) flagText = true
         val isInLast30 = position >= itemCount - 30

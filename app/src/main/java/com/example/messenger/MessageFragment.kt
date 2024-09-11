@@ -122,8 +122,18 @@ class MessageFragment(
         super.onViewCreated(view, savedInstanceState)
         viewModel.setDialogInfo(dialog.id, dialog.otherUser.id)
         lifecycleScope.launch {
-            viewModel.mes.collectLatest {message ->
-                adapter.submitData(message)
+            viewModel.combinedFlow.collectLatest { (newMessages, pagingData) ->
+                Log.d("testFlow1", "OK")
+                adapter.submitData(pagingData)
+                Log.d("testFlow2", "OK")
+                if (newMessages.isNotEmpty()) {
+                    adapter.addNewMessages(newMessages)
+                }
+                val firstItem = adapter.snapshot().firstOrNull()
+                if(firstItem != null) {
+                    val firstMessageDate = firstItem.second
+                    viewModel.updateLastDate(firstMessageDate)
+                }
             }
         }
         viewModel.fetchLastSession()
@@ -475,7 +485,7 @@ class MessageFragment(
                 binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
                 val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 enterText.setText("")
-                viewModel.refresh()
+                // viewModel.refresh()
             }
         }
         return binding.root
@@ -574,7 +584,7 @@ class MessageFragment(
                     }
                 }
                 binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
-                viewModel.refresh()
+                // viewModel.refresh()
             }
         } else Toast.makeText(requireContext(), "Что-то не так с файлом", Toast.LENGTH_SHORT).show()
     }

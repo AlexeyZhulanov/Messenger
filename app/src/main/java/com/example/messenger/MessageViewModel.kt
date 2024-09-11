@@ -40,6 +40,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
@@ -69,19 +72,33 @@ class MessageViewModel @Inject constructor(
     private var disableRefresh: Boolean = false
     @SuppressLint("StaticFieldLeak")
     private lateinit var recyclerView: RecyclerView
+    private var lastMessageDate: String = ""
 
     private val searchBy = MutableLiveData("")
+    private val _newMessagesFlow = MutableStateFlow<List<Pair<Message, String>>>(emptyList())
+    private val newMessagesFlow: StateFlow<List<Pair<Message, String>>> = _newMessagesFlow
 
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
-    val mes = searchBy.asFlow()
-        .debounce(500)
-        .flatMapLatest { Pager(PagingConfig(pageSize = 30, initialLoadSize = 30, prefetchDistance = 5)) {
-        MessagePagingSource(retrofitService, messengerService, dialogId, it, isFirst, fileManager)
-        }.flow }
-        .cachedIn(viewModelScope)
+    val combinedFlow = combine(
+        searchBy.asFlow()
+            .debounce(500)
+            .flatMapLatest { searchQuery ->
+                Pager(PagingConfig(pageSize = 30, initialLoadSize = 30, prefetchDistance = 5)) {
+                    MessagePagingSource(retrofitService, messengerService, dialogId, searchQuery, isFirst, fileManager)
+                }.flow.cachedIn(viewModelScope)
+            },
+        newMessagesFlow
+    ) { pagingData, newMessages ->
+        newMessages to pagingData
+    }
+
+    fun updateLastDate(st: String) {
+        this.lastMessageDate = st
+    }
 
     fun refresh() {
         isFirst = false
+        _newMessagesFlow.value = emptyList()
         this.searchBy.postValue(this.searchBy.value)
     }
 
@@ -98,7 +115,7 @@ class MessageViewModel @Inject constructor(
         webSocketService.connect()
         viewModelScope.launch {
             while (true) {
-                delay(30000)
+                delay(60000)
                 if(!disableRefresh) refresh()
             }
         }
@@ -248,6 +265,33 @@ class MessageViewModel @Inject constructor(
         return dateFormatToday.format(greenwichMessageDate.time)
     }
 
+    private fun formatMessageDate(timestamp: Long?): String {
+        if (timestamp == null) return ""
+
+        // Приведение серверного времени (МСК GMT+3) к GMT
+        val greenwichMessageDate = Calendar.getInstance().apply {
+            timeInMillis = timestamp - 10800000
+        }
+        val dateFormatMonthDay = SimpleDateFormat("d MMMM", Locale.getDefault())
+        val dateFormatYear = SimpleDateFormat("d MMMM yyyy", Locale.getDefault())
+        val localNow = Calendar.getInstance()
+
+        return when {
+            isToday(localNow, greenwichMessageDate) -> dateFormatMonthDay.format(greenwichMessageDate.time)
+            isThisYear(localNow, greenwichMessageDate) -> dateFormatMonthDay.format(greenwichMessageDate.time)
+            else -> dateFormatYear.format(greenwichMessageDate.time)
+        }
+    }
+
+    private fun isToday(now: Calendar, messageDate: Calendar): Boolean {
+        return now.get(Calendar.YEAR) == messageDate.get(Calendar.YEAR) &&
+                now.get(Calendar.DAY_OF_YEAR) == messageDate.get(Calendar.DAY_OF_YEAR)
+    }
+
+    private fun isThisYear(now: Calendar, messageDate: Calendar): Boolean {
+        return now.get(Calendar.YEAR) == messageDate.get(Calendar.YEAR)
+    }
+
     private fun formatUserSessionDate(timestamp: Long?): String {
         if (timestamp == null) return "Никогда не был в сети"
 
@@ -329,6 +373,9 @@ class MessageViewModel @Inject constructor(
 
     override fun onNewMessage(message: Message) {
         Log.d("testSocketsMessage", "New Message: $message")
+        val date = formatMessageDate(message.timestamp)
+        val newMessagePair = if(date == lastMessageDate) message to "" else message to date
+        _newMessagesFlow.value = listOf(newMessagePair) + _newMessagesFlow.value
     }
 
     override fun onEditedMessage(message: Message) {

@@ -1,10 +1,7 @@
 package com.example.messenger.model
 
-import android.content.SharedPreferences
-import android.util.Log
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.example.messenger.PREF_THEME
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
