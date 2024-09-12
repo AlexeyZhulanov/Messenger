@@ -81,19 +81,21 @@ class MessageAdapter(
     private var checkedFiles: MutableMap<String, String> = mutableMapOf()
     lateinit var dialogSettings: ConversationSettings
     private var highlightedPosition: Int? = null
-    private val newMessages = mutableListOf<Pair<Message, String>>()
+    private var newMessage: Pair<Message, String>? = null
+    private var messagesCount: Int = 0
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.IO + job)
     private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)
 
-    fun addNewMessages(messages: List<Pair<Message, String>>) {
-        newMessages.addAll(0, messages)
-        Log.d("testFlow3", newMessages.toString())
-        notifyItemRangeInserted(0, messages.size)
+    fun addNewMessages(messages: Pair<Message, String>) {
+        newMessage = messages
+        Log.d("testFlow4", newMessage.toString())
+        messagesCount += 1
+        notifyItemRangeInserted(0, 1)
     }
 
     override fun getItemCount(): Int {
-        return newMessages.size + super.getItemCount()
+        return messagesCount + super.getItemCount()
     }
 
     fun getDeleteList(): Pair<List<Int>, Map<String, String>> {
@@ -291,12 +293,12 @@ class MessageAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val message: Message
         val date: String
-        if (position < newMessages.size) {
-            message = newMessages[position].first
-            date = newMessages[position].second
+        if (position < messagesCount) {
+            message = newMessage!!.first
+            date = newMessage!!.second
         } else {
-            message = getItem(position - newMessages.size)?.first ?: return
-            date = getItem(position - newMessages.size)?.second ?: return
+            message = getItem(position - messagesCount)?.first ?: return
+            date = getItem(position - messagesCount)?.second ?: return
         }
         var flagText = false
         if(!message.text.isNullOrEmpty()) flagText = true
