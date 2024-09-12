@@ -8,6 +8,10 @@ import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import io.socket.engineio.client.transports.WebSocket
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.net.URISyntaxException
 import javax.inject.Inject
@@ -28,10 +32,16 @@ interface WebSocketListenerInterface {
 }
 
 class WebSocketService @Inject constructor(
-    private val appSettings: AppSettings
+    private val appSettings: AppSettings,
+    private val retrofitService: RetrofitService,
+    private val messengerService: MessengerService
 ) {
     private lateinit var socket: Socket
     private var listener: WebSocketListenerInterface? = null
+    private var lastEvent: String? = null
+    private var lastData: JSONObject? = null
+    private val job = Job()
+    private val uiScopeIO = CoroutineScope(Dispatchers.IO + job)
 
     fun setListener(listener: WebSocketListenerInterface) {
         this.listener = listener
@@ -77,6 +87,27 @@ class WebSocketService @Inject constructor(
         socket.on("stop_typing", onStopTyping)
         socket.on("messages_read", onMessagesRead)
         socket.on("dialog_messages_all_deleted", onAllMessagesDeleted)
+
+        // token expired
+        socket.on("token_expired", onTokenExpired)
+    }
+
+    private val onTokenExpired = Emitter.Listener {
+        Log.d("testSocketIO", "Token has expired, refreshing token")
+        uiScopeIO.launch {
+            val settingsResponse = messengerService.getSettings()
+            val success = retrofitService.login(settingsResponse.name!!, settingsResponse.password!!)
+            if(success) {
+                // send last emit
+                if(lastData != null && lastEvent != null) {
+                    Log.d("testSocketIO", "Try to reconnect sockets")
+                    socket.connect()
+                    socket.emit(lastEvent, lastData)
+                }
+            } else {
+                Log.d("testSocketIO", "Error Sockets Token")
+            }
+        }
     }
 
     private val onUserJoined = Emitter.Listener { args ->
@@ -98,6 +129,8 @@ class WebSocketService @Inject constructor(
     }
 
     fun send(event: String, data: JSONObject) {
+        lastEvent = event
+        lastData = data
         socket.emit(event, data)
     }
 
