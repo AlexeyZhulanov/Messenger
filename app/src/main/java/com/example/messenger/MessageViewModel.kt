@@ -382,11 +382,23 @@ class MessageViewModel @Inject constructor(
     }
 
     override fun onEditedMessage(message: Message) {
+        viewModelScope.launch {
         Log.d("testSocketsMessage", "Edited Message: $message")
+        val adapterWithLoadStates = recyclerView.adapter
+        if (adapterWithLoadStates is ConcatAdapter) {
+            // Ищем оригинальный MessageAdapter внутри ConcatAdapter(без load states)
+            adapterWithLoadStates.adapters.forEach { adapter ->
+                if (adapter is MessageAdapter) {
+                    adapter.updateMessage(message)
+                }
+            }
+        }
+        }
     }
 
     override fun onMessagesDeleted(deletedMessagesEvent: DeletedMessagesEvent) {
         Log.d("testSocketsMessage", "Deleted messages")
+        refresh()
     }
 
     override fun onDialogCreated(dialogCreatedEvent: DialogCreatedEvent) {

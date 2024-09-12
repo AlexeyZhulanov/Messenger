@@ -541,7 +541,7 @@ class MessageFragment(
                         }
                         withContext(Dispatchers.Main) {
                             binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
-                            viewModel.refresh()
+                            //viewModel.refresh()
                         }
                     }
                 }
