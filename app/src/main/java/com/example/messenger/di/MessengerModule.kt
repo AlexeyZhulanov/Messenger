@@ -132,7 +132,11 @@ object MessengerModule {
 
     @Provides
     @Singleton
-    fun provideWebSocketService(appSettings: AppSettings): WebSocketService {
-        return WebSocketService(appSettings)
+    fun provideWebSocketService(
+        appSettings: AppSettings,
+        retrofitService: RetrofitService,
+        messengerService: MessengerService
+    ): WebSocketService {
+        return WebSocketService(appSettings, retrofitService, messengerService)
     }
 }

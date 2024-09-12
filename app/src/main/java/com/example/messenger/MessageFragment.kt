@@ -122,17 +122,24 @@ class MessageFragment(
         super.onViewCreated(view, savedInstanceState)
         viewModel.setDialogInfo(dialog.id, dialog.otherUser.id)
         lifecycleScope.launch {
-            viewModel.combinedFlow.collectLatest { (newMessages, pagingData) ->
-                Log.d("testFlow1", "OK")
-                adapter.submitData(pagingData)
-                Log.d("testFlow2", "OK")
-                if (newMessages.isNotEmpty()) {
-                    adapter.addNewMessages(newMessages)
+            launch {
+                viewModel.combinedFlow.collectLatest { (_, pagingData) ->
+                    Log.d("testFlow1", "Submitting paging data")
+                    adapter.submitData(pagingData)
                 }
-                val firstItem = adapter.snapshot().firstOrNull()
-                if(firstItem != null) {
-                    val firstMessageDate = firstItem.second
-                    viewModel.updateLastDate(firstMessageDate)
+            }
+            launch {
+                viewModel.combinedFlow.collectLatest { (newMessage, _) ->
+                    Log.d("testFlow2", "OK")
+                    val firstItem = adapter.snapshot().firstOrNull()
+                    if(firstItem != null) {
+                        val firstMessageTime = firstItem.first.timestamp
+                        viewModel.updateLastDate(firstMessageTime)
+                    }
+                    if (newMessage != null) {
+                        Log.d("testFlow3", "Adding new messages")
+                        adapter.addNewMessages(newMessage)
+                    }
                 }
             }
         }
@@ -534,7 +541,7 @@ class MessageFragment(
                         }
                         withContext(Dispatchers.Main) {
                             binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
-                            viewModel.refresh()
+                            //viewModel.refresh()
                         }
                     }
                 }

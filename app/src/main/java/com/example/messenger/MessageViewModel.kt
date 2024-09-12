@@ -75,8 +75,8 @@ class MessageViewModel @Inject constructor(
     private var lastMessageDate: String = ""
 
     private val searchBy = MutableLiveData("")
-    private val _newMessagesFlow = MutableStateFlow<List<Pair<Message, String>>>(emptyList())
-    private val newMessagesFlow: StateFlow<List<Pair<Message, String>>> = _newMessagesFlow
+    private val _newMessageFlow = MutableStateFlow<Pair<Message, String>?>(null)
+    private val newMessageFlow: StateFlow<Pair<Message, String>?> = _newMessageFlow
 
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     val combinedFlow = combine(
@@ -87,18 +87,22 @@ class MessageViewModel @Inject constructor(
                     MessagePagingSource(retrofitService, messengerService, dialogId, searchQuery, isFirst, fileManager)
                 }.flow.cachedIn(viewModelScope)
             },
-        newMessagesFlow
-    ) { pagingData, newMessages ->
-        newMessages to pagingData
+        newMessageFlow
+    ) { pagingData, newMessage ->
+        newMessage to pagingData
     }
 
-    fun updateLastDate(st: String) {
-        this.lastMessageDate = st
+    fun updateLastDate(time: Long) {
+        val greenwichMessageDate = Calendar.getInstance().apply {
+            timeInMillis = time - 10800000
+        }
+        val localNow = Calendar.getInstance()
+        this.lastMessageDate = if(isToday(localNow, greenwichMessageDate)) "" else formatMessageDate(time)
     }
 
     fun refresh() {
         isFirst = false
-        _newMessagesFlow.value = emptyList()
+        _newMessageFlow.value = null
         this.searchBy.postValue(this.searchBy.value)
     }
 
@@ -113,12 +117,12 @@ class MessageViewModel @Inject constructor(
     init {
         webSocketService.setListener(this)
         webSocketService.connect()
-        viewModelScope.launch {
-            while (true) {
-                delay(60000)
-                if(!disableRefresh) refresh()
-            }
-        }
+//        viewModelScope.launch {
+//            while (true) {
+//                delay(60000)
+//                if(!disableRefresh) refresh()
+//            }
+//        }
     }
 
     fun setDialogInfo(dialogId: Int, otherUserId: Int) {
@@ -373,17 +377,28 @@ class MessageViewModel @Inject constructor(
 
     override fun onNewMessage(message: Message) {
         Log.d("testSocketsMessage", "New Message: $message")
-        val date = formatMessageDate(message.timestamp)
-        val newMessagePair = if(date == lastMessageDate) message to "" else message to date
-        _newMessagesFlow.value = listOf(newMessagePair) + _newMessagesFlow.value
+        val newMessagePair = if(lastMessageDate == "") message to "" else message to formatMessageDate(message.timestamp)
+        _newMessageFlow.value = newMessagePair
     }
 
     override fun onEditedMessage(message: Message) {
+        viewModelScope.launch {
         Log.d("testSocketsMessage", "Edited Message: $message")
+        val adapterWithLoadStates = recyclerView.adapter
+        if (adapterWithLoadStates is ConcatAdapter) {
+            // Ищем оригинальный MessageAdapter внутри ConcatAdapter(без load states)
+            adapterWithLoadStates.adapters.forEach { adapter ->
+                if (adapter is MessageAdapter) {
+                    adapter.updateMessage(message)
+                }
+            }
+        }
+        }
     }
 
     override fun onMessagesDeleted(deletedMessagesEvent: DeletedMessagesEvent) {
         Log.d("testSocketsMessage", "Deleted messages")
+        refresh()
     }
 
     override fun onDialogCreated(dialogCreatedEvent: DialogCreatedEvent) {
