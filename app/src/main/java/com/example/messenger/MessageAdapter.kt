@@ -95,7 +95,10 @@ class MessageAdapter(
 
     private fun getItemCustom(idx: Int): Pair<Message, String>? {
         return if(idx < newMessages.size) newMessages[newMessages.size - idx - 1]
-        else getItem(idx - newMessages.size + 1)
+        else {
+            if(newMessages.size == 0) getItem(idx)
+            else getItem(idx - newMessages.size + 1)
+        }
     }
 
     fun clearNewMessages() {
@@ -108,8 +111,8 @@ class MessageAdapter(
 
     fun getDeleteList(): Pair<List<Int>, Map<String, String>> {
         val list = mutableListOf<Int>()
-        checkedPositions.forEach {
-            val message = getItemCustom(it)?.first
+        checkedPositions.forEach { idx ->
+            val message = if(idx == 0) getItemCustom(0)?.first else getItemCustom(idx - 1)?.first
             if(message != null) {
                 list.add(message.id)
             }
@@ -143,8 +146,9 @@ class MessageAdapter(
         if (pagingPosition != null) {
             Log.d("testPagingPosition", pagingPosition.toString())
             if(newMessages.size == 0) {
-                return pagingPosition
-            } else return pagingPosition + newMessages.size
+                if(pagingPosition == 0) return 0
+            }
+            return pagingPosition
         }
         return -1
     }
@@ -763,8 +767,9 @@ class MessageAdapter(
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
                 val filePathTemp = async(Dispatchers.IO) {
-                    if (messageViewModel.fManagerIsExist(message.voice!!)) {
-                        return@async Pair(messageViewModel.fManagerGetFilePath(message.voice!!), true)
+                    val voice = message.voice ?: "nonWork"
+                    if (messageViewModel.fManagerIsExist(voice)) {
+                        return@async Pair(messageViewModel.fManagerGetFilePath(voice), true)
                     } else {
                         try {
                             return@async Pair(messageViewModel.downloadFile(context, "audio", message.voice!!), false)
@@ -902,8 +907,9 @@ class MessageAdapter(
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
                 val filePathTemp = async(Dispatchers.IO) {
-                    if (messageViewModel.fManagerIsExist(message.voice!!)) {
-                        return@async Pair(messageViewModel.fManagerGetFilePath(message.voice!!), true)
+                    val voice = message.voice ?: "nonWork"
+                    if (messageViewModel.fManagerIsExist(voice)) {
+                        return@async Pair(messageViewModel.fManagerGetFilePath(voice), true)
                     } else {
                         try {
                             return@async Pair(messageViewModel.downloadFile(context, "audio", message.voice!!), false)
@@ -1277,7 +1283,7 @@ class MessageAdapter(
             uiScope.launch {
                 withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
                 val filePathTemp = async(Dispatchers.IO) {
-                    if (messageViewModel.fManagerIsExist(message.images!!.first())) {
+                    if (messageViewModel.fManagerIsExist(message.images?.first() ?: "nonWork")) {
                         return@async Pair(messageViewModel.fManagerGetFilePath(message.images!!.first()), true)
                     } else {
                         try {
@@ -1397,7 +1403,7 @@ class MessageAdapter(
             uiScope.launch {
                 withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
                 val filePathTemp = async(Dispatchers.IO) {
-                    if (messageViewModel.fManagerIsExist(message.images!!.first())) {
+                    if (messageViewModel.fManagerIsExist(message.images?.first() ?: "nonWork")) {
                         return@async Pair(messageViewModel.fManagerGetFilePath(message.images!!.first()), true)
                     } else {
                         try {

@@ -248,6 +248,7 @@ class MessageFragment(
                                     }.awaitAll() // wait all responses
                                 }
                                 binding.floatingActionButtonDelete.visibility = View.GONE
+                                binding.floatingActionButtonForward.visibility = View.GONE
                                 if(response.await() && response2.all { it }) {
                                     adapter.clearPositions()
                                     viewModel.startRefresh()

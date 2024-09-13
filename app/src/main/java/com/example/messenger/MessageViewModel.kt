@@ -402,7 +402,21 @@ class MessageViewModel @Inject constructor(
 
     override fun onMessagesDeleted(deletedMessagesEvent: DeletedMessagesEvent) {
         Log.d("testSocketsMessage", "Deleted messages")
+        val adapterWithLoadStates = recyclerView.adapter
+        if (adapterWithLoadStates is ConcatAdapter) {
+            // Ищем оригинальный MessageAdapter внутри ConcatAdapter(без load states)
+            adapterWithLoadStates.adapters.forEach { adapter ->
+                if (adapter is MessageAdapter) {
+                    adapter.clearNewMessages()
+                }
+            }
+        }
         refresh()
+        recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                recyclerView.scrollToPosition(0)
+            }
+        })
     }
 
     override fun onDialogCreated(dialogCreatedEvent: DialogCreatedEvent) {
