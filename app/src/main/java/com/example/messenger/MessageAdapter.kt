@@ -16,6 +16,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
+import androidx.paging.PagingData
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
@@ -81,27 +82,34 @@ class MessageAdapter(
     private var checkedFiles: MutableMap<String, String> = mutableMapOf()
     lateinit var dialogSettings: ConversationSettings
     private var highlightedPosition: Int? = null
-    private var newMessage: Pair<Message, String>? = null
-    private var messagesCount: Int = 0
+    private val newMessages: MutableList<Pair<Message, String>> = mutableListOf()
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.IO + job)
     private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)
 
-    fun addNewMessages(messages: Pair<Message, String>) {
-        newMessage = messages
-        Log.d("testFlow4", newMessage.toString())
-        messagesCount += 1
+    fun addNewMessages(message: Pair<Message, String>) {
+        newMessages.add(message)
+        Log.d("testFlow4", message.toString())
         notifyItemRangeInserted(0, 1)
     }
 
+    private fun getItemCustom(idx: Int): Pair<Message, String>? {
+        return if(idx < newMessages.size) newMessages[newMessages.size - idx - 1]
+        else getItem(idx - newMessages.size + 1)
+    }
+
+    fun clearNewMessages() {
+        newMessages.clear()
+    }
+
     override fun getItemCount(): Int {
-        return messagesCount + super.getItemCount()
+        return newMessages.size + super.getItemCount()
     }
 
     fun getDeleteList(): Pair<List<Int>, Map<String, String>> {
         val list = mutableListOf<Int>()
         checkedPositions.forEach {
-            val message = getItem(it)?.first
+            val message = getItemCustom(it)?.first
             if(message != null) {
                 list.add(message.id)
             }
@@ -112,7 +120,7 @@ class MessageAdapter(
     fun getForwardList(): List<Pair<Message, Boolean>> {
         val list = mutableListOf<Pair<Message, Boolean>>()
         checkedPositions.forEach {
-            val message = getItem(it)?.first
+            val message = getItemCustom(it)?.first
             if(message != null) {
                 list.add(Pair(message, mapPositions[it] ?: true))
             }
@@ -128,12 +136,21 @@ class MessageAdapter(
     }
 
     private fun getItemPosition(message: Message): Int {
-        val index = (0 until itemCount).firstOrNull { getItem(it)!!.first == message }
-        return index ?: -1
+        val newMessagePosition = newMessages.indexOfLast { it.first.id == message.id }
+        if(newMessagePosition != -1) return newMessagePosition
+
+        val pagingPosition = (0 until itemCount - newMessages.size).firstOrNull { getItem(it)?.first?.id == message.id }
+        if (pagingPosition != null) {
+            Log.d("testPagingPosition", pagingPosition.toString())
+            if(newMessages.size == 0) {
+                return pagingPosition
+            } else return pagingPosition + newMessages.size
+        }
+        return -1
     }
 
     private fun getItemPositionId(idMessage: Int): Int {
-        val index = (0 until itemCount).firstOrNull { getItem(it)!!.first.id == idMessage }
+        val index = (0 until itemCount).firstOrNull { getItemCustom(it)!!.first.id == idMessage }
         return index ?: -1
     }
 
@@ -218,7 +235,7 @@ class MessageAdapter(
     }
 
     override fun getItemViewType(position: Int): Int {
-        val message = getItem(position)?.first ?: return -1
+        val message = getItemCustom(position)?.first ?: return -1
         if(message.idSender == otherUserId) {
             return when {
                 message.images?.isNotEmpty() == true -> {
@@ -293,12 +310,12 @@ class MessageAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val message: Message
         val date: String
-        if (position < messagesCount) {
-            message = newMessage!!.first
-            date = newMessage!!.second
+        if (position < newMessages.size) {
+            message = newMessages[newMessages.size - position - 1].first
+            date = newMessages[newMessages.size - position - 1].second
         } else {
-            message = getItem(position - messagesCount)?.first ?: return
-            date = getItem(position - messagesCount)?.second ?: return
+            message = getItem(position)?.first ?: return
+            date = getItem(position)?.second ?: return
         }
         var flagText = false
         if(!message.text.isNullOrEmpty()) flagText = true
@@ -403,7 +420,7 @@ class MessageAdapter(
                     }
                 }
             } else {
-                val m = getItem(chk)?.first
+                val m = getItemCustom(chk)?.first
                 uiScopeMain.launch {
                     if(m?.images != null) {
                         messageViewModel.imageSet(m.images!!.first(), binding.answerImageView, context)
@@ -463,6 +480,7 @@ class MessageAdapter(
                 binding.icCheck2.visibility = View.VISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
                     savePosition(message, false)
@@ -519,6 +537,7 @@ class MessageAdapter(
                 binding.icCheck2.visibility = View.VISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
                     savePosition(message, true)
@@ -842,6 +861,7 @@ class MessageAdapter(
                 binding.icCheck2.visibility = View.VISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
                     savePositionFile(message, File(filePath).name, "audio", false)
@@ -980,6 +1000,7 @@ class MessageAdapter(
                 binding.icCheck2.visibility = View.VISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
                     savePositionFile(message, File(filePath).name, "audio", true)
@@ -1092,6 +1113,7 @@ class MessageAdapter(
                 binding.icCheck2.visibility = View.VISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
                     savePositionFile(message, File(filePath).name, "files", false)
@@ -1198,6 +1220,7 @@ class MessageAdapter(
                 binding.icCheck2.visibility = View.VISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
                     savePositionFile(message, File(filePath).name, "files", true)
@@ -1329,6 +1352,7 @@ class MessageAdapter(
                 binding.icCheck2.visibility = View.VISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
                     savePositionFile(message, File(filePath).name, "photos", false)
@@ -1451,6 +1475,7 @@ class MessageAdapter(
                 binding.icCheck2.visibility = View.VISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
                     savePositionFile(message, File(filePath).name, "photos", true)
@@ -1577,6 +1602,7 @@ class MessageAdapter(
                 binding.icCheck2.visibility = View.VISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
                     savePositionFiles(message, filePaths, false)
@@ -1707,6 +1733,7 @@ class MessageAdapter(
                 binding.icCheck2.visibility = View.VISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+            else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
                     savePositionFiles(message, filePaths, true)

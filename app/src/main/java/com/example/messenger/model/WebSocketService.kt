@@ -11,6 +11,7 @@ import io.socket.engineio.client.transports.WebSocket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.net.URISyntaxException
@@ -101,8 +102,12 @@ class WebSocketService @Inject constructor(
                 // send last emit
                 if(lastData != null && lastEvent != null) {
                     Log.d("testSocketIO", "Try to reconnect sockets")
+                    socket.disconnect()
+                    delay(200)
                     socket.connect()
                     socket.emit(lastEvent, lastData)
+                    lastData = null
+                    lastEvent = null
                 }
             } else {
                 Log.d("testSocketIO", "Error Sockets Token")
