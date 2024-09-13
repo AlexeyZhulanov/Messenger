@@ -6,6 +6,8 @@ import android.content.SharedPreferences
 import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import android.provider.OpenableColumns
@@ -80,6 +82,15 @@ class MessageFragment(
     private var editFlag = false
     private var answerFlag = false
     private var answerMessage: Pair<Int, String>? = null
+    private var typingStoppedTimeout = 3000L // delay 3 seconds
+    private var typingHandler: Handler = Handler(Looper.getMainLooper())
+    private var isTyping = false
+    private val typingRunnable = Runnable {
+        if (isTyping) {
+            viewModel.sendTypingEvent(false)
+            isTyping = false
+        }
+    }
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.Main + job)
     private val uiScopeIO = CoroutineScope(Dispatchers.IO + job)
@@ -176,6 +187,30 @@ class MessageFragment(
                 .commit()
         }
         val lastSession: TextView = view.findViewById(R.id.lastSessionTextView)
+        val typingTextView: TextView = view.findViewById(R.id.typingText)
+        val dot1: View = view.findViewById(R.id.dot1)
+        val dot2: View = view.findViewById(R.id.dot2)
+        val dot3: View = view.findViewById(R.id.dot3)
+        val typingAnimation = TypingAnimation(dot1, dot2, dot3)
+        lifecycleScope.launch {
+            viewModel.typingState.collect { isTyping ->
+                if (isTyping) {
+                    lastSession.visibility = View.INVISIBLE
+                    typingTextView.visibility = View.VISIBLE
+                    dot1.visibility = View.VISIBLE
+                    dot2.visibility = View.VISIBLE
+                    dot3.visibility = View.VISIBLE
+                    typingAnimation.startAnimation()
+                } else {
+                    typingAnimation.stopAnimation()
+                    typingTextView.visibility = View.INVISIBLE
+                    dot1.visibility = View.INVISIBLE
+                    dot2.visibility = View.INVISIBLE
+                    dot3.visibility = View.INVISIBLE
+                    lastSession.visibility = View.VISIBLE
+                }
+            }
+        }
         viewModel.lastSessionString.observe(viewLifecycleOwner) { sessionString ->
             lastSession.text = sessionString
         }
@@ -335,14 +370,33 @@ class MessageFragment(
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 if (s.isNullOrEmpty()) {
                     binding.recordView.visibility = View.VISIBLE
-                    if(!editFlag) {
+                    if (!editFlag) {
                         binding.enterButton.visibility = View.INVISIBLE
-                    } else binding.editButton.visibility = View.GONE
+                    } else {
+                        binding.editButton.visibility = View.GONE
+                    }
+
+                    // Отправляем событие "typing_stopped"
+                    viewModel.sendTypingEvent(false)
+                    isTyping = false
+                    typingHandler.removeCallbacks(typingRunnable)
                 } else {
                     binding.recordView.visibility = View.INVISIBLE
-                    if(!editFlag) {
+                    if (!editFlag) {
                         binding.enterButton.visibility = View.VISIBLE
-                    } else binding.editButton.visibility = View.VISIBLE
+                    } else {
+                        binding.editButton.visibility = View.VISIBLE
+                    }
+
+                    if (!isTyping) {
+                        // Отправляем событие "typing_started"
+                        viewModel.sendTypingEvent(true)
+                        isTyping = true
+                    }
+
+                    // Перезапускаем таймер отсчета до отправки "typing_stopped"
+                    typingHandler.removeCallbacks(typingRunnable)
+                    typingHandler.postDelayed(typingRunnable, typingStoppedTimeout)
                 }
             }
 

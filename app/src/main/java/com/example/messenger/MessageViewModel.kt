@@ -77,6 +77,8 @@ class MessageViewModel @Inject constructor(
     private val searchBy = MutableLiveData("")
     private val _newMessageFlow = MutableStateFlow<Pair<Message, String>?>(null)
     private val newMessageFlow: StateFlow<Pair<Message, String>?> = _newMessageFlow
+    private val _typingState = MutableStateFlow(false)
+    val typingState: StateFlow<Boolean> get() = _typingState
 
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     val combinedFlow = combine(
@@ -375,6 +377,16 @@ class MessageViewModel @Inject constructor(
         webSocketService.send("leave_dialog", leaveData)
     }
 
+    fun sendTypingEvent(flag: Boolean) {
+        val typingData = JSONObject()
+        typingData.put("dialog_id", dialogId)
+        if(flag) {
+            webSocketService.send("typing", typingData)
+        } else {
+            webSocketService.send("stop_typing", typingData)
+        }
+    }
+
     override fun onNewMessage(message: Message) {
         Log.d("testSocketsMessage", "New Message: $message")
         val newMessagePair = if(lastMessageDate == "") message to "" else message to formatMessageDate(message.timestamp)
@@ -433,10 +445,12 @@ class MessageViewModel @Inject constructor(
 
     override fun onStartTyping(typingEvent: TypingEvent) {
         Log.d("testSocketsMessage", "Typing started")
+        _typingState.value = true
     }
 
     override fun onStopTyping(typingEvent: TypingEvent) {
         Log.d("testSocketsMessage", "Typing stopped")
+        _typingState.value = false
     }
 
     override fun onMessagesRead(readMessagesEvent: ReadMessagesEvent) {

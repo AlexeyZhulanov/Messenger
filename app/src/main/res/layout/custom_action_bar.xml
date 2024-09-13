@@ -54,6 +54,54 @@
         app:layout_constraintStart_toStartOf="@id/userNameTextView"
         app:layout_constraintEnd_toStartOf="@id/ic_options"/>
 
+    <TextView
+        android:id="@+id/typingText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:lines="1"
+        android:ellipsize="end"
+        android:textSize="14sp"
+        android:fontFamily="casual"
+        android:textStyle="italic"
+        android:layout_marginTop="4dp"
+        android:visibility="invisible"
+        android:text="печатает"
+        app:layout_constraintTop_toBottomOf="@id/userNameTextView"
+        app:layout_constraintStart_toStartOf="@id/userNameTextView"/>
+
+    <View
+        android:id="@+id/dot1"
+        android:layout_width="5dp"
+        android:layout_height="5dp"
+        android:background="@drawable/circle_dot_grey"
+        android:visibility="invisible"
+        app:layout_constraintTop_toTopOf="@id/typingText"
+        app:layout_constraintBottom_toBottomOf="@id/typingText"
+        app:layout_constraintStart_toEndOf="@id/typingText"
+        android:layout_marginStart="4dp" />
+
+    <View
+        android:id="@+id/dot2"
+        android:layout_width="5dp"
+        android:layout_height="5dp"
+        android:background="@drawable/circle_dot_grey"
+        android:visibility="invisible"
+        app:layout_constraintTop_toTopOf="@id/typingText"
+        app:layout_constraintBottom_toBottomOf="@id/typingText"
+        app:layout_constraintStart_toEndOf="@id/dot1"
+        android:layout_marginStart="4dp" />
+
+    <View
+        android:id="@+id/dot3"
+        android:layout_width="5dp"
+        android:layout_height="5dp"
+        android:background="@drawable/circle_dot_grey"
+        android:visibility="invisible"
+        app:layout_constraintTop_toTopOf="@id/typingText"
+        app:layout_constraintBottom_toBottomOf="@id/typingText"
+        app:layout_constraintStart_toEndOf="@id/dot2"
+        android:layout_marginStart="4dp" />
+
     <ImageView
         android:id="@+id/ic_volume_off"
         android:layout_width="40dp"
