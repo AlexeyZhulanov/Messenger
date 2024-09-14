@@ -38,6 +38,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -74,6 +75,7 @@ class MessageViewModel @Inject constructor(
     @SuppressLint("StaticFieldLeak")
     private lateinit var recyclerView: RecyclerView
     private var lastMessageDate: String = ""
+    private var debounceJob: Job? = null
 
     private val searchBy = MutableLiveData("")
     private val _newMessageFlow = MutableStateFlow<Pair<Message, String>?>(null)
@@ -135,8 +137,51 @@ class MessageViewModel @Inject constructor(
         this.otherUserId = otherUserId
         joinDialog()
     }
-    fun setRecyclerView(recyclerView: RecyclerView) {
+    fun setRecyclerView(recyclerView: RecyclerView, adapter: MessageAdapter) {
         this.recyclerView = recyclerView
+//            val lastMessageId = messengerService.getLastReadMessage(dialogId)
+//            if(lastMessageId != null) {
+//            } else {
+//                // сохраняем последнее сообщение
+//            }
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+                val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+                val lastVisibleItemPosition = layoutManager.findLastVisibleItemPosition()
+
+                // Проверяем, есть ли видимые элементы на экране
+                if (firstVisibleItemPosition != RecyclerView.NO_POSITION && lastVisibleItemPosition != RecyclerView.NO_POSITION) {
+                    val visibleMessages = (firstVisibleItemPosition..lastVisibleItemPosition).mapNotNull { position ->
+                        adapter.getItemCustom(position)?.first
+                    }
+                    markMessagesAsRead(visibleMessages)
+                }
+            }
+        })
+    }
+
+    fun markMessagesAsRead(visibleMessages: List<Message>) {
+        debounceJob?.cancel() // Отменяем предыдущий запрос, если он был
+
+        debounceJob = viewModelScope.launch {
+            delay(2000) // Задержка перед отправкой
+
+            val messageIds = visibleMessages.map { it.id }
+            if (messageIds.isNotEmpty()) {
+                sendReadReceiptsToServer(messageIds)
+            }
+        }
+    }
+
+    private suspend fun sendReadReceiptsToServer(messageIds: List<Int>) {
+        try {
+            // Отправляем список прочитанных сообщений на сервер
+            retrofitService.markMessagesAsRead(messageIds)
+        } catch (e: Exception) {
+            Log.e("ReadReceiptError", "Failed to send read receipts: ${e.message}")
+        }
     }
 
     private fun highlightItem(position: Int) {

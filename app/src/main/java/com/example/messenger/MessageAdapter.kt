@@ -93,7 +93,7 @@ class MessageAdapter(
         notifyItemRangeInserted(0, 1)
     }
 
-    private fun getItemCustom(idx: Int): Pair<Message, String>? {
+    fun getItemCustom(idx: Int): Pair<Message, String>? {
         return if(idx < newMessages.size) newMessages[newMessages.size - idx - 1]
         else {
             if(newMessages.size == 0) getItem(idx)

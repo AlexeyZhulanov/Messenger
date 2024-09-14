@@ -13,6 +13,7 @@ import com.example.messenger.retrofit.source.base.SourcesProvider
 import com.example.messenger.room.AppDatabase
 import com.example.messenger.room.dao.ConversationDao
 import com.example.messenger.room.dao.GroupMessageDao
+import com.example.messenger.room.dao.LastReadMessageDao
 import com.example.messenger.room.dao.MessageDao
 import com.example.messenger.room.dao.SettingsDao
 import com.example.messenger.room.dao.UserDao
@@ -75,9 +76,10 @@ object MessengerModule {
         conversationDao: ConversationDao,
         messageDao: MessageDao,
         groupMessageDao: GroupMessageDao,
-        userDao: UserDao
+        userDao: UserDao,
+        lastReadMessageDao: LastReadMessageDao
     ): MessengerService {
-        return MessengerService(settingsDao, conversationDao, messageDao, groupMessageDao, userDao)
+        return MessengerService(settingsDao, conversationDao, messageDao, groupMessageDao, userDao, lastReadMessageDao)
     }
 
     @Provides

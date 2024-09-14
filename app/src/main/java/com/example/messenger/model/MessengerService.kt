@@ -2,11 +2,13 @@ package com.example.messenger.model
 
 import com.example.messenger.room.dao.ConversationDao
 import com.example.messenger.room.dao.GroupMessageDao
+import com.example.messenger.room.dao.LastReadMessageDao
 import com.example.messenger.room.dao.MessageDao
 import com.example.messenger.room.dao.SettingsDao
 import com.example.messenger.room.dao.UserDao
 import com.example.messenger.room.entities.ConversationDbEntity
 import com.example.messenger.room.entities.GroupMessageDbEntity
+import com.example.messenger.room.entities.LastReadMessageEntity
 import com.example.messenger.room.entities.MessageDbEntity
 import com.example.messenger.room.entities.SettingsDbEntity
 import com.example.messenger.room.entities.UserDbEntity
@@ -19,7 +21,8 @@ class MessengerService(
     private val conversationDao: ConversationDao,
     private val messageDao: MessageDao,
     private val groupMessageDao: GroupMessageDao,
-    private val userDao: UserDao
+    private val userDao: UserDao,
+    private val lastReadMessageDao: LastReadMessageDao
 ) : MessengerRepository {
     private var settings = Settings(0)
     override suspend fun getSettings(): Settings = withContext(Dispatchers.IO) {
@@ -101,5 +104,21 @@ class MessengerService(
         } else {
             userDao.insertUser(UserDbEntity.fromUserInput(user))
         }
+    }
+
+    override suspend fun getPreviousMessage(idDialog: Int, lastMessageId: Int): Message = withContext(Dispatchers.IO) {
+        return@withContext messageDao.getPreviousMessage(idDialog, lastMessageId).toMessage()
+    }
+
+    override suspend fun saveLastReadMessage(idDialog: Int, lastMessageId: Int) = withContext(Dispatchers.IO) {
+        lastReadMessageDao.saveLastReadMessage(LastReadMessageEntity.fromUserInput(idDialog, lastMessageId))
+    }
+
+    override suspend fun getLastReadMessage(idDialog: Int): Pair<Int, Int>? = withContext(Dispatchers.IO) {
+        lastReadMessageDao.getLastReadMessage(idDialog)?.toPair()
+    }
+
+    override suspend fun updateLastReadMessage(idDialog: Int, lastMessageId: Int) = withContext(Dispatchers.IO) {
+        lastReadMessageDao.updateLastReadMessage(LastReadMessageEntity.fromUserInput(idDialog, lastMessageId))
     }
 }
