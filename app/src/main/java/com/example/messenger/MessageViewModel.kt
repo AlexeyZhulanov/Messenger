@@ -70,6 +70,7 @@ class MessageViewModel @Inject constructor(
     private var otherUserId: Int = -1
     private var isFirst = true
     private var disableRefresh: Boolean = false
+    private var pendingRefresh: Boolean = false
     @SuppressLint("StaticFieldLeak")
     private lateinit var recyclerView: RecyclerView
     private var lastMessageDate: String = ""
@@ -103,6 +104,10 @@ class MessageViewModel @Inject constructor(
     }
 
     fun refresh() {
+        if (disableRefresh) {
+            pendingRefresh = true
+            return
+        }
         isFirst = false
         _newMessageFlow.value = null
         this.searchBy.postValue(this.searchBy.value)
@@ -114,17 +119,15 @@ class MessageViewModel @Inject constructor(
 
     fun startRefresh() {
         disableRefresh = false
+        if (pendingRefresh) {
+            pendingRefresh = false
+            refresh() // Отложенное обновление
+        }
     }
 
     init {
         webSocketService.setListener(this)
         webSocketService.connect()
-//        viewModelScope.launch {
-//            while (true) {
-//                delay(60000)
-//                if(!disableRefresh) refresh()
-//            }
-//        }
     }
 
     fun setDialogInfo(dialogId: Int, otherUserId: Int) {
@@ -184,19 +187,6 @@ class MessageViewModel @Inject constructor(
         else {
             recyclerView.smoothScrollToPosition(targetPosition)
             highlightItem(targetPosition)
-        }
-    }
-
-    fun fetchLastSession() {
-        viewModelScope.launch {
-            try {
-                val session = withContext(Dispatchers.IO) {
-                    retrofitService.getLastSession(otherUserId)
-                }
-                _lastSessionString.value = formatUserSessionDate(session)
-            } catch (e: Exception) {
-                _lastSessionString.value = "Unknown"
-            }
         }
     }
 
@@ -441,6 +431,8 @@ class MessageViewModel @Inject constructor(
 
     override fun onUserSessionUpdated(userSessionUpdatedEvent: UserSessionUpdatedEvent) {
         Log.d("testSocketsMessage", "Session updated")
+        val sessionString = formatUserSessionDate(userSessionUpdatedEvent.lastSession)
+        _lastSessionString.postValue(sessionString)
     }
 
     override fun onStartTyping(typingEvent: TypingEvent) {

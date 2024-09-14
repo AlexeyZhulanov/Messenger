@@ -59,6 +59,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -129,6 +130,7 @@ class MessageFragment(
         }
     }
 
+    @OptIn(FlowPreview::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel.setDialogInfo(dialog.id, dialog.otherUser.id)
@@ -154,7 +156,6 @@ class MessageFragment(
                 }
             }
         }
-        viewModel.fetchLastSession()
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.custom_action_bar, toolbarContainer, false)
@@ -193,7 +194,10 @@ class MessageFragment(
         val dot3: View = view.findViewById(R.id.dot3)
         val typingAnimation = TypingAnimation(dot1, dot2, dot3)
         lifecycleScope.launch {
-            viewModel.typingState.collect { isTyping ->
+            viewModel.typingState
+                .debounce(2000)
+                .distinctUntilChanged()
+                .collect { isTyping ->
                 if (isTyping) {
                     lastSession.visibility = View.INVISIBLE
                     typingTextView.visibility = View.VISIBLE
