@@ -78,10 +78,16 @@ class MessageViewModel @Inject constructor(
     private var debounceJob: Job? = null
 
     private val searchBy = MutableLiveData("")
+
     private val _newMessageFlow = MutableStateFlow<Pair<Message, String>?>(null)
     private val newMessageFlow: StateFlow<Pair<Message, String>?> = _newMessageFlow
+
     private val _typingState = MutableStateFlow(false)
     val typingState: StateFlow<Boolean> get() = _typingState
+
+    private val _readMessagesFlow = MutableStateFlow<List<Int>>(emptyList())
+    val readMessagesFlow: StateFlow<List<Int>> get() = _readMessagesFlow
+
 
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     val combinedFlow = combine(
@@ -139,22 +145,17 @@ class MessageViewModel @Inject constructor(
     }
     fun setRecyclerView(recyclerView: RecyclerView, adapter: MessageAdapter) {
         this.recyclerView = recyclerView
-//            val lastMessageId = messengerService.getLastReadMessage(dialogId)
-//            if(lastMessageId != null) {
-//            } else {
-//                // сохраняем последнее сообщение
-//            }
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
                 val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-                val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
                 val lastVisibleItemPosition = layoutManager.findLastVisibleItemPosition()
+                val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
 
-                // Проверяем, есть ли видимые элементы на экране
-                if (firstVisibleItemPosition != RecyclerView.NO_POSITION && lastVisibleItemPosition != RecyclerView.NO_POSITION) {
-                    val visibleMessages = (firstVisibleItemPosition..lastVisibleItemPosition).mapNotNull { position ->
-                        adapter.getItemCustom(position)?.first
+                // Проверяем видимые элементы от последнего к первому
+                if (lastVisibleItemPosition != RecyclerView.NO_POSITION && firstVisibleItemPosition != RecyclerView.NO_POSITION) {
+                    val visibleMessages = (lastVisibleItemPosition downTo firstVisibleItemPosition).mapNotNull { position ->
+                        adapter.getItemCustom(position)?.first?.takeIf { it.idSender == otherUserId }
                     }
                     markMessagesAsRead(visibleMessages)
                 }
@@ -400,6 +401,22 @@ class MessageViewModel @Inject constructor(
         }
     }
 
+    fun saveLastMessage(id: Int) {
+        viewModelScope.launch {
+            val temp = messengerService.getLastReadMessage(dialogId)
+            if(temp != null) messengerService.updateLastReadMessage(dialogId, id)
+            else messengerService.saveLastReadMessage(dialogId, id)
+        }
+    }
+
+    suspend fun getLastMessageId(): Int = withContext(Dispatchers.IO) {
+        return@withContext messengerService.getLastReadMessage(dialogId)?.second ?: -1
+    }
+
+    suspend fun getPreviousMessageId(id: Int): Int = withContext(Dispatchers.IO) {
+        return@withContext messengerService.getPreviousMessage(dialogId, id).id
+    }
+
     private fun joinDialog() {
         val joinData = JSONObject()
         joinData.put("dialog_id", dialogId)
@@ -492,6 +509,7 @@ class MessageViewModel @Inject constructor(
 
     override fun onMessagesRead(readMessagesEvent: ReadMessagesEvent) {
         Log.d("testSocketsMessage", "Messages read")
+        _readMessagesFlow.value = readMessagesEvent.messagesReadIds
     }
 
     override fun onAllMessagesDeleted(dialogMessagesAllDeleted: DialogMessagesAllDeleted) {

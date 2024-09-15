@@ -115,7 +115,7 @@ class MessengerService(
     }
 
     override suspend fun getLastReadMessage(idDialog: Int): Pair<Int, Int>? = withContext(Dispatchers.IO) {
-        lastReadMessageDao.getLastReadMessage(idDialog)?.toPair()
+        return@withContext lastReadMessageDao.getLastReadMessage(idDialog)?.toPair()
     }
 
     override suspend fun updateLastReadMessage(idDialog: Int, lastMessageId: Int) = withContext(Dispatchers.IO) {

@@ -131,6 +131,10 @@ class MessageAdapter(
         return list
     }
 
+    fun updateMessagesAsRead(list: List<Int>) {
+        // todo
+    }
+
     @SuppressLint("NotifyDataSetChanged")
     fun clearPositions() {
         canLongClick = true

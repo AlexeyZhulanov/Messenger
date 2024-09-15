@@ -218,6 +218,14 @@ class MessageFragment(
         viewModel.lastSessionString.observe(viewLifecycleOwner) { sessionString ->
             lastSession.text = sessionString
         }
+        lifecycleScope.launch {
+            viewModel.readMessagesFlow
+                .debounce(5000)
+                .distinctUntilChanged()
+                .collect { readMessagesIds ->
+                adapter.updateMessagesAsRead(readMessagesIds)
+            }
+        }
         val options: ImageView = view.findViewById(R.id.ic_options)
         options.setOnClickListener {
             showPopupMenu(it, R.menu.popup_menu_dialog)
@@ -632,6 +640,20 @@ class MessageFragment(
     override fun onPause() {
         viewModel.stopRefresh()
         super.onPause()
+        // Получаем последнее видимое сообщение
+        val layoutManager = binding.recyclerview.layoutManager as LinearLayoutManager
+        val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+        val firstMessageId = if (firstVisibleItemPosition != RecyclerView.NO_POSITION && firstVisibleItemPosition < 25) {
+            val firstMessage = adapter.getItemCustom(firstVisibleItemPosition)?.first
+            if(firstMessage?.isRead == true) {
+                adapter.getItemCustom(0)?.first?.id ?: -1
+            } else {
+                firstMessage?.id ?: -1
+            }
+        } else {
+            adapter.getItemCustom(0)?.first?.id ?: -1
+        }
+        viewModel.saveLastMessage(firstMessageId)
     }
 
     private fun handleFileUri(uri: Uri) {
