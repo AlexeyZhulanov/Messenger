@@ -71,6 +71,12 @@ object MessengerModule {
 
     @Provides
     @Singleton
+    fun provideLastReadMessageDao(appDatabase: AppDatabase): LastReadMessageDao {
+        return appDatabase.getLastReadMessageDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideMessengerService(
         settingsDao: SettingsDao,
         conversationDao: ConversationDao,

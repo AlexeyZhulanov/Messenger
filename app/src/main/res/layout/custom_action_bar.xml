@@ -48,6 +48,7 @@
         android:lines="1"
         android:ellipsize="end"
         android:textSize="14sp"
+        android:visibility="visible"
         android:layout_marginTop="4dp"
         tools:text="был в сети час назад"
         app:layout_constraintTop_toBottomOf="@id/userNameTextView"

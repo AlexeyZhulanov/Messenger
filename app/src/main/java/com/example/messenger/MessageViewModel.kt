@@ -35,6 +35,7 @@ import com.example.messenger.model.UserSessionUpdatedEvent
 import com.example.messenger.model.WebSocketListenerInterface
 import com.example.messenger.model.WebSocketService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -74,7 +75,7 @@ class MessageViewModel @Inject constructor(
     private var pendingRefresh: Boolean = false
     @SuppressLint("StaticFieldLeak")
     private lateinit var recyclerView: RecyclerView
-    private var lastMessageDate: String = ""
+    private var lastMessageDate: String = "null"
     private var debounceJob: Job? = null
 
     private val searchBy = MutableLiveData("")
@@ -134,6 +135,7 @@ class MessageViewModel @Inject constructor(
     }
 
     init {
+        updateLastSession()
         webSocketService.setListener(this)
         webSocketService.connect()
     }
@@ -143,8 +145,31 @@ class MessageViewModel @Inject constructor(
         this.otherUserId = otherUserId
         joinDialog()
     }
-    fun setRecyclerView(recyclerView: RecyclerView, adapter: MessageAdapter) {
+
+    fun setRecyclerView(recyclerView: RecyclerView) {
         this.recyclerView = recyclerView
+    }
+
+    fun fetchLastSession() {
+        viewModelScope.launch {
+            try {
+                val session = withContext(Dispatchers.IO) {
+                    retrofitService.getLastSession(otherUserId)
+                }
+                _lastSessionString.value = formatUserSessionDate(session)
+            } catch (e: Exception) {
+                _lastSessionString.value = "Unknown"
+            }
+        }
+    }
+
+    private fun updateLastSession() {
+        viewModelScope.launch {
+            retrofitService.updateLastSession()
+        }
+    }
+
+    fun setMarkScrollListener(recyclerView: RecyclerView, adapter: MessageAdapter) {
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
@@ -167,7 +192,7 @@ class MessageViewModel @Inject constructor(
         debounceJob?.cancel() // Отменяем предыдущий запрос, если он был
 
         debounceJob = viewModelScope.launch {
-            delay(2000) // Задержка перед отправкой
+            delay(3000) // Задержка перед отправкой
 
             val messageIds = visibleMessages.map { it.id }
             if (messageIds.isNotEmpty()) {

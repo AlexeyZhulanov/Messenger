@@ -89,7 +89,6 @@ class MessageAdapter(
 
     fun addNewMessages(message: Pair<Message, String>) {
         newMessages.add(message)
-        Log.d("testFlow4", message.toString())
         notifyItemRangeInserted(0, 1)
     }
 
@@ -97,7 +96,7 @@ class MessageAdapter(
         return if(idx < newMessages.size) newMessages[newMessages.size - idx - 1]
         else {
             if(newMessages.size == 0) getItem(idx)
-            else getItem(idx - newMessages.size + 1)
+            else getItem(idx - newMessages.size)
         }
     }
 
@@ -131,8 +130,21 @@ class MessageAdapter(
         return list
     }
 
-    fun updateMessagesAsRead(list: List<Int>) {
-        // todo
+    fun updateMessagesAsRead(listIds: List<Int>) {
+        val currentPagingData = snapshot().items
+        val updatedPagingData = currentPagingData.map {
+            if(it.first.id in listIds) it.first.isRead = true
+            it
+        }
+        uiScopeMain.launch {
+            submitData(PagingData.from(updatedPagingData))
+        }
+        newMessages.forEachIndexed { index, pair ->
+            if(pair.first.id in listIds) {
+                pair.first.isRead = true
+                notifyItemChanged(newMessages.size - index - 1)
+            }
+        }
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -148,7 +160,6 @@ class MessageAdapter(
 
         val pagingPosition = (0 until itemCount - newMessages.size).firstOrNull { getItem(it)?.first?.id == message.id }
         if (pagingPosition != null) {
-            Log.d("testPagingPosition", pagingPosition.toString())
             if(newMessages.size == 0) {
                 if(pagingPosition == 0) return 0
             }
@@ -486,6 +497,9 @@ class MessageAdapter(
             if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
                 binding.icCheck2.visibility = View.VISIBLE
+            } else {
+                binding.icCheck.visibility = View.VISIBLE
+                binding.icCheck2.visibility = View.INVISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             else binding.editTextView.visibility = View.GONE
@@ -543,6 +557,9 @@ class MessageAdapter(
             if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
                 binding.icCheck2.visibility = View.VISIBLE
+            } else {
+                binding.icCheck.visibility = View.VISIBLE
+                binding.icCheck2.visibility = View.INVISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             else binding.editTextView.visibility = View.GONE
@@ -868,6 +885,9 @@ class MessageAdapter(
             if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
                 binding.icCheck2.visibility = View.VISIBLE
+            } else {
+                binding.icCheck.visibility = View.VISIBLE
+                binding.icCheck2.visibility = View.INVISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             else binding.editTextView.visibility = View.GONE
@@ -1008,6 +1028,9 @@ class MessageAdapter(
             if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
                 binding.icCheck2.visibility = View.VISIBLE
+            } else {
+                binding.icCheck.visibility = View.VISIBLE
+                binding.icCheck2.visibility = View.INVISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             else binding.editTextView.visibility = View.GONE
@@ -1121,6 +1144,9 @@ class MessageAdapter(
             if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
                 binding.icCheck2.visibility = View.VISIBLE
+            } else {
+                binding.icCheck.visibility = View.VISIBLE
+                binding.icCheck2.visibility = View.INVISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             else binding.editTextView.visibility = View.GONE
@@ -1228,6 +1254,9 @@ class MessageAdapter(
             if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
                 binding.icCheck2.visibility = View.VISIBLE
+            } else {
+                binding.icCheck.visibility = View.VISIBLE
+                binding.icCheck2.visibility = View.INVISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             else binding.editTextView.visibility = View.GONE
@@ -1360,6 +1389,9 @@ class MessageAdapter(
             if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
                 binding.icCheck2.visibility = View.VISIBLE
+            } else {
+                binding.icCheck.visibility = View.VISIBLE
+                binding.icCheck2.visibility = View.INVISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             else binding.editTextView.visibility = View.GONE
@@ -1483,6 +1515,9 @@ class MessageAdapter(
             if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
                 binding.icCheck2.visibility = View.VISIBLE
+            } else {
+                binding.icCheck.visibility = View.VISIBLE
+                binding.icCheck2.visibility = View.INVISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             else binding.editTextView.visibility = View.GONE
@@ -1610,6 +1645,9 @@ class MessageAdapter(
             if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
                 binding.icCheck2.visibility = View.VISIBLE
+            } else {
+                binding.icCheck.visibility = View.VISIBLE
+                binding.icCheck2.visibility = View.INVISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             else binding.editTextView.visibility = View.GONE
@@ -1741,6 +1779,9 @@ class MessageAdapter(
             if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
                 binding.icCheck2.visibility = View.VISIBLE
+            } else {
+                binding.icCheck.visibility = View.VISIBLE
+                binding.icCheck2.visibility = View.INVISIBLE
             }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             else binding.editTextView.visibility = View.GONE

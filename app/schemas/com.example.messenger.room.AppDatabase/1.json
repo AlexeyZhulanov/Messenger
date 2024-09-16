@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "695c853bc530629fc3e227a0e49f7d5e",
+    "identityHash": "53fe7f74e9cf31254a2b921fa0255e01",
     "entities": [
       {
         "tableName": "settings",
@@ -449,12 +449,48 @@
           }
         ],
         "foreignKeys": []
+      },
+      {
+        "tableName": "last_read_message",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`dialog_id` INTEGER NOT NULL, `last_read_message_id` INTEGER NOT NULL, PRIMARY KEY(`dialog_id`))",
+        "fields": [
+          {
+            "fieldPath": "dialogId",
+            "columnName": "dialog_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastReadMessageId",
+            "columnName": "last_read_message_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "dialog_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_last_read_message_dialog_id",
+            "unique": true,
+            "columnNames": [
+              "dialog_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_last_read_message_dialog_id` ON `${TABLE_NAME}` (`dialog_id`)"
+          }
+        ],
+        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '695c853bc530629fc3e227a0e49f7d5e')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '53fe7f74e9cf31254a2b921fa0255e01')"
     ]
   }
 }

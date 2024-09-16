@@ -143,19 +143,28 @@ class MessageFragment(
             }
             launch {
                 viewModel.combinedFlow.collectLatest { (newMessage, _) ->
-                    Log.d("testFlow2", "OK")
-                    val firstItem = adapter.snapshot().firstOrNull()
-                    if(firstItem != null) {
-                        val firstMessageTime = firstItem.first.timestamp
-                        viewModel.updateLastDate(firstMessageTime)
-                    }
                     if (newMessage != null) {
-                        Log.d("testFlow3", "Adding new messages")
+                        viewModel.updateLastDate(newMessage.first.timestamp)
                         adapter.addNewMessages(newMessage)
                     }
                 }
             }
         }
+        val firstItem = adapter.snapshot().items.firstOrNull()
+        if(firstItem != null) viewModel.updateLastDate(firstItem.first.timestamp)
+        lifecycleScope.launch {
+            val lastReadMessageId = viewModel.getLastMessageId()
+            if(lastReadMessageId != -1) {
+                val position = findPositionById(lastReadMessageId)
+                if(position != -1) {
+                    binding.recyclerview.scrollToPosition(position)
+                } else {
+                    val pos = viewModel.getPreviousMessageId(lastReadMessageId)
+                    binding.recyclerview.scrollToPosition(pos)
+                }
+            }
+        }
+        viewModel.setMarkScrollListener(binding.recyclerview, adapter)
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.custom_action_bar, toolbarContainer, false)
@@ -215,14 +224,12 @@ class MessageFragment(
                 }
             }
         }
+        viewModel.fetchLastSession()
         viewModel.lastSessionString.observe(viewLifecycleOwner) { sessionString ->
             lastSession.text = sessionString
         }
         lifecycleScope.launch {
-            viewModel.readMessagesFlow
-                .debounce(5000)
-                .distinctUntilChanged()
-                .collect { readMessagesIds ->
+            viewModel.readMessagesFlow.collect { readMessagesIds ->
                 adapter.updateMessagesAsRead(readMessagesIds)
             }
         }
@@ -495,7 +502,7 @@ class MessageFragment(
         binding.recyclerview.layoutManager = layoutManager
         binding.recyclerview.adapter = adapterWithLoadStates
         binding.recyclerview.addItemDecoration(VerticalSpaceItemDecoration(15))
-        viewModel.setRecyclerView(binding.recyclerview, adapter)
+        viewModel.setRecyclerView(binding.recyclerview)
         binding.selectedPhotosRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         binding.selectedPhotosRecyclerView.adapter = imageAdapter
         lifecycleScope.launch {
@@ -563,6 +570,16 @@ class MessageFragment(
             }
         }
         return binding.root
+    }
+
+    private fun findPositionById(messageId: Int): Int {
+        val currentPagingData = adapter.snapshot().items
+        val positionInPagingData = currentPagingData.indexOfFirst { it.first.id == messageId }
+
+        if (positionInPagingData != -1) {
+            return positionInPagingData
+        }
+        return -1
     }
 
     override val defaultViewModelCreationExtras: CreationExtras
