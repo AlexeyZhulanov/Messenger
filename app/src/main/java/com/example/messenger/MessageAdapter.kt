@@ -131,18 +131,26 @@ class MessageAdapter(
     }
 
     fun updateMessagesAsRead(listIds: List<Int>) {
-        val currentPagingData = snapshot().items
-        val updatedPagingData = currentPagingData.map {
-            if(it.first.id in listIds) it.first.isRead = true
-            it
-        }
-        uiScopeMain.launch {
-            submitData(PagingData.from(updatedPagingData))
-        }
-        newMessages.forEachIndexed { index, pair ->
-            if(pair.first.id in listIds) {
-                pair.first.isRead = true
-                notifyItemChanged(newMessages.size - index - 1)
+        if(listIds.isNotEmpty()) {
+            val currentPagingData = snapshot().items
+            var startPosition = -1
+            val updatedPagingData = currentPagingData.mapIndexed { index, pair ->
+                if (pair.first.id in listIds) {
+                    pair.first.isRead = true
+                    if (startPosition == -1) startPosition = index
+                }
+                pair
+            }
+            uiScopeMain.launch {
+                submitData(PagingData.from(updatedPagingData))
+                notifyItemRangeChanged(startPosition, listIds.size)
+                Log.d("testMarkReadMessages", "startpos: $startPosition, size: ${listIds.size}")
+            }
+            newMessages.forEachIndexed { index, pair ->
+                if (pair.first.id in listIds) {
+                    pair.first.isRead = true
+                    notifyItemChanged(newMessages.size - index - 1)
+                }
             }
         }
     }

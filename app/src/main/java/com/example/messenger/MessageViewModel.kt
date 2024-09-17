@@ -181,7 +181,7 @@ class MessageViewModel @Inject constructor(
                 // Проверяем видимые элементы от последнего к первому
                 if (lastVisibleItemPosition != RecyclerView.NO_POSITION && firstVisibleItemPosition != RecyclerView.NO_POSITION) {
                     val visibleMessages = (lastVisibleItemPosition downTo firstVisibleItemPosition).mapNotNull { position ->
-                        adapter.getItemCustom(position)?.first?.takeIf { it.idSender == otherUserId }
+                        adapter.getItemCustom(position)?.first?.takeIf { it.idSender == otherUserId && !it.isRead }
                     }
                     markMessagesAsRead(visibleMessages)
                 }

@@ -564,7 +564,13 @@ class MessageFragment(
                         }
                     }
                 }
-                binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+                try {
+                    binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+                } catch (e: Exception) {
+                    binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterDataObserver)
+                    binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+                }
+
                 val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 enterText.setText("")
                 // viewModel.refresh()
@@ -625,7 +631,12 @@ class MessageFragment(
                             }
                         }
                         withContext(Dispatchers.Main) {
-                            binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+                            try {
+                                binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+                            } catch (e: Exception) {
+                                binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterDataObserver)
+                                binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+                            }
                             //viewModel.refresh()
                         }
                     }
@@ -689,7 +700,12 @@ class MessageFragment(
                         }
                     }
                 }
-                binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+                try {
+                    binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+                } catch (e: Exception) {
+                    binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterDataObserver)
+                    binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+                }
                 // viewModel.refresh()
             }
         } else Toast.makeText(requireContext(), "Что-то не так с файлом", Toast.LENGTH_SHORT).show()
