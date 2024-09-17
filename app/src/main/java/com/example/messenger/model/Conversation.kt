@@ -36,6 +36,6 @@ data class Group(
 )
 
 data class ConversationSettings(
-    val canDelete: Boolean,
-    val autoDeleteInterval: Int
+    val canDelete: Boolean = false,
+    val autoDeleteInterval: Int = 0
 )

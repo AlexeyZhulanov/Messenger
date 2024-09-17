@@ -80,7 +80,7 @@ class MessageAdapter(
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
     private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
     private var checkedFiles: MutableMap<String, String> = mutableMapOf()
-    lateinit var dialogSettings: ConversationSettings
+    var dialogSettings: ConversationSettings = ConversationSettings()
     private var highlightedPosition: Int? = null
     private val newMessages: MutableList<Pair<Message, String>> = mutableListOf()
     private val job = Job()
@@ -111,7 +111,7 @@ class MessageAdapter(
     fun getDeleteList(): Pair<List<Int>, Map<String, String>> {
         val list = mutableListOf<Int>()
         checkedPositions.forEach { idx ->
-            val message = if(idx == 0) getItemCustom(0)?.first else getItemCustom(idx - 1)?.first
+            val message = getItemCustom(idx)?.first
             if(message != null) {
                 list.add(message.id)
             }
@@ -156,13 +156,10 @@ class MessageAdapter(
 
     private fun getItemPosition(message: Message): Int {
         val newMessagePosition = newMessages.indexOfLast { it.first.id == message.id }
-        if(newMessagePosition != -1) return newMessagePosition
+        if(newMessagePosition != -1) return newMessages.size - newMessagePosition - 1
 
         val pagingPosition = (0 until itemCount - newMessages.size).firstOrNull { getItem(it)?.first?.id == message.id }
         if (pagingPosition != null) {
-            if(newMessages.size == 0) {
-                if(pagingPosition == 0) return 0
-            }
             return pagingPosition
         }
         return -1

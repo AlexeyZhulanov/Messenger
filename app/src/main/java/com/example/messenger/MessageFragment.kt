@@ -271,8 +271,6 @@ class MessageFragment(
                         viewModel.stopRefresh()
                         binding.floatingActionButtonDelete.visibility = View.VISIBLE
                         binding.floatingActionButtonForward.visibility = View.VISIBLE
-                        val dialogSettings = async(Dispatchers.IO) { viewModel.getDialogSettings(dialog.id) }
-                        adapter.dialogSettings = dialogSettings.await()
                     requireActivity().onBackPressedDispatcher.addCallback(
                         viewLifecycleOwner,
                         object : OnBackPressedCallback(true) {
@@ -355,6 +353,9 @@ class MessageFragment(
                         .startActivityPreview(position, false, images)
                 }
             }, dialog.otherUser.id, requireContext(), viewModel)
+            uiScope.launch {
+                adapter.dialogSettings = viewModel.getDialogSettings(dialog.id)
+            }
         imageAdapter = ImageAdapter(requireContext(), object: ImageActionListener {
             override fun onImageClicked(image: LocalMedia, position: Int) {
                 Log.d("testClick", "Image clicked: $image")
