@@ -141,9 +141,9 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun updateLastSession(): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun updateLastSession(idDialog: Int): Boolean = withContext(Dispatchers.IO) {
         val message = try {
-            usersSource.updateLastSession()
+            usersSource.updateLastSession(idDialog)
         } catch (e: BackendException) {
             if (e.code == 404) {
                 throw UserNotFoundException(e)

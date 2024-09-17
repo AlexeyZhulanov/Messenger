@@ -135,7 +135,6 @@ class MessageViewModel @Inject constructor(
     }
 
     init {
-        updateLastSession()
         webSocketService.setListener(this)
         webSocketService.connect()
     }
@@ -144,6 +143,7 @@ class MessageViewModel @Inject constructor(
         this.dialogId = dialogId
         this.otherUserId = otherUserId
         joinDialog()
+        updateLastSession()
     }
 
     fun setRecyclerView(recyclerView: RecyclerView) {
@@ -165,7 +165,8 @@ class MessageViewModel @Inject constructor(
 
     private fun updateLastSession() {
         viewModelScope.launch {
-            retrofitService.updateLastSession()
+            delay(2000)
+            retrofitService.updateLastSession(dialogId)
         }
     }
 

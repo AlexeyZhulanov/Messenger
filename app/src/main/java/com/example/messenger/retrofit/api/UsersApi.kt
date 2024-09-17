@@ -14,6 +14,7 @@ import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface UsersApi {
     @POST("register")
@@ -30,8 +31,10 @@ interface UsersApi {
     suspend fun updatePassword(
         @Body updatePasswordRequestEntity: UpdatePasswordRequestEntity) : ResponseEntityMessageAnswer
 
-    @PUT("update_last_session")
-    suspend fun updateLastSession() : ResponseEntityMessageAnswer
+    @PUT("update_last_session/{id_dialog}")
+    suspend fun updateLastSession(
+        @Path("id_dialog") idDialog: Int
+    ) : ResponseEntityMessageAnswer
 
     @GET("last_session/{user_id}")
     suspend fun getLastSession(

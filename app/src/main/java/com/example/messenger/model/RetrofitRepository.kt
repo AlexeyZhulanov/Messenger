@@ -17,7 +17,7 @@ interface RetrofitRepository {
 
     suspend fun updatePassword(password: String) : Boolean
 
-    suspend fun updateLastSession() : Boolean
+    suspend fun updateLastSession(idDialog: Int) : Boolean
 
     suspend fun getUser(userId: Int) : User
 
