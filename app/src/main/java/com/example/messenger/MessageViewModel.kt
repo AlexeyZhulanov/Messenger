@@ -75,7 +75,7 @@ class MessageViewModel @Inject constructor(
     private var pendingRefresh: Boolean = false
     @SuppressLint("StaticFieldLeak")
     private lateinit var recyclerView: RecyclerView
-    private var lastMessageDate: String = "null"
+    private var lastMessageDate: String = ""
     private var debounceJob: Job? = null
 
     private val searchBy = MutableLiveData("")

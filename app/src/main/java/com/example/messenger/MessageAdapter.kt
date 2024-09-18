@@ -83,6 +83,8 @@ class MessageAdapter(
     var dialogSettings: ConversationSettings = ConversationSettings()
     private var highlightedPosition: Int? = null
     private val newMessages: MutableList<Pair<Message, String>> = mutableListOf()
+    private var widthFlag: Boolean = true
+    private var maxWidth: Int = 300
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.IO + job)
     private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)
@@ -334,6 +336,12 @@ class MessageAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val message: Message
         val date: String
+        if(widthFlag) {
+            val displayMetrics = holder.itemView.context.resources.displayMetrics
+            val screenWidth = displayMetrics.widthPixels
+            maxWidth = (screenWidth * 0.65).toInt()
+            widthFlag = false
+        }
         if (position < newMessages.size) {
             message = newMessages[newMessages.size - position - 1].first
             date = newMessages[newMessages.size - position - 1].second
@@ -473,6 +481,7 @@ class MessageAdapter(
             binding.answerLayout.answerImageView.setImageDrawable(null)
         }
         fun bind(message: Message, date: String, position: Int, isAnswer: Boolean) {
+            binding.messageReceiverTextView.maxWidth = maxWidth
             if(isAnswer) handleAnswerLayout(binding, message)
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
@@ -534,6 +543,7 @@ class MessageAdapter(
             binding.answerLayout.answerImageView.setImageDrawable(null)
         }
         fun bind(message: Message, date: String, position: Int, isAnswer: Boolean) {
+            binding.messageSenderTextView.maxWidth = maxWidth
             if(isAnswer) handleAnswerLayout(binding, message)
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
@@ -1313,6 +1323,7 @@ class MessageAdapter(
             }
             if(flagText) {
                 binding.messageReceiverTextView.visibility = View.VISIBLE
+                binding.messageReceiverTextView.maxWidth = maxWidth
                 binding.messageReceiverTextView.text = message.text
             } else {
                 binding.messageReceiverTextView.visibility = View.GONE
@@ -1437,6 +1448,7 @@ class MessageAdapter(
             }
             if(flagText) {
                 binding.messageSenderTextView.visibility = View.VISIBLE
+                binding.messageSenderTextView.maxWidth = maxWidth
                 binding.messageSenderTextView.text = message.text
             } else {
                 binding.messageSenderTextView.visibility = View.GONE
@@ -1586,6 +1598,7 @@ class MessageAdapter(
             mes = message
             if(flagText) {
                 binding.messageReceiverTextView.visibility = View.VISIBLE
+                binding.messageReceiverTextView.maxWidth = maxWidth
                 binding.messageReceiverTextView.text = message.text
             } else {
                 binding.messageReceiverTextView.visibility = View.GONE
@@ -1718,6 +1731,7 @@ class MessageAdapter(
             mes = message
             if(flagText) {
                 binding.messageSenderTextView.visibility = View.VISIBLE
+                binding.messageSenderTextView.maxWidth = maxWidth
                 binding.messageSenderTextView.text = message.text
             } else {
                 binding.messageSenderTextView.visibility = View.GONE
