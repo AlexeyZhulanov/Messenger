@@ -255,7 +255,7 @@ class MessageFragment(
                 binding.messageLayout.background =
                     ContextCompat.getDrawable(requireContext(), resId)
         }
-        val filePickerManager = FilePickerManager(this)
+        val filePickerManager = FilePickerManager(this, null)
             adapter = MessageAdapter(object : MessageActionListener {
                 override fun onMessageClick(message: Message, itemView: View, isSender: Boolean) {
                     showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, null, isSender)

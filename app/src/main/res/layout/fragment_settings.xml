@@ -1,44 +1,111 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/settings_layout"
     android:layout_width="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_height="match_parent">
 
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/topGuideLine"
+    <ImageView
+        android:id="@+id/photoImageView"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_marginStart="5dp"
+        android:layout_marginTop="6dp"
+        android:src="@drawable/ic_user_avatar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/errorImageView"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_error"
+        app:tint="?attr/colorError"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="@id/photoImageView"
+        app:layout_constraintTop_toTopOf="@id/photoImageView"
+        app:layout_constraintBottom_toBottomOf="@id/photoImageView"
+        app:layout_constraintEnd_toEndOf="@id/photoImageView" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.08"
+        app:layout_constraintStart_toStartOf="@id/photoImageView"
+        app:layout_constraintEnd_toEndOf="@id/photoImageView"
+        app:layout_constraintTop_toTopOf="@id/photoImageView"
+        app:layout_constraintBottom_toBottomOf="@id/photoImageView"
+        android:visibility="gone"
         />
 
-    <TextView
-        android:id="@+id/header"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:text="Настройки"
-        android:textColor="?attr/colorAccent"
-        android:fontFamily="casual"
-        android:gravity="center"
-        android:layout_marginTop="10dp"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="30sp"
-        android:autoSizeMaxTextSize="100sp"
-        android:autoSizeStepGranularity="2sp"
-        android:textStyle="bold|italic"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/topGuideLine"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+    <ImageView
+        android:id="@+id/edit_photo_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_add_photo"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        app:layout_constraintBottom_toBottomOf="@id/photoImageView"
+        app:layout_constraintEnd_toEndOf="@id/photoImageView"/>
 
     <TextView
-        android:id="@+id/customization_text"
+        android:id="@+id/usernameTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:text="Алексей"
+        android:textColor="?attr/colorAccent"
+        android:layout_marginTop="23dp"
+        android:layout_marginStart="10dp"
+        android:fontFamily="casual"
+        android:gravity="start"
+        android:textSize="24sp"
+        android:textStyle="bold|italic"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toEndOf="@id/photoImageView" />
+
+    <ImageView
+        android:id="@+id/edit_username_button"
+        android:layout_width="25dp"
+        android:layout_height="25dp"
+        android:src="@drawable/ic_edit"
+        android:layout_marginStart="5dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        app:layout_constraintBottom_toBottomOf="@id/usernameTextView"
+        app:layout_constraintTop_toTopOf="@id/usernameTextView"
+        app:layout_constraintStart_toEndOf="@id/usernameTextView"/>
+
+    <TextView
+        android:id="@+id/nameTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:text="user123"
+        android:layout_marginStart="10dp"
+        android:textColor="?attr/colorAccent"
+        android:fontFamily="casual"
+        android:gravity="start"
+        android:textSize="20sp"
+        android:textStyle="bold|italic"
+        app:layout_constraintTop_toBottomOf="@id/usernameTextView"
+        app:layout_constraintStart_toEndOf="@id/photoImageView" />
+
+    <ImageView
+        android:id="@+id/copy_name_button"
+        android:layout_width="25dp"
+        android:layout_height="25dp"
+        android:src="@drawable/ic_copy"
+        android:layout_marginStart="5dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        app:layout_constraintBottom_toBottomOf="@id/nameTextView"
+        app:layout_constraintTop_toTopOf="@id/nameTextView"
+        app:layout_constraintStart_toEndOf="@id/nameTextView"/>
+
+    <TextView
+        android:id="@+id/settings_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Кастомизация"
+        android:text="Настройки"
         android:textColor="?attr/colorAccent"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="5dp"
         android:fontFamily="casual"
         android:gravity="center"
         android:autoSizeTextType="uniform"
@@ -46,7 +113,44 @@
         android:autoSizeMaxTextSize="100sp"
         android:autoSizeStepGranularity="2sp"
         android:textStyle="bold|italic"
-        app:layout_constraintTop_toBottomOf="@+id/header"
+        app:layout_constraintTop_toBottomOf="@id/photoImageView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <Button
+        android:id="@+id/change_password"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Сменить пароль"
+        android:fontFamily="casual"
+        android:gravity="center"
+        android:layout_marginHorizontal="10dp"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeMaxTextSize="100sp"
+        android:autoSizeStepGranularity="2sp"
+        android:textStyle="bold|italic"
+        android:textColor="?attr/colorAccent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/settings_text"
+        android:textAllCaps="false"/>
+
+    <TextView
+        android:id="@+id/customization_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Кастомизация"
+        android:textColor="?attr/colorAccent"
+        android:layout_marginTop="5dp"
+        android:fontFamily="casual"
+        android:gravity="center"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="18sp"
+        android:autoSizeMaxTextSize="100sp"
+        android:autoSizeStepGranularity="2sp"
+        android:textStyle="bold|italic"
+        app:layout_constraintTop_toBottomOf="@id/change_password"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 

@@ -216,7 +216,6 @@ class MessengerFragment : Fragment() {
 
         // Create the AlertDialog
         val dialog = AlertDialog.Builder(requireContext())
-            .setTitle("Введите никнейм пользователя")
             .setView(dialogView)
             .setPositiveButton("Добавить") { dialogInterface, _ ->
                 val input = dialogView.findViewById<EditText>(R.id.dialog_input).text.toString()

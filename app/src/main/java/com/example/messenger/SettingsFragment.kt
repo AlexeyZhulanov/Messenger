@@ -1,41 +1,154 @@
 package com.example.messenger
 
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
-import android.content.SharedPreferences
+import android.net.Uri
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.messenger.databinding.FragmentSettingsBinding
+import com.example.messenger.model.User
+import com.example.messenger.picker.DateUtils
+import com.example.messenger.picker.ExoPlayerEngine
+import com.example.messenger.picker.FilePickerManager
+import com.example.messenger.picker.GlideEngine
+import com.luck.picture.lib.basic.PictureSelector
+import com.luck.picture.lib.config.InjectResourceSource
+import com.luck.picture.lib.config.PictureMimeType
+import com.luck.picture.lib.config.SelectMimeType
+import com.luck.picture.lib.entity.LocalMedia
+import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
+@AndroidEntryPoint
 class SettingsFragment : Fragment() {
     private lateinit var binding: FragmentSettingsBinding
+    private val viewModel: SettingsViewModel by viewModels()
+    private lateinit var currentUser: User
+    private lateinit var fileUpdate: File
+    private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('!') + ('$')
+    private val job = Job()
+    private val uiScope = CoroutineScope(Dispatchers.Main + job)
+    private val uiScopeIO = CoroutineScope(Dispatchers.IO + job)
 
     @SuppressLint("DiscouragedApi")
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentSettingsBinding.inflate(inflater, container, false)
-        val prefs = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
-        prefs.registerOnSharedPreferenceChangeListener(preferenceChangeListener)
-        val wallpaper = prefs.getString(PREF_WALLPAPER, "")
-        if(wallpaper != "") {
-            binding.wallpaperName.text = wallpaper
-            val resId = resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
-            if (resId != 0) binding.settingsLayout.background =
-                ContextCompat.getDrawable(requireContext(), resId)
+        val filePickerManager = FilePickerManager(null, this)
+        uiScopeIO.launch {
+            currentUser = viewModel.getUser()
         }
-        else {
-            binding.wallpaperName.text = "Classic"
+        viewModel.wallpaper.observe(viewLifecycleOwner) { wallpaper ->
+            if (wallpaper != "") {
+                binding.wallpaperName.text = wallpaper
+                val resId =
+                    resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
+                if (resId != 0) binding.settingsLayout.background =
+                    ContextCompat.getDrawable(requireContext(), resId)
+            } else {
+                binding.wallpaperName.text = "Classic"
+            }
         }
-        val themeNumber = prefs.getInt(PREF_THEME, 0)
-        if(themeNumber != 0) binding.colorThemeName.text = "Theme ${themeNumber+1}" else binding.colorThemeName.text = "Classic"
+        viewModel.themeNumber.observe(viewLifecycleOwner) { themeNumber ->
+            if (themeNumber != 0) binding.colorThemeName.text =
+                "Theme ${themeNumber + 1}" else binding.colorThemeName.text = "Classic"
+        }
+        uiScope.launch {
+            val avatar = currentUser.avatar ?: ""
+            withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
+            val filePathTemp = async(Dispatchers.IO) {
+                if (viewModel.fManagerIsExist(avatar)) {
+                    return@async Pair(viewModel.fManagerGetFilePath(avatar), true)
+                } else {
+                    try {
+                        return@async Pair(
+                            viewModel.downloadFile(
+                                requireContext(),
+                                "photos",
+                                avatar
+                            ), false
+                        )
+                    } catch (e: Exception) {
+                        return@async Pair(null, true)
+                    }
+                }
+            }
+            val (first, second) = filePathTemp.await()
+            if (first != null) {
+                val file = File(first)
+                if (file.exists()) {
+                    fileUpdate = file
+                    if (!second) viewModel.fManagerSaveFile(avatar, file.readBytes())
+                    val uri = Uri.fromFile(file)
+                    Glide.with(requireContext())
+                        .load(uri)
+                        .centerCrop()
+                        .placeholder(R.color.app_color_f6)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .into(binding.photoImageView)
+                    binding.progressBar.visibility = View.GONE
+                } else {
+                    withContext(Dispatchers.Main) {
+                        binding.progressBar.visibility = View.GONE
+                        binding.errorImageView.visibility = View.VISIBLE
+                    }
+                }
+            } else {
+                binding.progressBar.visibility = View.GONE
+                binding.errorImageView.visibility = View.VISIBLE
+            }
+        }
+        binding.editPhotoButton.setOnClickListener {
+            showPopupMenu(it, R.menu.popup_menu_user, filePickerManager, fileUpdate)
+        }
+        binding.editUsernameButton.setOnClickListener {
+            showAddDialog(currentUser.username)
+        }
+        binding.photoImageView.setOnClickListener {
+            openPictureSelector(filePickerManager, viewModel.fileToLocalMedia(fileUpdate))
+        }
+        binding.changePassword.setOnClickListener {
+            BottomSheetPasswordFragment(viewModel, object : BottomSheetListener {
+                override fun onChangePassword() {
+                    Toast.makeText(requireContext(), "Пароль успешно обновлен", Toast.LENGTH_SHORT)
+                        .show()
+                }
+            })
+        }
+        binding.copyNameButton.setOnClickListener {
+            val clipboard = context?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText("label", currentUser.name)
+            clipboard.setPrimaryClip(clip)
+        }
         binding.changeColorTheme.setOnClickListener {
             showColorThemePopupMenu(it, container as ViewGroup)
         }
@@ -43,12 +156,6 @@ class SettingsFragment : Fragment() {
             showWallpapersPopupMenu(it, container as ViewGroup)
         }
         return binding.root
-    }
-    private val preferenceChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, key ->
-        if (key == PREF_WALLPAPER) {
-            val tmp = sharedPreferences.getString(PREF_WALLPAPER, "")
-            updateWallpapers(tmp!!)
-        }
     }
 
     private fun showWallpapersPopupMenu(view: View, container: ViewGroup) {
@@ -81,7 +188,7 @@ class SettingsFragment : Fragment() {
         )
         var temp = ""
         val adapter = PopupMenuWallpaperAdapter(menuItems) { menuItem ->
-            temp = when(menuItem.title) {
+            temp = when (menuItem.title) {
                 "Classic" -> ""
                 "1." -> "wallpaper1"
                 "2." -> "wallpaper2"
@@ -95,9 +202,7 @@ class SettingsFragment : Fragment() {
                 "10." -> "wallpaper10"
                 else -> ""
             }
-            val preferences: SharedPreferences =
-                requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
-            preferences.edit().putString(PREF_WALLPAPER, temp).apply()
+            viewModel.updateWallpaper(temp)
             popupWindow.dismiss()
         }
 
@@ -133,9 +238,7 @@ class SettingsFragment : Fragment() {
             ColorThemeMenuItem(R.color.color8_main, R.color.color8_secondary, 8)
         )
         val adapter = ColorThemeMenuAdapter(menuItems) { menuItem ->
-            val preferences: SharedPreferences =
-                requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
-            preferences.edit().putInt(PREF_THEME, menuItem.themeNumber).apply()
+            viewModel.updateTheme(menuItem.themeNumber)
             requireActivity().recreate()
             popupWindow.dismiss()
         }
@@ -148,20 +251,99 @@ class SettingsFragment : Fragment() {
     @SuppressLint("DiscouragedApi")
     private fun updateWallpapers(wallpaper: String) {
         binding.wallpaperName.text = wallpaper
-        if(wallpaper != "") {
+        if (wallpaper != "") {
             val resId = resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
-            if(resId != 0)
-                binding.settingsLayout.background = ContextCompat.getDrawable(requireContext(), resId)
-        }
-        else {
+            if (resId != 0)
+                binding.settingsLayout.background =
+                    ContextCompat.getDrawable(requireContext(), resId)
+        } else {
             binding.settingsLayout.background = null
             binding.wallpaperName.text = "Classic"
         }
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        val prefs = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
-        prefs.unregisterOnSharedPreferenceChangeListener(preferenceChangeListener)
+    private fun showPopupMenu(view: View, menuRes: Int, filePickerManager: FilePickerManager, file: File?) {
+        val popupMenu = PopupMenu(requireContext(), view)
+        popupMenu.menuInflater.inflate(menuRes, popupMenu.menu)
+        popupMenu.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.item_delete -> {
+                    uiScope.launch {
+                        viewModel.updateAvatar("delete")
+                    }
+                    true
+                }
+
+                R.id.item_update -> {
+                    uiScope.launch {
+                        filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false,
+                            arrayListOf(viewModel.fileToLocalMedia(file!!))
+                        )
+                    }
+                    true
+                }
+
+                R.id.item_new -> {
+                    uiScope.launch {
+                        filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false,
+                            arrayListOf()
+                        )
+                    }
+                    true
+                }
+
+                else -> false
+            }
+        }
+        popupMenu.show()
+    }
+
+    private fun showAddDialog(username: String) {
+        // Inflate the custom layout for the dialog
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_item, null)
+        val editText = dialogView.findViewById<EditText>(R.id.dialog_input)
+        editText.setText(username)
+        // Create the AlertDialog
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .setPositiveButton("Добавить") { dialogInterface, _ ->
+                uiScope.launch {
+                    val input = editText.text.toString()
+                    input.forEach {
+                        if(it !in alf) {
+                            dialogInterface.dismiss()
+                            return@launch
+                        }
+                    }
+                    viewModel.updateUserName(input)
+                }
+            }
+            .setNegativeButton("Назад") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+            }
+            .create()
+
+        dialog.show()
+    }
+
+    private fun openPictureSelector(filePickerManager: FilePickerManager, localMedia: LocalMedia) {
+        PictureSelector.create(requireActivity())
+            .openPreview()
+            .setImageEngine(GlideEngine.createGlideEngine())
+            .setVideoPlayerEngine(ExoPlayerEngine())
+            .isAutoVideoPlay(false)
+            .isLoopAutoVideoPlay(false)
+            .isVideoPauseResumePlay(true)
+            .setSelectorUIStyle(filePickerManager.selectorStyle)
+            .isPreviewFullScreenMode(true)
+            .setInjectLayoutResourceListener(object: OnInjectLayoutResourceListener {
+                override fun getLayoutResourceId(context: Context?, resourceSource: Int): Int {
+                    @Suppress("DEPRECATED_IDENTITY_EQUALS")
+                    return if (resourceSource === InjectResourceSource.PREVIEW_LAYOUT_RESOURCE
+                    ) R.layout.ps_custom_fragment_preview
+                    else InjectResourceSource.DEFAULT_LAYOUT_RESOURCE
+                }
+            })
+            .startActivityPreview(0, false, arrayListOf(localMedia))
     }
 }

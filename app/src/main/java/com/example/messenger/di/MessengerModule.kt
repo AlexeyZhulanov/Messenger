@@ -1,7 +1,9 @@
 package com.example.messenger.di
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.room.Room
+import com.example.messenger.APP_PREFERENCES
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
@@ -146,5 +148,11 @@ object MessengerModule {
         messengerService: MessengerService
     ): WebSocketService {
         return WebSocketService(appSettings, retrofitService, messengerService)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSharedPreferences(@ApplicationContext context: Context): SharedPreferences {
+        return context.getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
     }
 }
