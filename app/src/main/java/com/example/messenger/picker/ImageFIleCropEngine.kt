@@ -89,9 +89,6 @@ private fun buildOptions(selectorStyle: PictureSelectorStyle, fragment: Fragment
         options.setShowCropFrame(true)
         options.setShowCropGrid(true)
     }
-    options.setShowCropFrame(true)
-    options.setShowCropGrid(true)
-    options.setCircleDimmedLayer(false)
     options.withAspectRatio(-1f, -1f) // crop default, 1to1 : 1 1, 3to4 : 3 4 ....
     options.setCropOutputPathDir(getSandboxPath(fragment!!))
     options.isCropDragSmoothToCenter(false)

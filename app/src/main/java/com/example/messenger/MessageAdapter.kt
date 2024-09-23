@@ -84,7 +84,7 @@ class MessageAdapter(
     private var highlightedPosition: Int? = null
     private val newMessages: MutableList<Pair<Message, String>> = mutableListOf()
     private var widthFlag: Boolean = true
-    private var maxWidth: Int = 300
+    private var maxWidth: Int = 0
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.IO + job)
     private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)

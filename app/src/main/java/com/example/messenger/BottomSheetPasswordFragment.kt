@@ -7,7 +7,9 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.EditText
+import androidx.core.content.ContextCompat
 import com.example.messenger.databinding.FragmentBottomSheetPasswordBinding
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
@@ -26,13 +28,16 @@ class BottomSheetPasswordFragment(
     private lateinit var drawableEnd : Drawable
     private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('!') + ('$')
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+    @Suppress("DEPRECATION")
+    override fun onStart() {
+        super.onStart()
+        dialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         binding = FragmentBottomSheetPasswordBinding.inflate(inflater, container, false)
-
+        drawableStart = ContextCompat.getDrawable(requireContext(), R.drawable.ic_lock)!!
+        drawableEnd = ContextCompat.getDrawable(requireContext(), R.drawable.ic_check_two)!!
         binding.oldPassword.addTextChangedListener(object: TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
@@ -93,19 +98,38 @@ class BottomSheetPasswordFragment(
     private fun validateInputs(): Boolean {
         return when {
             binding.oldPassword.text.isEmpty() -> {
-                binding.errorTextView.text = "Ошибка: Пустая строка логина"
+                binding.errorTextView.text = "Ошибка: Пустая строка старого пароля"
                 false
             }
             binding.newPassword.text.isEmpty() -> {
-                binding.errorTextView.text = "Ошибка: Пустая строка имени пользователя"
+                binding.errorTextView.text = "Ошибка: Пустая строка нового пароля"
                 false
             }
             binding.passwordRepeat.text.isEmpty() -> {
                 binding.errorTextView.text = "Ошибка: Пустая строка повтора пароля"
                 false
             }
+            isInvalid(binding.oldPassword.text.toString()) -> {
+                binding.errorTextView.text = "Ошибка: Недопустимые символы в первой строке"
+                false
+            }
+            isInvalid(binding.newPassword.text.toString()) -> {
+                binding.errorTextView.text = "Ошибка: Недопустимые символы во второй строке"
+                false
+            }
+            isInvalid(binding.passwordRepeat.text.toString()) -> {
+                binding.errorTextView.text = "Ошибка: Недопустимые символы в третьей строке"
+                false
+            }
             else -> true
         }.also { binding.errorTextView.visibility = if (it) View.INVISIBLE else View.VISIBLE }
+    }
+
+    private fun isInvalid(text: String): Boolean {
+        text.forEach {
+            if(it !in alf) return true
+        }
+        return false
     }
 
     private fun checkCharSequence(s: CharSequence?, editText: EditText) {

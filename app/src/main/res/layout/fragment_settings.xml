@@ -4,6 +4,7 @@
     android:id="@+id/settings_layout"
     android:layout_width="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:fitsSystemWindows="true"
     android:layout_height="match_parent">
 
     <ImageView
@@ -231,7 +232,7 @@
                 android:id="@+id/colorTheme_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Цветовая тема: "
+                android:text="Тема: "
                 android:fontFamily="casual"
                 android:autoSizeTextType="uniform"
                 android:autoSizeMinTextSize="10sp"

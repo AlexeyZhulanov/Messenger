@@ -28,6 +28,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentSettingsBinding
 import com.example.messenger.model.User
 import com.example.messenger.picker.DateUtils
@@ -54,8 +55,8 @@ class SettingsFragment : Fragment() {
     private lateinit var binding: FragmentSettingsBinding
     private val viewModel: SettingsViewModel by viewModels()
     private lateinit var currentUser: User
-    private lateinit var fileUpdate: File
-    private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('!') + ('$')
+    private var fileUpdate: File? = null
+    private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('А'..'Я') + ('а'..'я') + ('!') + ('$')
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.Main + job)
     private val uiScopeIO = CoroutineScope(Dispatchers.IO + job)
@@ -64,9 +65,6 @@ class SettingsFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentSettingsBinding.inflate(inflater, container, false)
         val filePickerManager = FilePickerManager(null, this)
-        uiScopeIO.launch {
-            currentUser = viewModel.getUser()
-        }
         viewModel.wallpaper.observe(viewLifecycleOwner) { wallpaper ->
             if (wallpaper != "") {
                 binding.wallpaperName.text = wallpaper
@@ -83,7 +81,12 @@ class SettingsFragment : Fragment() {
                 "Theme ${themeNumber + 1}" else binding.colorThemeName.text = "Classic"
         }
         uiScope.launch {
-            val avatar = currentUser.avatar ?: ""
+            val user = viewModel.getUser()
+            currentUser = user
+            binding.usernameTextView.text = user.username
+            binding.nameTextView.text = user.name
+            val avatar = user.avatar ?: ""
+            if (avatar != "") {
             withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
             val filePathTemp = async(Dispatchers.IO) {
                 if (viewModel.fManagerIsExist(avatar)) {
@@ -111,7 +114,7 @@ class SettingsFragment : Fragment() {
                     val uri = Uri.fromFile(file)
                     Glide.with(requireContext())
                         .load(uri)
-                        .centerCrop()
+                        .apply(RequestOptions.circleCropTransform())
                         .placeholder(R.color.app_color_f6)
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
                         .into(binding.photoImageView)
@@ -126,6 +129,7 @@ class SettingsFragment : Fragment() {
                 binding.progressBar.visibility = View.GONE
                 binding.errorImageView.visibility = View.VISIBLE
             }
+            }
         }
         binding.editPhotoButton.setOnClickListener {
             showPopupMenu(it, R.menu.popup_menu_user, filePickerManager, fileUpdate)
@@ -134,6 +138,7 @@ class SettingsFragment : Fragment() {
             showAddDialog(currentUser.username)
         }
         binding.photoImageView.setOnClickListener {
+            if(fileUpdate != null)
             openPictureSelector(filePickerManager, viewModel.fileToLocalMedia(fileUpdate))
         }
         binding.changePassword.setOnClickListener {
@@ -142,7 +147,8 @@ class SettingsFragment : Fragment() {
                     Toast.makeText(requireContext(), "Пароль успешно обновлен", Toast.LENGTH_SHORT)
                         .show()
                 }
-            })
+            }).show(childFragmentManager, "PasswordChange")
+
         }
         binding.copyNameButton.setOnClickListener {
             val clipboard = context?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -268,30 +274,56 @@ class SettingsFragment : Fragment() {
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.item_delete -> {
-                    uiScope.launch {
-                        viewModel.updateAvatar("delete")
+                    if(currentUser.avatar != null) {
+                        uiScope.launch {
+                            val success = async(Dispatchers.IO) {viewModel.updateAvatar("delete") }
+                            if(success.await()) {
+                                requireActivity().recreate()
+                            }
+                        }
+                    } else {
+                        Toast.makeText(requireContext(), "Аватарки и так нет!", Toast.LENGTH_SHORT).show()
                     }
                     true
                 }
 
                 R.id.item_update -> {
-                    uiScope.launch {
-                        filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false,
-                            arrayListOf(viewModel.fileToLocalMedia(file!!))
-                        )
+                    if (file != null) {
+                    uiScopeIO.launch {
+                        val res = async {filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf(viewModel.fileToLocalMedia(file))) }
+                        val photo = res.await()
+                        if(photo.isNotEmpty()) {
+                            val path = async { viewModel.uploadPhoto(File(photo[0].availablePath)) }
+                            val success = async { viewModel.updateAvatar(path.await()) }
+                            if(success.await()) {
+                                withContext(Dispatchers.Main) {
+                                    requireActivity().recreate()
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Toast.makeText(requireContext(), "Нельзя редактировать пустоту!", Toast.LENGTH_SHORT).show()
                     }
                     true
                 }
 
                 R.id.item_new -> {
-                    uiScope.launch {
-                        filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false,
-                            arrayListOf()
-                        )
+                    uiScopeIO.launch {
+                        val res = async { filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf()) }
+                        val photo = res.await()
+                        if(photo.isNotEmpty()) {
+                            val path = async { viewModel.uploadPhoto(File(photo[0].availablePath)) }
+                            val success = async { viewModel.updateAvatar(path.await()) }
+                            if(success.await()) {
+                                withContext(Dispatchers.Main) {
+                                    requireActivity().recreate()
+                                }
+                            }
+                        }
                     }
                     true
                 }
-
                 else -> false
             }
         }
@@ -306,16 +338,18 @@ class SettingsFragment : Fragment() {
         // Create the AlertDialog
         val dialog = AlertDialog.Builder(requireContext())
             .setView(dialogView)
-            .setPositiveButton("Добавить") { dialogInterface, _ ->
+            .setPositiveButton("Изменить") { dialogInterface, _ ->
                 uiScope.launch {
                     val input = editText.text.toString()
                     input.forEach {
                         if(it !in alf) {
                             dialogInterface.dismiss()
+                            Toast.makeText(requireContext(), "Недопустимые символы в нике", Toast.LENGTH_SHORT).show()
                             return@launch
                         }
                     }
-                    viewModel.updateUserName(input)
+                    val success = async(Dispatchers.IO) {viewModel.updateUserName(input) }
+                    if(success.await()) requireActivity().recreate()
                 }
             }
             .setNegativeButton("Назад") { dialogInterface, _ ->

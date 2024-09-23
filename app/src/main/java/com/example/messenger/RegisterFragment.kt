@@ -115,8 +115,31 @@ class RegisterFragment : Fragment() {
                 binding.errorTextView.text = "Ошибка: Пароли не совпадают"
                 false
             }
+            isInvalid(binding.name2.text.toString()) -> {
+                binding.errorTextView.text = "Ошибка: Недопустимые символы в первой строке"
+                false
+            }
+            isInvalid(binding.username2.text.toString()) -> {
+                binding.errorTextView.text = "Ошибка: Недопустимые символы во второй строке"
+                false
+            }
+            isInvalid(binding.password2.text.toString()) -> {
+                binding.errorTextView.text = "Ошибка: Недопустимые символы в третьей строке"
+                false
+            }
+            isInvalid(binding.passwordRepeat.text.toString()) -> {
+                binding.errorTextView.text = "Ошибка: Недопустимые символы в четвертой строке"
+                false
+            }
             else -> true
         }.also { binding.errorTextView.visibility = if (it) View.INVISIBLE else View.VISIBLE }
+    }
+
+    private fun isInvalid(text: String): Boolean {
+        text.forEach {
+            if(it !in alf) return true
+        }
+        return false
     }
 
     private fun checkCharSequence(s: CharSequence?, editText: EditText) {

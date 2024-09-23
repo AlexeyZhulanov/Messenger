@@ -104,11 +104,10 @@ class FilePickerManager(private val fragment1: MessageFragment?, private val fra
     }
 
     suspend fun openFilePicker(isCircle: Boolean, isFreeStyleCrop: Boolean, data: ArrayList<LocalMedia>) : ArrayList<LocalMedia> = suspendCancellableCoroutine { continuation ->
-        PictureSelector.create(fragment1 ?: fragment2!!)
+        val selector = PictureSelector.create(fragment1 ?: fragment2!!)
             .openGallery(SelectMimeType.ofAll())
             .setImageEngine(GlideEngine.createGlideEngine())
             .setVideoPlayerEngine(ExoPlayerEngine())
-            //.setCropEngine(ImageFileCropEngine(selectorStyle, isCircle, isFreeStyleCrop)) // Обязательное редактирование всех фото
             .setCompressEngine(ImageFileCompressEngine())
             .setEditMediaInterceptListener(getMediaEditInterceptListener(fragment1 ?: fragment2!!, selectorStyle, isCircle, isFreeStyleCrop))
             .isAutoVideoPlay(false)
@@ -116,8 +115,6 @@ class FilePickerManager(private val fragment1: MessageFragment?, private val fra
             .isVideoPauseResumePlay(true)
             .setSelectorUIStyle(selectorStyle)
             .setSelectionMode(2)
-            .setMaxSelectNum(10)
-            .setMaxVideoSelectNum(10)
             .isWithSelectVideoImage(true)
             .isSelectZoomAnim(true)
             .setImageSpanCount(4)
@@ -134,17 +131,24 @@ class FilePickerManager(private val fragment1: MessageFragment?, private val fra
                 }
             })
             .setSelectedData(data)
-            .forResult(object: OnResultCallbackListener<LocalMedia> {
-                override fun onResult(result: ArrayList<LocalMedia>?) {
-                    if(result != null) {
-                        continuation.resume(result)
-                    } else continuation.resumeWithException(CancellationException("Empty array"))
-                }
-
-                override fun onCancel() {
-                    continuation.resumeWithException(CancellationException("User cancelled the operation"))
-                }
-            })
+        if(isCircle) {
+            selector.setCropEngine(ImageFileCropEngine(selectorStyle, true, isFreeStyleCrop)) // Обязательное редактирование всех фото
+            selector.setMaxSelectNum(1)
+            selector.setMaxVideoSelectNum(0)
+        } else {
+            selector.setMaxSelectNum(10)
+            selector.setMaxVideoSelectNum(10)
+        }
+        selector.forResult(object: OnResultCallbackListener<LocalMedia> {
+            override fun onResult(result: ArrayList<LocalMedia>?) {
+                if(result != null) {
+                    continuation.resume(result)
+                } else continuation.resumeWithException(CancellationException("Empty array"))
+            }
+            override fun onCancel() {
+                continuation.resumeWithException(CancellationException("User cancelled the operation"))
+            }
+        })
         continuation.invokeOnCancellation {
             Log.d("testCancellation", "cancelled")
         }

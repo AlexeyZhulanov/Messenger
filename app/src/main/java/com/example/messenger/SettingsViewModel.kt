@@ -9,7 +9,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.model.Settings
 import com.example.messenger.model.User
+import com.example.messenger.room.entities.SettingsDbEntity
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,8 +42,10 @@ class SettingsViewModel @Inject constructor(
     }
 
     private fun loadSettings() {
-        _wallpaper.value = prefs.getString(PREF_WALLPAPER, "")
-        _themeNumber.value = prefs.getInt(PREF_THEME, 0)
+        viewModelScope.launch {
+            _wallpaper.value = prefs.getString(PREF_WALLPAPER, "")
+            _themeNumber.value = prefs.getInt(PREF_THEME, 0)
+        }
     }
 
     fun updateWallpaper(wallpaper: String) {
@@ -82,20 +86,23 @@ class SettingsViewModel @Inject constructor(
         return@withContext retrofitService.deleteFile(folder, filename)
     }
 
-    suspend fun updateAvatar(photo: String) = withContext(Dispatchers.IO) {
-        retrofitService.updateProfile(null, photo)
+    suspend fun updateAvatar(photo: String) : Boolean = withContext(Dispatchers.IO) {
+        return@withContext retrofitService.updateProfile(null, photo)
     }
     
-    suspend fun updateUserName(username: String) = withContext(Dispatchers.IO) {
-        retrofitService.updateProfile(username, null)
+    suspend fun updateUserName(username: String) : Boolean = withContext(Dispatchers.IO) {
+        return@withContext retrofitService.updateProfile(username, null)
     }
 
     fun updatePassword(oldPassword: String, newPassword: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
-            val savedPassword = messengerService.getSettings().password
+            val settings = messengerService.getSettings()
+            val savedPassword = settings.password
             if(savedPassword == oldPassword) {
                 val result = async(Dispatchers.IO) { retrofitService.updatePassword(newPassword) }
                 if (result.await()) {
+                    settings.password = newPassword
+                    messengerService.updateSettings(settings)
                     onSuccess()
                 } else {
                     onError("Ошибка: Имя пользователя уже занято")
@@ -106,14 +113,14 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun fileToLocalMedia(file: File) : LocalMedia {
+    fun fileToLocalMedia(file: File?) : LocalMedia {
         val localMedia = LocalMedia()
 
         // Установите путь файла
-        localMedia.path = file.absolutePath
+        localMedia.path = file?.absolutePath
 
         // Определите MIME тип файла на основе его расширения
-        localMedia.mimeType = when (file.extension.lowercase(Locale.ROOT)) {
+        localMedia.mimeType = when (file?.extension?.lowercase(Locale.ROOT)) {
             "jpg", "jpeg" -> PictureMimeType.ofJPEG()
             "png" -> PictureMimeType.ofPNG()
             "mp4" -> PictureMimeType.ofMP4()
