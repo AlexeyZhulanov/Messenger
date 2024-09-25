@@ -13,6 +13,7 @@ import com.example.messenger.retrofit.source.SourceProviderHolder
 import com.example.messenger.model.WebSocketService
 import com.example.messenger.retrofit.source.base.SourcesProvider
 import com.example.messenger.room.AppDatabase
+import com.example.messenger.room.dao.ChatSettingsDao
 import com.example.messenger.room.dao.ConversationDao
 import com.example.messenger.room.dao.GroupMessageDao
 import com.example.messenger.room.dao.LastReadMessageDao
@@ -24,6 +25,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import javax.annotation.Signed
 import javax.inject.Provider
 import javax.inject.Singleton
 
@@ -79,15 +81,23 @@ object MessengerModule {
 
     @Provides
     @Singleton
+    fun provideChatSettingsDao(appDatabase: AppDatabase): ChatSettingsDao {
+        return appDatabase.getChatSettingsDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideMessengerService(
         settingsDao: SettingsDao,
         conversationDao: ConversationDao,
         messageDao: MessageDao,
         groupMessageDao: GroupMessageDao,
         userDao: UserDao,
-        lastReadMessageDao: LastReadMessageDao
+        lastReadMessageDao: LastReadMessageDao,
+        chatSettingsDao: ChatSettingsDao
     ): MessengerService {
-        return MessengerService(settingsDao, conversationDao, messageDao, groupMessageDao, userDao, lastReadMessageDao)
+        return MessengerService(settingsDao, conversationDao, messageDao, groupMessageDao, userDao,
+            lastReadMessageDao, chatSettingsDao)
     }
 
     @Provides

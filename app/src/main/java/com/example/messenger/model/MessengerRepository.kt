@@ -29,4 +29,10 @@ interface MessengerRepository {
     suspend fun getLastReadMessage(idDialog: Int): Pair<Int, Int>?
 
     suspend fun updateLastReadMessage(idDialog: Int, lastMessageId: Int)
+
+    suspend fun isNotificationsEnabled(id: Int, type: Boolean) : Boolean
+
+    suspend fun insertChatSettings(chatSettings: ChatSettings)
+
+    suspend fun deleteChatSettings(idDialog: Int, type: Boolean)
 }

@@ -29,6 +29,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -110,11 +111,30 @@ class DialogInfoFragment(
         binding.userNameTextView.text = dialog.otherUser.username
         binding.lastSessionTextView.text = lastSessionString
         binding.nickTextView.text = dialog.otherUser.name
-        //binding.switchNotifications.isChecked = dialog // todo
+        uiScope.launch {
+            binding.switchNotifications.isChecked = messageViewModel.isNotificationsEnabled(dialog.id)
+        }
+        binding.switchDelete.isChecked = dialog.canDelete
         binding.copyImageView.setOnClickListener {
             val clipboard = context?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("label", dialog.otherUser.name)
             clipboard.setPrimaryClip(clip)
+        }
+        binding.switchNotifications.setOnClickListener {
+            binding.switchNotifications.isEnabled = false
+            uiScope.launch {
+                messageViewModel.turnNotifications(dialog.id)
+                delay(5000)
+                binding.switchNotifications.isEnabled = true
+            }
+        }
+        binding.switchDelete.setOnClickListener {
+            binding.switchDelete.isEnabled = false
+            uiScope.launch {
+                messageViewModel.toggleCanDeleteDialog(dialog.id)
+                delay(5000)
+                binding.switchDelete.isEnabled = true
+            }
         }
         return binding.root
     }

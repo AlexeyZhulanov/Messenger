@@ -19,12 +19,14 @@ data class ConversationEntity(
     @Json(name = "created_by") val createdBy: Int? = null,
     val avatar: String? = null,
     @Json(name = "last_message") val lastMessage: MessageEntity? = null,
-    @Json(name = "count_msg") val countMsg: Int
+    @Json(name = "count_msg") val countMsg: Int,
+    @Json(name = "can_delete") val canDelete: Boolean,
+    @Json(name = "auto_delete_interval") val autoDeleteInterval: Int
 ) {
     fun toConversation() : Conversation = Conversation(
-        type = type, id = id, key = key, otherUser = otherUser?.toUser(), name = name, createdBy = createdBy,
-        avatar = avatar, lastMessage = lastMessage?.toLastMessage(), countMsg = countMsg
-    )
+        type = type, id = id, key = key, otherUser = otherUser?.toUser(), name = name,
+        createdBy = createdBy, avatar = avatar, lastMessage = lastMessage?.toLastMessage(),
+        countMsg = countMsg, canDelete = canDelete, autoDeleteInterval = autoDeleteInterval)
 }
 
 @JsonClass(generateAdapter = true)

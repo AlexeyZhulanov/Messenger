@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.example.messenger.model.ChatSettings
 import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.DeletedMessagesEvent
 import com.example.messenger.model.DialogCreatedEvent
@@ -548,6 +549,20 @@ class MessageViewModel @Inject constructor(
 
     override fun onUserLeftDialog(dialogId: Int, userId: Int) {
         Log.d("testSocketsMessage", "User $userId left Dialog $dialogId")
+    }
+
+    suspend fun isNotificationsEnabled(dialogId: Int): Boolean = withContext(Dispatchers.IO) {
+        return@withContext messengerService.isNotificationsEnabled(dialogId, false)
+    }
+
+    suspend fun turnNotifications(dialogId: Int) = withContext(Dispatchers.IO) {
+        val isEnabled = messengerService.isNotificationsEnabled(dialogId, false)
+        if(isEnabled) messengerService.insertChatSettings(ChatSettings(dialogId, false))
+        else messengerService.deleteChatSettings(dialogId, false)
+    }
+
+    suspend fun toggleCanDeleteDialog(dialogId: Int) = withContext(Dispatchers.IO) {
+        retrofitService.toggleDialogCanDelete(dialogId)
     }
 
     override fun onCleared() {

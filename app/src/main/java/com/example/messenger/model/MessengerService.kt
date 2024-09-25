@@ -1,11 +1,13 @@
 package com.example.messenger.model
 
+import com.example.messenger.room.dao.ChatSettingsDao
 import com.example.messenger.room.dao.ConversationDao
 import com.example.messenger.room.dao.GroupMessageDao
 import com.example.messenger.room.dao.LastReadMessageDao
 import com.example.messenger.room.dao.MessageDao
 import com.example.messenger.room.dao.SettingsDao
 import com.example.messenger.room.dao.UserDao
+import com.example.messenger.room.entities.ChatSettingsDbEntity
 import com.example.messenger.room.entities.ConversationDbEntity
 import com.example.messenger.room.entities.GroupMessageDbEntity
 import com.example.messenger.room.entities.LastReadMessageEntity
@@ -22,7 +24,8 @@ class MessengerService(
     private val messageDao: MessageDao,
     private val groupMessageDao: GroupMessageDao,
     private val userDao: UserDao,
-    private val lastReadMessageDao: LastReadMessageDao
+    private val lastReadMessageDao: LastReadMessageDao,
+    private val chatSettingsDao: ChatSettingsDao
 ) : MessengerRepository {
     private var settings = Settings(0)
     override suspend fun getSettings(): Settings = withContext(Dispatchers.IO) {
@@ -120,5 +123,18 @@ class MessengerService(
 
     override suspend fun updateLastReadMessage(idDialog: Int, lastMessageId: Int) = withContext(Dispatchers.IO) {
         lastReadMessageDao.updateLastReadMessage(LastReadMessageEntity.fromUserInput(idDialog, lastMessageId))
+    }
+
+    override suspend fun isNotificationsEnabled(id: Int, type: Boolean): Boolean = withContext(Dispatchers.IO) {
+        val answer = chatSettingsDao.getChatSettings(id, type)?.toChat()
+        return@withContext answer == null
+    }
+
+    override suspend fun insertChatSettings(chatSettings: ChatSettings) = withContext(Dispatchers.IO) {
+        chatSettingsDao.insertChatSettings(ChatSettingsDbEntity.fromUserInput(chatSettings))
+    }
+
+    override suspend fun deleteChatSettings(idDialog: Int, type: Boolean) = withContext(Dispatchers.IO) {
+        chatSettingsDao.deleteChatSettings(idDialog, type)
     }
 }

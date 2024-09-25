@@ -178,7 +178,7 @@ class MessageFragment(
             parentFragmentManager.beginTransaction()
                 .replace(
                     R.id.fragmentContainer,
-                    DialogInfoFragment(dialog, lastSessionString),
+                    DialogInfoFragment(dialog, lastSessionString, viewModel),
                     "DIALOG_INFO_FRAGMENT_TAG"
                 )
                 .addToBackStack(null)
@@ -190,7 +190,7 @@ class MessageFragment(
             parentFragmentManager.beginTransaction()
                 .replace(
                     R.id.fragmentContainer,
-                    DialogInfoFragment(dialog, lastSessionString),
+                    DialogInfoFragment(dialog, lastSessionString, viewModel),
                     "DIALOG_INFO_FRAGMENT_TAG2"
                 )
                 .addToBackStack(null)
