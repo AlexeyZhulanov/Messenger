@@ -19,6 +19,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentDialogInfoBinding
 import com.example.messenger.model.Dialog
 import com.example.messenger.model.MessengerService
@@ -34,13 +35,13 @@ import java.io.File
 
 class DialogInfoFragment(
     private val dialog: Dialog,
-    private val lastSessionString : String
+    private val lastSessionString : String,
+    private val messageViewModel: MessageViewModel
 ) : Fragment() {
     private lateinit var binding: FragmentDialogInfoBinding
     private lateinit var preferences: SharedPreferences
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.Main + job)
-    private val viewModel: DialogInfoViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -66,11 +67,50 @@ class DialogInfoFragment(
             if(resId != 0)
                 binding.dialogInfoLayout.background = ContextCompat.getDrawable(requireContext(), resId)
         }
-
+        uiScope.launch {
+            val avatar = dialog.otherUser.avatar ?: ""
+            if (avatar != "") {
+                withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
+                val filePathTemp = async(Dispatchers.IO) {
+                    if (messageViewModel.fManagerIsExist(avatar)) {
+                        return@async Pair(messageViewModel.fManagerGetFilePath(avatar), true)
+                    } else {
+                        try {
+                            return@async Pair(messageViewModel.downloadFile(requireContext(), "photos", avatar), false)
+                        } catch (e: Exception) {
+                            return@async Pair(null, true)
+                        }
+                    }
+                }
+                val (first, second) = filePathTemp.await()
+                if (first != null) {
+                    val file = File(first)
+                    if (file.exists()) {
+                        if (!second) messageViewModel.fManagerSaveFile(avatar, file.readBytes())
+                        val uri = Uri.fromFile(file)
+                        Glide.with(requireContext())
+                            .load(uri)
+                            .apply(RequestOptions.circleCropTransform())
+                            .placeholder(R.color.app_color_f6)
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .into(binding.photoImageView)
+                        binding.progressBar.visibility = View.GONE
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            binding.progressBar.visibility = View.GONE
+                            binding.errorImageView.visibility = View.VISIBLE
+                        }
+                    }
+                } else {
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
+                }
+            }
+        }
         binding.userNameTextView.text = dialog.otherUser.username
         binding.lastSessionTextView.text = lastSessionString
         binding.nickTextView.text = dialog.otherUser.name
-        // todo switch notification room
+        //binding.switchNotifications.isChecked = dialog // todo
         binding.copyImageView.setOnClickListener {
             val clipboard = context?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("label", dialog.otherUser.name)
@@ -83,53 +123,6 @@ class DialogInfoFragment(
         super.onDestroyView()
     }
 
-//    private fun setUserAvatar() {
-//        uiScope.launch {
-//            val avatar = dialog.otherUser.avatar ?: ""
-//            withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
-//            val filePathTemp = async(Dispatchers.IO) {
-//                if (viewModel.fManagerIsExist(avatar)) {
-//                    return@async Pair(viewModel.fManagerGetFilePath(avatar), true)
-//                } else {
-//                    try {
-//                        return@async Pair(
-//                            viewModel.downloadFile(
-//                                requireContext(),
-//                                "photos",
-//                                avatar
-//                            ), false
-//                        )
-//                    } catch (e: Exception) {
-//                        return@async Pair(null, true)
-//                    }
-//                }
-//            }
-//            val (first, second) = filePathTemp.await()
-//            if (first != null) {
-//                val file = File(first)
-//                if (file.exists()) {
-//                    fileUpdate = file
-//                    if (!second) viewModel.fManagerSaveFile(avatar, file.readBytes())
-//                    val uri = Uri.fromFile(file)
-//                    Glide.with(requireContext())
-//                        .load(uri)
-//                        .centerCrop()
-//                        .placeholder(R.color.app_color_f6)
-//                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-//                        .into(binding.photoImageView)
-//                    binding.progressBar.visibility = View.GONE
-//                } else {
-//                    withContext(Dispatchers.Main) {
-//                        binding.progressBar.visibility = View.GONE
-//                        binding.errorImageView.visibility = View.VISIBLE
-//                    }
-//                }
-//            } else {
-//                binding.progressBar.visibility = View.GONE
-//                binding.errorImageView.visibility = View.VISIBLE
-//            }
-//        }
-//    }
 
     @Suppress("DEPRECATION")
     @Deprecated("Deprecated in Java")

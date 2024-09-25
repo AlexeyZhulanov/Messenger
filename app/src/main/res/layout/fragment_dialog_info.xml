@@ -27,6 +27,29 @@
         app:layout_constraintBottom_toTopOf="@id/topGuideLine"
          />
 
+    <ImageView
+        android:id="@+id/errorImageView"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@drawable/ic_error"
+        app:tint="?attr/colorError"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="@id/photoImageView"
+        app:layout_constraintTop_toTopOf="@id/photoImageView"
+        app:layout_constraintBottom_toBottomOf="@id/photoImageView"
+        app:layout_constraintEnd_toEndOf="@id/photoImageView" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="@id/photoImageView"
+        app:layout_constraintEnd_toEndOf="@id/photoImageView"
+        app:layout_constraintTop_toTopOf="@id/photoImageView"
+        app:layout_constraintBottom_toBottomOf="@id/photoImageView"
+        android:visibility="gone"
+        />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="50dp"
