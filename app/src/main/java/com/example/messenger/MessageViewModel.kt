@@ -276,10 +276,6 @@ class MessageViewModel @Inject constructor(
         return@withContext retrofitService.deleteMessages(ids)
     }
 
-    suspend fun deleteFile(folder: String, filename: String): Boolean = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.deleteFile(folder, filename)
-    }
-
     suspend fun uploadPhoto(photo: File): String = withContext(Dispatchers.IO) {
         return@withContext retrofitService.uploadPhoto(photo)
     }

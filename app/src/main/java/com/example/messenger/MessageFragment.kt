@@ -289,19 +289,14 @@ class MessageFragment(
                             }
                         })
                     binding.floatingActionButtonDelete.setOnClickListener {
-                       val (messagesToDelete, filesToDelete) = adapter.getDeleteList()
+                       val messagesToDelete = adapter.getDeleteList()
                         if (messagesToDelete.isNotEmpty()) {
                             uiScope.launch {
                                 binding.progressBar.visibility = View.VISIBLE
                                 val response = async(Dispatchers.IO) { viewModel.deleteMessages(messagesToDelete) }
-                                val response2 = withContext(Dispatchers.IO) {
-                                    filesToDelete.map {
-                                        async { viewModel.deleteFile(it.value, it.key) }
-                                    }.awaitAll() // wait all responses
-                                }
                                 binding.floatingActionButtonDelete.visibility = View.GONE
                                 binding.floatingActionButtonForward.visibility = View.GONE
-                                if(response.await() && response2.all { it }) {
+                                if(response.await()) {
                                     adapter.clearPositions()
                                     viewModel.startRefresh()
                                     binding.progressBar.visibility = View.GONE
@@ -851,14 +846,6 @@ class MessageFragment(
                                 val itemsToUpload = if (localMedias == null) tempItems
                                 else tempItems.filter { it !in localMedias } as ArrayList<LocalMedia>
                                 // из-за того, что автор библиотеки дохера умный, приходится использовать кастомный компаратор
-                                val itemsToDelete = localMedias?.filter { localItem ->
-                                    tempItems.none { tempItem ->
-                                        tempItem.id == localItem.id
-                                                && tempItem.path == localItem.path
-                                                && tempItem.realPath == localItem.realPath
-                                    }
-                                } ?: arrayListOf()
-                                // ну и ещё один компаратор...... автор красавчик, сразу понять что у тебя не работает equals нереально
                                 val removedItemsIndices: List<Int> =
                                     localMedias?.mapIndexedNotNull { index, localItem ->
                                         if (tempItems.none { tempItem ->
@@ -890,27 +877,9 @@ class MessageFragment(
                                     }
                                     return@async list
                                 }
-                                // Delete old media
-                                val response = withContext(Dispatchers.IO) {
-                                    itemsToDelete.map {
-                                        val file = if (it.duration > 0) getFileFromContentUri(
-                                            requireContext(),
-                                            Uri.parse(it.availablePath)
-                                        ) ?: File(it.availablePath)
-                                        else File(it.availablePath)
-                                        async(Dispatchers.IO) {
-                                            try {
-                                                viewModel.deleteFile("photos", file.name)
-                                            } catch (e: FileNotFoundException) {
-                                                return@async true
-                                            }
-                                        }
-                                    }.awaitAll() // wait all responses
-                                }
                                 val imagesMessage = message.images?.filterIndexed { index, _ ->
                                     index !in removedItemsIndices
                                 } ?: emptyList()
-                                if (response.all { it }) {
                                     val finalList = imagesMessage + uploadList.await()
                                     val resp = async(Dispatchers.IO) {
                                         if (text.isNotEmpty()) {
@@ -926,7 +895,6 @@ class MessageFragment(
                                         binding.recordView.visibility = View.VISIBLE
                                         viewModel.startRefresh()
                                     }
-                                }
                             } else {
                                 if (text.isNotEmpty()) {
                                     val resp = async(Dispatchers.IO) {

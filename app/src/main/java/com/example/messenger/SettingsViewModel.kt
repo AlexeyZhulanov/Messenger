@@ -82,10 +82,6 @@ class SettingsViewModel @Inject constructor(
         return@withContext retrofitService.downloadFile(context, folder, filename)
     }
 
-    suspend fun deleteFile(folder: String, filename: String): Boolean = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.deleteFile(folder, filename)
-    }
-
     suspend fun updateAvatar(photo: String) : Boolean = withContext(Dispatchers.IO) {
         return@withContext retrofitService.updateProfile(null, photo)
     }

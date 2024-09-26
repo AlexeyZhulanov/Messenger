@@ -79,7 +79,6 @@ class MessageAdapter(
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
     private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
-    private var checkedFiles: MutableMap<String, String> = mutableMapOf()
     var dialogSettings: ConversationSettings = ConversationSettings()
     private var highlightedPosition: Int? = null
     private val newMessages: MutableList<Pair<Message, String>> = mutableListOf()
@@ -110,7 +109,7 @@ class MessageAdapter(
         return newMessages.size + super.getItemCount()
     }
 
-    fun getDeleteList(): Pair<List<Int>, Map<String, String>> {
+    fun getDeleteList(): List<Int> {
         val list = mutableListOf<Int>()
         checkedPositions.forEach { idx ->
             val message = getItemCustom(idx)?.first
@@ -118,7 +117,7 @@ class MessageAdapter(
                 list.add(message.id)
             }
         }
-        return Pair(list, checkedFiles)
+        return list
     }
 
     fun getForwardList(): List<Pair<Message, Boolean>> {
@@ -161,7 +160,6 @@ class MessageAdapter(
     fun clearPositions() {
         canLongClick = true
         checkedPositions.clear()
-        checkedFiles.clear()
     }
 
     private fun getItemPosition(message: Message): Int {
@@ -196,52 +194,6 @@ class MessageAdapter(
     private fun onLongClick(message: Message, isSender: Boolean) {
         if(canLongClick) {
             savePosition(message, isSender)
-            canLongClick = false
-            notifyDataSetChanged()
-        }
-    }
-
-    private fun savePositionFile(message: Message, filePath: String, fileType: String, isSender: Boolean) {
-        val position = getItemPosition(message)
-        if (position in checkedPositions) {
-            checkedPositions.remove(position)
-            checkedFiles.remove(filePath)
-            mapPositions.remove(position)
-        } else {
-            checkedPositions.add(position)
-            checkedFiles[filePath] = fileType
-            mapPositions[position] = isSender
-        }
-        notifyItemChanged(position)
-    }
-
-    @SuppressLint("NotifyDataSetChanged")
-    private fun onLongClickFile(message: Message, filePath: String, fileType: String, isSender: Boolean) {
-        if (canLongClick) {
-            savePositionFile(message, filePath, fileType, isSender)
-            canLongClick = false
-            notifyDataSetChanged()
-        }
-    }
-
-    private fun savePositionFiles(message: Message, filePaths: Map<String, String>, isSender: Boolean) {
-        val position = getItemPosition(message)
-        if (position in checkedPositions) {
-            checkedPositions.remove(position)
-            mapPositions.remove(position)
-            filePaths.forEach { checkedFiles.remove(it.key) }
-        } else {
-            checkedPositions.add(position)
-            mapPositions[position] = isSender
-            filePaths.forEach { checkedFiles[it.key] = it.value }
-        }
-        notifyItemChanged(position)
-    }
-
-    @SuppressLint("NotifyDataSetChanged")
-    private fun onLongClickFiles(message: Message, filePaths: Map<String, String>, isSender: Boolean) {
-        if (canLongClick) {
-            savePositionFiles(message, filePaths, isSender)
             canLongClick = false
             notifyDataSetChanged()
         }
@@ -782,7 +734,6 @@ class MessageAdapter(
 
 
     inner class MessagesViewHolderVoiceReceiver(private val binding: ItemVoiceReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
-        private var filePath: String = ""
         private var isPlaying: Boolean = false
         private val handler = Handler(Looper.getMainLooper())
         fun clearAnswerLayout() {
@@ -817,11 +768,10 @@ class MessageAdapter(
                 val (first, second) = filePathTemp.await()
                 if (first != null) {
                 val file = File(first)
-                filePath = first
                 if (file.exists()) {
                     if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.voice!!, file.readBytes())
                     val mediaPlayer = MediaPlayer().apply {
-                        setDataSource(filePath)
+                        setDataSource(first)
                         prepare()
                     }
                     val duration = mediaPlayer.duration
@@ -870,7 +820,7 @@ class MessageAdapter(
                         handler.removeCallbacks(updateSeekBarRunnable)
                     }
                 } else {
-                    Log.e("VoiceError", "File does not exist: $filePath")
+                    Log.e("VoiceError", "File does not exist: $first")
                     binding.progressBar.visibility = View.GONE
                     binding.errorImageView.visibility = View.VISIBLE
                     binding.playButton.visibility = View.GONE
@@ -893,7 +843,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFile(message, File(filePath).name, "audio", false)
+                    savePosition(message, false)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -908,14 +858,14 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFile(message, File(filePath).name, "audio", false)
+                    savePosition(message, false)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFile(message, File(filePath).name, "audio", false)
+                    onLongClick(message, false)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -924,8 +874,6 @@ class MessageAdapter(
     }
 
     inner class MessagesViewHolderVoiceSender(private val binding: ItemVoiceSenderBinding) : RecyclerView.ViewHolder(binding.root) {
-
-        private var filePath: String = ""
         private var isPlaying: Boolean = false
         private val handler = Handler(Looper.getMainLooper())
         fun clearAnswerLayout() {
@@ -960,11 +908,10 @@ class MessageAdapter(
                 val (first, second) = filePathTemp.await()
                 if (first != null) {
                 val file = File(first)
-                filePath = first
                 if (file.exists()) {
                     if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.voice!!, file.readBytes())
                     val mediaPlayer = MediaPlayer().apply {
-                        setDataSource(filePath)
+                        setDataSource(first)
                         prepare()
                     }
                     val duration = mediaPlayer.duration
@@ -1013,7 +960,7 @@ class MessageAdapter(
                         handler.removeCallbacks(updateSeekBarRunnable)
                     }
                 } else {
-                    Log.e("VoiceError", "File does not exist: $filePath")
+                    Log.e("VoiceError", "File does not exist: $first")
                     binding.progressBar.visibility = View.GONE
                     binding.errorImageView.visibility = View.VISIBLE
                     binding.playButton.visibility = View.GONE
@@ -1036,7 +983,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFile(message, File(filePath).name, "audio", true)
+                    savePosition(message, true)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1051,14 +998,14 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFile(message, File(filePath).name, "audio", true)
+                    savePosition(message, true)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFile(message, File(filePath).name, "audio", true)
+                    onLongClick(message, true)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1074,7 +1021,6 @@ class MessageAdapter(
     }
 
     inner class MessagesViewHolderFileReceiver(private val binding: ItemFileReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
-        private var filePath: String = ""
         fun clearAnswerLayout() {
             binding.answerLayout.root.visibility = View.GONE
             binding.answerLayout.answerMessage.text = ""
@@ -1106,7 +1052,6 @@ class MessageAdapter(
                 val (first, second) = filePathTemp.await()
                 if (first != null) {
                 val file = File(first)
-                filePath = first
                 if (file.exists()) {
                     if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.file!!, file.readBytes())
                     withContext(Dispatchers.Main) {
@@ -1130,7 +1075,7 @@ class MessageAdapter(
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        Log.e("FileError", "File does not exist: $filePath")
+                        Log.e("FileError", "File does not exist: $first")
                         binding.progressBar.visibility = View.GONE
                         binding.errorImageView.visibility = View.VISIBLE
                     }
@@ -1152,7 +1097,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFile(message, File(filePath).name, "files", false)
+                    savePosition(message, false)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1167,14 +1112,14 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFile(message, File(filePath).name, "files", false)
+                    savePosition(message, false)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFile(message, File(filePath).name, "files", false)
+                    onLongClick(message, false)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1183,8 +1128,6 @@ class MessageAdapter(
     }
 
     inner class MessagesViewHolderFileSender(private val binding: ItemFileSenderBinding) : RecyclerView.ViewHolder(binding.root) {
-
-        private var filePath: String = ""
         fun clearAnswerLayout() {
             binding.answerLayout.root.visibility = View.GONE
             binding.answerLayout.answerMessage.text = ""
@@ -1216,7 +1159,6 @@ class MessageAdapter(
                 val (first, second) = filePathTemp.await()
                 if (first != null) {
                     val file = File(first)
-                    filePath = first
                     if (file.exists()) {
                         if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.file!!, file.readBytes())
                         withContext(Dispatchers.Main) {
@@ -1240,7 +1182,7 @@ class MessageAdapter(
                         }
                     } else {
                         withContext(Dispatchers.Main) {
-                            Log.e("FileError", "File does not exist: $filePath")
+                            Log.e("FileError", "File does not exist: $first")
                             binding.progressBar.visibility = View.GONE
                             binding.errorImageView.visibility = View.VISIBLE
                         }
@@ -1262,7 +1204,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFile(message, File(filePath).name, "files", true)
+                    savePosition(message, true)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1277,14 +1219,14 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFile(message, File(filePath).name, "files", true)
+                    savePosition(message, true)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFile(message, File(filePath).name, "files", true)
+                    onLongClick(message, true)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1304,7 +1246,6 @@ class MessageAdapter(
     }
 
     inner class MessagesViewHolderTextImageReceiver(private val binding: ItemTextImageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
-
         private var filePath: String = ""
         fun clearAnswerLayout() {
             binding.answerLayout.root.visibility = View.GONE
@@ -1345,7 +1286,7 @@ class MessageAdapter(
                 val (first, second) = filePathTemp.await()
                 if(first != null) {
                 val file = File(first)
-                filePath = first
+                    filePath = first
                 if (file.exists()) {
                     if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.images!!.first(), file.readBytes())
                     val uri = Uri.fromFile(file)
@@ -1376,7 +1317,7 @@ class MessageAdapter(
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        Log.e("ImageError", "File does not exist: $filePath")
+                        Log.e("ImageError", "File does not exist: $first")
                         binding.progressBar.visibility = View.GONE
                         binding.errorImageView.visibility = View.VISIBLE
                     }
@@ -1398,7 +1339,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFile(message, File(filePath).name, "photos", false)
+                    savePosition(message, false)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1413,14 +1354,14 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFile(message, File(filePath).name, "photos", false)
+                    savePosition(message, false)
                 }
                 else
                     actionListener.onMessageClickImage(message, itemView, arrayListOf(fileToLocalMedia(File(filePath))), false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFile(message, File(filePath).name, "photos", false)
+                    onLongClick(message, false)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1429,7 +1370,6 @@ class MessageAdapter(
     }
 
     inner class MessagesViewHolderTextImageSender(private val binding: ItemTextImageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
-
         private var filePath: String = ""
         fun clearAnswerLayout() {
             binding.answerLayout.root.visibility = View.GONE
@@ -1469,7 +1409,7 @@ class MessageAdapter(
                 val (first, second) = filePathTemp.await()
                 if (first != null) {
                 val file = File(first)
-                filePath = first
+                    filePath = first
                 if (file.exists()) {
                     if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.images!!.first(), file.readBytes())
                     val uri = Uri.fromFile(file)
@@ -1503,7 +1443,7 @@ class MessageAdapter(
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        Log.e("ImageError", "File does not exist: $filePath")
+                        Log.e("ImageError", "File does not exist: $first")
                         binding.progressBar.visibility = View.GONE
                         binding.errorImageView.visibility = View.VISIBLE
                     }
@@ -1525,7 +1465,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFile(message, File(filePath).name, "photos", true)
+                    savePosition(message, true)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1540,14 +1480,14 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFile(message, File(filePath).name, "photos", true)
+                    savePosition(message, true)
                 }
                 else
                     actionListener.onMessageClickImage(message, itemView, arrayListOf(fileToLocalMedia(File(filePath))), true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFile(message, File(filePath).name, "photos", true)
+                    onLongClick(message, true)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1564,15 +1504,14 @@ class MessageAdapter(
                 actionListener.onImagesClick(images, position)
             }
 
-            override fun onLongImageClicked(images: ArrayList<LocalMedia>, position: Int) {
+            override fun onLongImageClicked(position: Int) {
                 if(canLongClick) {
-                    onLongClickFiles(mes, filePaths, false)
+                    onLongClick(mes, false)
                     actionListener.onMessageLongClick(itemView)
                 }
             }
         })
 
-        private var filePaths: MutableMap<String, String> = mutableMapOf()
         private var filePathsForClick: List<String> = listOf()
         init {
             binding.recyclerview.layoutManager = CustomLayoutManager()
@@ -1622,7 +1561,6 @@ class MessageAdapter(
                         val (first, second) = filePath.await()
                         if (first != null) {
                         val file = File(first)
-                        filePaths[File(first).name] = "photos"
                         filePathsForClick += first
                         if (file.exists()) {
                             if (!second && isInLast30) messageViewModel.fManagerSaveFile(image, file.readBytes())
@@ -1656,7 +1594,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFiles(message, filePaths, false)
+                    savePosition(message, false)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1671,7 +1609,7 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFiles(message, filePaths, false)
+                    savePosition(message, false)
                 }
                 else {
                     val medias: ArrayList<LocalMedia> = filePathsForClick.map { fileToLocalMedia(File(it)) } as ArrayList<LocalMedia>
@@ -1680,7 +1618,7 @@ class MessageAdapter(
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFiles(message, filePaths, false)
+                    onLongClick(message, false)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1697,15 +1635,14 @@ class MessageAdapter(
                 actionListener.onImagesClick(images, position)
             }
 
-            override fun onLongImageClicked(images: ArrayList<LocalMedia>, position: Int) {
+            override fun onLongImageClicked(position: Int) {
                 if(canLongClick) {
-                    onLongClickFiles(mes, filePaths, true)
+                    onLongClick(mes, true)
                     actionListener.onMessageLongClick(itemView)
                 }
             }
         })
 
-        private var filePaths: MutableMap<String, String> = mutableMapOf()
         private var filePathsForClick: List<String> = listOf()
         init {
             binding.recyclerview.layoutManager = CustomLayoutManager()
@@ -1755,7 +1692,6 @@ class MessageAdapter(
                         val (first, second) = filePath.await()
                         if (first != null) {
                             val file = File(first)
-                            filePaths[File(first).name] = "photos"
                             filePathsForClick += first
                             if (file.exists()) {
                                 if (!second && isInLast30) messageViewModel.fManagerSaveFile(image, file.readBytes())
@@ -1791,7 +1727,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePositionFiles(message, filePaths, true)
+                    savePosition(message, true)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1806,7 +1742,7 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePositionFiles(message, filePaths, true)
+                    savePosition(message, true)
                 }
                 else {
                     val medias: ArrayList<LocalMedia> = filePathsForClick.map { fileToLocalMedia(File(it)) } as ArrayList<LocalMedia>
@@ -1815,7 +1751,7 @@ class MessageAdapter(
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClickFiles(message, filePaths, true)
+                    onLongClick(message,true)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
