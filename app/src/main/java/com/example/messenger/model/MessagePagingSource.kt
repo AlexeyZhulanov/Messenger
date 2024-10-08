@@ -1,5 +1,6 @@
 package com.example.messenger.model
 
+import android.util.Log
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import java.text.SimpleDateFormat
@@ -28,6 +29,7 @@ class MessagePagingSource(
                 } catch (e: Exception) {
                     if(flag) {
                         flag = false
+                        Log.d("testERRORGETMESSAGES", e.message.toString())
                         messengerService.getMessages(dialogId)
                     } else throw e
                 }
@@ -71,9 +73,8 @@ class MessagePagingSource(
     private fun formatMessageDate(timestamp: Long?): String {
         if (timestamp == null) return ""
 
-        // Приведение серверного времени (МСК GMT+3) к GMT
         val greenwichMessageDate = Calendar.getInstance().apply {
-            timeInMillis = timestamp - 10800000
+            timeInMillis = timestamp
         }
         val dateFormatMonthDay = SimpleDateFormat("d MMMM", Locale.getDefault())
         val dateFormatYear = SimpleDateFormat("d MMMM yyyy", Locale.getDefault())

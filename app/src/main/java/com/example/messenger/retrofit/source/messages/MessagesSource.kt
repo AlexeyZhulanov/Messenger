@@ -14,23 +14,23 @@ interface MessagesSource {
 
     suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int) : List<Message>
 
-    suspend fun findMessage(idMessage: Int) : Pair<Message, Int>
+    suspend fun findMessage(idMessage: Int, idDialog: Int) : Pair<Message, Int>
 
     suspend fun addKeyToDialog(dialogId: Int, key: String) : String
 
     suspend fun removeKeyFromDialog(dialogId: Int) : String
 
-    suspend fun editMessage(messageId: Int, text: String? = null,
+    suspend fun editMessage(idDialog: Int, messageId: Int, text: String? = null,
                             images: List<String>? = null, voice: String? = null,
                             file: String? = null) : String
 
-    suspend fun deleteMessages(ids: List<Int>) : String
+    suspend fun deleteMessages(idDialog: Int, ids: List<Int>) : String
 
     suspend fun deleteDialog(dialogId: Int) : String
 
     suspend fun getUsers() : List<UserShort>
 
-    suspend fun markMessagesAsRead(ids: List<Int>) : String
+    suspend fun markMessagesAsRead(idDialog: Int, ids: List<Int>) : String
 
     suspend fun searchMessagesInDialog(dialogId: Int, word: String) : List<Message>
 

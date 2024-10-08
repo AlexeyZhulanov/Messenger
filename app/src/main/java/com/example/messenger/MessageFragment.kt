@@ -160,7 +160,7 @@ class MessageFragment(
                     binding.recyclerview.scrollToPosition(position)
                 } else {
                     val pos = viewModel.getPreviousMessageId(lastReadMessageId)
-                    binding.recyclerview.scrollToPosition(pos)
+                    if(pos != -1) binding.recyclerview.scrollToPosition(pos)
                 }
             }
         }
@@ -237,6 +237,17 @@ class MessageFragment(
         options.setOnClickListener {
             showPopupMenu(it, R.menu.popup_menu_dialog)
         }
+        lifecycleScope.launch {
+            viewModel.deleteState.collectLatest {
+                if(it == 1) {
+                    Toast.makeText(requireContext(), "Все сообщения были удалены", Toast.LENGTH_SHORT).show()
+                }
+                if(it == 2) {
+                    Toast.makeText(requireContext(), "Диалог был удален", Toast.LENGTH_SHORT).show()
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        }
     }
 
     @OptIn(FlowPreview::class)
@@ -278,6 +289,7 @@ class MessageFragment(
                             override fun handleOnBackPressed() {
                                 if (!adapter.canLongClick && flag) {
                                     adapter.clearPositions()
+                                    adapter.notifyDataSetChanged()
                                     binding.floatingActionButtonDelete.visibility = View.GONE
                                     binding.floatingActionButtonForward.visibility = View.GONE
                                 } else {

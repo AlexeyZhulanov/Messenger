@@ -30,22 +30,22 @@ interface RetrofitRepository {
 
     suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int) : List<Message>
 
-    suspend fun findMessage(idMessage: Int) : Pair<Message, Int>
+    suspend fun findMessage(idMessage: Int, idDialog: Int) : Pair<Message, Int>
 
     suspend fun addKeyToDialog(dialogId: Int, key: String) : Boolean
 
     suspend fun removeKeyFromDialog(dialogId: Int) : Boolean
 
-    suspend fun editMessage(messageId: Int, text: String?,
+    suspend fun editMessage(idDialog: Int, messageId: Int, text: String?,
                             images: List<String>?, voice: String?, file: String?) : Boolean
 
-    suspend fun deleteMessages(ids: List<Int>) : Boolean
+    suspend fun deleteMessages(idDialog: Int, ids: List<Int>) : Boolean
 
     suspend fun deleteDialog(dialogId: Int) : Boolean
 
     suspend fun getUsers(): List<UserShort>
 
-    suspend fun markMessagesAsRead(ids: List<Int>) : Boolean
+    suspend fun markMessagesAsRead(idDialog: Int, ids: List<Int>) : Boolean
 
     suspend fun searchMessagesInDialog(dialogId: Int, word: String): List<Message>
 
@@ -95,14 +95,18 @@ interface RetrofitRepository {
 
     suspend fun searchMessagesInGroup(groupId: Int, word: String) : List<GroupMessage>
 
-    suspend fun uploadPhoto(photo: File) : String
+    suspend fun uploadPhoto(dialogId: Int, photo: File) : String
 
-    suspend fun uploadFile(file: File) : String
+    suspend fun uploadFile(dialogId: Int, file: File) : String
 
-    suspend fun uploadAudio(audio: File) : String
+    suspend fun uploadAudio(dialogId: Int, audio: File) : String
 
-    suspend fun downloadFile(context: Context, folder: String, filename: String) : String
+    suspend fun uploadAvatar(avatar: File) : String
 
-    suspend fun deleteFile(folder: String, filename: String) : Boolean
+    suspend fun downloadFile(context: Context, folder: String, dialogId: Int, filename: String) : String
+
+    suspend fun downloadAvatar(context: Context, filename: String) : String
+
+    suspend fun deleteFile(folder: String, dialogId: Int, filename: String) : Boolean
 
 }

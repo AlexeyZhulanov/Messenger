@@ -27,5 +27,5 @@ interface MessageDao {
     suspend fun deleteMessagesByDialogId(idDialog: Int)
 
     @Query("SELECT * FROM messages WHERE id_dialog = :idDialog AND id < :lastMessageId ORDER BY id DESC LIMIT 1")
-    suspend fun getPreviousMessage(idDialog: Int, lastMessageId: Int): MessageDbEntity
+    suspend fun getPreviousMessage(idDialog: Int, lastMessageId: Int): MessageDbEntity?
 }

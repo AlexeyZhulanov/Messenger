@@ -15,36 +15,45 @@ class RetrofitUploadsSource(
 ) : BaseRetrofitSource(config), UploadsSource {
 
     private val uploadsApi = retrofit.create(UploadsApi::class.java)
-    override suspend fun uploadPhoto(photo: File): String = wrapRetrofitExceptions {
+    override suspend fun uploadPhoto(dialogId: Int, photo: File): String = wrapRetrofitExceptions {
         val requestBody = MultipartBody.Part.createFormData(
             "file",
             photo.name,
             photo.asRequestBody("image/*".toMediaTypeOrNull())
         )
-        uploadsApi.uploadPhoto(requestBody).filename
+        uploadsApi.uploadPhoto(dialogId, requestBody).filename
     }
 
-    override suspend fun uploadFile(file: File): String = wrapRetrofitExceptions {
+    override suspend fun uploadFile(dialogId: Int, file: File): String = wrapRetrofitExceptions {
         val requestBody = MultipartBody.Part.createFormData(
             "file",
             file.name,
             file.asRequestBody("file/*".toMediaTypeOrNull())
         )
-        uploadsApi.uploadFile(requestBody).filename
+        uploadsApi.uploadFile(dialogId, requestBody).filename
     }
 
-    override suspend fun uploadAudio(audio: File): String = wrapRetrofitExceptions {
+    override suspend fun uploadAudio(dialogId: Int, audio: File): String = wrapRetrofitExceptions {
         val requestBody = MultipartBody.Part.createFormData(
             "file",
             audio.name,
             audio.asRequestBody("audio/*".toMediaTypeOrNull())
         )
-        uploadsApi.uploadAudio(requestBody).filename
+        uploadsApi.uploadAudio(dialogId, requestBody).filename
     }
 
-    override suspend fun downloadFile(context: Context, folder: String, filename: String) : String = wrapRetrofitExceptions {
+    override suspend fun uploadAvatar(avatar: File): String = wrapRetrofitExceptions {
+        val requestBody = MultipartBody.Part.createFormData(
+            "file",
+            avatar.name,
+            avatar.asRequestBody("image/*".toMediaTypeOrNull())
+        )
+        uploadsApi.uploadAvatar(requestBody).filename
+    }
+
+    override suspend fun downloadFile(context: Context, folder: String, dialogId: Int, filename: String) : String = wrapRetrofitExceptions {
         try {
-            val responseBody = uploadsApi.downloadFile(folder, filename)
+            val responseBody = uploadsApi.downloadFile(folder, dialogId, filename)
 
             val fileTypeDir = when (folder) {
                 "photos" -> "photos"
@@ -77,7 +86,29 @@ class RetrofitUploadsSource(
         }
     }
 
-    override suspend fun deleteFile(folder: String, filename: String): String = wrapRetrofitExceptions {
-        uploadsApi.deleteFile(folder, filename).message
+    override suspend fun downloadAvatar(context: Context, filename: String): String = wrapRetrofitExceptions {
+        try {
+            val responseBody = uploadsApi.downloadAvatar(filename)
+            val directory = File(context.filesDir, "avatars")
+            if (!directory.exists()) {
+                directory.mkdirs()
+            }
+            val file = File(directory, filename)
+            // Запись файла на диск
+            file.outputStream().use { outputStream ->
+                responseBody.byteStream().use { inputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+            Log.d("testDownloadAvatar","File downloaded to ${file.absolutePath}")
+            return@wrapRetrofitExceptions file.absolutePath
+        } catch (e: Exception) {
+            Log.d("testDownloadAvatar","Error downloading file: ${e.message}")
+            return@wrapRetrofitExceptions "Error: ${e.message}"
+        }
+    }
+
+    override suspend fun deleteFile(folder: String, dialogId: Int, filename: String): String = wrapRetrofitExceptions {
+        uploadsApi.deleteFile(folder, dialogId, filename).message
     }
 }

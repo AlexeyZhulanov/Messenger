@@ -6,6 +6,7 @@ import android.net.Uri
 import android.util.Log
 import android.view.View
 import android.widget.ImageView
+import android.widget.Toast
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -87,6 +88,9 @@ class MessageViewModel @Inject constructor(
     private val _typingState = MutableStateFlow(false)
     val typingState: StateFlow<Boolean> get() = _typingState
 
+    private val _deleteState = MutableStateFlow(0)
+    val deleteState: StateFlow<Int> get() = _deleteState
+
     private val _readMessagesFlow = MutableStateFlow<List<Int>>(emptyList())
     val readMessagesFlow: StateFlow<List<Int>> get() = _readMessagesFlow
 
@@ -107,7 +111,7 @@ class MessageViewModel @Inject constructor(
 
     fun updateLastDate(time: Long) {
         val greenwichMessageDate = Calendar.getInstance().apply {
-            timeInMillis = time - 10800000
+            timeInMillis = time
         }
         val localNow = Calendar.getInstance()
         this.lastMessageDate = if(isToday(localNow, greenwichMessageDate)) "" else formatMessageDate(time)
@@ -206,7 +210,7 @@ class MessageViewModel @Inject constructor(
     private suspend fun sendReadReceiptsToServer(messageIds: List<Int>) {
         try {
             // Отправляем список прочитанных сообщений на сервер
-            retrofitService.markMessagesAsRead(messageIds)
+            retrofitService.markMessagesAsRead(dialogId, messageIds)
         } catch (e: Exception) {
             Log.e("ReadReceiptError", "Failed to send read receipts: ${e.message}")
         }
@@ -273,19 +277,19 @@ class MessageViewModel @Inject constructor(
     }
 
     suspend fun deleteMessages(ids: List<Int>): Boolean = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.deleteMessages(ids)
+        return@withContext retrofitService.deleteMessages(dialogId, ids)
     }
 
     suspend fun uploadPhoto(photo: File): String = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.uploadPhoto(photo)
+        return@withContext retrofitService.uploadPhoto(dialogId, photo)
     }
 
     suspend fun uploadAudio(audio: File): String = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.uploadAudio(audio)
+        return@withContext retrofitService.uploadAudio(dialogId, audio)
     }
 
     suspend fun uploadFile(file: File): String = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.uploadFile(file)
+        return@withContext retrofitService.uploadFile(dialogId, file)
     }
 
     suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?,
@@ -296,11 +300,11 @@ class MessageViewModel @Inject constructor(
 
     suspend fun editMessage(messageId: Int, text: String?, images: List<String>?,
                             voice: String?, file: String?) = withContext(Dispatchers.IO) {
-        retrofitService.editMessage(messageId, text, images, voice, file)
+        retrofitService.editMessage(dialogId, messageId, text, images, voice, file)
     }
 
     suspend fun downloadFile(context: Context, folder: String, filename: String): String = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.downloadFile(context, folder, filename)
+        return@withContext retrofitService.downloadFile(context, folder, dialogId, filename)
     }
 
     suspend fun fManagerIsExist(fileName: String): Boolean = withContext(Dispatchers.IO) {
@@ -316,15 +320,18 @@ class MessageViewModel @Inject constructor(
     }
 
     suspend fun findMessage(idMessage: Int): Pair<Message, Int> = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.findMessage(idMessage)
+        return@withContext retrofitService.findMessage(idMessage, dialogId)
+    }
+
+    suspend fun updateAutoDeleteInterval(interval: Int) = withContext(Dispatchers.IO) {
+        retrofitService.updateAutoDeleteInterval(dialogId, interval)
     }
 
     fun formatMessageTime(timestamp: Long?): String {
         if (timestamp == null) return "-"
 
-        // Приведение серверного времени (МСК GMT+3) к GMT
         val greenwichMessageDate = Calendar.getInstance().apply {
-            timeInMillis = timestamp - 10800000
+            timeInMillis = timestamp
         }
         val dateFormatToday = SimpleDateFormat("HH:mm", Locale.getDefault())
         return dateFormatToday.format(greenwichMessageDate.time)
@@ -333,9 +340,8 @@ class MessageViewModel @Inject constructor(
     private fun formatMessageDate(timestamp: Long?): String {
         if (timestamp == null) return ""
 
-        // Приведение серверного времени (МСК GMT+3) к GMT
         val greenwichMessageDate = Calendar.getInstance().apply {
-            timeInMillis = timestamp - 10800000
+            timeInMillis = timestamp
         }
         val dateFormatMonthDay = SimpleDateFormat("d MMMM", Locale.getDefault())
         val dateFormatYear = SimpleDateFormat("d MMMM yyyy", Locale.getDefault())
@@ -360,9 +366,8 @@ class MessageViewModel @Inject constructor(
     private fun formatUserSessionDate(timestamp: Long?): String {
         if (timestamp == null) return "Никогда не был в сети"
 
-        // Приведение серверного времени (МСК GMT+3) к GMT
         val greenwichSessionDate = Calendar.getInstance().apply {
-            timeInMillis = timestamp - 10800000
+            timeInMillis = timestamp
         }
         val now = Calendar.getInstance()
 
@@ -437,7 +442,7 @@ class MessageViewModel @Inject constructor(
     }
 
     suspend fun getPreviousMessageId(id: Int): Int = withContext(Dispatchers.IO) {
-        return@withContext messengerService.getPreviousMessage(dialogId, id).id
+        return@withContext messengerService.getPreviousMessage(dialogId, id)?.id ?: -1
     }
 
     private fun joinDialog() {
@@ -512,6 +517,7 @@ class MessageViewModel @Inject constructor(
 
     override fun onDialogDeleted(dialogDeletedEvent: DialogDeletedEvent) {
         Log.d("testSocketsMessage", "Dialog deleted")
+        _deleteState.value = 2
     }
 
     override fun onUserSessionUpdated(userSessionUpdatedEvent: UserSessionUpdatedEvent) {
@@ -537,6 +543,7 @@ class MessageViewModel @Inject constructor(
 
     override fun onAllMessagesDeleted(dialogMessagesAllDeleted: DialogMessagesAllDeleted) {
         Log.d("testSocketsMessage", "All messages deleted")
+        refresh()
     }
 
     override fun onUserJoinedDialog(dialogId: Int, userId: Int) {
@@ -561,8 +568,17 @@ class MessageViewModel @Inject constructor(
         retrofitService.toggleDialogCanDelete(dialogId)
     }
 
+    suspend fun deleteAllMessages(dialogId: Int) = withContext(Dispatchers.IO) {
+        retrofitService.deleteDialogMessages(dialogId)
+        _deleteState.value = 1
+    }
+
+    suspend fun deleteDialog(dialogId: Int) = withContext(Dispatchers.IO) {
+        retrofitService.deleteDialog(dialogId)
+    }
+
     override fun onCleared() {
-        super.onCleared()
         leaveDialog()
+        super.onCleared()
     }
 }

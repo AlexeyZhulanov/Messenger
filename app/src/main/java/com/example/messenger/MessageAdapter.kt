@@ -96,7 +96,8 @@ class MessageAdapter(
     fun getItemCustom(idx: Int): Pair<Message, String>? {
         return if(idx < newMessages.size) newMessages[newMessages.size - idx - 1]
         else {
-            if(newMessages.size == 0) getItem(idx)
+            if(itemCount == idx && itemCount != 0) getItem(idx - 1)
+            else if(newMessages.size == 0) getItem(idx)
             else getItem(idx - newMessages.size)
         }
     }
@@ -298,8 +299,14 @@ class MessageAdapter(
             message = newMessages[newMessages.size - position - 1].first
             date = newMessages[newMessages.size - position - 1].second
         } else {
-            message = getItem(position)?.first ?: return
-            date = getItem(position)?.second ?: return
+            if(position == itemCount) {
+                message = getItem(position - 1)?.first ?: return
+                date = getItem(position - 1)?.second ?: return
+            }
+            else {
+                message = getItem(position)?.first ?: return
+                date = getItem(position)?.second ?: return
+            }
         }
         var flagText = false
         if(!message.text.isNullOrEmpty()) flagText = true
@@ -1292,28 +1299,33 @@ class MessageAdapter(
                     val uri = Uri.fromFile(file)
                     val localMedia = fileToLocalMedia(file)
                     val chooseModel = localMedia.chooseModel
-                    binding.tvDuration.visibility =
-                        if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
-                    if (chooseModel == SelectMimeType.ofAudio()) {
-                        binding.tvDuration.visibility = View.VISIBLE
-                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
-                    } else {
-                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
-                    }
-                    binding.tvDuration.text = (DateUtils.formatDurationTime(localMedia.duration))
-                    if (chooseModel == SelectMimeType.ofAudio()) {
-                        binding.receiverImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
-                    } else {
-                        Glide.with(context)
-                            .load(uri)
-                            .centerCrop()
-                            .placeholder(R.color.app_color_f6)
-                            .diskCacheStrategy(DiskCacheStrategy.ALL)
-                            .into(binding.receiverImageView)
-                    }
-                    binding.progressBar.visibility = View.GONE
-                    binding.receiverImageView.setOnClickListener {
-                        actionListener.onImagesClick(arrayListOf(localMedia), 0)
+                    withContext(Dispatchers.Main) {
+                        binding.tvDuration.visibility =
+                            if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
+                        if (chooseModel == SelectMimeType.ofAudio()) {
+                            binding.tvDuration.visibility = View.VISIBLE
+                            binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                                com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
+                        } else {
+                            binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                                com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
+                        }
+                        binding.tvDuration.text =
+                            (DateUtils.formatDurationTime(localMedia.duration))
+                        if (chooseModel == SelectMimeType.ofAudio()) {
+                            binding.receiverImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
+                        } else {
+                            Glide.with(context)
+                                .load(uri)
+                                .centerCrop()
+                                .placeholder(R.color.app_color_f6)
+                                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                .into(binding.receiverImageView)
+                        }
+                        binding.progressBar.visibility = View.GONE
+                        binding.receiverImageView.setOnClickListener {
+                            actionListener.onImagesClick(arrayListOf(localMedia), 0)
+                        }
                     }
                 } else {
                     withContext(Dispatchers.Main) {

@@ -99,13 +99,19 @@ class WebSocketService @Inject constructor(
             val settingsResponse = messengerService.getSettings()
             val success = retrofitService.login(settingsResponse.name!!, settingsResponse.password!!)
             if(success) {
+                Log.d("testSocketIO", "Try to reconnect sockets")
                 // send last emit
                 if(lastData != null && lastEvent != null) {
-                    Log.d("testSocketIO", "Try to reconnect sockets")
                     socket.disconnect()
                     delay(200)
-                    socket.connect()
+                    connect()
                     socket.emit(lastEvent, lastData)
+                    lastData = null
+                    lastEvent = null
+                } else {
+                    socket.disconnect()
+                    delay(200)
+                    connect()
                     lastData = null
                     lastEvent = null
                 }

@@ -235,9 +235,9 @@ class RetrofitService(
         return@withContext messages
     }
 
-    override suspend fun findMessage(idMessage: Int): Pair<Message, Int> = withContext(Dispatchers.IO) {
+    override suspend fun findMessage(idMessage: Int, idDialog: Int): Pair<Message, Int> = withContext(Dispatchers.IO) {
         val message = try {
-            messagesSource.findMessage(idMessage)
+            messagesSource.findMessage(idMessage, idDialog)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw MessageNotFoundException(e)
@@ -277,10 +277,10 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun editMessage(messageId: Int, text: String?, images: List<String>?,
+    override suspend fun editMessage(idDialog: Int, messageId: Int, text: String?, images: List<String>?,
         voice: String?, file: String?): Boolean = withContext(Dispatchers.IO) {
         val message = try {
-            messagesSource.editMessage(messageId, text, images, voice, file)
+            messagesSource.editMessage(idDialog, messageId, text, images, voice, file)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw MessageNotFoundException(e)
@@ -292,9 +292,9 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun deleteMessages(ids: List<Int>): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun deleteMessages(idDialog: Int, ids: List<Int>): Boolean = withContext(Dispatchers.IO) {
         val message = try {
-            messagesSource.deleteMessages(ids)
+            messagesSource.deleteMessages(idDialog, ids)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw MessageNotFoundException(e)
@@ -332,9 +332,9 @@ class RetrofitService(
         return@withContext users
     }
 
-    override suspend fun markMessagesAsRead(ids: List<Int>): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun markMessagesAsRead(idDialog: Int, ids: List<Int>): Boolean = withContext(Dispatchers.IO) {
         val message = try {
-            messagesSource.markMessagesAsRead(ids)
+            messagesSource.markMessagesAsRead(idDialog, ids)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw MessageNotFoundException(e)
@@ -668,9 +668,9 @@ class RetrofitService(
         return@withContext messagesGroupSearch
     }
 
-    override suspend fun uploadPhoto(photo: File): String = withContext(Dispatchers.IO) {
+    override suspend fun uploadPhoto(dialogId: Int, photo: File): String = withContext(Dispatchers.IO) {
         val file = try {
-            uploadSource.uploadPhoto(photo)
+            uploadSource.uploadPhoto(dialogId, photo)
         } catch (e: BackendException) {
             if(e.code == 400) throw InvalidCredentialsException(e)
             else throw e
@@ -679,9 +679,9 @@ class RetrofitService(
         return@withContext file
     }
 
-    override suspend fun uploadFile(file: File): String = withContext(Dispatchers.IO) {
+    override suspend fun uploadFile(dialogId: Int, file: File): String = withContext(Dispatchers.IO) {
         val fileUpload = try {
-            uploadSource.uploadFile(file)
+            uploadSource.uploadFile(dialogId, file)
         } catch (e: BackendException) {
             if(e.code == 400) throw InvalidCredentialsException(e)
             else throw e
@@ -690,9 +690,9 @@ class RetrofitService(
         return@withContext fileUpload
     }
 
-    override suspend fun uploadAudio(audio: File): String = withContext(Dispatchers.IO) {
+    override suspend fun uploadAudio(dialogId: Int, audio: File): String = withContext(Dispatchers.IO) {
         val file = try {
-            uploadSource.uploadAudio(audio)
+            uploadSource.uploadAudio(dialogId, audio)
         } catch (e: BackendException) {
             if(e.code == 400) throw InvalidCredentialsException(e)
             else throw e
@@ -701,9 +701,20 @@ class RetrofitService(
         return@withContext file
     }
 
-    override suspend fun downloadFile(context: Context, folder: String, filename: String): String = withContext(Dispatchers.IO) {
+    override suspend fun uploadAvatar(avatar: File): String = withContext(Dispatchers.IO) {
+        val file = try {
+            uploadSource.uploadAvatar(avatar)
+        } catch (e: BackendException) {
+            if(e.code == 400) throw InvalidCredentialsException(e)
+            else throw e
+        }
+        Log.d("testUploadAvatar", file)
+        return@withContext file
+    }
+
+    override suspend fun downloadFile(context: Context, folder: String, dialogId: Int, filename: String): String = withContext(Dispatchers.IO) {
         val filePath = try {
-            uploadSource.downloadFile(context, folder, filename)
+            uploadSource.downloadFile(context, folder, dialogId, filename)
         } catch (e: BackendException) {
             if(e.code == 400) throw InvalidCredentialsException(e)
             else throw e
@@ -712,9 +723,20 @@ class RetrofitService(
         return@withContext filePath
     }
 
-    override suspend fun deleteFile(folder: String, filename: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun downloadAvatar(context: Context, filename: String): String = withContext(Dispatchers.IO) {
+        val filePath = try {
+            uploadSource.downloadAvatar(context, filename)
+        } catch (e: BackendException) {
+            if(e.code == 400) throw InvalidCredentialsException(e)
+            else throw e
+        }
+        Log.d("testDownloadAvatar", filePath)
+        return@withContext filePath
+    }
+
+    override suspend fun deleteFile(folder: String, dialogId: Int, filename: String): Boolean = withContext(Dispatchers.IO) {
         val message = try {
-            uploadSource.deleteFile(folder, filename)
+            uploadSource.deleteFile(folder, dialogId, filename)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw FileNotFoundException(e)

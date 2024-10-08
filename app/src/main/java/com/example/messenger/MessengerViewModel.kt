@@ -48,7 +48,7 @@ class MessengerViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        webSocketService.disconnect() // todo надо тестировать, не факт что здесь
+        //webSocketService.disconnect() // todo надо тестировать, не факт что здесь
     }
 
     private fun fetchCurrentUser() {

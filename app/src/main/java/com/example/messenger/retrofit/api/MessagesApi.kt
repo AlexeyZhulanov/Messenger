@@ -24,21 +24,22 @@ interface MessagesApi {
     suspend fun createDialog(
         @Body dialogCreateRequestEntity: DialogCreateRequestEntity) : ResponseEntityMessageAnswer
 
-    @POST("messages")
+    @POST("messages/{id_dialog}")
     suspend fun sendMessage(
-        @Query("id_dialog") idDialog: Int,
+        @Path("id_dialog") idDialog: Int,
         @Body sendMessageRequestEntity: SendMessageRequestEntity) : ResponseEntityMessageAnswer
 
-    @GET("messages")
+    @GET("messages/{id_dialog}")
     suspend fun getMessages(
-        @Query("id_dialog") idDialog: Int,
+        @Path("id_dialog") idDialog: Int,
         @Query("page") pageIndex: Int,
         @Query("size") pageSize: Int
         ) : List<Message>
 
     @GET("message/{message_id}")
     suspend fun findMessage(
-        @Path("message_id") messageId: Int
+        @Path("message_id") messageId: Int,
+        @Query("id_dialog") idDialog: Int
     ) : Message
 
     @PUT("dialogs/{dialog_id}/key")
@@ -55,11 +56,13 @@ interface MessagesApi {
     @PUT("messages/{message_id}")
     suspend fun editMessage(
         @Path("message_id") messageId: Int,
+        @Query("id_dialog") idDialog: Int,
         @Body sendMessageRequestEntity: SendMessageRequestEntity
     ) : ResponseEntityMessageAnswer
 
-    @HTTP(method = "DELETE", path = "messages", hasBody = true)
+    @HTTP(method = "DELETE", path = "messages/{id_dialog}", hasBody = true)
     suspend fun deleteMessages(
+        @Path("id_dialog") idDialog: Int,
         @Body deleteMessagesRequestEntity: DeleteMessagesRequestEntity
     ) : ResponseEntityMessageAnswer
 
@@ -71,8 +74,9 @@ interface MessagesApi {
     @GET("users")
     suspend fun getUsers() : GetUsersResponseEntity
 
-    @PUT("messages/read")
+    @PUT("messages/{id_dialog}/read")
     suspend fun markMessagesAsRead(
+        @Path("id_dialog") idDialog: Int,
         @Body deleteMessagesRequestEntity: DeleteMessagesRequestEntity
     ) : ResponseEntityMessageAnswer
 

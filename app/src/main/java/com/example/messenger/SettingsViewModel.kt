@@ -74,12 +74,12 @@ class SettingsViewModel @Inject constructor(
         fileManager.saveFile(fileName, fileData)
     }
 
-    suspend fun uploadPhoto(photo: File): String = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.uploadPhoto(photo)
+    suspend fun uploadAvatar(avatar: File): String = withContext(Dispatchers.IO) {
+        return@withContext retrofitService.uploadAvatar(avatar)
     }
 
-    suspend fun downloadFile(context: Context, folder: String, filename: String): String = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.downloadFile(context, folder, filename)
+    suspend fun downloadAvatar(context: Context, filename: String): String = withContext(Dispatchers.IO) {
+        return@withContext retrofitService.downloadAvatar(context, filename)
     }
 
     suspend fun updateAvatar(photo: String) : Boolean = withContext(Dispatchers.IO) {

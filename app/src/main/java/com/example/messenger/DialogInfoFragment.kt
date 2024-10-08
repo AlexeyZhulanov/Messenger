@@ -1,17 +1,21 @@
 package com.example.messenger
 
+import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.NumberPicker
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
@@ -139,11 +143,6 @@ class DialogInfoFragment(
         return binding.root
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-    }
-
-
     @Suppress("DEPRECATION")
     @Deprecated("Deprecated in Java")
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
@@ -157,19 +156,74 @@ class DialogInfoFragment(
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.auto_delete -> {
-                // todo
+                showNumberPickerDialog()
                 true
             }
             R.id.delete_all_messages -> {
-               // todo
+                uiScope.launch {
+                    messageViewModel.deleteAllMessages(dialog.id)
+                }
+                requireActivity().onBackPressedDispatcher.onBackPressed()
                 true
             }
             R.id.delete_dialog -> {
-                // todo
+                uiScope.launch {
+                    messageViewModel.deleteDialog(dialog.id)
+                }
+                parentFragmentManager.beginTransaction()
+                    .replace(
+                        R.id.fragmentContainer,
+                        MessengerFragment(),
+                        "MESSENGER_FRAGMENT_FROM_DIALOG_TAG"
+                    )
+                    .commit()
                 true
             }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
+    private fun showNumberPickerDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.delete_interval_dialog, null)
+        val numberPicker = dialogView.findViewById<NumberPicker>(R.id.numberPicker)
+
+        // Настраиваем список значений
+        val values = arrayOf("Выключено", "Каждые 30 секунд", "Каждую минуту", "Каждые 5 минут", "Каждые 10 минут")
+        numberPicker.minValue = 0
+        numberPicker.maxValue = values.size - 1
+        numberPicker.displayedValues = values
+        val numb = when(dialog.autoDeleteInterval) {
+            0 -> 0
+            30 -> 1
+            60 -> 2
+            300 -> 3
+            600 -> 4
+            else -> 0
+        }
+        numberPicker.value = numb
+        // Создаем диалог
+        AlertDialog.Builder(requireActivity())
+            .setTitle("Автоудаление сообщений")
+            .setView(dialogView)
+            .setPositiveButton("OK") { _, _ ->
+                // Обработка выбранного значения
+                val selectedValue = values[numberPicker.value]
+                Toast.makeText(requireContext(), "Установлено автоудаление: $selectedValue", Toast.LENGTH_SHORT).show()
+                if(numberPicker.value != numb) {
+                    val interval = when(numberPicker.value) {
+                        0 -> 0
+                        1 -> 30
+                        2 -> 60
+                        3 -> 300
+                        4 -> 600
+                        else -> 0
+                    }
+                    uiScope.launch {
+                        messageViewModel.updateAutoDeleteInterval(interval)
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
 }

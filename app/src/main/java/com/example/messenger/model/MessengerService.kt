@@ -109,8 +109,8 @@ class MessengerService(
         }
     }
 
-    override suspend fun getPreviousMessage(idDialog: Int, lastMessageId: Int): Message = withContext(Dispatchers.IO) {
-        return@withContext messageDao.getPreviousMessage(idDialog, lastMessageId).toMessage()
+    override suspend fun getPreviousMessage(idDialog: Int, lastMessageId: Int): Message? = withContext(Dispatchers.IO) {
+        return@withContext messageDao.getPreviousMessage(idDialog, lastMessageId)?.toMessage()
     }
 
     override suspend fun saveLastReadMessage(idDialog: Int, lastMessageId: Int) = withContext(Dispatchers.IO) {

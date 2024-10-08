@@ -94,10 +94,9 @@ class SettingsFragment : Fragment() {
                 } else {
                     try {
                         return@async Pair(
-                            viewModel.downloadFile(
+                            viewModel.downloadAvatar(
                                 requireContext(),
-                                "photos",
-                                avatar
+                                avatar,
                             ), false
                         )
                     } catch (e: Exception) {
@@ -293,7 +292,7 @@ class SettingsFragment : Fragment() {
                         val res = async {filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf(viewModel.fileToLocalMedia(file))) }
                         val photo = res.await()
                         if(photo.isNotEmpty()) {
-                            val path = async { viewModel.uploadPhoto(File(photo[0].availablePath)) }
+                            val path = async { viewModel.uploadAvatar(File(photo[0].availablePath)) }
                             val success = async { viewModel.updateAvatar(path.await()) }
                             if(success.await()) {
                                 withContext(Dispatchers.Main) {
@@ -313,7 +312,7 @@ class SettingsFragment : Fragment() {
                         val res = async { filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf()) }
                         val photo = res.await()
                         if(photo.isNotEmpty()) {
-                            val path = async { viewModel.uploadPhoto(File(photo[0].availablePath)) }
+                            val path = async { viewModel.uploadAvatar(File(photo[0].availablePath)) }
                             val success = async { viewModel.updateAvatar(path.await()) }
                             if(success.await()) {
                                 withContext(Dispatchers.Main) {

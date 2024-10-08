@@ -22,7 +22,7 @@ interface MessengerRepository {
 
     suspend fun updateUser(user: User)
 
-    suspend fun getPreviousMessage(idDialog: Int, lastMessageId: Int): Message
+    suspend fun getPreviousMessage(idDialog: Int, lastMessageId: Int): Message?
 
     suspend fun saveLastReadMessage(idDialog: Int, lastMessageId: Int)
 

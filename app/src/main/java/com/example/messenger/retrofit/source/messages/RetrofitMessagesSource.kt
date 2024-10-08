@@ -38,8 +38,8 @@ class RetrofitMessagesSource(
         response.map { it.toMessage() }
     }
 
-    override suspend fun findMessage(idMessage: Int): Pair<Message, Int> = wrapRetrofitExceptions {
-        val response = messagesApi.findMessage(idMessage)
+    override suspend fun findMessage(idMessage: Int, idDialog: Int): Pair<Message, Int> = wrapRetrofitExceptions {
+        val response = messagesApi.findMessage(idMessage, idDialog)
         Pair(response.toMessage(), response.position ?: -1)
     }
 
@@ -52,17 +52,17 @@ class RetrofitMessagesSource(
         messagesApi.removeKeyFromDialog(dialogId).message
     }
 
-    override suspend fun editMessage(messageId: Int, text: String?,
+    override suspend fun editMessage(idDialog: Int, messageId: Int, text: String?,
                                      images: List<String>?, voice: String?,
                                      file: String?): String = wrapRetrofitExceptions {
         val sendMessageRequestEntity = SendMessageRequestEntity(text = text, images = images,
             file = file, voice = voice)
-        messagesApi.editMessage(messageId, sendMessageRequestEntity).message
+        messagesApi.editMessage(messageId, idDialog, sendMessageRequestEntity).message
     }
 
-    override suspend fun deleteMessages(ids: List<Int>): String = wrapRetrofitExceptions {
+    override suspend fun deleteMessages(idDialog: Int, ids: List<Int>): String = wrapRetrofitExceptions {
         val deleteMessagesRequestEntity = DeleteMessagesRequestEntity(ids = ids)
-        messagesApi.deleteMessages(deleteMessagesRequestEntity).message
+        messagesApi.deleteMessages(idDialog, deleteMessagesRequestEntity).message
     }
 
     override suspend fun deleteDialog(dialogId: Int): String = wrapRetrofitExceptions {
@@ -73,9 +73,9 @@ class RetrofitMessagesSource(
         messagesApi.getUsers().toUsersShort()
     }
 
-    override suspend fun markMessagesAsRead(ids: List<Int>): String = wrapRetrofitExceptions {
+    override suspend fun markMessagesAsRead(idDialog: Int, ids: List<Int>): String = wrapRetrofitExceptions {
         val deleteMessagesRequestEntity = DeleteMessagesRequestEntity(ids = ids)
-        messagesApi.markMessagesAsRead(deleteMessagesRequestEntity).message
+        messagesApi.markMessagesAsRead(idDialog, deleteMessagesRequestEntity).message
     }
 
     override suspend fun searchMessagesInDialog(dialogId: Int,

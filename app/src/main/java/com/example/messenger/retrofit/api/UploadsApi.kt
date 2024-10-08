@@ -13,25 +13,39 @@ import retrofit2.http.Path
 
 interface UploadsApi {
     @Multipart
-    @POST("upload/photo")
-    suspend fun uploadPhoto(@Part photo: MultipartBody.Part): UploadResponseEntity
+    @POST("upload/photo/{dialog_id}")
+    suspend fun uploadPhoto(
+        @Path("dialog_id") dialogId: Int,
+        @Part photo: MultipartBody.Part): UploadResponseEntity
 
     @Multipart
-    @POST("upload/file")
-    suspend fun uploadFile(@Part file: MultipartBody.Part): UploadResponseEntity
+    @POST("upload/file/{dialog_id}")
+    suspend fun uploadFile(
+        @Path("dialog_id") dialogId: Int,
+        @Part file: MultipartBody.Part): UploadResponseEntity
 
     @Multipart
-    @POST("upload/audio")
-    suspend fun uploadAudio(@Part audio: MultipartBody.Part): UploadResponseEntity
+    @POST("upload/audio/{dialog_id}")
+    suspend fun uploadAudio(
+        @Path("dialog_id") dialogId: Int,
+        @Part audio: MultipartBody.Part): UploadResponseEntity
 
-    @GET("files/{folder}/{filename}")
+    @Multipart
+    @POST("upload/avatar")
+    suspend fun uploadAvatar(@Part avatar: MultipartBody.Part): UploadResponseEntity
+
+    @GET("files/{folder}/{dialog_id}/{filename}")
     suspend fun downloadFile(
         @Path("folder") folder: String,
+        @Path("dialog_id") dialogId: Int,
         @Path("filename") filename: String): ResponseBody
 
-    @DELETE("files/{folder}/{filename}")
+    @GET("avatars/{filename}")
+    suspend fun downloadAvatar(@Path("filename") filename: String) : ResponseBody
+
+    @DELETE("files/{folder}/{dialog_id}/{filename}")
     suspend fun deleteFile(
         @Path("folder") folder: String,
+        @Path("dialog_id") dialogId: Int,
         @Path("filename") filename: String): ResponseEntityMessageAnswer
-
 }
