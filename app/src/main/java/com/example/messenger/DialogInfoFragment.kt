@@ -21,11 +21,14 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentDialogInfoBinding
 import com.example.messenger.model.Dialog
+import com.example.messenger.model.MediaItem
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.User
@@ -140,6 +143,35 @@ class DialogInfoFragment(
                 binding.switchDelete.isEnabled = true
             }
         }
+        binding.loadButton.setOnClickListener {
+            // todo load images/other
+        }
+        val dialogInfoAdapter = DialogInfoAdapter()
+        binding.recyclerview.adapter = dialogInfoAdapter
+        // GridLayoutManager для медиа (фото и видео по 3 в ряд), LinearLayoutManager для файлов и аудио
+        val gridLayoutManager = GridLayoutManager(requireContext(), 3).apply {
+            spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+                override fun getSpanSize(position: Int): Int {
+                    return when (dialogInfoAdapter.getItemViewType(position)) {
+                        MediaItem.TYPE_MEDIA -> 1 // Медиа по одному элементу
+                        MediaItem.TYPE_FILE, MediaItem.TYPE_AUDIO -> 3 // Файлы и аудио занимают всю строку
+                        else -> 1
+                    }
+                }
+            }
+        }
+        // Пагинация
+        binding.recyclerview.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                val layoutManager = recyclerView.layoutManager as? GridLayoutManager
+                if (layoutManager != null && layoutManager.findLastVisibleItemPosition() == dialogInfoAdapter.itemCount - 1) {
+                    // Достигнут конец списка, подгружаем новые элементы
+                    loadMoreMediaItems()
+                }
+            }
+        })
+        binding.recyclerview.layoutManager = gridLayoutManager
         return binding.root
     }
 

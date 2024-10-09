@@ -234,7 +234,7 @@
 
 
         <Button
-            android:id="@+id/button"
+            android:id="@+id/button_media"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:textAllCaps="false"
@@ -246,13 +246,13 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/button3"
+            app:layout_constraintEnd_toStartOf="@id/button_files"
             app:layout_constraintHorizontal_chainStyle="spread_inside"
             android:textColor="?attr/colorAccent"
             style="?android:attr/buttonBarButtonStyle" />
 
         <Button
-            android:id="@+id/button3"
+            android:id="@+id/button_files"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:textAllCaps="false"
@@ -263,12 +263,12 @@
             style="?android:attr/buttonBarButtonStyle"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/button"
-            app:layout_constraintEnd_toStartOf="@+id/button4"
+            app:layout_constraintEnd_toStartOf="@id/button_audio"
+            app:layout_constraintStart_toEndOf="@+id/button_media"
             android:text="Файлы" />
 
         <Button
-            android:id="@+id/button4"
+            android:id="@+id/button_audio"
             android:layout_width="0dp"
             android:textAllCaps="false"
             android:layout_height="wrap_content"
@@ -277,13 +277,25 @@
             android:autoSizeMaxTextSize="22sp"
             android:autoSizeStepGranularity="2sp"
             style="?android:attr/buttonBarButtonStyle"
+            app:layout_constraintHorizontal_bias="1"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/button3"
+            app:layout_constraintStart_toEndOf="@+id/button_files"
             android:text="Голосовые" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <Button
+        android:id="@+id/load_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Загрузить изображения"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/buttons_layout"
+        app:layout_constraintBottom_toBottomOf="parent"
+        />
 
 <ScrollView
     android:layout_width="0dp"
