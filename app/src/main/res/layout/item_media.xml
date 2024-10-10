@@ -20,6 +20,24 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:src="@drawable/ic_error"
+        android:scaleX="3"
+        android:scaleY="3"
+        android:background="@drawable/checkbox_background"
+        app:layout_constraintEnd_toEndOf="@id/photo_image_view"
+        app:layout_constraintTop_toTopOf="@id/photo_image_view"
+        app:layout_constraintStart_toStartOf="@id/photo_image_view"
+        app:layout_constraintBottom_toBottomOf="@id/photo_image_view"
+        android:visibility="gone"
+
+        />
+
+    <ImageView
+        android:id="@+id/ic_download"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:scaleY="5"
+        android:scaleX="5"
+        android:src="@drawable/ic_download"
         android:background="@drawable/checkbox_background"
         app:layout_constraintEnd_toEndOf="@id/photo_image_view"
         app:layout_constraintTop_toTopOf="@id/photo_image_view"

@@ -2,6 +2,7 @@ package com.example.messenger.retrofit.source.uploads
 
 import android.content.Context
 import android.util.Log
+import com.example.messenger.model.MediaFile
 import com.example.messenger.retrofit.api.UploadsApi
 import com.example.messenger.retrofit.source.base.BaseRetrofitSource
 import com.example.messenger.retrofit.source.base.RetrofitConfig
@@ -110,5 +111,17 @@ class RetrofitUploadsSource(
 
     override suspend fun deleteFile(folder: String, dialogId: Int, filename: String): String = wrapRetrofitExceptions {
         uploadsApi.deleteFile(folder, dialogId, filename).message
+    }
+
+    override suspend fun getMedias(dialogId: Int, page: Int): List<MediaFile> = wrapRetrofitExceptions {
+        return@wrapRetrofitExceptions uploadsApi.getMedias(dialogId, page)
+    }
+
+    override suspend fun getFiles(dialogId: Int, page: Int): List<MediaFile> = wrapRetrofitExceptions {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getAudios(dialogId: Int, page: Int): List<MediaFile> = wrapRetrofitExceptions {
+        TODO("Not yet implemented")
     }
 }

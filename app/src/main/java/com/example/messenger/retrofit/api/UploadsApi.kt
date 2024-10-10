@@ -1,5 +1,6 @@
 package com.example.messenger.retrofit.api
 
+import com.example.messenger.model.MediaFile
 import com.example.messenger.retrofit.entities.ResponseEntityMessageAnswer
 import com.example.messenger.retrofit.entities.uploads.UploadResponseEntity
 import retrofit2.http.Multipart
@@ -48,4 +49,19 @@ interface UploadsApi {
         @Path("folder") folder: String,
         @Path("dialog_id") dialogId: Int,
         @Path("filename") filename: String): ResponseEntityMessageAnswer
+
+    @GET("files/{dialog_id}/media/{page}")
+    suspend fun getMedias(
+        @Path("dialog_id") dialogId: Int,
+        @Path("page") page: Int) : List<MediaFile>
+
+    @GET("files/{dialog_id}/file/{page}")
+    suspend fun getFiles(
+        @Path("dialog_id") dialogId: Int,
+        @Path("page") page: Int) : List<MediaFile>
+
+    @GET("files/{dialog_id}/audio/{page}")
+    suspend fun getAudios(
+        @Path("dialog_id") dialogId: Int,
+        @Path("page") page: Int) : List<MediaFile>
 }

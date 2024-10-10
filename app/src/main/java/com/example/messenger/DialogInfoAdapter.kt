@@ -33,7 +33,7 @@ class DialogInfoAdapter: RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 FileViewHolder(view)
             }
             MediaItem.TYPE_AUDIO -> {
-                val view = inflater.inflate(R.layout.item_audio, parent, false)
+                val view = inflater.inflate(R.layout.item_voice, parent, false)
                 AudioViewHolder(view)
             }
             else -> throw IllegalArgumentException("Invalid view type")
@@ -52,7 +52,7 @@ class DialogInfoAdapter: RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     override fun getItemCount(): Int = mediaItems.size
 
     class MediaViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val imageView: ImageView = itemView.findViewById(R.id.imageView)
+        private val imageView: ImageView = itemView.findViewById(R.id.photoImageView)
 
         fun bind(imageUrl: String) {
             // Загрузка изображения, например через Glide
@@ -61,7 +61,7 @@ class DialogInfoAdapter: RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     }
 
     class FileViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val fileNameView: TextView = itemView.findViewById(R.id.fileNameView)
+        private val fileNameView: TextView = itemView.findViewById(R.id.fileNameTextView)
 
         fun bind(fileName: String) {
             fileNameView.text = fileName
