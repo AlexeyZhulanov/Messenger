@@ -48,6 +48,8 @@ class DialogInfoFragment(
 ) : Fragment() {
     private lateinit var binding: FragmentDialogInfoBinding
     private lateinit var preferences: SharedPreferences
+    private lateinit var adapter: DialogInfoAdapter
+    private var selectedType: Int = 0
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.Main + job)
 
@@ -146,13 +148,17 @@ class DialogInfoFragment(
         binding.loadButton.setOnClickListener {
             // todo load images/other
         }
-        val dialogInfoAdapter = DialogInfoAdapter()
-        binding.recyclerview.adapter = dialogInfoAdapter
+        adapter = DialogInfoAdapter(object: DialogActionListener {
+            override fun onItemClicked() {
+                TODO("Not yet implemented")
+            }
+        })
+        binding.recyclerview.adapter = adapter
         // GridLayoutManager для медиа (фото и видео по 3 в ряд), LinearLayoutManager для файлов и аудио
         val gridLayoutManager = GridLayoutManager(requireContext(), 3).apply {
             spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
                 override fun getSpanSize(position: Int): Int {
-                    return when (dialogInfoAdapter.getItemViewType(position)) {
+                    return when (adapter.getItemViewType(position)) {
                         MediaItem.TYPE_MEDIA -> 1 // Медиа по одному элементу
                         MediaItem.TYPE_FILE, MediaItem.TYPE_AUDIO -> 3 // Файлы и аудио занимают всю строку
                         else -> 1
@@ -165,7 +171,7 @@ class DialogInfoFragment(
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
                 val layoutManager = recyclerView.layoutManager as? GridLayoutManager
-                if (layoutManager != null && layoutManager.findLastVisibleItemPosition() == dialogInfoAdapter.itemCount - 1) {
+                if (layoutManager != null && layoutManager.findLastVisibleItemPosition() == adapter.itemCount - 1) {
                     // Достигнут конец списка, подгружаем новые элементы
                     loadMoreMediaItems()
                 }

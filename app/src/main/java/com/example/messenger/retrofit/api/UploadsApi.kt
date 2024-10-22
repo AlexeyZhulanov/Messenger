@@ -51,7 +51,7 @@ interface UploadsApi {
         @Path("filename") filename: String): ResponseEntityMessageAnswer
 
     @GET("files/{dialog_id}/media/{page}")
-    suspend fun getMedias(
+    suspend fun getMediaPreviews(
         @Path("dialog_id") dialogId: Int,
         @Path("page") page: Int) : List<MediaFile>
 

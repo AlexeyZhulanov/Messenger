@@ -9,7 +9,13 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.messenger.model.MediaItem
 
-class DialogInfoAdapter: RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+interface DialogActionListener {
+    fun onItemClicked()
+}
+
+class DialogInfoAdapter(
+    private val actionListener: DialogActionListener
+): RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private val mediaItems = mutableListOf<MediaItem>()
 
     fun setMediaItems(items: List<MediaItem>) {
