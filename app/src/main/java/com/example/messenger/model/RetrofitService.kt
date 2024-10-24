@@ -748,15 +748,55 @@ class RetrofitService(
         return@withContext true
     }
 
-    fun addListener(listener: ConversationsListener) {
-        listeners.add(listener)
-        listener.invoke(conversations)
-    }
-    fun removeListener(listener: ConversationsListener) = listeners.remove(listener)
-    suspend fun notifyChanges() = withContext(Dispatchers.Main + job) {
-        listeners.forEach {
-            it.invoke(conversations)
+    override suspend fun getMedias(dialogId: Int, page: Int): List<String> = withContext(Dispatchers.IO) {
+        val files = try {
+            uploadSource.getMediaPreviews(dialogId, page)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw FileNotFoundException(e)
+                400 -> throw InvalidCredentialsException(e)
+                else -> throw e
+            }
         }
+        return@withContext files
     }
 
+    override suspend fun getFiles(dialogId: Int, page: Int): List<String> = withContext(Dispatchers.IO) {
+        val files = try {
+            uploadSource.getFiles(dialogId, page)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw FileNotFoundException(e)
+                400 -> throw InvalidCredentialsException(e)
+                else -> throw e
+            }
+        }
+        return@withContext files
+    }
+
+    override suspend fun getAudios(dialogId: Int, page: Int): List<String> = withContext(Dispatchers.IO) {
+        val files = try {
+            uploadSource.getAudios(dialogId, page)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw FileNotFoundException(e)
+                400 -> throw InvalidCredentialsException(e)
+                else -> throw e
+            }
+        }
+        return@withContext files
+    }
+
+    override suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String): String = withContext(Dispatchers.IO) {
+        val preview = try {
+            uploadSource.getMediaPreview(context, dialogId, filename)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw FileNotFoundException(e)
+                400 -> throw InvalidCredentialsException(e)
+                else -> throw e
+            }
+        }
+        return@withContext preview
+    }
 }

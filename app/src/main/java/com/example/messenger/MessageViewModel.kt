@@ -37,7 +37,6 @@ import com.example.messenger.model.UserSessionUpdatedEvent
 import com.example.messenger.model.WebSocketListenerInterface
 import com.example.messenger.model.WebSocketService
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -575,6 +574,22 @@ class MessageViewModel @Inject constructor(
 
     suspend fun deleteDialog(dialogId: Int) = withContext(Dispatchers.IO) {
         retrofitService.deleteDialog(dialogId)
+    }
+
+    suspend fun getMediaPreviews(page: Int): List<String> = withContext(Dispatchers.IO) {
+        return@withContext retrofitService.getMedias(dialogId, page)
+    }
+
+    suspend fun getFiles(page: Int): List<String> = withContext(Dispatchers.IO) {
+        return@withContext retrofitService.getFiles(dialogId, page)
+    }
+
+    suspend fun getAudios(page: Int): List<String> = withContext(Dispatchers.IO) {
+        return@withContext retrofitService.getAudios(dialogId, page)
+    }
+
+    suspend fun getPreview(context: Context, filename: String): String = withContext(Dispatchers.IO) {
+        return@withContext retrofitService.getMediaPreview(context, dialogId, filename)
     }
 
     override fun onCleared() {

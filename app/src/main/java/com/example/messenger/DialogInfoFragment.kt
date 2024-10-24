@@ -50,6 +50,7 @@ class DialogInfoFragment(
     private lateinit var preferences: SharedPreferences
     private lateinit var adapter: DialogInfoAdapter
     private var selectedType: Int = 0
+    private var currentPage: Int = 0
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.Main + job)
 
@@ -146,9 +147,11 @@ class DialogInfoFragment(
             }
         }
         binding.loadButton.setOnClickListener {
-            // todo load images/other
+            // at first -> get list medias
+            loadMoreMediaItems(0) //todo change type
+            currentPage++
         }
-        adapter = DialogInfoAdapter(object: DialogActionListener {
+        adapter = DialogInfoAdapter(requireContext(), object: DialogActionListener {
             override fun onItemClicked() {
                 TODO("Not yet implemented")
             }
@@ -173,12 +176,28 @@ class DialogInfoFragment(
                 val layoutManager = recyclerView.layoutManager as? GridLayoutManager
                 if (layoutManager != null && layoutManager.findLastVisibleItemPosition() == adapter.itemCount - 1) {
                     // Достигнут конец списка, подгружаем новые элементы
-                    loadMoreMediaItems()
+                    loadMoreMediaItems(0) //todo change type
+                    currentPage++
                 }
             }
         })
         binding.recyclerview.layoutManager = gridLayoutManager
         return binding.root
+    }
+
+    private fun loadMoreMediaItems(type: Int) {
+        val context = requireContext()
+        uiScope.launch {
+            val list = messageViewModel.getMediaPreviews(currentPage)
+            val items = async(Dispatchers.IO) {
+                val tmp = mutableListOf<String>()
+                list.forEach {
+                    tmp.add(messageViewModel.getPreview(context, it))
+                }
+                return@async tmp
+            }
+            adapter.setMediaItems(items.await().map { MediaItem(type, it) })
+        }
     }
 
     @Suppress("DEPRECATION")

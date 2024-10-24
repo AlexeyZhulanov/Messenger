@@ -1,8 +1,6 @@
 package com.example.messenger.retrofit.source.uploads
 
 import android.content.Context
-import androidx.paging.Pager
-import com.example.messenger.model.MediaFile
 import java.io.File
 
 interface UploadsSource {
@@ -21,9 +19,11 @@ interface UploadsSource {
 
     suspend fun deleteFile(folder: String, dialogId: Int, filename: String) : String
 
-    suspend fun getMedias(dialogId: Int, page: Int) : List<MediaFile>
+    suspend fun getMediaPreviews(dialogId: Int, page: Int) : List<String>
 
-    suspend fun getFiles(dialogId: Int, page: Int) : List<MediaFile>
+    suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String) : String
 
-    suspend fun getAudios(dialogId: Int, page: Int) : List<MediaFile>
+    suspend fun getFiles(dialogId: Int, page: Int) : List<String>
+
+    suspend fun getAudios(dialogId: Int, page: Int) : List<String>
 }

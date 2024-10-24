@@ -2,7 +2,6 @@ package com.example.messenger.retrofit.source.uploads
 
 import android.content.Context
 import android.util.Log
-import com.example.messenger.model.MediaFile
 import com.example.messenger.retrofit.api.UploadsApi
 import com.example.messenger.retrofit.source.base.BaseRetrofitSource
 import com.example.messenger.retrofit.source.base.RetrofitConfig
@@ -113,15 +112,40 @@ class RetrofitUploadsSource(
         uploadsApi.deleteFile(folder, dialogId, filename).message
     }
 
-    override suspend fun getMedias(dialogId: Int, page: Int): List<MediaFile> = wrapRetrofitExceptions {
-        return@wrapRetrofitExceptions uploadsApi.getMedias(dialogId, page)
+    override suspend fun getMediaPreviews(dialogId: Int, page: Int): List<String> = wrapRetrofitExceptions {
+        val response = uploadsApi.getMediaPreviews(dialogId, page)
+        return@wrapRetrofitExceptions response.map { it.filename }
     }
 
-    override suspend fun getFiles(dialogId: Int, page: Int): List<MediaFile> = wrapRetrofitExceptions {
-        TODO("Not yet implemented")
+    override suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String): String = wrapRetrofitExceptions {
+        try {
+            val responseBody = uploadsApi.getMediaPreview(dialogId, filename)
+            val directory = File(context.filesDir, "previews")
+            if (!directory.exists()) {
+                directory.mkdirs()
+            }
+            val file = File(directory, filename)
+            // Запись файла на диск
+            file.outputStream().use { outputStream ->
+                responseBody.byteStream().use { inputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+            Log.d("testDownloadPreview","File downloaded to ${file.absolutePath}")
+            return@wrapRetrofitExceptions file.absolutePath
+        } catch (e: Exception) {
+            Log.d("testDownloadPreview","Error downloading file: ${e.message}")
+            return@wrapRetrofitExceptions "Error: ${e.message}"
+        }
     }
 
-    override suspend fun getAudios(dialogId: Int, page: Int): List<MediaFile> = wrapRetrofitExceptions {
-        TODO("Not yet implemented")
+    override suspend fun getFiles(dialogId: Int, page: Int): List<String> = wrapRetrofitExceptions {
+        val response = uploadsApi.getFiles(dialogId, page)
+        return@wrapRetrofitExceptions response.map { it.filename }
+    }
+
+    override suspend fun getAudios(dialogId: Int, page: Int): List<String> = wrapRetrofitExceptions {
+        val response = uploadsApi.getAudios(dialogId, page)
+        return@wrapRetrofitExceptions response.map { it.filename }
     }
 }
