@@ -19,7 +19,7 @@ interface UploadsSource {
 
     suspend fun deleteFile(folder: String, dialogId: Int, filename: String) : String
 
-    suspend fun getMediaPreviews(dialogId: Int, page: Int) : List<String>
+    suspend fun getMediaPreviews(dialogId: Int, page: Int) : List<String>?
 
     suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String) : String
 

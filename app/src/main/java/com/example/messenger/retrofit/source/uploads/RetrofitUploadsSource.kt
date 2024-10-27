@@ -112,9 +112,9 @@ class RetrofitUploadsSource(
         uploadsApi.deleteFile(folder, dialogId, filename).message
     }
 
-    override suspend fun getMediaPreviews(dialogId: Int, page: Int): List<String> = wrapRetrofitExceptions {
+    override suspend fun getMediaPreviews(dialogId: Int, page: Int): List<String>? = wrapRetrofitExceptions {
         val response = uploadsApi.getMediaPreviews(dialogId, page)
-        return@wrapRetrofitExceptions response.map { it.filename }
+        return@wrapRetrofitExceptions response?.filename
     }
 
     override suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String): String = wrapRetrofitExceptions {

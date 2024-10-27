@@ -576,7 +576,7 @@ class MessageViewModel @Inject constructor(
         retrofitService.deleteDialog(dialogId)
     }
 
-    suspend fun getMediaPreviews(page: Int): List<String> = withContext(Dispatchers.IO) {
+    suspend fun getMediaPreviews(page: Int): List<String>? = withContext(Dispatchers.IO) {
         return@withContext retrofitService.getMedias(dialogId, page)
     }
 
@@ -590,6 +590,28 @@ class MessageViewModel @Inject constructor(
 
     suspend fun getPreview(context: Context, filename: String): String = withContext(Dispatchers.IO) {
         return@withContext retrofitService.getMediaPreview(context, dialogId, filename)
+    }
+
+    fun parsePreviewFilename(filename: String): Pair<String, String?> {
+        // Проверяем, содержит ли название файла продолжительность и формат в формате "30s:mp4"
+        val regex = Regex("(.*)_([0-9]+)s:([a-zA-Z0-9]+)\\.jpg$")
+        val matchResult = regex.find(filename)
+
+        return if (matchResult != null) {
+            val originalName = "${matchResult.groupValues[1]}.${matchResult.groupValues[3]}"
+            val durationInSeconds = matchResult.groupValues[2].toInt()
+
+            // Форматируем продолжительность в "mm:ss"
+            val durationFormatted = formatDuration(durationInSeconds)
+            originalName to durationFormatted
+        } else {
+            filename to null  // Для фото продолжительности нет, возвращаем без изменений
+        }
+    }
+    private fun formatDuration(durationInSeconds: Int): String {
+        val minutes = durationInSeconds / 60
+        val seconds = durationInSeconds % 60
+        return String.format(Locale.ROOT,"%02d:%02d", minutes, seconds)
     }
 
     override fun onCleared() {

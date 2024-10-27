@@ -748,7 +748,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun getMedias(dialogId: Int, page: Int): List<String> = withContext(Dispatchers.IO) {
+    override suspend fun getMedias(dialogId: Int, page: Int): List<String>? = withContext(Dispatchers.IO) {
         val files = try {
             uploadSource.getMediaPreviews(dialogId, page)
         } catch (e: BackendException) {

@@ -14,6 +14,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
 import androidx.paging.PagingData
@@ -287,8 +288,8 @@ class MessageAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val message: Message
-        val date: String
+        var message: Message
+        var date: String
         if(widthFlag) {
             val displayMetrics = holder.itemView.context.resources.displayMetrics
             val screenWidth = displayMetrics.widthPixels
@@ -303,9 +304,13 @@ class MessageAdapter(
                 message = getItem(position - 1)?.first ?: return
                 date = getItem(position - 1)?.second ?: return
             }
-            else {
+            else try {
                 message = getItem(position)?.first ?: return
                 date = getItem(position)?.second ?: return
+            } catch (_: IndexOutOfBoundsException) {
+                Toast.makeText(context, "Ошибка индексации", Toast.LENGTH_SHORT).show()
+                message = getItem(position - 1)?.first ?: return
+                date = getItem(position - 1)?.second ?: return
             }
         }
         var flagText = false

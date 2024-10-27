@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -148,15 +149,24 @@ class DialogInfoFragment(
         }
         binding.loadButton.setOnClickListener {
             // at first -> get list medias
-            loadMoreMediaItems(0) //todo change type
-            currentPage++
+            loadMoreMediaItems(0, currentPage) //todo change type
         }
-        adapter = DialogInfoAdapter(requireContext(), object: DialogActionListener {
+        val displayMetrics = context?.resources?.displayMetrics
+        val imageSize: Int
+        val spacing = 3
+        imageSize =
+            if(displayMetrics != null) (displayMetrics.widthPixels - spacing * 4) / 3 else 100
+        adapter = DialogInfoAdapter(requireContext(), imageSize, messageViewModel, object: DialogActionListener {
             override fun onItemClicked() {
+                TODO("Not yet implemented")
+            }
+
+            override fun onVideoDownloadClicked() {
                 TODO("Not yet implemented")
             }
         })
         binding.recyclerview.adapter = adapter
+        binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, spacing, true))
         // GridLayoutManager для медиа (фото и видео по 3 в ряд), LinearLayoutManager для файлов и аудио
         val gridLayoutManager = GridLayoutManager(requireContext(), 3).apply {
             spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
@@ -176,8 +186,8 @@ class DialogInfoFragment(
                 val layoutManager = recyclerView.layoutManager as? GridLayoutManager
                 if (layoutManager != null && layoutManager.findLastVisibleItemPosition() == adapter.itemCount - 1) {
                     // Достигнут конец списка, подгружаем новые элементы
-                    loadMoreMediaItems(0) //todo change type
-                    currentPage++
+                    //loadMoreMediaItems(0, currentPage) //todo change type
+                    return //temp
                 }
             }
         })
@@ -185,18 +195,49 @@ class DialogInfoFragment(
         return binding.root
     }
 
-    private fun loadMoreMediaItems(type: Int) {
+    private fun loadMoreMediaItems(type: Int, page: Int) {
         val context = requireContext()
         uiScope.launch {
-            val list = messageViewModel.getMediaPreviews(currentPage)
-            val items = async(Dispatchers.IO) {
-                val tmp = mutableListOf<String>()
-                list.forEach {
-                    tmp.add(messageViewModel.getPreview(context, it))
+            val list = messageViewModel.getMediaPreviews(page)
+            if(!list.isNullOrEmpty()) {
+                val items = async(Dispatchers.IO) {
+                    val tmp = mutableListOf<String>()
+                    list.forEach {
+                        tmp.add(messageViewModel.getPreview(context, it))
+                    }
+                    return@async tmp
                 }
-                return@async tmp
+                adapter.setMediaItems(items.await().map { MediaItem(type, it) })
+                binding.loadButton.visibility = View.GONE
+            } else {
+                Toast.makeText(requireContext(), "Медиа файлов нет", Toast.LENGTH_SHORT).show()
             }
-            adapter.setMediaItems(items.await().map { MediaItem(type, it) })
+            currentPage++
+        }
+    }
+
+    class GridSpacingItemDecoration(private val spanCount: Int, private val spacing: Int, private val includeEdge: Boolean) : RecyclerView.ItemDecoration() {
+        override fun getItemOffsets(
+            outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State
+        ) {
+            val position = parent.getChildAdapterPosition(view)
+            val column = position % spanCount
+
+            if (includeEdge) {
+                outRect.left = spacing - column * spacing / spanCount
+                outRect.right = (column + 1) * spacing / spanCount
+
+                if (position < spanCount) {
+                    outRect.top = spacing
+                }
+                outRect.bottom = spacing
+            } else {
+                outRect.left = column * spacing / spanCount
+                outRect.right = spacing - (column + 1) * spacing / spanCount
+                if (position >= spanCount) {
+                    outRect.top = spacing
+                }
+            }
         }
     }
 

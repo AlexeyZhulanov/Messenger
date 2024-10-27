@@ -109,7 +109,7 @@ interface RetrofitRepository {
 
     suspend fun deleteFile(folder: String, dialogId: Int, filename: String) : Boolean
 
-    suspend fun getMedias(dialogId: Int, page: Int) : List<String>
+    suspend fun getMedias(dialogId: Int, page: Int) : List<String>?
 
     suspend fun getFiles(dialogId: Int, page: Int) : List<String>
 
