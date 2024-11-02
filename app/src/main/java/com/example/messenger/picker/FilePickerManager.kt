@@ -3,6 +3,7 @@ package com.example.messenger.picker
 import android.content.Context
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.example.messenger.DialogInfoFragment
 import com.example.messenger.MessageFragment
 import com.example.messenger.R
 import com.example.messenger.SettingsFragment
@@ -24,7 +25,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 
-class FilePickerManager(private val fragment1: MessageFragment?, private val fragment2: SettingsFragment?) {
+class FilePickerManager(private val fragment1: MessageFragment?, private val fragment2: SettingsFragment?, private val fragment3: DialogInfoFragment?) {
 
     val selectorStyle = PictureSelectorStyle()
 
@@ -40,30 +41,30 @@ class FilePickerManager(private val fragment1: MessageFragment?, private val fra
         numberSelectMainStyle.previewSelectBackground = R.drawable.ps_preview_checkbox_selector
         numberSelectMainStyle.selectNormalBackgroundResources = R.drawable.ps_select_complete_normal_bg
         numberSelectMainStyle.selectNormalTextColor = ContextCompat.getColor(
-            fragment1?.requireContext() ?: fragment2!!.requireContext(),
+            fragment1?.requireContext() ?: fragment2?.requireContext() ?: fragment3!!.requireContext(),
             R.color.ps_color_53575e
         )
         numberSelectMainStyle.setSelectNormalText(R.string.ps_send)
         numberSelectMainStyle.adapterPreviewGalleryBackgroundResource = R.drawable.ps_preview_gallery_bg
         numberSelectMainStyle.adapterPreviewGalleryItemSize = DensityUtil.dip2px(
-            fragment1?.requireContext() ?: fragment2!!.requireContext(),
+            fragment1?.requireContext() ?: fragment2?.requireContext() ?: fragment3!!.requireContext(),
             52f
         )
         numberSelectMainStyle.setPreviewSelectText(R.string.ps_select)
         numberSelectMainStyle.previewSelectTextSize = 14
         numberSelectMainStyle.previewSelectTextColor = ContextCompat.getColor(
-            fragment1?.requireContext() ?: fragment2!!.requireContext(),
+            fragment1?.requireContext() ?: fragment2?.requireContext() ?: fragment3!!.requireContext(),
             R.color.ps_color_white
         )
-        numberSelectMainStyle.previewSelectMarginRight = DensityUtil.dip2px(fragment1?.requireContext() ?: fragment2!!.requireContext(), 6F);
+        numberSelectMainStyle.previewSelectMarginRight = DensityUtil.dip2px(fragment1?.requireContext() ?: fragment2?.requireContext() ?: fragment3!!.requireContext(), 6F);
         numberSelectMainStyle.selectBackgroundResources = R.drawable.ps_select_complete_bg
         numberSelectMainStyle.setSelectText(R.string.ps_send_num)
         numberSelectMainStyle.selectTextColor = ContextCompat.getColor(
-            fragment1?.requireContext() ?: fragment2!!.requireContext(),
+            fragment1?.requireContext() ?: fragment2?.requireContext() ?: fragment3!!.requireContext(),
             R.color.ps_color_white
         )
         numberSelectMainStyle.mainListBackgroundColor = ContextCompat.getColor(
-            fragment1?.requireContext() ?: fragment2!!.requireContext(),
+            fragment1?.requireContext() ?: fragment2?.requireContext() ?: fragment3!!.requireContext(),
             R.color.ps_color_black
         )
         numberSelectMainStyle.isCompleteSelectRelativeTop = true
@@ -77,23 +78,26 @@ class FilePickerManager(private val fragment1: MessageFragment?, private val fra
         numberTitleBarStyle.titleAlbumBackgroundResource = R.drawable.ps_album_bg
         numberTitleBarStyle.titleDrawableRightResource = R.drawable.ps_ic_grey_arrow
         numberTitleBarStyle.previewTitleLeftBackResource = R.drawable.ps_ic_normal_back
+        if(fragment3 != null) {
+            numberTitleBarStyle.previewDeleteBackgroundResource = R.drawable.ic_forward_floating
+        }
 
         // NavBar
         val numberBottomNavBarStyle = BottomNavBarStyle()
         numberBottomNavBarStyle.bottomPreviewNarBarBackgroundColor = ContextCompat.getColor(
-            fragment1?.requireContext() ?: fragment2!!.requireContext(),
+            fragment1?.requireContext() ?: fragment2?.requireContext() ?: fragment3!!.requireContext(),
             R.color.ps_color_half_grey
         );
         numberBottomNavBarStyle.setBottomPreviewNormalText(R.string.ps_preview)
         numberBottomNavBarStyle.bottomPreviewNormalTextColor = ContextCompat.getColor(
-            fragment1?.requireContext() ?: fragment2!!.requireContext(),
+            fragment1?.requireContext() ?: fragment2?.requireContext() ?: fragment3!!.requireContext(),
             R.color.ps_color_9b
         )
         numberBottomNavBarStyle.bottomPreviewNormalTextSize = 16
         numberBottomNavBarStyle.isCompleteCountTips = false
         numberBottomNavBarStyle.setBottomPreviewSelectText(R.string.ps_preview_num)
         numberBottomNavBarStyle.bottomPreviewSelectTextColor = ContextCompat.getColor(
-            fragment1?.requireContext() ?: fragment2!!.requireContext(),
+            fragment1?.requireContext() ?: fragment2?.requireContext() ?: fragment3!!.requireContext(),
             R.color.ps_color_white
         )
 
@@ -104,12 +108,12 @@ class FilePickerManager(private val fragment1: MessageFragment?, private val fra
     }
 
     suspend fun openFilePicker(isCircle: Boolean, isFreeStyleCrop: Boolean, data: ArrayList<LocalMedia>) : ArrayList<LocalMedia> = suspendCancellableCoroutine { continuation ->
-        val selector = PictureSelector.create(fragment1 ?: fragment2!!)
+        val selector = PictureSelector.create(fragment1 ?: fragment2 ?: fragment3!!)
             .openGallery(SelectMimeType.ofAll())
             .setImageEngine(GlideEngine.createGlideEngine())
             .setVideoPlayerEngine(ExoPlayerEngine())
             .setCompressEngine(ImageFileCompressEngine())
-            .setEditMediaInterceptListener(getMediaEditInterceptListener(fragment1 ?: fragment2!!, selectorStyle, isCircle, isFreeStyleCrop))
+            .setEditMediaInterceptListener(getMediaEditInterceptListener(fragment1 ?: fragment2 ?: fragment3!!, selectorStyle, isCircle, isFreeStyleCrop))
             .isAutoVideoPlay(false)
             .isLoopAutoVideoPlay(false)
             .isVideoPauseResumePlay(true)

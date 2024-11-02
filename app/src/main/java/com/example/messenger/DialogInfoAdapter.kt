@@ -2,30 +2,28 @@ package com.example.messenger
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.ItemFileBinding
-import com.example.messenger.databinding.ItemImageBinding
 import com.example.messenger.databinding.ItemMediaBinding
 import com.example.messenger.databinding.ItemVoiceBinding
 import com.example.messenger.model.MediaItem
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.luck.picture.lib.config.PictureMimeType
+import com.luck.picture.lib.entity.LocalMedia
 import java.io.File
+import java.util.Locale
 
 interface DialogActionListener {
-    fun onItemClicked()
+    fun onImageClicked(position: Int, filename: String, localMedia: LocalMedia)
 
-    fun onVideoDownloadClicked()
+    fun onVideoClicked(position: Int, filename: String, localMedia: LocalMedia)
 }
 
 class DialogInfoAdapter(
@@ -64,7 +62,7 @@ class DialogInfoAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val item = mediaItems[position]
         when (holder) {
-            is MediaViewHolder -> holder.bind(item.content)
+            is MediaViewHolder -> holder.bind(item.content, position)
             is FileViewHolder -> holder.bind(item.content)
             is AudioViewHolder -> holder.bind(item.content)
         }
@@ -72,7 +70,7 @@ class DialogInfoAdapter(
     override fun getItemCount(): Int = mediaItems.size
 
     inner class MediaViewHolder(private val binding: ItemMediaBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(content: String) {
+        fun bind(content: String, position: Int) {
             binding.photoImageView.layoutParams.width = imageSize
             binding.photoImageView.layoutParams.height = imageSize
             val(filename, duration) = messageViewModel.parsePreviewFilename(content)
@@ -93,10 +91,13 @@ class DialogInfoAdapter(
                         binding.icDownload.visibility = View.GONE
                     }
                 }
+                binding.photoImageView.setOnClickListener {
+                    if(duration == null) actionListener.onImageClicked(position, filename, messageViewModel.fileToLocalMedia(file))
+                    else actionListener.onVideoClicked(position, filename, messageViewModel.fileToLocalMedia(file))
+                }
             } else {
                 binding.icError.visibility = View.VISIBLE
             }
-            
         }
     }
 
@@ -111,4 +112,5 @@ class DialogInfoAdapter(
 
         }
     }
+
 }

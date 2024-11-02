@@ -2,6 +2,7 @@ package com.example.messenger
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Log
 import android.view.View
@@ -36,6 +37,8 @@ import com.example.messenger.model.TypingEvent
 import com.example.messenger.model.UserSessionUpdatedEvent
 import com.example.messenger.model.WebSocketListenerInterface
 import com.example.messenger.model.WebSocketService
+import com.luck.picture.lib.config.PictureMimeType
+import com.luck.picture.lib.entity.LocalMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -49,6 +52,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
@@ -304,6 +308,12 @@ class MessageViewModel @Inject constructor(
 
     suspend fun downloadFile(context: Context, folder: String, filename: String): String = withContext(Dispatchers.IO) {
         return@withContext retrofitService.downloadFile(context, folder, dialogId, filename)
+    }
+
+    fun downloadFileJava(context: Context, folder: String, filename: String): String {
+        return runBlocking {
+            retrofitService.downloadFile(context, folder, dialogId, filename)
+        }
     }
 
     suspend fun fManagerIsExist(fileName: String): Boolean = withContext(Dispatchers.IO) {
@@ -612,6 +622,52 @@ class MessageViewModel @Inject constructor(
         val minutes = durationInSeconds / 60
         val seconds = durationInSeconds % 60
         return String.format(Locale.ROOT,"%02d:%02d", minutes, seconds)
+    }
+
+    fun fileToLocalMedia(file: File): LocalMedia {
+        val localMedia = LocalMedia()
+
+        // Установите путь файла
+        localMedia.path = file.absolutePath
+
+        // Определите MIME тип файла на основе его расширения
+        localMedia.mimeType = when (file.extension.lowercase(Locale.ROOT)) {
+            "jpg", "jpeg" -> PictureMimeType.ofJPEG()
+            "png" -> PictureMimeType.ofPNG()
+            "mp4" -> PictureMimeType.ofMP4()
+            "avi" -> PictureMimeType.ofAVI()
+            "gif" -> PictureMimeType.ofGIF()
+            else -> PictureMimeType.MIME_TYPE_AUDIO // Или другой тип по умолчанию
+        }
+
+        // Установите дополнительные свойства
+        localMedia.isCompressed = false // Или true, если вы хотите сжать изображение
+        localMedia.isCut = false // Если это изображение было обрезано
+        localMedia.isOriginal = false // Если это оригинальный файл
+
+        if (localMedia.mimeType == PictureMimeType.MIME_TYPE_VIDEO) {
+            // Получаем длительность видео
+            val duration = getVideoDuration(file)
+            localMedia.duration = duration
+        } else {
+            localMedia.duration = 0 // Для изображений длительность обычно равна 0
+        }
+
+        return localMedia
+    }
+
+    private fun getVideoDuration(file: File): Long {
+        val retriever = MediaMetadataRetriever()
+        try {
+            retriever.setDataSource(file.absolutePath)
+            val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            return durationStr?.toLongOrNull() ?: 0
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return 0
+        } finally {
+            retriever.release()
+        }
     }
 
     override fun onCleared() {

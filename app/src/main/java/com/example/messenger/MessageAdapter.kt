@@ -559,52 +559,6 @@ class MessageAdapter(
         }
     }
 
-    private fun fileToLocalMedia(file: File): LocalMedia {
-        val localMedia = LocalMedia()
-
-        // Установите путь файла
-        localMedia.path = file.absolutePath
-
-        // Определите MIME тип файла на основе его расширения
-        localMedia.mimeType = when (file.extension.lowercase(Locale.ROOT)) {
-            "jpg", "jpeg" -> PictureMimeType.ofJPEG()
-            "png" -> PictureMimeType.ofPNG()
-            "mp4" -> PictureMimeType.ofMP4()
-            "avi" -> PictureMimeType.ofAVI()
-            "gif" -> PictureMimeType.ofGIF()
-            else -> PictureMimeType.MIME_TYPE_AUDIO // Или другой тип по умолчанию
-        }
-
-        // Установите дополнительные свойства
-        localMedia.isCompressed = false // Или true, если вы хотите сжать изображение
-        localMedia.isCut = false // Если это изображение было обрезано
-        localMedia.isOriginal = false // Если это оригинальный файл
-
-        if (localMedia.mimeType == PictureMimeType.MIME_TYPE_VIDEO) {
-            // Получаем длительность видео
-            val duration = getVideoDuration(file)
-            localMedia.duration = duration
-        } else {
-            localMedia.duration = 0 // Для изображений длительность обычно равна 0
-        }
-
-        return localMedia
-    }
-
-    private fun getVideoDuration(file: File): Long {
-        val retriever = MediaMetadataRetriever()
-        try {
-            retriever.setDataSource(file.absolutePath)
-            val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-            return durationStr?.toLongOrNull() ?: 0
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return 0
-        } finally {
-            retriever.release()
-        }
-    }
-
     class CustomLayoutManager : RecyclerView.LayoutManager() {
 
         private var columnWidth = 0
@@ -1302,7 +1256,7 @@ class MessageAdapter(
                 if (file.exists()) {
                     if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.images!!.first(), file.readBytes())
                     val uri = Uri.fromFile(file)
-                    val localMedia = fileToLocalMedia(file)
+                    val localMedia = messageViewModel.fileToLocalMedia(file)
                     val chooseModel = localMedia.chooseModel
                     withContext(Dispatchers.Main) {
                         binding.tvDuration.visibility =
@@ -1374,7 +1328,7 @@ class MessageAdapter(
                     savePosition(message, false)
                 }
                 else
-                    actionListener.onMessageClickImage(message, itemView, arrayListOf(fileToLocalMedia(File(filePath))), false)
+                    actionListener.onMessageClickImage(message, itemView, arrayListOf(messageViewModel.fileToLocalMedia(File(filePath))), false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
@@ -1430,7 +1384,7 @@ class MessageAdapter(
                 if (file.exists()) {
                     if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.images!!.first(), file.readBytes())
                     val uri = Uri.fromFile(file)
-                    val localMedia = fileToLocalMedia(file)
+                    val localMedia = messageViewModel.fileToLocalMedia(file)
                     val chooseModel = localMedia.chooseModel
                     withContext(Dispatchers.Main) {
                         binding.tvDuration.visibility =
@@ -1500,7 +1454,7 @@ class MessageAdapter(
                     savePosition(message, true)
                 }
                 else
-                    actionListener.onMessageClickImage(message, itemView, arrayListOf(fileToLocalMedia(File(filePath))), true)
+                    actionListener.onMessageClickImage(message, itemView, arrayListOf(messageViewModel.fileToLocalMedia(File(filePath))), true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
@@ -1581,7 +1535,7 @@ class MessageAdapter(
                         filePathsForClick += first
                         if (file.exists()) {
                             if (!second && isInLast30) messageViewModel.fManagerSaveFile(image, file.readBytes())
-                            medias += fileToLocalMedia(file)
+                            medias += messageViewModel.fileToLocalMedia(file)
                         } else {
                             withContext(Dispatchers.Main) {
                                 Log.e("ImageError", "File does not exist: $filePath")
@@ -1629,7 +1583,7 @@ class MessageAdapter(
                     savePosition(message, false)
                 }
                 else {
-                    val medias: ArrayList<LocalMedia> = filePathsForClick.map { fileToLocalMedia(File(it)) } as ArrayList<LocalMedia>
+                    val medias: ArrayList<LocalMedia> = filePathsForClick.map { messageViewModel.fileToLocalMedia(File(it)) } as ArrayList<LocalMedia>
                     actionListener.onMessageClickImage(message, itemView, medias, false)
                 }
             }
@@ -1712,7 +1666,7 @@ class MessageAdapter(
                             filePathsForClick += first
                             if (file.exists()) {
                                 if (!second && isInLast30) messageViewModel.fManagerSaveFile(image, file.readBytes())
-                                medias += fileToLocalMedia(file)
+                                medias += messageViewModel.fileToLocalMedia(file)
                             } else {
                                 withContext(Dispatchers.Main) {
                                     Log.e("ImageError", "File does not exist: $filePath")
@@ -1762,7 +1716,7 @@ class MessageAdapter(
                     savePosition(message, true)
                 }
                 else {
-                    val medias: ArrayList<LocalMedia> = filePathsForClick.map { fileToLocalMedia(File(it)) } as ArrayList<LocalMedia>
+                    val medias: ArrayList<LocalMedia> = filePathsForClick.map { messageViewModel.fileToLocalMedia(File(it)) } as ArrayList<LocalMedia>
                     actionListener.onMessageClickImage(message, itemView, medias, true)
                 }
             }

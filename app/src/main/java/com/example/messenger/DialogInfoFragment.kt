@@ -15,6 +15,7 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.NumberPicker
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -33,6 +34,16 @@ import com.example.messenger.model.MediaItem
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.User
+import com.example.messenger.picker.ExoPlayerEngine
+import com.example.messenger.picker.FilePickerManager
+import com.example.messenger.picker.GlideEngine
+import com.luck.picture.lib.PictureSelectorPreviewFragment
+import com.luck.picture.lib.basic.PictureSelector
+import com.luck.picture.lib.config.InjectResourceSource
+import com.luck.picture.lib.entity.LocalMedia
+import com.luck.picture.lib.interfaces.OnExternalPreviewEventListener
+import com.luck.picture.lib.interfaces.OnInjectActivityPreviewListener
+import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -79,6 +90,7 @@ class DialogInfoFragment(
             if(resId != 0)
                 binding.dialogInfoLayout.background = ContextCompat.getDrawable(requireContext(), resId)
         }
+        val filePickerManager = FilePickerManager(null, null, this)
         uiScope.launch {
             val avatar = dialog.otherUser.avatar ?: ""
             if (avatar != "") {
@@ -157,11 +169,40 @@ class DialogInfoFragment(
         imageSize =
             if(displayMetrics != null) (displayMetrics.widthPixels - spacing * 4) / 3 else 100
         adapter = DialogInfoAdapter(requireContext(), imageSize, messageViewModel, object: DialogActionListener {
-            override fun onItemClicked() {
-                TODO("Not yet implemented")
+            override fun onImageClicked(position: Int, filename: String, localMedia: LocalMedia) {
+                val preview = PictureSelector.create(requireActivity())
+                    .openPreview()
+                    .setImageEngine(GlideEngine.createGlideEngine())
+                    .setVideoPlayerEngine(ExoPlayerEngine())
+                    .isAutoVideoPlay(false)
+                    .isLoopAutoVideoPlay(false)
+                    .isVideoPauseResumePlay(true)
+                    .setSelectorUIStyle(filePickerManager.selectorStyle)
+                    .isPreviewFullScreenMode(true)
+                    .setInjectLayoutResourceListener(object: OnInjectLayoutResourceListener {
+                        override fun getLayoutResourceId(context: Context?, resourceSource: Int): Int {
+                            @Suppress("DEPRECATED_IDENTITY_EQUALS")
+                            return if (resourceSource === InjectResourceSource.PREVIEW_LAYOUT_RESOURCE
+                            ) R.layout.ps_custom_fragment_preview
+                            else InjectResourceSource.DEFAULT_LAYOUT_RESOURCE
+                        }
+                    })
+                    .setInjectActivityPreviewFragment {
+                        TODO("Not yet implemented")
+                    }
+                    .startActivityPreview(0, true, arrayListOf(localMedia)) // todo change position and get full list
+
+                uiScope.launch {
+                    val path = async(Dispatchers.IO) {  messageViewModel.downloadFile(requireContext(), "photos", filename) }
+                    val originalFile = File(path.await())
+                    if(originalFile.exists()) {
+                        val originalMedia = messageViewModel.fileToLocalMedia(originalFile)
+                        // todo как-то нужно подменить на originalMedia preview
+                    }
+                }
             }
 
-            override fun onVideoDownloadClicked() {
+            override fun onVideoClicked(position: Int, filename: String, localMedia: LocalMedia) {
                 TODO("Not yet implemented")
             }
         })
@@ -323,5 +364,16 @@ class DialogInfoFragment(
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private class MyExternalPreviewEventListener(private val imageAdapter: ImageAdapter) : OnExternalPreviewEventListener {
+        override fun onPreviewDelete(position: Int) {
+            imageAdapter.remove(position)
+            imageAdapter.notifyItemRemoved(position)
+        }
+
+        override fun onLongPressDownload(context: Context, media: LocalMedia): Boolean {
+            return false
+        }
     }
 }
