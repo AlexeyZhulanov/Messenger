@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="colorDefault">#000000</color>
+    <color name="colorBar">#ffffff</color>
     <color name="colorPrimary">#FF6200EE</color>
     <color name="colorPrimaryDark">#FF3700B3</color>
     <color name="colorAccent">#FF03DAC5</color>
@@ -24,8 +26,8 @@
     <color name="color5_secondary">#8B0000</color>"
     <color name="color6_main">#008000</color>
     <color name="color6_secondary">#FF8C00</color>"
-    <color name="color7_main">#808080</color>
-    <color name="color7_secondary">#FF0090</color>"
+    <color name="color7_main">#7D7DFF</color>
+    <color name="color7_secondary">#000000</color>"
     <color name="color8_main">#964B00</color>
     <color name="color8_secondary">#30D5C8</color>"
     <color name="ps_color_grey">#393a3e</color>

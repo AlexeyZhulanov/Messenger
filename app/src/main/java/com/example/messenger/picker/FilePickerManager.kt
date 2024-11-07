@@ -78,9 +78,6 @@ class FilePickerManager(private val fragment1: MessageFragment?, private val fra
         numberTitleBarStyle.titleAlbumBackgroundResource = R.drawable.ps_album_bg
         numberTitleBarStyle.titleDrawableRightResource = R.drawable.ps_ic_grey_arrow
         numberTitleBarStyle.previewTitleLeftBackResource = R.drawable.ps_ic_normal_back
-        if(fragment3 != null) {
-            numberTitleBarStyle.previewDeleteBackgroundResource = R.drawable.ic_forward_floating
-        }
 
         // NavBar
         val numberBottomNavBarStyle = BottomNavBarStyle()

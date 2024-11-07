@@ -97,6 +97,8 @@ class MessageViewModel @Inject constructor(
     private val _readMessagesFlow = MutableStateFlow<List<Int>>(emptyList())
     val readMessagesFlow: StateFlow<List<Int>> get() = _readMessagesFlow
 
+    private val tempFiles = mutableSetOf<String>()
+
 
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     val combinedFlow = combine(
@@ -327,6 +329,19 @@ class MessageViewModel @Inject constructor(
     suspend fun fManagerSaveFile(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
         fileManager.saveFile(fileName, fileData)
     }
+
+    fun fManagerIsExistJava(filename: String): Boolean {
+        return fileManager.isExist(filename)
+    }
+
+    fun fManagerGetFilePathJava(fileName: String): String {
+        return fileManager.getFilePath(fileName)
+    }
+
+    fun fManagerSaveFileJava(fileName: String, fileData: ByteArray) {
+        fileManager.saveFile(fileName, fileData)
+    }
+
 
     suspend fun findMessage(idMessage: Int): Pair<Message, Int> = withContext(Dispatchers.IO) {
         return@withContext retrofitService.findMessage(idMessage, dialogId)
@@ -602,7 +617,8 @@ class MessageViewModel @Inject constructor(
         return@withContext retrofitService.getMediaPreview(context, dialogId, filename)
     }
 
-    fun parsePreviewFilename(filename: String): Pair<String, String?> {
+    fun parsePreviewFilename(filepath: String): Pair<String, String?> {
+        val filename = File(filepath).name
         // Проверяем, содержит ли название файла продолжительность и формат в формате "30s:mp4"
         val regex = Regex("(.*)_([0-9]+)s:([a-zA-Z0-9]+)\\.jpg$")
         val matchResult = regex.find(filename)
@@ -668,6 +684,13 @@ class MessageViewModel @Inject constructor(
         } finally {
             retriever.release()
         }
+    }
+
+    fun addTempFile(filename: String) = tempFiles.add(filename)
+
+    fun clearTempFiles() {
+        fileManager.deleteFiles(tempFiles.toList())
+        tempFiles.clear()
     }
 
     override fun onCleared() {

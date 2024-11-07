@@ -13,6 +13,7 @@
         android:layout_height="match_parent"
         android:layout_marginTop="6dp"
         android:src="@drawable/ic_user_avatar"
+        app:tint="?attr/colorPrimary"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -38,6 +39,7 @@
         android:textSize="16sp"
         android:layout_marginTop="4dp"
         tools:text="Google Inc."
+        android:textColor="?attr/colorAccent"
         app:layout_constraintTop_toBottomOf="@id/userNameTextView"
         app:layout_constraintStart_toStartOf="@id/userNameTextView"
         app:layout_constraintEnd_toEndOf="parent"/>
@@ -47,6 +49,7 @@
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:src="@drawable/ic_check"
+        app:tint="?attr/colorPrimary"
         android:layout_marginEnd="-5dp"
         android:padding="8dp"
         android:visibility="invisible"
@@ -60,6 +63,7 @@
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:src="@drawable/ic_check_two"
+        app:tint="?attr/colorPrimary"
         android:layout_marginEnd="-5dp"
         android:padding="8dp"
         android:visibility="invisible"

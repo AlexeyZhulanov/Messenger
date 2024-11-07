@@ -34,6 +34,7 @@ import com.example.messenger.model.MediaItem
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.User
+import com.example.messenger.picker.CustomPreviewFragment
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
@@ -169,8 +170,8 @@ class DialogInfoFragment(
         imageSize =
             if(displayMetrics != null) (displayMetrics.widthPixels - spacing * 4) / 3 else 100
         adapter = DialogInfoAdapter(requireContext(), imageSize, messageViewModel, object: DialogActionListener {
-            override fun onImageClicked(position: Int, filename: String, localMedia: LocalMedia) {
-                val preview = PictureSelector.create(requireActivity())
+            override fun onItemClicked(position: Int, filename: String, localMedia: LocalMedia) {
+                PictureSelector.create(requireActivity())
                     .openPreview()
                     .setImageEngine(GlideEngine.createGlideEngine())
                     .setVideoPlayerEngine(ExoPlayerEngine())
@@ -188,22 +189,9 @@ class DialogInfoFragment(
                         }
                     })
                     .setInjectActivityPreviewFragment {
-                        TODO("Not yet implemented")
+                        CustomPreviewFragment.newInstance(messageViewModel, filename)
                     }
-                    .startActivityPreview(0, true, arrayListOf(localMedia)) // todo change position and get full list
-
-                uiScope.launch {
-                    val path = async(Dispatchers.IO) {  messageViewModel.downloadFile(requireContext(), "photos", filename) }
-                    val originalFile = File(path.await())
-                    if(originalFile.exists()) {
-                        val originalMedia = messageViewModel.fileToLocalMedia(originalFile)
-                        // todo как-то нужно подменить на originalMedia preview
-                    }
-                }
-            }
-
-            override fun onVideoClicked(position: Int, filename: String, localMedia: LocalMedia) {
-                TODO("Not yet implemented")
+                    .startActivityPreview(0, false, arrayListOf(localMedia)) // todo change position and get full list
             }
         })
         binding.recyclerview.adapter = adapter
@@ -366,14 +354,8 @@ class DialogInfoFragment(
             .show()
     }
 
-    private class MyExternalPreviewEventListener(private val imageAdapter: ImageAdapter) : OnExternalPreviewEventListener {
-        override fun onPreviewDelete(position: Int) {
-            imageAdapter.remove(position)
-            imageAdapter.notifyItemRemoved(position)
-        }
-
-        override fun onLongPressDownload(context: Context, media: LocalMedia): Boolean {
-            return false
-        }
+    override fun onDestroy() {
+        super.onDestroy()
+        messageViewModel.clearTempFiles()
     }
 }

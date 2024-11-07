@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        android:background="@color/purple_500"
+        android:background="?attr/colorPrimary"
         app:layout_constraintEnd_toEndOf="parent"/>
 
     <ImageView
@@ -21,6 +21,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:src="@drawable/ic_user_avatar"
+        app:tint="?attr/colorPrimary"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -143,6 +144,7 @@
             android:layout_width="wrap_content"
             android:layout_height="0dp"
             android:src="@drawable/ic_copy"
+            app:tint="?attr/colorPrimary"
             app:layout_constraintTop_toTopOf="@id/nickTextView"
             app:layout_constraintBottom_toBottomOf="@id/nickTextView"
             app:layout_constraintStart_toEndOf="@id/nickTextView"
@@ -265,6 +267,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/button_audio"
             app:layout_constraintStart_toEndOf="@+id/button_media"
+            android:textColor="?attr/colorPrimary"
             android:text="Файлы" />
 
         <Button
@@ -282,6 +285,7 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@+id/button_files"
+            android:textColor="?attr/colorPrimary"
             android:text="Голосовые" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
@@ -291,6 +295,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Загрузить изображения"
+        android:textColor="?attr/colorAccent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/buttons_layout"

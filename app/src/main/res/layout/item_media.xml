@@ -30,22 +30,6 @@
         android:visibility="gone"
         />
 
-    <ImageView
-        android:id="@+id/ic_download"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:scaleY="2"
-        android:scaleX="2"
-        android:src="@drawable/ic_download"
-        android:background="@drawable/checkbox_background"
-        app:layout_constraintEnd_toEndOf="@id/photo_image_view"
-        app:layout_constraintTop_toTopOf="@id/photo_image_view"
-        app:layout_constraintStart_toStartOf="@id/photo_image_view"
-        app:layout_constraintBottom_toBottomOf="@id/photo_image_view"
-        android:visibility="gone"
-        tools:visibility="visible"
-        />
-
     <TextView
         android:id="@+id/tv_duration"
         android:layout_width="wrap_content"

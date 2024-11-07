@@ -30,14 +30,21 @@ class FileManager(private val context: Context) {
     }
 
     // Получение списка всех файлов в директории сообщений
-    fun getAllFiles(): List<File> {
+    private fun getAllFiles(): List<File> {
         val dir = getMessageDirectory()
         return dir.listFiles()?.toList() ?: emptyList()
     }
 
     // Удаление файла
-    fun deleteFile(file: File): Boolean {
+    private fun deleteFile(file: File): Boolean {
         return file.delete()
+    }
+
+    fun deleteFiles(files: List<String>) {
+        val dir = getMessageDirectory()
+        files.forEach { filename ->
+            deleteFile(File(dir, filename))
+        }
     }
 
     // Удаление всех файлов, не используемых в новых сообщениях

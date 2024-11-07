@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:background="@drawable/ps_select_complete_normal_bg"
+    android:background="#00000000"
     android:minWidth="170dp">
 
     <TextView

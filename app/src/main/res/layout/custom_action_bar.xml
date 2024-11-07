@@ -3,7 +3,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:background="#333333"
+    android:background="@color/colorBar"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -16,7 +16,8 @@
         android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"/>
+        app:layout_constraintStart_toStartOf="parent"
+        app:tint="?attr/colorPrimary" />
 
     <ImageView
         android:id="@+id/photoImageView"
@@ -25,6 +26,7 @@
         android:layout_marginStart="5dp"
         android:layout_marginTop="6dp"
         android:src="@drawable/ic_user_avatar"
+        app:tint="?attr/colorPrimary"
         app:layout_constraintStart_toEndOf="@id/back_arrow"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -49,6 +51,7 @@
         android:ellipsize="end"
         android:textSize="14sp"
         android:visibility="visible"
+        android:textColor="?attr/colorAccent"
         android:layout_marginTop="4dp"
         tools:text="был в сети час назад"
         app:layout_constraintTop_toBottomOf="@id/userNameTextView"
@@ -64,6 +67,7 @@
         android:textSize="14sp"
         android:fontFamily="casual"
         android:textStyle="italic"
+        android:textColor="?attr/colorAccent"
         android:layout_marginTop="4dp"
         android:visibility="invisible"
         android:text="печатает"
@@ -76,6 +80,7 @@
         android:layout_height="5dp"
         android:background="@drawable/circle_dot_grey"
         android:visibility="invisible"
+        app:tint="?attr/colorAccent"
         app:layout_constraintTop_toTopOf="@id/typingText"
         app:layout_constraintBottom_toBottomOf="@id/typingText"
         app:layout_constraintStart_toEndOf="@id/typingText"
@@ -87,6 +92,7 @@
         android:layout_height="5dp"
         android:background="@drawable/circle_dot_grey"
         android:visibility="invisible"
+        app:tint="?attr/colorAccent"
         app:layout_constraintTop_toTopOf="@id/typingText"
         app:layout_constraintBottom_toBottomOf="@id/typingText"
         app:layout_constraintStart_toEndOf="@id/dot1"
@@ -98,6 +104,7 @@
         android:layout_height="5dp"
         android:background="@drawable/circle_dot_grey"
         android:visibility="invisible"
+        app:tint="?attr/colorAccent"
         app:layout_constraintTop_toTopOf="@id/typingText"
         app:layout_constraintBottom_toBottomOf="@id/typingText"
         app:layout_constraintStart_toEndOf="@id/dot2"
@@ -109,6 +116,7 @@
         android:layout_height="40dp"
         android:src="@drawable/ic_volume_off"
         android:padding="10dp"
+        app:tint="?attr/colorPrimary"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="@id/userNameTextView"
         app:layout_constraintBottom_toBottomOf="@id/userNameTextView"
@@ -120,6 +128,7 @@
         android:layout_height="40dp"
         android:src="@drawable/ic_more"
         android:padding="8dp"
+        app:tint="?attr/colorPrimary"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"

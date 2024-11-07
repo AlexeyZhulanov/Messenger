@@ -99,7 +99,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/button3"
         app:layout_constraintHorizontal_chainStyle="spread_inside"
-        android:textColor="?attr/colorAccent"
+        android:textColor="?attr/colorPrimary"
         style="?android:attr/buttonBarButtonStyle" />
 
     <Button
@@ -116,6 +116,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@+id/button"
         app:layout_constraintEnd_toStartOf="@+id/button4"
+        android:textColor="?attr/colorAccent"
         android:text="Сообщения" />
 
     <Button
@@ -132,6 +133,7 @@
         app:layout_constraintTop_toBottomOf="@+id/bottomGuideLine"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@+id/button3"
-        android:text="Хз" />
+        android:textColor="?attr/colorPrimary"
+        android:text="Apanel" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

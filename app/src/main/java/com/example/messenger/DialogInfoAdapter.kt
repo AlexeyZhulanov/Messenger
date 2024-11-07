@@ -21,9 +21,7 @@ import java.io.File
 import java.util.Locale
 
 interface DialogActionListener {
-    fun onImageClicked(position: Int, filename: String, localMedia: LocalMedia)
-
-    fun onVideoClicked(position: Int, filename: String, localMedia: LocalMedia)
+    fun onItemClicked(position: Int, filename: String, localMedia: LocalMedia)
 }
 
 class DialogInfoAdapter(
@@ -73,7 +71,7 @@ class DialogInfoAdapter(
         fun bind(content: String, position: Int) {
             binding.photoImageView.layoutParams.width = imageSize
             binding.photoImageView.layoutParams.height = imageSize
-            val(filename, duration) = messageViewModel.parsePreviewFilename(content)
+            val(originalFilename, duration) = messageViewModel.parsePreviewFilename(content)
             val file = File(content)
             if (file.exists()) {
                 val uri = Uri.fromFile(file)
@@ -86,14 +84,9 @@ class DialogInfoAdapter(
                 if(duration != null) {
                     binding.tvDuration.text = duration
                     binding.tvDuration.visibility = View.VISIBLE
-                    binding.icDownload.visibility = View.VISIBLE
-                    binding.icDownload.setOnClickListener {
-                        binding.icDownload.visibility = View.GONE
-                    }
                 }
                 binding.photoImageView.setOnClickListener {
-                    if(duration == null) actionListener.onImageClicked(position, filename, messageViewModel.fileToLocalMedia(file))
-                    else actionListener.onVideoClicked(position, filename, messageViewModel.fileToLocalMedia(file))
+                    actionListener.onItemClicked(position, originalFilename, messageViewModel.fileToLocalMedia(file))
                 }
             } else {
                 binding.icError.visibility = View.VISIBLE

@@ -45,6 +45,7 @@
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:src="@drawable/ic_add_photo"
+        app:tint="?attr/colorPrimary"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintBottom_toBottomOf="@id/photoImageView"
         app:layout_constraintEnd_toEndOf="@id/photoImageView"/>
@@ -69,6 +70,7 @@
         android:layout_width="25dp"
         android:layout_height="25dp"
         android:src="@drawable/ic_edit"
+        app:tint="?attr/colorPrimary"
         android:layout_marginStart="5dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintBottom_toBottomOf="@id/usernameTextView"
@@ -94,6 +96,7 @@
         android:layout_width="25dp"
         android:layout_height="25dp"
         android:src="@drawable/ic_copy"
+        app:tint="?attr/colorPrimary"
         android:layout_marginStart="5dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintBottom_toBottomOf="@id/nameTextView"

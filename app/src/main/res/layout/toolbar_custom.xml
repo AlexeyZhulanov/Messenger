@@ -2,6 +2,7 @@
 <androidx.appcompat.widget.Toolbar xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:contentInsetStart="0dp"
     android:contentInsetEnd="0dp"
     android:padding="8dp">
@@ -11,6 +12,7 @@
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:src="@drawable/ic_user_avatar"
+        app:tint="?attr/colorAccent"
         android:contentDescription="avatar"
         android:layout_gravity="start"
         android:layout_marginStart="5dp" />
@@ -20,7 +22,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="AMessenger"
-        android:textColor="@android:color/white"
+        android:textColor="?attr/colorAccent"
         android:textSize="20sp"
         android:layout_gravity="start"
         android:layout_marginStart="16dp" />
@@ -30,6 +32,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:src="@drawable/ic_more"
+        app:tint="?attr/colorAccent"
         android:layout_gravity="end"
         android:layout_marginEnd="5dp"
         android:scaleX="1.3"
@@ -41,6 +44,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:src="@drawable/ic_add"
+        app:tint="?attr/colorAccent"
         android:layout_gravity="end"
         android:scaleX="1.5"
         android:scaleY="1.5"
