@@ -3,7 +3,10 @@ package com.example.messenger
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Rect
+import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -14,6 +17,7 @@ import android.provider.OpenableColumns
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -28,6 +32,8 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -429,6 +435,10 @@ class MessageFragment(
 
             override fun afterTextChanged(s: Editable?) {}
         })
+        val typedValue = TypedValue()
+        context?.theme?.resolveAttribute(android.R.attr.colorAccent, typedValue, true)
+        val colorAccent = typedValue.data
+
 
         binding.recordView.apply {
             activity = requireActivity()
@@ -698,8 +708,7 @@ class MessageFragment(
             uiScope.launch {
                 val response = async(Dispatchers.IO) { viewModel.uploadFile(file) }
                 withContext(Dispatchers.IO) {
-                    // костыль чтобы отображалось корректное имя файла - кладу его в voice
-                    if(!answerFlag) viewModel.sendMessage(dialog.id, null, null, file.name, response.await(), null, false, null)
+                    if(!answerFlag) viewModel.sendMessage(dialog.id, null, null, null, response.await(), null, false, null)
                     else {
                         viewModel.sendMessage(dialog.id, null, null, file.name, response.await(), answerMessage?.first, false, answerMessage?.second)
                         withContext(Dispatchers.Main) {
@@ -955,7 +964,7 @@ class MessageFragment(
                     binding.answerMessage.text = when {
                         message.text != null -> message.text
                         message.images != null -> "Фотография"
-                        message.file != null -> message.voice //имя файла(костыль)
+                        message.file != null -> message.file
                         message.voice != null -> "Голосовое сообщение"
                         else -> "?????????"
                     }

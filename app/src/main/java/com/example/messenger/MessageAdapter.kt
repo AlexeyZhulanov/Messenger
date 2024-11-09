@@ -407,7 +407,7 @@ class MessageAdapter(
                     binding.answerMessage.text = when {
                         m.text != null -> m.text
                         m.images != null -> "Фотография"
-                        m.file != null -> m.voice //имя файла(костыль)
+                        m.file != null -> m.file
                         m.voice != null -> "Голосовое сообщение"
                         else -> "?????????"
                     }
@@ -424,7 +424,7 @@ class MessageAdapter(
                     binding.answerMessage.text = when {
                         m?.text != null -> m.text
                         m?.images != null -> "Фотография"
-                        m?.file != null -> m.voice //имя файла(костыль)
+                        m?.file != null -> m.file
                         m?.voice != null -> "Голосовое сообщение"
                         else -> "?????????"
                     }
@@ -743,15 +743,14 @@ class MessageAdapter(
                     val duration = mediaPlayer.duration
                     binding.waveformSeekBar.setSampleFrom(file)
                     binding.waveformSeekBar.maxProgress = duration.toFloat()
-                    binding.timeVoiceTextView.text = formatTime(duration.toLong())
+                    binding.timeVoiceTextView.text = messageViewModel.formatTime(duration.toLong())
 
                     val updateSeekBarRunnable = object : Runnable {
                         override fun run() {
                             if (isPlaying && mediaPlayer.isPlaying) {
                                 val currentPosition = mediaPlayer.currentPosition.toFloat()
                                 binding.waveformSeekBar.progress = currentPosition
-                                binding.timeVoiceTextView.text =
-                                    formatTime(currentPosition.toLong())
+                                binding.timeVoiceTextView.text = messageViewModel.formatTime(currentPosition.toLong())
                                 handler.postDelayed(this, 100)
                             }
                         }
@@ -774,14 +773,14 @@ class MessageAdapter(
                         override fun onProgressChanged(waveformSeekBar: WaveformSeekBar, progress: Float, fromUser: Boolean) {
                             if (fromUser) {
                                 mediaPlayer.seekTo(progress.toInt())
-                                binding.timeVoiceTextView.text = formatTime(progress.toLong())
+                                binding.timeVoiceTextView.text = messageViewModel.formatTime(progress.toLong())
                             }
                         }
                     }
                     mediaPlayer.setOnCompletionListener {
                         binding.playButton.setImageResource(R.drawable.ic_play)
                         binding.waveformSeekBar.progress = 0f
-                        binding.timeVoiceTextView.text = formatTime(duration.toLong())
+                        binding.timeVoiceTextView.text = messageViewModel.formatTime(duration.toLong())
                         isPlaying = false
                         handler.removeCallbacks(updateSeekBarRunnable)
                     }
@@ -883,15 +882,14 @@ class MessageAdapter(
                     val duration = mediaPlayer.duration
                     binding.waveformSeekBar.setSampleFrom(file)
                     binding.waveformSeekBar.maxProgress = duration.toFloat()
-                    binding.timeVoiceTextView.text = formatTime(duration.toLong())
+                    binding.timeVoiceTextView.text = messageViewModel.formatTime(duration.toLong())
 
                     val updateSeekBarRunnable = object : Runnable {
                         override fun run() {
                             if (isPlaying && mediaPlayer.isPlaying) {
                                 val currentPosition = mediaPlayer.currentPosition.toFloat()
                                 binding.waveformSeekBar.progress = currentPosition
-                                binding.timeVoiceTextView.text =
-                                    formatTime(currentPosition.toLong())
+                                binding.timeVoiceTextView.text = messageViewModel.formatTime(currentPosition.toLong())
                                 handler.postDelayed(this, 100)
                             }
                         }
@@ -914,14 +912,14 @@ class MessageAdapter(
                         override fun onProgressChanged(waveformSeekBar: WaveformSeekBar, progress: Float, fromUser: Boolean) {
                             if (fromUser) {
                                 mediaPlayer.seekTo(progress.toInt())
-                                binding.timeVoiceTextView.text = formatTime(progress.toLong())
+                                binding.timeVoiceTextView.text = messageViewModel.formatTime(progress.toLong())
                             }
                         }
                     }
                     mediaPlayer.setOnCompletionListener {
                         binding.playButton.setImageResource(R.drawable.ic_play)
                         binding.waveformSeekBar.progress = 0f
-                        binding.timeVoiceTextView.text = formatTime(duration.toLong())
+                        binding.timeVoiceTextView.text = messageViewModel.formatTime(duration.toLong())
                         isPlaying = false
                         handler.removeCallbacks(updateSeekBarRunnable)
                     }
@@ -979,13 +977,6 @@ class MessageAdapter(
         }
     }
 
-    @SuppressLint("DefaultLocale")
-    private fun formatTime(milliseconds: Long): String {
-        val minutes = TimeUnit.MILLISECONDS.toMinutes(milliseconds)
-        val seconds = TimeUnit.MILLISECONDS.toSeconds(milliseconds) % 60
-        return String.format("%02d:%02d", minutes, seconds)
-    }
-
     inner class MessagesViewHolderFileReceiver(private val binding: ItemFileReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         fun clearAnswerLayout() {
             binding.answerLayout.root.visibility = View.GONE
@@ -1021,9 +1012,8 @@ class MessageAdapter(
                 if (file.exists()) {
                     if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.file!!, file.readBytes())
                     withContext(Dispatchers.Main) {
-                        // костыль чтобы отображалось корректное имя файла
-                        binding.fileNameReceiverTextView.text = message.voice
-                        binding.fileSizeTextView.text = formatFileSize(file.length())
+                        binding.fileNameReceiverTextView.text = file.name
+                        binding.fileSizeTextView.text = messageViewModel.formatFileSize(file.length())
                         binding.fileButton.setOnClickListener {
                             try {
                                 val uri: Uri = FileProvider.getUriForFile(context, context.applicationContext.packageName + ".provider", file)
@@ -1128,9 +1118,8 @@ class MessageAdapter(
                     if (file.exists()) {
                         if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.file!!, file.readBytes())
                         withContext(Dispatchers.Main) {
-                            // костыль чтобы отображалось корректное имя файла
-                            binding.fileNameSenderTextView.text = message.voice
-                            binding.fileSizeTextView.text = formatFileSize(file.length())
+                            binding.fileNameSenderTextView.text = file.name
+                            binding.fileSizeTextView.text = messageViewModel.formatFileSize(file.length())
                             binding.fileButton.setOnClickListener {
                                 try {
                                     val uri: Uri = FileProvider.getUriForFile(context, context.applicationContext.packageName + ".provider", file)
@@ -1199,18 +1188,6 @@ class MessageAdapter(
             }
         }
     }
-
-    @SuppressLint("DefaultLocale")
-    private fun formatFileSize(size: Long): String {
-        val kb = 1024.0
-        val mb = kb * 1024
-        return when {
-            size < kb -> "$size B"
-            size < mb -> "${(size / kb).toInt()} KB"
-            else -> String.format("%.2f MB", size / mb)
-        }
-    }
-
     inner class MessagesViewHolderTextImageReceiver(private val binding: ItemTextImageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         private var filePath: String = ""
         fun clearAnswerLayout() {

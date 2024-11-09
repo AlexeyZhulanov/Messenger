@@ -9,6 +9,7 @@ import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -92,6 +93,11 @@ class DialogInfoFragment(
                 binding.dialogInfoLayout.background = ContextCompat.getDrawable(requireContext(), resId)
         }
         val filePickerManager = FilePickerManager(null, null, this)
+        val typedValue = TypedValue()
+        context?.theme?.resolveAttribute(android.R.attr.colorAccent, typedValue, true)
+        val colorAccent = typedValue.data
+        context?.theme?.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
+        val colorPrimary = typedValue.data
         uiScope.launch {
             val avatar = dialog.otherUser.avatar ?: ""
             if (avatar != "") {
@@ -161,16 +167,44 @@ class DialogInfoFragment(
             }
         }
         binding.loadButton.setOnClickListener {
-            // at first -> get list medias
-            loadMoreMediaItems(0, currentPage) //todo change type
+            loadMoreMediaItems(selectedType, currentPage)
+        }
+        binding.buttonMedia.setOnClickListener {
+            if(selectedType != MediaItem.TYPE_MEDIA) {
+                binding.buttonMedia.setTextColor(colorAccent)
+                binding.buttonFiles.setTextColor(colorPrimary)
+                binding.buttonAudio.setTextColor(colorPrimary)
+                selectedType = 0
+                currentPage = 0
+                loadMoreMediaItems(0, 0)
+            }
+        }
+        binding.buttonFiles.setOnClickListener {
+            if(selectedType != MediaItem.TYPE_FILE) {
+                binding.buttonMedia.setTextColor(colorPrimary)
+                binding.buttonFiles.setTextColor(colorAccent)
+                binding.buttonAudio.setTextColor(colorPrimary)
+                selectedType = 1
+                currentPage = 0
+                loadMoreMediaItems(1, 0)
+            }
+        }
+        binding.buttonAudio.setOnClickListener {
+            if(selectedType != MediaItem.TYPE_AUDIO) {
+                binding.buttonMedia.setTextColor(colorPrimary)
+                binding.buttonFiles.setTextColor(colorPrimary)
+                binding.buttonAudio.setTextColor(colorAccent)
+                selectedType = 2
+                currentPage = 0
+                loadMoreMediaItems(2, 0)
+            }
         }
         val displayMetrics = context?.resources?.displayMetrics
         val imageSize: Int
         val spacing = 3
-        imageSize =
-            if(displayMetrics != null) (displayMetrics.widthPixels - spacing * 4) / 3 else 100
+        imageSize = if(displayMetrics != null) (displayMetrics.widthPixels - spacing * 4) / 3 else 100
         adapter = DialogInfoAdapter(requireContext(), imageSize, messageViewModel, object: DialogActionListener {
-            override fun onItemClicked(position: Int, filename: String, localMedias: ArrayList<LocalMedia>) {
+            override fun onItemClicked(position: Int, localMedias: ArrayList<LocalMedia>) {
                 PictureSelector.create(requireActivity())
                     .openPreview()
                     .setImageEngine(GlideEngine.createGlideEngine())
@@ -189,9 +223,9 @@ class DialogInfoFragment(
                         }
                     })
                     .setInjectActivityPreviewFragment {
-                        CustomPreviewFragment.newInstance(messageViewModel, filename)
+                        CustomPreviewFragment.newInstance(messageViewModel)
                     }
-                    .startActivityPreview(position, false, localMedias) // todo change position and get full list
+                    .startActivityPreview(position, false, localMedias)
             }
         })
         binding.recyclerview.adapter = adapter
@@ -226,22 +260,50 @@ class DialogInfoFragment(
 
     private fun loadMoreMediaItems(type: Int, page: Int) {
         val context = requireContext()
-        uiScope.launch {
-            val list = messageViewModel.getMediaPreviews(page)
-            if(!list.isNullOrEmpty()) {
-                val items = async(Dispatchers.IO) {
-                    val tmp = mutableListOf<String>()
-                    list.forEach {
-                        tmp.add(messageViewModel.getPreview(context, it))
+        when(type) {
+            MediaItem.TYPE_MEDIA -> {
+                uiScope.launch {
+                    val list = messageViewModel.getMediaPreviews(page)
+                    if(!list.isNullOrEmpty()) {
+                        val items = async(Dispatchers.IO) {
+                            val tmp = mutableListOf<String>()
+                            list.forEach {
+                                tmp.add(messageViewModel.getPreview(context, it))
+                            }
+                            return@async tmp
+                        }
+                        adapter.setMediaItems(items.await().map { MediaItem(type, it) })
+                        binding.loadButton.visibility = View.GONE
+                    } else {
+                        Toast.makeText(requireContext(), "Медиа файлов нет", Toast.LENGTH_SHORT).show()
                     }
-                    return@async tmp
+                    currentPage++
                 }
-                adapter.setMediaItems(items.await().map { MediaItem(type, it) })
-                binding.loadButton.visibility = View.GONE
-            } else {
-                Toast.makeText(requireContext(), "Медиа файлов нет", Toast.LENGTH_SHORT).show()
             }
-            currentPage++
+            MediaItem.TYPE_FILE -> {
+                uiScope.launch {
+                    val list = messageViewModel.getFiles(page)
+                    if(!list.isNullOrEmpty()) {
+                        adapter.setMediaItems(list.map { MediaItem(type, it) })
+                    } else {
+                        Toast.makeText(requireContext(), "Файлов нет", Toast.LENGTH_SHORT).show()
+                    }
+                    currentPage++
+                    binding.loadButton.visibility = View.GONE
+                }
+            }
+            MediaItem.TYPE_AUDIO -> {
+                uiScope.launch {
+                    val list = messageViewModel.getAudios(page)
+                    if(!list.isNullOrEmpty()) {
+                        adapter.setMediaItems(list.map { MediaItem(type, it) })
+                    } else {
+                        Toast.makeText(requireContext(), "Голосовых нет", Toast.LENGTH_SHORT).show()
+                    }
+                    currentPage++
+                    binding.loadButton.visibility = View.GONE
+                }
+            }
         }
     }
 

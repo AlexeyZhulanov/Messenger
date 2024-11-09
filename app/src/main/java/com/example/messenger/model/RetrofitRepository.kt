@@ -111,9 +111,9 @@ interface RetrofitRepository {
 
     suspend fun getMedias(dialogId: Int, page: Int) : List<String>?
 
-    suspend fun getFiles(dialogId: Int, page: Int) : List<String>
+    suspend fun getFiles(dialogId: Int, page: Int) : List<String>?
 
-    suspend fun getAudios(dialogId: Int, page: Int) : List<String>
+    suspend fun getAudios(dialogId: Int, page: Int) : List<String>?
 
     suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String) : String
 }

@@ -4,11 +4,13 @@ import android.graphics.Bitmap;
 import android.graphics.PointF;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.CustomTarget;
@@ -28,24 +30,23 @@ import com.luck.picture.lib.utils.MediaUtils;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CustomPreviewImageHolder extends BasePreviewHolder {
     private final MessageViewModel messageViewModel;
-    private final String filename;
-    private final SubsamplingScaleImageView subsamplingScaleImageView;
+    public SubsamplingScaleImageView subsamplingScaleImageView;
     private final ImageView coverImageView;
     private final StyledPlayerView videoPlayerView;
     private ExoPlayer exoPlayer;
     private boolean isOriginalLoaded = false;
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-    public CustomPreviewImageHolder(@NonNull View itemView, MessageViewModel messageViewModel, String filename) {
+    public CustomPreviewImageHolder(@NonNull View itemView, MessageViewModel messageViewModel) {
         super(itemView);
         this.messageViewModel = messageViewModel;
-        this.filename = filename;
         subsamplingScaleImageView = itemView.findViewById(R.id.big_preview_image);
         coverImageView = itemView.findViewById(R.id.preview_image);
         videoPlayerView = itemView.findViewById(R.id.video_player_view);
@@ -56,10 +57,23 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
 
     @Override
     protected void loadImage(LocalMedia media, int maxWidth, int maxHeight) {
-        if (isVideoFile(filename)) {
-            loadVideoFromFile(media);
+        resetViewHolder();
+        String currentFilename = messageViewModel.parseOriginalFilename(media.getAvailablePath());
+        Log.d("testInfoAdapter", "path: " + media.getAvailablePath() + " current: " + currentFilename);
+        if (isVideoFile(currentFilename)) {
+            loadVideoFromFile(media, currentFilename);
         } else {
-            loadImageFromFile(media);
+            loadImageFromFile(media, currentFilename);
+        }
+    }
+
+    private void resetViewHolder() {
+        // Сбрасываем состояние оригинальной загрузки для каждого нового элемента
+        isOriginalLoaded = false;
+        subsamplingScaleImageView.recycle(); // Сбрасываем состояние ImageView
+        if (exoPlayer != null) {
+            exoPlayer.stop();
+            exoPlayer.clearMediaItems();
         }
     }
 
@@ -77,7 +91,7 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
         return false;
     }
 
-    private void loadImageFromFile(LocalMedia media) {
+    private void loadImageFromFile(LocalMedia media, String filename) {
         Glide.with(itemView.getContext())
                 .asBitmap()
                 .load(media.getAvailablePath())
@@ -85,7 +99,7 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
                     @Override
                     public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
                         displayImage(resource);
-                        loadOriginalImage();
+                        loadOriginalImage(filename);
                     }
 
                     @Override
@@ -96,7 +110,7 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
                 });
     }
 
-    private void loadVideoFromFile(LocalMedia media) {
+    private void loadVideoFromFile(LocalMedia media, String filename) {
         Glide.with(itemView.getContext())
                 .asBitmap()
                 .load(media.getAvailablePath())
@@ -104,7 +118,7 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
                     @Override
                     public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
                         displayImage(resource);
-                        loadVideo();
+                        loadVideo(filename);
                     }
 
                     @Override
@@ -115,7 +129,7 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
                 });
     }
 
-    private void loadVideo() {
+    private void loadVideo(String filename) {
         if (isOriginalLoaded) return;
         AtomicBoolean flagExist = new AtomicBoolean(true);
 
@@ -124,8 +138,12 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
             if(messageViewModel.fManagerIsExistJava(filename)) {
                 path = messageViewModel.fManagerGetFilePathJava(filename);
             } else {
-                path = messageViewModel.downloadFileJava(itemView.getContext(), "photos", filename);
-                flagExist.set(false);
+                try {
+                    path = messageViewModel.downloadFileJava(itemView.getContext(), "photos", filename);
+                    flagExist.set(false);
+                } catch (Exception e) {
+                    return;
+                }
             }
 
             File originalFile = new File(path);
@@ -169,7 +187,7 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
         return Files.readAllBytes(file.toPath());
     }
 
-    private void loadOriginalImage() {
+    private void loadOriginalImage(String filename) {
         if (isOriginalLoaded) return;
         AtomicBoolean flagExist = new AtomicBoolean(true);
 
@@ -178,8 +196,12 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
             if(messageViewModel.fManagerIsExistJava(filename)) {
                 path = messageViewModel.fManagerGetFilePathJava(filename);
             } else {
-                path = messageViewModel.downloadFileJava(itemView.getContext(), "photos", filename);
-                flagExist.set(false);
+                try {
+                    path = messageViewModel.downloadFileJava(itemView.getContext(), "photos", filename);
+                    flagExist.set(false);
+                } catch (Exception e) {
+                    return;
+                }
             }
 
             File originalFile = new File(path);
@@ -188,7 +210,7 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
                 if (!flagExist.get()) {
                     try {
                         messageViewModel.fManagerSaveFileJava(filename, readFileToBytes(originalFile));
-                        messageViewModel.addTempFile(filename);
+                        messageViewModel.addTempFile(path);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }

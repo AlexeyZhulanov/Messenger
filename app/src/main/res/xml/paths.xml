@@ -4,7 +4,21 @@
         name="internal_files"
         path="files/" />
 
+    <external-files-path
+        name="conversations"
+        path="." />
+    
     <cache-path
         name="cache_files"
         path="." />
+
+    <external-cache-path
+        name="external_cache"
+        path="." />
+
+    <external-path
+        name="external"
+        path="." />
+
+    <root-path name="root" path="." />
 </paths>

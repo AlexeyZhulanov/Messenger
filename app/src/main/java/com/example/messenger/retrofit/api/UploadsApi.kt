@@ -58,12 +58,12 @@ interface UploadsApi {
     @GET("files/{dialog_id}/file/{page}")
     suspend fun getFiles(
         @Path("dialog_id") dialogId: Int,
-        @Path("page") page: Int) : List<UploadResponseEntity>
+        @Path("page") page: Int) : UploadPreviewResponseEntity?
 
     @GET("files/{dialog_id}/audio/{page}")
     suspend fun getAudios(
         @Path("dialog_id") dialogId: Int,
-        @Path("page") page: Int) : List<UploadResponseEntity>
+        @Path("page") page: Int) : UploadPreviewResponseEntity?
 
     @GET("media/preview/{dialog_id}/{filename}")
     suspend fun getMediaPreview(

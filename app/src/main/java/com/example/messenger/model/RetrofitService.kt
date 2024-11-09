@@ -761,7 +761,7 @@ class RetrofitService(
         return@withContext files
     }
 
-    override suspend fun getFiles(dialogId: Int, page: Int): List<String> = withContext(Dispatchers.IO) {
+    override suspend fun getFiles(dialogId: Int, page: Int): List<String>? = withContext(Dispatchers.IO) {
         val files = try {
             uploadSource.getFiles(dialogId, page)
         } catch (e: BackendException) {
@@ -774,7 +774,7 @@ class RetrofitService(
         return@withContext files
     }
 
-    override suspend fun getAudios(dialogId: Int, page: Int): List<String> = withContext(Dispatchers.IO) {
+    override suspend fun getAudios(dialogId: Int, page: Int): List<String>? = withContext(Dispatchers.IO) {
         val files = try {
             uploadSource.getAudios(dialogId, page)
         } catch (e: BackendException) {

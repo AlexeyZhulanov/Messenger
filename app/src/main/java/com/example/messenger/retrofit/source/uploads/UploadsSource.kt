@@ -23,7 +23,7 @@ interface UploadsSource {
 
     suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String) : String
 
-    suspend fun getFiles(dialogId: Int, page: Int) : List<String>
+    suspend fun getFiles(dialogId: Int, page: Int) : List<String>?
 
-    suspend fun getAudios(dialogId: Int, page: Int) : List<String>
+    suspend fun getAudios(dialogId: Int, page: Int) : List<String>?
 }

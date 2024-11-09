@@ -6,20 +6,19 @@ import com.luck.picture.lib.PictureSelectorPreviewFragment
 import com.luck.picture.lib.adapter.PicturePreviewAdapter
 
 class CustomPreviewFragment(
-    private val messageViewModel: MessageViewModel,
-    private val filename: String
+    private val messageViewModel: MessageViewModel
 ) : PictureSelectorPreviewFragment() {
     override fun getFragmentTag(): String {
         return CustomPreviewFragment::class.java.simpleName
     }
 
     override fun createAdapter(): PicturePreviewAdapter {
-        return CustomPreviewAdapter(messageViewModel, filename)
+        return CustomPreviewAdapter(messageViewModel)
     }
 
     companion object {
-        fun newInstance(messageViewModel: MessageViewModel, filename: String): CustomPreviewFragment {
-            val fragment = CustomPreviewFragment(messageViewModel, filename)
+        fun newInstance(messageViewModel: MessageViewModel): CustomPreviewFragment {
+            val fragment = CustomPreviewFragment(messageViewModel)
             fragment.arguments = Bundle()
             return fragment
         }

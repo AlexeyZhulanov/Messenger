@@ -59,6 +59,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.abs
 
@@ -605,11 +606,11 @@ class MessageViewModel @Inject constructor(
         return@withContext retrofitService.getMedias(dialogId, page)
     }
 
-    suspend fun getFiles(page: Int): List<String> = withContext(Dispatchers.IO) {
+    suspend fun getFiles(page: Int): List<String>? = withContext(Dispatchers.IO) {
         return@withContext retrofitService.getFiles(dialogId, page)
     }
 
-    suspend fun getAudios(page: Int): List<String> = withContext(Dispatchers.IO) {
+    suspend fun getAudios(page: Int): List<String>? = withContext(Dispatchers.IO) {
         return@withContext retrofitService.getAudios(dialogId, page)
     }
 
@@ -617,23 +618,31 @@ class MessageViewModel @Inject constructor(
         return@withContext retrofitService.getMediaPreview(context, dialogId, filename)
     }
 
-    fun parsePreviewFilename(filepath: String): Pair<String, String?> {
+    fun parseOriginalFilename(filepath: String): String {
         val filename = File(filepath).name
-        // Проверяем, содержит ли название файла продолжительность и формат в формате "30s:mp4"
         val regex = Regex("(.*)_([0-9]+)s:([a-zA-Z0-9]+)\\.jpg$")
         val matchResult = regex.find(filename)
 
         return if (matchResult != null) {
-            val originalName = "${matchResult.groupValues[1]}.${matchResult.groupValues[3]}"
-            val durationInSeconds = matchResult.groupValues[2].toInt()
-
-            // Форматируем продолжительность в "mm:ss"
-            val durationFormatted = formatDuration(durationInSeconds)
-            originalName to durationFormatted
+            "${matchResult.groupValues[1]}.${matchResult.groupValues[3]}"
         } else {
-            filename to null  // Для фото продолжительности нет, возвращаем без изменений
+            filename
         }
     }
+
+    fun parseDuration(filepath: String): String? {
+        val filename = File(filepath).name
+        val regex = Regex("(.*)_([0-9]+)s:([a-zA-Z0-9]+)\\.jpg$")
+        val matchResult = regex.find(filename)
+
+        return if (matchResult != null) {
+            val durationInSeconds = matchResult.groupValues[2].toInt()
+            formatDuration(durationInSeconds)
+        } else {
+            null
+        }
+    }
+
     private fun formatDuration(durationInSeconds: Int): String {
         val minutes = durationInSeconds / 60
         val seconds = durationInSeconds % 60
@@ -684,6 +693,22 @@ class MessageViewModel @Inject constructor(
         } finally {
             retriever.release()
         }
+    }
+
+    fun formatFileSize(size: Long): String {
+        val kb = 1024.0
+        val mb = kb * 1024
+        return when {
+            size < kb -> "$size B"
+            size < mb -> "${(size / kb).toInt()} KB"
+            else -> String.format(Locale.ROOT, "%.2f MB", size / mb)
+        }
+    }
+
+    fun formatTime(milliseconds: Long): String {
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(milliseconds)
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(milliseconds) % 60
+        return String.format(Locale.ROOT,"%02d:%02d", minutes, seconds)
     }
 
     fun addTempFile(filename: String) = tempFiles.add(filename)

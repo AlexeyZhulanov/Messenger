@@ -139,13 +139,13 @@ class RetrofitUploadsSource(
         }
     }
 
-    override suspend fun getFiles(dialogId: Int, page: Int): List<String> = wrapRetrofitExceptions {
+    override suspend fun getFiles(dialogId: Int, page: Int): List<String>? = wrapRetrofitExceptions {
         val response = uploadsApi.getFiles(dialogId, page)
-        return@wrapRetrofitExceptions response.map { it.filename }
+        return@wrapRetrofitExceptions response?.filename
     }
 
-    override suspend fun getAudios(dialogId: Int, page: Int): List<String> = wrapRetrofitExceptions {
+    override suspend fun getAudios(dialogId: Int, page: Int): List<String>? = wrapRetrofitExceptions {
         val response = uploadsApi.getAudios(dialogId, page)
-        return@wrapRetrofitExceptions response.map { it.filename }
+        return@wrapRetrofitExceptions response?.filename
     }
 }
