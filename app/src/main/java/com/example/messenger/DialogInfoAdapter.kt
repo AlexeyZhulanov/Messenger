@@ -2,7 +2,6 @@ package com.example.messenger
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Log
 import android.view.LayoutInflater
@@ -15,13 +14,11 @@ import com.example.messenger.databinding.ItemFileBinding
 import com.example.messenger.databinding.ItemMediaBinding
 import com.example.messenger.databinding.ItemVoiceBinding
 import com.example.messenger.model.MediaItem
-import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import java.io.File
-import java.util.Locale
 
 interface DialogActionListener {
-    fun onItemClicked(position: Int, filename: String, localMedia: LocalMedia)
+    fun onItemClicked(position: Int, filename: String, localMedias: ArrayList<LocalMedia>)
 }
 
 class DialogInfoAdapter(
@@ -31,10 +28,18 @@ class DialogInfoAdapter(
     private val actionListener: DialogActionListener
 ): RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private val mediaItems = mutableListOf<MediaItem>()
+    private val localMedias = arrayListOf<LocalMedia>()
 
     @SuppressLint("NotifyDataSetChanged")
     fun setMediaItems(items: List<MediaItem>) {
+        localMedias.clear()
+        mediaItems.clear()
         mediaItems.addAll(items)
+        if(items[0].type == 0) {
+            items.forEach {
+                localMedias.add(messageViewModel.fileToLocalMedia(File(it.content)))
+            }
+        }
         notifyDataSetChanged()
     }
 
@@ -86,7 +91,7 @@ class DialogInfoAdapter(
                     binding.tvDuration.visibility = View.VISIBLE
                 }
                 binding.photoImageView.setOnClickListener {
-                    actionListener.onItemClicked(position, originalFilename, messageViewModel.fileToLocalMedia(file))
+                    actionListener.onItemClicked(position, originalFilename, ArrayList(localMedias))
                 }
             } else {
                 binding.icError.visibility = View.VISIBLE

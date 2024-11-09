@@ -170,7 +170,7 @@ class DialogInfoFragment(
         imageSize =
             if(displayMetrics != null) (displayMetrics.widthPixels - spacing * 4) / 3 else 100
         adapter = DialogInfoAdapter(requireContext(), imageSize, messageViewModel, object: DialogActionListener {
-            override fun onItemClicked(position: Int, filename: String, localMedia: LocalMedia) {
+            override fun onItemClicked(position: Int, filename: String, localMedias: ArrayList<LocalMedia>) {
                 PictureSelector.create(requireActivity())
                     .openPreview()
                     .setImageEngine(GlideEngine.createGlideEngine())
@@ -191,7 +191,7 @@ class DialogInfoFragment(
                     .setInjectActivityPreviewFragment {
                         CustomPreviewFragment.newInstance(messageViewModel, filename)
                     }
-                    .startActivityPreview(0, false, arrayListOf(localMedia)) // todo change position and get full list
+                    .startActivityPreview(position, false, localMedias) // todo change position and get full list
             }
         })
         binding.recyclerview.adapter = adapter
