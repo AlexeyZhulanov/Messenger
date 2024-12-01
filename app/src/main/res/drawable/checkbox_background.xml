@@ -3,7 +3,7 @@
     <!-- Checked state -->
     <item android:state_checked="true">
         <shape android:shape="oval">
-            <solid android:color="@color/colorAccent"/> <!-- Цвет фона для отмеченного состояния -->
+            <solid android:color="?attr/colorAccent"/> <!-- Цвет фона для отмеченного состояния -->
             <size android:width="24dp" android:height="24dp"/> <!-- Размер круга -->
         </shape>
     </item>
@@ -12,7 +12,7 @@
         <shape android:shape="oval">
             <solid android:color="@android:color/white"/> <!-- Цвет фона для неотмеченного состояния -->
             <size android:width="24dp" android:height="24dp"/> <!-- Размер круга -->
-            <stroke android:width="2dp" android:color="@color/colorPrimary"/> <!-- Рамка для неотмеченного состояния -->
+            <stroke android:width="2dp" android:color="?attr/colorPrimary"/> <!-- Рамка для неотмеченного состояния -->
         </shape>
     </item>
 </selector>
