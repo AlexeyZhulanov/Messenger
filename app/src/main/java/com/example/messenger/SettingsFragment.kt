@@ -111,10 +111,10 @@ class SettingsFragment : Fragment() {
                     fileUpdate = file
                     if (!second) viewModel.fManagerSaveFile(avatar, file.readBytes())
                     val uri = Uri.fromFile(file)
+                    binding.photoImageView.imageTintList = null
                     Glide.with(requireContext())
                         .load(uri)
                         .apply(RequestOptions.circleCropTransform())
-                        .placeholder(R.color.app_color_f6)
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
                         .into(binding.photoImageView)
                     binding.progressBar.visibility = View.GONE

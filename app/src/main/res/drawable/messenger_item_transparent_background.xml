@@ -8,9 +8,9 @@
         android:topRightRadius="5dp" />
     <stroke
         android:width="0.2dp"
-        android:color="?attr/colorPrimary" />
+        android:color="@color/colorTransparent2" />
     <solid
-        android:color="@color/colorDefault2" />
+        android:color="@color/colorTransparent" />
 
 
 </shape>

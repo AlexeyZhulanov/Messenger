@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="colorDefault">#000000</color>
-    <color name="colorBar">#ffffff</color>
-    <color name="colorPrimary">#2980B9</color>
+    <color name="colorDefault2">#F2F2F2</color>
+    <color name="colorBar">#F2F2F2</color>
+    <color name="colorPrimary">#529BEA</color>
     <color name="colorPrimaryDark">#000000</color>
-    <color name="colorAccent">#BDC3C7</color>
+    <color name="colorAccent">#808080</color>
+    <!-- <color name="colorMessageSenderBack">#E1FFC7</color> -->
+    <color name="colorMessageSenderBack">#E7F0F9</color>
+    <color name="colorMessageReceiverBack">#A6CAF0</color>"
+    <color name="colorTransparent">#CCFFFFFF</color>
+    <color name="colorTransparent2">#CCFFFFFF</color>
+    <color name="colorDayNightAttr">@color/colorPrimary</color>
+    <color name="colorDayNightAttrReversed">@color/colorPrimaryDark</color>
+    <color name="colorDayNightAttr2">@color/colorPrimary</color>
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>

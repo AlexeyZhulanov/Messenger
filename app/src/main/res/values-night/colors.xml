@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorDefault">#ffffff</color>
+    <color name="colorDefault">#FFFFFF</color>
+    <color name="colorDefault2">#000000</color>
     <color name="colorBar">#333333</color>
-    <color name="colorPrimary">#27AE60</color>
-    <color name="colorAccent">#F1C40F</color>
+    <color name="colorPrimary">#71BC78</color>
+    <color name="colorPrimaryDark">#ffffff</color>
+    <color name="colorAccent">#A0A0A4</color>
+    <color name="colorMessageSenderBack">#00693E</color>
+    <color name="colorMessageReceiverBack">#333333</color>"
+    <color name="colorTransparent">#60000000</color>
+    <color name="colorTransparent2">#30000000</color>
+    <color name="colorDayNightAttr">@color/colorPrimaryDark</color>
+    <color name="colorDayNightAttrReversed">@color/colorPrimary</color>
+    <color name="colorDayNightAttr2">@color/colorAccent</color>
     <color name="color1_main">#1ABC9C</color>
     <color name="color1_secondary">#3498DB</color>"
     <color name="color2_main">#2ECC71</color>

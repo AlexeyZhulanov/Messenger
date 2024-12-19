@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/settings_layout"
     android:layout_width="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:fitsSystemWindows="true"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
 
     <ImageView
         android:id="@+id/photoImageView"
@@ -15,162 +15,163 @@
         android:layout_marginTop="6dp"
         android:src="@drawable/ic_user_avatar"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="?attr/colorPrimaryDark"
+         />
 
     <ImageView
         android:id="@+id/errorImageView"
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:src="@drawable/ic_error"
-        app:tint="?attr/colorError"
         android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/photoImageView"
+        app:layout_constraintEnd_toEndOf="@id/photoImageView"
         app:layout_constraintStart_toStartOf="@id/photoImageView"
         app:layout_constraintTop_toTopOf="@id/photoImageView"
-        app:layout_constraintBottom_toBottomOf="@id/photoImageView"
-        app:layout_constraintEnd_toEndOf="@id/photoImageView" />
+        app:tint="?attr/colorError" />
 
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintStart_toStartOf="@id/photoImageView"
-        app:layout_constraintEnd_toEndOf="@id/photoImageView"
-        app:layout_constraintTop_toTopOf="@id/photoImageView"
-        app:layout_constraintBottom_toBottomOf="@id/photoImageView"
         android:visibility="gone"
-        />
+        app:layout_constraintBottom_toBottomOf="@id/photoImageView"
+        app:layout_constraintEnd_toEndOf="@id/photoImageView"
+        app:layout_constraintStart_toStartOf="@id/photoImageView"
+        app:layout_constraintTop_toTopOf="@id/photoImageView" />
 
     <ImageView
         android:id="@+id/edit_photo_button"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        android:src="@drawable/ic_add_photo"
-        app:tint="?attr/colorPrimary"
         android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_add_photo"
         app:layout_constraintBottom_toBottomOf="@id/photoImageView"
-        app:layout_constraintEnd_toEndOf="@id/photoImageView"/>
+        app:layout_constraintEnd_toEndOf="@id/photoImageView"
+        app:tint="?attr/colorPrimary" />
 
     <TextView
         android:id="@+id/usernameTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        tools:text="Алексей"
-        android:textColor="?attr/colorAccent"
-        android:layout_marginTop="23dp"
         android:layout_marginStart="10dp"
+        android:layout_marginTop="23dp"
         android:fontFamily="casual"
         android:gravity="start"
+        android:textColor="?attr/colorPrimaryDark"
         android:textSize="24sp"
         android:textStyle="bold|italic"
+        app:layout_constraintStart_toEndOf="@id/photoImageView"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toEndOf="@id/photoImageView" />
+        tools:text="Алексей" />
 
     <ImageView
         android:id="@+id/edit_username_button"
         android:layout_width="25dp"
         android:layout_height="25dp"
-        android:src="@drawable/ic_edit"
-        app:tint="?attr/colorPrimary"
         android:layout_marginStart="5dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_edit"
         app:layout_constraintBottom_toBottomOf="@id/usernameTextView"
+        app:layout_constraintStart_toEndOf="@id/usernameTextView"
         app:layout_constraintTop_toTopOf="@id/usernameTextView"
-        app:layout_constraintStart_toEndOf="@id/usernameTextView"/>
+        app:tint="?attr/colorPrimary" />
 
     <TextView
         android:id="@+id/nameTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        tools:text="user123"
         android:layout_marginStart="10dp"
-        android:textColor="?attr/colorAccent"
         android:fontFamily="casual"
         android:gravity="start"
+        android:textColor="?attr/colorPrimaryDark"
         android:textSize="20sp"
         android:textStyle="bold|italic"
+        app:layout_constraintStart_toEndOf="@id/photoImageView"
         app:layout_constraintTop_toBottomOf="@id/usernameTextView"
-        app:layout_constraintStart_toEndOf="@id/photoImageView" />
+        tools:text="user123" />
 
     <ImageView
         android:id="@+id/copy_name_button"
         android:layout_width="25dp"
         android:layout_height="25dp"
-        android:src="@drawable/ic_copy"
-        app:tint="?attr/colorPrimary"
         android:layout_marginStart="5dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_copy"
         app:layout_constraintBottom_toBottomOf="@id/nameTextView"
+        app:layout_constraintStart_toEndOf="@id/nameTextView"
         app:layout_constraintTop_toTopOf="@id/nameTextView"
-        app:layout_constraintStart_toEndOf="@id/nameTextView"/>
+        app:tint="?attr/colorPrimary" />
 
     <TextView
         android:id="@+id/settings_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Настройки"
-        android:textColor="?attr/colorAccent"
         android:layout_marginTop="5dp"
+        android:autoSizeMaxTextSize="100sp"
+        android:autoSizeMinTextSize="18sp"
+        android:autoSizeStepGranularity="2sp"
+        android:autoSizeTextType="uniform"
         android:fontFamily="casual"
         android:gravity="center"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="18sp"
-        android:autoSizeMaxTextSize="100sp"
-        android:autoSizeStepGranularity="2sp"
+        android:text="Настройки"
+        android:textColor="?attr/colorAccent"
         android:textStyle="bold|italic"
-        app:layout_constraintTop_toBottomOf="@id/photoImageView"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintTop_toBottomOf="@id/photoImageView" />
 
     <Button
         android:id="@+id/change_password"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Сменить пароль"
+        android:layout_marginHorizontal="10dp"
+        android:autoSizeMaxTextSize="100sp"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeStepGranularity="2sp"
+        android:autoSizeTextType="uniform"
         android:fontFamily="casual"
         android:gravity="center"
-        android:layout_marginHorizontal="10dp"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="10sp"
-        android:autoSizeMaxTextSize="100sp"
-        android:autoSizeStepGranularity="2sp"
+        android:text="Сменить пароль"
+        android:textAllCaps="false"
+        android:textColor="?attr/colorPrimaryDark"
         android:textStyle="bold|italic"
-        android:textColor="?attr/colorAccent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/settings_text"
-        android:textAllCaps="false"/>
+        app:layout_constraintTop_toBottomOf="@id/settings_text" />
 
     <TextView
         android:id="@+id/customization_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Кастомизация"
-        android:textColor="?attr/colorAccent"
         android:layout_marginTop="5dp"
+        android:autoSizeMaxTextSize="100sp"
+        android:autoSizeMinTextSize="18sp"
+        android:autoSizeStepGranularity="2sp"
+        android:autoSizeTextType="uniform"
         android:fontFamily="casual"
         android:gravity="center"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="18sp"
-        android:autoSizeMaxTextSize="100sp"
-        android:autoSizeStepGranularity="2sp"
+        android:text="Кастомизация"
+        android:textColor="?attr/colorAccent"
         android:textStyle="bold|italic"
-        app:layout_constraintTop_toBottomOf="@id/change_password"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintTop_toBottomOf="@id/change_password" />
 
     <LinearLayout
         android:id="@+id/linear_block2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/choose_settings"
-        app:layout_constraintTop_toBottomOf="@+id/customization_text"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginStart="10dp"
-        android:layout_marginEnd="10dp"
         android:layout_marginTop="20dp"
+        android:layout_marginEnd="10dp"
+        android:background="@drawable/choose_settings"
         android:orientation="vertical"
-        >
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/customization_text">
+
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
@@ -179,52 +180,53 @@
                 android:id="@+id/wallpaper_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Обои:"
-                android:fontFamily="casual"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="10sp"
                 android:autoSizeMaxTextSize="100sp"
+                android:autoSizeMinTextSize="10sp"
                 android:autoSizeStepGranularity="2sp"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
+                android:autoSizeTextType="uniform"
+                android:fontFamily="casual"
+                android:text="Обои: "
+                android:textColor="?attr/colorAccent"
+                android:textStyle="bold|italic"
                 app:layout_constraintBottom_toBottomOf="parent"
-                android:textStyle="bold|italic"/>
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
                 android:id="@+id/wallpaper_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Classic"
-                android:textColor="?attr/colorAccent"
+                android:autoSizeMaxTextSize="100sp"
+                android:autoSizeMinTextSize="10sp"
+                android:autoSizeStepGranularity="2sp"
+                android:autoSizeTextType="uniform"
                 android:fontFamily="casual"
                 android:gravity="center"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="10sp"
-                android:autoSizeMaxTextSize="100sp"
-                android:autoSizeStepGranularity="2sp"
-                app:layout_constraintStart_toEndOf="@id/wallpaper_text"
-                app:layout_constraintTop_toTopOf="parent"
+                android:text="Classic"
+                android:textColor="?attr/colorPrimaryDark"
+                android:textStyle="bold|italic"
                 app:layout_constraintBottom_toBottomOf="parent"
-                android:textStyle="bold|italic"/>
+                app:layout_constraintStart_toEndOf="@id/wallpaper_text"
+                app:layout_constraintTop_toTopOf="parent" />
 
             <Button
                 android:id="@+id/change_wallpaper"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Сменить"
+                android:layout_marginEnd="5dp"
+                android:autoSizeMaxTextSize="100sp"
+                android:autoSizeMinTextSize="10sp"
+                android:autoSizeStepGranularity="2sp"
+                android:autoSizeTextType="uniform"
                 android:fontFamily="casual"
                 android:gravity="center"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="10sp"
-                android:autoSizeMaxTextSize="100sp"
-                android:autoSizeStepGranularity="2sp"
+                android:text="Сменить"
+                android:textAllCaps="false"
+                android:textColor="?attr/colorPrimaryDark"
                 android:textStyle="bold|italic"
-                android:textColor="?attr/colorAccent"
-                android:layout_marginEnd="5dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
-                android:textAllCaps="false"/>
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -236,52 +238,53 @@
                 android:id="@+id/colorTheme_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Тема: "
-                android:fontFamily="casual"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="10sp"
                 android:autoSizeMaxTextSize="100sp"
+                android:autoSizeMinTextSize="10sp"
                 android:autoSizeStepGranularity="2sp"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
+                android:autoSizeTextType="uniform"
+                android:fontFamily="casual"
+                android:text="Тема: "
+                android:textColor="?attr/colorAccent"
+                android:textStyle="bold|italic"
                 app:layout_constraintBottom_toBottomOf="parent"
-                android:textStyle="bold|italic"/>
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
                 android:id="@+id/colorTheme_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Classic"
-                android:textColor="?attr/colorAccent"
+                android:autoSizeMaxTextSize="100sp"
+                android:autoSizeMinTextSize="10sp"
+                android:autoSizeStepGranularity="2sp"
+                android:autoSizeTextType="uniform"
                 android:fontFamily="casual"
                 android:gravity="center"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="10sp"
-                android:autoSizeMaxTextSize="100sp"
-                android:autoSizeStepGranularity="2sp"
-                app:layout_constraintStart_toEndOf="@id/colorTheme_text"
-                app:layout_constraintTop_toTopOf="parent"
+                android:text="Classic"
+                android:textColor="?attr/colorPrimaryDark"
+                android:textStyle="bold|italic"
                 app:layout_constraintBottom_toBottomOf="parent"
-                android:textStyle="bold|italic"/>
+                app:layout_constraintStart_toEndOf="@id/colorTheme_text"
+                app:layout_constraintTop_toTopOf="parent" />
 
             <Button
                 android:id="@+id/change_colorTheme"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Сменить"
+                android:layout_marginEnd="5dp"
+                android:autoSizeMaxTextSize="100sp"
+                android:autoSizeMinTextSize="10sp"
+                android:autoSizeStepGranularity="2sp"
+                android:autoSizeTextType="uniform"
                 android:fontFamily="casual"
                 android:gravity="center"
-                android:autoSizeTextType="uniform"
-                android:autoSizeMinTextSize="10sp"
-                android:autoSizeMaxTextSize="100sp"
-                android:autoSizeStepGranularity="2sp"
+                android:text="Сменить"
+                android:textAllCaps="false"
+                android:textColor="?attr/colorPrimaryDark"
                 android:textStyle="bold|italic"
-                android:textColor="?attr/colorAccent"
-                android:layout_marginEnd="5dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
-                android:textAllCaps="false"/>
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </LinearLayout>

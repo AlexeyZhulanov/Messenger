@@ -21,7 +21,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:src="@drawable/ic_user_avatar"
-        app:tint="?attr/colorPrimary"
+        app:tint="@color/colorDayNightAttr2"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -59,7 +59,7 @@
         tools:text="Дамир"
         android:layout_marginStart="10dp"
         android:id="@+id/userNameTextView"
-        android:textColor="?attr/colorAccent"
+        android:textColor="?attr/colorPrimaryDark"
         android:fontFamily="casual"
         android:autoSizeTextType="uniform"
         android:autoSizeMinTextSize="28sp"
@@ -78,7 +78,7 @@
         tools:text="был в сети час назад"
         android:layout_marginStart="10dp"
         android:id="@+id/lastSessionTextView"
-        android:textColor="?attr/colorAccent"
+        android:textColor="?attr/colorPrimaryDark"
         android:fontFamily="casual"
         android:autoSizeTextType="uniform"
         android:autoSizeMinTextSize="16sp"
@@ -115,7 +115,7 @@
             android:layout_marginStart="10dp"
             android:id="@+id/nickWordTextView"
             android:layout_marginTop="10dp"
-            android:textColor="?attr/colorPrimary"
+            android:textColor="?attr/colorAccent"
             android:fontFamily="casual"
             android:autoSizeTextType="uniform"
             android:autoSizeMinTextSize="20sp"
@@ -133,7 +133,7 @@
             app:layout_constraintStart_toEndOf="@id/midStartGuideLine"
             tools:text="user123"
             android:layout_marginTop="10dp"
-            android:textColor="?attr/colorPrimary"
+            android:textColor="?attr/colorPrimaryDark"
             android:fontFamily="casual"
             android:textSize="20sp"
             android:padding="2dp"
@@ -144,7 +144,7 @@
             android:layout_width="wrap_content"
             android:layout_height="0dp"
             android:src="@drawable/ic_copy"
-            app:tint="?attr/colorAccent"
+            app:tint="?attr/colorPrimary"
             app:layout_constraintTop_toTopOf="@id/nickTextView"
             app:layout_constraintBottom_toBottomOf="@id/nickTextView"
             app:layout_constraintStart_toEndOf="@id/nickTextView"
@@ -161,7 +161,7 @@
             android:layout_marginStart="10dp"
             android:text="Уведомления"
             android:layout_marginTop="15dp"
-            android:textColor="?attr/colorPrimary"
+            android:textColor="?attr/colorAccent"
             android:fontFamily="casual"
             android:autoSizeTextType="uniform"
             android:autoSizeMinTextSize="20sp"
@@ -177,7 +177,8 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/notificationsTextView"
             app:layout_constraintBottom_toBottomOf="@id/notificationsTextView"
-            android:layout_height="match_parent"/>
+            android:layout_height="match_parent"
+            app:thumbTint="@color/switch_thumb_tint" />
 
         <TextView
             android:id="@+id/deleteTextView"
@@ -188,7 +189,7 @@
             android:layout_marginStart="10dp"
             android:text="Удаление чужих сообщений"
             android:layout_marginTop="15dp"
-            android:textColor="?attr/colorPrimary"
+            android:textColor="?attr/colorAccent"
             android:fontFamily="casual"
             android:autoSizeTextType="uniform"
             android:autoSizeMinTextSize="12sp"
@@ -204,7 +205,8 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/deleteTextView"
             app:layout_constraintBottom_toBottomOf="@id/deleteTextView"
-            android:layout_height="match_parent"/>
+            android:layout_height="match_parent"
+            app:thumbTint="@color/switch_thumb_tint" />
 
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/midGuideLine"
@@ -250,7 +252,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/button_files"
             app:layout_constraintHorizontal_chainStyle="spread_inside"
-            android:textColor="?attr/colorAccent"
+            android:textColor="?attr/colorPrimary"
             style="?android:attr/buttonBarButtonStyle" />
 
         <Button
@@ -267,7 +269,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/button_audio"
             app:layout_constraintStart_toEndOf="@+id/button_media"
-            android:textColor="?attr/colorPrimary"
+            android:textColor="?attr/colorAccent"
             android:text="Файлы" />
 
         <Button
@@ -285,7 +287,7 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@+id/button_files"
-            android:textColor="?attr/colorPrimary"
+            android:textColor="?attr/colorAccent"
             android:text="Голосовые" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
@@ -295,7 +297,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Загрузить изображения"
-        android:textColor="?attr/colorAccent"
+        android:textColor="?attr/colorPrimaryDark"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/buttons_layout"

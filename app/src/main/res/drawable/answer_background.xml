@@ -4,7 +4,7 @@
     <!-- Полупрозрачный светло-серый фон -->
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#FFFFFF" /> <!-- общий цвет -->
+            <solid android:color="?attr/colorPrimaryDark" /> <!-- общий цвет -->
             <corners android:radius="8dp" />
         </shape>
     </item>
@@ -12,8 +12,8 @@
     <!-- Толстая рамка слева -->
     <item android:left="6dp">
         <shape android:shape="rectangle">
-            <solid android:color="#B3D3D3D3" /> <!-- цвет внутри -->
-            <stroke android:width="1.5dp" android:color="#FF0000FF" /> <!-- Толстая синяя рамка -->
+            <solid android:color="?attr/colorAccent" /> <!-- цвет внутри -->
+            <stroke android:width="1.5dp" android:color="?attr/colorPrimary" /> <!-- Толстая рамка -->
             <corners android:radius="8dp" />
         </shape>
     </item>

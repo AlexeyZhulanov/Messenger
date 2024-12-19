@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Цвет для состояния checked -->
+    <item android:color="?attr/colorPrimary" android:state_checked="true" />
+    <!-- Цвет для состояния unchecked -->
+    <item android:color="?attr/colorAccent" android:state_checked="false" />
+</selector>

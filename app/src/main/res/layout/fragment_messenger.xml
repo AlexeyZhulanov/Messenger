@@ -18,7 +18,7 @@
         <com.google.android.material.appbar.AppBarLayout
             android:layout_width="match_parent"
             android:layout_height="250dp"
-            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+            android:theme="@style/ThemeOverlay.AppCompat.DayNight.ActionBar"
             >
             <com.google.android.material.appbar.CollapsingToolbarLayout
                 android:layout_width="match_parent"
@@ -36,8 +36,9 @@
                     android:fontFamily="casual"
                     android:padding="20dp"
                     android:gravity="center"
-                    android:textColor="?attr/colorAccent"
+                    android:textColor="?attr/colorPrimary"
                     android:text="Сообщения"
+                    android:background="@color/colorDefault2"
                     android:autoSizeTextType="uniform"
                     android:autoSizeMinTextSize="10sp"
                     android:autoSizeMaxTextSize="100sp"
@@ -49,7 +50,7 @@
                     layout="@layout/toolbar_custom"
                     android:layout_width="match_parent"
                     android:layout_height="?attr/actionBarSize"
-                    app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+                    app:popupTheme="@style/ThemeOverlay.AppCompat.DayNight"
                     app:layout_collapseMode="pin"
                     android:layout_gravity="bottom"
                     android:id="@+id/toolbar" />
@@ -99,7 +100,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/button3"
         app:layout_constraintHorizontal_chainStyle="spread_inside"
-        android:textColor="?attr/colorPrimary"
+        android:textColor="?attr/colorAccent"
         style="?android:attr/buttonBarButtonStyle" />
 
     <Button
@@ -116,7 +117,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@+id/button"
         app:layout_constraintEnd_toStartOf="@+id/button4"
-        android:textColor="?attr/colorAccent"
+        android:textColor="?attr/colorPrimary"
         android:text="Сообщения" />
 
     <Button
@@ -133,7 +134,7 @@
         app:layout_constraintTop_toBottomOf="@+id/bottomGuideLine"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@+id/button3"
-        android:textColor="?attr/colorPrimary"
+        android:textColor="?attr/colorAccent"
         android:text="Apanel" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
