@@ -13,7 +13,7 @@
         android:layout_height="match_parent"
         android:layout_marginTop="6dp"
         android:src="@drawable/ic_user_avatar"
-        app:tint="?attr/colorAccent"
+        app:tint="@color/colorDayNightAttr"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -25,7 +25,7 @@
         android:lines="1"
         android:ellipsize="end"
         tools:text="John Smith"
-        android:textColor="?attr/colorAccent"
+        android:textColor="?attr/colorPrimaryDark"
         app:layout_constraintTop_toTopOf="@id/photoImageView"
         app:layout_constraintStart_toEndOf="@id/photoImageView"
         app:layout_constraintEnd_toStartOf="@id/ic_check"/>
@@ -79,7 +79,7 @@
         android:layout_height="wrap_content"
         android:textSize="16sp"
         tools:text="19 jul"
-        android:textColor="?attr/colorPrimary"
+        android:textColor="?attr/colorAccent"
         android:layout_marginEnd="10dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="parent"
