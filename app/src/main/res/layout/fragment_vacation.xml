@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+
+    <TextView
+        android:id="@+id/vacation"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:text="Vacation"
+        android:textColor="?attr/colorPrimary"
+        android:fontFamily="casual"
+        android:gravity="center"
+        android:padding="25dp"
+        android:layout_marginTop="10dp"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="20sp"
+        android:autoSizeMaxTextSize="100sp"
+        android:autoSizeStepGranularity="2sp"
+        android:textStyle="bold|italic"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/topGuideLine"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/topGuideLine"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.25"
+        />
+
+    <TextView
+        android:id="@+id/descriptionTextView"
+        android:layout_width="0dp"
+        android:layout_height="120dp"
+        android:text="Доступ к мессенджеру запрещен, так как вы находитесь в отпуске"
+        android:textColor="?attr/colorPrimaryDark"
+        android:fontFamily="casual"
+        android:gravity="center"
+        android:padding="25dp"
+        android:layout_marginTop="-30dp"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="15sp"
+        android:autoSizeMaxTextSize="100sp"
+        android:autoSizeStepGranularity="2sp"
+        android:textStyle="bold|italic"
+        app:layout_constraintTop_toBottomOf="@id/topGuideLine"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/info_layout"
+        android:layout_width="0dp"
+        android:background="@drawable/choose_settings"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/descriptionTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/startWordTextView"
+            android:layout_width="150dp"
+            android:layout_height="40dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:text="Начало запрета: "
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="10dp"
+            android:textColor="?attr/colorAccent"
+            android:fontFamily="casual"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="14sp"
+            android:autoSizeMaxTextSize="100sp"
+            android:autoSizeStepGranularity="2sp"
+            android:padding="2dp"
+            android:textStyle="bold|italic"/>
+
+        <TextView
+            android:id="@+id/startDateTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="15:00 14.12.2024"
+            android:layout_marginTop="10dp"
+            android:layout_marginEnd="20dp"
+            android:textColor="?attr/colorPrimaryDark"
+            android:fontFamily="casual"
+            android:textSize="18sp"
+            android:padding="2dp"
+            android:textStyle="bold|italic"/>
+
+        <TextView
+            android:id="@+id/endWordTextView"
+            android:layout_width="160dp"
+            android:layout_height="40dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/startWordTextView"
+            android:text="Окончание запрета: "
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="10dp"
+            android:textColor="?attr/colorAccent"
+            android:fontFamily="casual"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="14sp"
+            android:autoSizeMaxTextSize="100sp"
+            android:autoSizeStepGranularity="2sp"
+            android:padding="2dp"
+            android:textStyle="bold|italic"/>
+
+        <TextView
+            android:id="@+id/endDateTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/startWordTextView"
+            tools:text="15:00 21.12.2024"
+            android:layout_marginTop="10dp"
+            android:layout_marginEnd="20dp"
+            android:textColor="?attr/colorPrimaryDark"
+            android:fontFamily="casual"
+            android:textSize="18sp"
+            android:padding="2dp"
+            android:textStyle="bold|italic"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

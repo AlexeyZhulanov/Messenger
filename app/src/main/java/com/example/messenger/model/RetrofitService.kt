@@ -799,4 +799,28 @@ class RetrofitService(
         }
         return@withContext preview
     }
+
+    override suspend fun getPermission(): Int = withContext(Dispatchers.IO) {
+        val permission = try {
+            usersSource.getPermission()
+        } catch (e: BackendException) {
+            when(e.code) {
+                404 -> throw UserNotFoundException(e)
+                else -> throw e
+            }
+        }
+        return@withContext permission
+    }
+
+    override suspend fun getVacation(): Pair<String, String>? = withContext(Dispatchers.IO) {
+        val vacation = try {
+            usersSource.getVacation()
+        } catch (e: BackendException) {
+            when(e.code) {
+                404 -> throw UserNotFoundException(e)
+                else -> throw e
+            }
+        }
+        return@withContext vacation
+    }
 }

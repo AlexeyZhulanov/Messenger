@@ -102,6 +102,12 @@ class MessengerFragment : Fragment() {
             if(resId != 0)
                 binding.messengerLayout.background = ContextCompat.getDrawable(requireContext(), resId)
         }
+        binding.button.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, NewsFragment(messengerViewModel), "NEWS_FRAGMENT_TAG")
+                .addToBackStack(null)
+                .commit()
+        }
         setupRecyclerView()
         return binding.root
     }
@@ -117,6 +123,13 @@ class MessengerFragment : Fragment() {
     }
 
     private fun observeViewModel() {
+        messengerViewModel.vacation.observe(viewLifecycleOwner) { vacation ->
+            if(vacation != null) {
+                parentFragmentManager.beginTransaction()
+                    .replace(R.id.fragmentContainer, VacationFragment(vacation.first, vacation.second), "VACATION_FRAGMENT_TAG")
+                    .commit()
+            }
+        }
         messengerViewModel.conversations.observe(viewLifecycleOwner) { conversations ->
             adapter.conversations = conversations
         }

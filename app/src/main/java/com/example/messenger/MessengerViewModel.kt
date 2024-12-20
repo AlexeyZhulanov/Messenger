@@ -38,8 +38,11 @@ class MessengerViewModel @Inject constructor(
     val conversations: LiveData<List<Conversation>> = _conversations
     private val _currentUser = MutableLiveData<User>()
     val currentUser: LiveData<User> = _currentUser
+    private val _vacation = MutableLiveData<Pair<String, String>?>()
+    val vacation: LiveData<Pair<String, String>?> = _vacation
 
     init {
+        fetchVacation()
         fetchCurrentUser()
         fetchConversations()
         //webSocketService.connect() временное отключение
@@ -49,6 +52,17 @@ class MessengerViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         //webSocketService.disconnect() // todo надо тестировать, не факт что здесь
+    }
+
+    private fun fetchVacation() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val pair = retrofitService.getVacation()
+                _vacation.postValue(pair)
+            } catch (e: Exception) {
+                Log.e("Connection Error", e.toString())
+            }
+        }
     }
 
     private fun fetchCurrentUser() {
@@ -97,6 +111,10 @@ class MessengerViewModel @Inject constructor(
                 // Handle exceptions
             }
         }
+    }
+
+    suspend fun getPermission() : Int = withContext(Dispatchers.IO) {
+        return@withContext retrofitService.getPermission()
     }
 
     fun createDialog(input: String) {

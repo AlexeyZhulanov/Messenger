@@ -5,7 +5,9 @@ import com.example.messenger.retrofit.entities.users.LoginResponseEntity
 import com.example.messenger.retrofit.entities.users.RegisterRequestEntity
 import com.example.messenger.retrofit.entities.ResponseEntityMessageAnswer
 import com.example.messenger.retrofit.entities.users.GetLastSessionResponseEntity
+import com.example.messenger.retrofit.entities.users.GetPermissionResponseEntity
 import com.example.messenger.retrofit.entities.users.GetUserResponseEntity
+import com.example.messenger.retrofit.entities.users.GetVacationResponseEntity
 import com.example.messenger.retrofit.entities.users.UpdatePasswordRequestEntity
 import com.example.messenger.retrofit.entities.users.UpdateProfileRequestEntity
 import retrofit2.http.Body
@@ -46,4 +48,9 @@ interface UsersApi {
         @Path("user_id") userId: Int
     ) : GetUserResponseEntity
 
+    @GET("get_vacation")
+    suspend fun getVacation() : GetVacationResponseEntity
+
+    @GET("get_permission")
+    suspend fun getPermission() : GetPermissionResponseEntity
 }

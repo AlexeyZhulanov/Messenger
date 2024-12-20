@@ -46,4 +46,12 @@ class RetrofitUsersSource(
     override suspend fun getUser(userId: Int): User = wrapRetrofitExceptions {
         usersApi.getUser(userId).toUser()
     }
+
+    override suspend fun getPermission(): Int = wrapRetrofitExceptions {
+        usersApi.getPermission().permission ?: 0
+    }
+
+    override suspend fun getVacation(): Pair<String, String>? = wrapRetrofitExceptions {
+        usersApi.getVacation().toPair()
+    }
 }

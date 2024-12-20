@@ -16,4 +16,8 @@ interface UsersSource {
     suspend fun getLastSession(userId: Int) : Long
 
     suspend fun getUser(userId: Int) : User
+
+    suspend fun getVacation() : Pair<String, String>?
+
+    suspend fun getPermission() : Int
 }

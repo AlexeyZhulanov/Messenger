@@ -116,4 +116,8 @@ interface RetrofitRepository {
     suspend fun getAudios(dialogId: Int, page: Int) : List<String>?
 
     suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String) : String
+
+    suspend fun getVacation() : Pair<String, String>?
+
+    suspend fun getPermission() : Int
 }

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="colorDefault">#000000</color>
-    <color name="colorDefault2">#F2F2F2</color>
-    <color name="colorBar">#F2F2F2</color>
+    <color name="colorDefault2">#FCFCFC</color>
+    <color name="colorBar">#FCFCFC</color>
     <color name="colorPrimary">#529BEA</color>
     <color name="colorPrimaryDark">#000000</color>
     <color name="colorAccent">#808080</color>
