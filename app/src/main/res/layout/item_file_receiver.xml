@@ -33,7 +33,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:button="@drawable/ic_flag"
-        style="@style/CustomCheckBox"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/layout_message"
         app:layout_constraintBottom_toBottomOf="@id/layout_message"

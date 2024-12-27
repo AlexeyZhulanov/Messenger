@@ -58,8 +58,8 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.1"
         android:src="@drawable/ic_trash"
-        app:tint="?attr/colorPrimary"
-        android:backgroundTint="?attr/colorAccent"
+        app:tint="?attr/colorPrimaryDark"
+        android:backgroundTint="?attr/colorPrimary"
         app:borderWidth="0dp"
         android:visibility="gone"
         />
@@ -75,8 +75,8 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.9"
         android:src="@drawable/ic_forward_floating"
-        app:tint="?attr/colorPrimary"
-        android:backgroundTint="?attr/colorAccent"
+        app:tint="?attr/colorPrimaryDark"
+        android:backgroundTint="?attr/colorPrimary"
         app:borderWidth="0dp"
         android:visibility="gone"
         />

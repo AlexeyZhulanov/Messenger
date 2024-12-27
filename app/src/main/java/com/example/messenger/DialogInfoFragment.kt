@@ -65,6 +65,8 @@ class DialogInfoFragment(
     private lateinit var adapter: DialogInfoAdapter
     private var selectedType: Int = 0
     private var currentPage: Int = 0
+    private var isCanDoPagination: Boolean = true
+    private var isPaginationAllowed: Boolean = true
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.Main + job)
 
@@ -167,36 +169,48 @@ class DialogInfoFragment(
             }
         }
         binding.loadButton.setOnClickListener {
-            loadMoreMediaItems(selectedType, currentPage)
+            loadMoreMediaItems(selectedType, currentPage) {}
         }
         binding.buttonMedia.setOnClickListener {
             if(selectedType != MediaItem.TYPE_MEDIA) {
-                binding.buttonMedia.setTextColor(colorAccent)
-                binding.buttonFiles.setTextColor(colorPrimary)
-                binding.buttonAudio.setTextColor(colorPrimary)
-                selectedType = 0
-                currentPage = 0
-                loadMoreMediaItems(0, 0)
+                loadMoreMediaItems(0, 0) { success ->
+                    if(success) {
+                        binding.buttonMedia.setTextColor(colorPrimary)
+                        binding.buttonFiles.setTextColor(colorAccent)
+                        binding.buttonAudio.setTextColor(colorAccent)
+                        selectedType = 0
+                        currentPage = 1
+                        isCanDoPagination = true
+                    }
+                }
             }
         }
         binding.buttonFiles.setOnClickListener {
             if(selectedType != MediaItem.TYPE_FILE) {
-                binding.buttonMedia.setTextColor(colorPrimary)
-                binding.buttonFiles.setTextColor(colorAccent)
-                binding.buttonAudio.setTextColor(colorPrimary)
-                selectedType = 1
-                currentPage = 0
-                loadMoreMediaItems(1, 0)
+                loadMoreMediaItems(1, 0) { success ->
+                    if(success) {
+                        binding.buttonMedia.setTextColor(colorAccent)
+                        binding.buttonFiles.setTextColor(colorPrimary)
+                        binding.buttonAudio.setTextColor(colorAccent)
+                        selectedType = 1
+                        currentPage = 1
+                        isCanDoPagination = true
+                    }
+                }
             }
         }
         binding.buttonAudio.setOnClickListener {
             if(selectedType != MediaItem.TYPE_AUDIO) {
-                binding.buttonMedia.setTextColor(colorPrimary)
-                binding.buttonFiles.setTextColor(colorPrimary)
-                binding.buttonAudio.setTextColor(colorAccent)
-                selectedType = 2
-                currentPage = 0
-                loadMoreMediaItems(2, 0)
+                loadMoreMediaItems(2, 0) { success ->
+                    if(success) {
+                        binding.buttonMedia.setTextColor(colorAccent)
+                        binding.buttonFiles.setTextColor(colorAccent)
+                        binding.buttonAudio.setTextColor(colorPrimary)
+                        selectedType = 2
+                        currentPage = 1
+                        isCanDoPagination = true
+                    }
+                }
             }
         }
         val displayMetrics = context?.resources?.displayMetrics
@@ -247,10 +261,16 @@ class DialogInfoFragment(
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
                 val layoutManager = recyclerView.layoutManager as? GridLayoutManager
-                if (layoutManager != null && layoutManager.findLastVisibleItemPosition() == adapter.itemCount - 1) {
+                if (layoutManager != null && layoutManager.findLastVisibleItemPosition() == adapter.itemCount - 1
+                    && adapter.itemCount > 5 && isCanDoPagination && isPaginationAllowed) {
+                    Log.d("testTryPagination", "page : $currentPage")
                     // Достигнут конец списка, подгружаем новые элементы
-                    //loadMoreMediaItems(0, currentPage) //todo change type
-                    return //temp
+                    loadMoreMediaItems(selectedType, currentPage) {}
+                    isPaginationAllowed = false
+                    uiScope.launch {
+                        delay(3000)
+                        isPaginationAllowed = true
+                    }
                 }
             }
         })
@@ -258,7 +278,7 @@ class DialogInfoFragment(
         return binding.root
     }
 
-    private fun loadMoreMediaItems(type: Int, page: Int) {
+    private fun loadMoreMediaItems(type: Int, page: Int, callback: (Boolean) -> Unit) {
         val context = requireContext()
         when(type) {
             MediaItem.TYPE_MEDIA -> {
@@ -272,23 +292,27 @@ class DialogInfoFragment(
                             }
                             return@async tmp
                         }
-                        adapter.setMediaItems(items.await().map { MediaItem(type, it) })
+                        adapter.addMediaItems(MediaItem.TYPE_MEDIA, items.await().map { MediaItem(type, it) })
                         binding.loadButton.visibility = View.GONE
+                        currentPage++
+                        callback(true)
                     } else {
                         Toast.makeText(requireContext(), "Медиа файлов нет", Toast.LENGTH_SHORT).show()
+                        if(currentPage == 0) callback(false) else isCanDoPagination = false
                     }
-                    currentPage++
                 }
             }
             MediaItem.TYPE_FILE -> {
                 uiScope.launch {
                     val list = messageViewModel.getFiles(page)
                     if(!list.isNullOrEmpty()) {
-                        adapter.setMediaItems(list.map { MediaItem(type, it) })
+                        adapter.addMediaItems(MediaItem.TYPE_FILE, list.map { MediaItem(type, it) })
+                        currentPage++
+                        callback(true)
                     } else {
                         Toast.makeText(requireContext(), "Файлов нет", Toast.LENGTH_SHORT).show()
+                        if(currentPage == 0) callback(false) else isCanDoPagination = false
                     }
-                    currentPage++
                     binding.loadButton.visibility = View.GONE
                 }
             }
@@ -296,11 +320,13 @@ class DialogInfoFragment(
                 uiScope.launch {
                     val list = messageViewModel.getAudios(page)
                     if(!list.isNullOrEmpty()) {
-                        adapter.setMediaItems(list.map { MediaItem(type, it) })
+                        adapter.addMediaItems(MediaItem.TYPE_AUDIO, list.map { MediaItem(type, it) })
+                        currentPage++
+                        callback(true)
                     } else {
                         Toast.makeText(requireContext(), "Голосовых нет", Toast.LENGTH_SHORT).show()
+                        if(currentPage == 0) callback(false) else isCanDoPagination = false
                     }
-                    currentPage++
                     binding.loadButton.visibility = View.GONE
                 }
             }

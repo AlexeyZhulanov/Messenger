@@ -42,16 +42,17 @@ class DialogInfoAdapter(
     private val mediaItems = mutableListOf<MediaItem>()
     private val localMedias = arrayListOf<LocalMedia>()
     private val durations = mutableListOf<String?>()
+    private var currentType: Int? = null
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.Main + job)
 
     @SuppressLint("NotifyDataSetChanged")
-    fun setMediaItems(items: List<MediaItem>) {
+    private fun setMediaItems(type: Int, items: List<MediaItem>) {
         localMedias.clear()
         mediaItems.clear()
         durations.clear()
         mediaItems.addAll(items)
-        if(items[0].type == 0) {
+        if(type == MediaItem.TYPE_MEDIA) {
             items.forEach {
                 localMedias.add(messageViewModel.fileToLocalMedia(File(it.content)))
                 messageViewModel.parseDuration(it.content).let { duration ->
@@ -59,7 +60,26 @@ class DialogInfoAdapter(
                 }
             }
         }
+        currentType = type
         notifyDataSetChanged()
+    }
+
+    fun addMediaItems(type: Int, items: List<MediaItem>) {
+        if (items.isNotEmpty() && currentType == type) {
+            val startPosition = mediaItems.size
+            mediaItems.addAll(items)
+            if (type == MediaItem.TYPE_MEDIA) {
+                items.forEach {
+                    localMedias.add(messageViewModel.fileToLocalMedia(File(it.content)))
+                    messageViewModel.parseDuration(it.content).let { duration ->
+                        durations.add(duration)
+                    }
+                }
+            }
+            notifyItemRangeInserted(startPosition, items.size)
+        } else {
+            setMediaItems(type, items)
+        }
     }
 
     override fun getItemViewType(position: Int): Int {

@@ -59,7 +59,6 @@ class ImagesAdapter(
         val chooseModel = localMedia.chooseModel
         val duration = localMedia.duration
         val path = localMedia.availablePath
-        Log.d("testBindImages", "localMedia: $localMedia")
         with(holder.binding) {
             tvDuration.visibility = if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
             if(chooseModel == SelectMimeType.ofAudio()) {

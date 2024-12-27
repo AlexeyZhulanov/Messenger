@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Rect
-import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Handler
@@ -17,9 +16,8 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
-import androidx.paging.PagingData
-import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewbinding.ViewBinding
 import com.bumptech.glide.Glide
@@ -49,8 +47,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 interface MessageActionListener {
     fun onMessageClick(message: Message, itemView: View, isSender: Boolean)
@@ -66,7 +62,7 @@ class MessageDiffCallback : DiffUtil.ItemCallback<Pair<Message, String>>() {
     }
 
     override fun areContentsTheSame(oldItem: Pair<Message, String>, newItem: Pair<Message, String>): Boolean {
-        return oldItem == newItem
+        return oldItem.first == newItem.first
     }
 }
 
@@ -75,46 +71,34 @@ class MessageAdapter(
     private val otherUserId: Int,
     private val context: Context,
     private val messageViewModel: MessageViewModel
-) : PagingDataAdapter<Pair<Message, String>, RecyclerView.ViewHolder>(MessageDiffCallback()) {
+) : ListAdapter<Pair<Message, String>, RecyclerView.ViewHolder>(MessageDiffCallback()) {
 
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
     private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
     var dialogSettings: ConversationSettings = ConversationSettings()
     private var highlightedPosition: Int? = null
-    private val newMessages: MutableList<Pair<Message, String>> = mutableListOf()
     private var widthFlag: Boolean = true
     private var maxWidth: Int = 0
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.IO + job)
     private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)
 
-    fun addNewMessages(message: Pair<Message, String>) {
-        newMessages.add(message)
-        notifyItemRangeInserted(0, 1)
+
+    fun addNewMessage(message: Pair<Message, String>) {
+        val updatedList = currentList.toMutableList()
+        updatedList.add(0, message)
+        submitList(updatedList)
     }
 
-    fun getItemCustom(idx: Int): Pair<Message, String>? {
-        return if(idx < newMessages.size) newMessages[newMessages.size - idx - 1]
-        else {
-            if(itemCount == idx && itemCount != 0) getItem(idx - 1)
-            else if(newMessages.size == 0) getItem(idx)
-            else getItem(idx - newMessages.size)
-        }
-    }
+    fun getItemNotProtected(position: Int) : Pair<Message, String> = getItem(position)
 
-    fun clearNewMessages() {
-        newMessages.clear()
-    }
-
-    override fun getItemCount(): Int {
-        return newMessages.size + super.getItemCount()
-    }
+    override fun getItemCount(): Int = currentList.size
 
     fun getDeleteList(): List<Int> {
         val list = mutableListOf<Int>()
         checkedPositions.forEach { idx ->
-            val message = getItemCustom(idx)?.first
+            val message = getItem(idx)?.first
             if(message != null) {
                 list.add(message.id)
             }
@@ -125,7 +109,7 @@ class MessageAdapter(
     fun getForwardList(): List<Pair<Message, Boolean>> {
         val list = mutableListOf<Pair<Message, Boolean>>()
         checkedPositions.forEach {
-            val message = getItemCustom(it)?.first
+            val message = getItem(it)?.first
             if(message != null) {
                 list.add(Pair(message, mapPositions[it] ?: true))
             }
@@ -135,7 +119,7 @@ class MessageAdapter(
 
     fun updateMessagesAsRead(listIds: List<Int>) {
         if(listIds.isNotEmpty()) {
-            val currentPagingData = snapshot().items
+            val currentPagingData = currentList
             var startPosition = -1
             val updatedPagingData = currentPagingData.mapIndexed { index, pair ->
                 if (pair.first.id in listIds) {
@@ -145,15 +129,10 @@ class MessageAdapter(
                 pair
             }
             uiScopeMain.launch {
-                submitData(PagingData.from(updatedPagingData))
-                notifyItemRangeChanged(startPosition, listIds.size)
+                submitList(updatedPagingData)
+                //messageList = updatedPagingData.toMutableList()
+                //notifyItemRangeChanged(startPosition, listIds.size)
                 Log.d("testMarkReadMessages", "startpos: $startPosition, size: ${listIds.size}")
-            }
-            newMessages.forEachIndexed { index, pair ->
-                if (pair.first.id in listIds) {
-                    pair.first.isRead = true
-                    notifyItemChanged(newMessages.size - index - 1)
-                }
             }
         }
     }
@@ -162,26 +141,15 @@ class MessageAdapter(
     fun clearPositions() {
         canLongClick = true
         checkedPositions.clear()
+        notifyDataSetChanged()
     }
 
-    private fun getItemPosition(message: Message): Int {
-        val newMessagePosition = newMessages.indexOfLast { it.first.id == message.id }
-        if(newMessagePosition != -1) return newMessages.size - newMessagePosition - 1
-
-        val pagingPosition = (0 until itemCount - newMessages.size).firstOrNull { getItem(it)?.first?.id == message.id }
-        if (pagingPosition != null) {
-            return pagingPosition
-        }
-        return -1
+    private fun getItemPositionWithId(idMessage: Int): Int {
+        return currentList.indexOfLast { it.first.id == idMessage }
     }
 
-    private fun getItemPositionId(idMessage: Int): Int {
-        val index = (0 until itemCount).firstOrNull { getItemCustom(it)!!.first.id == idMessage }
-        return index ?: -1
-    }
-
-    private fun savePosition(message: Message, isSender: Boolean) {
-        val position = getItemPosition(message)
+    private fun savePosition(messageId: Int, isSender: Boolean) {
+        val position = getItemPositionWithId(messageId)
         if (position in checkedPositions) {
             checkedPositions.remove(position)
             mapPositions.remove(position)
@@ -193,9 +161,9 @@ class MessageAdapter(
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    private fun onLongClick(message: Message, isSender: Boolean) {
+    private fun onLongClick(messageId: Int, isSender: Boolean) {
         if(canLongClick) {
-            savePosition(message, isSender)
+            savePosition(messageId, isSender)
             canLongClick = false
             notifyDataSetChanged()
         }
@@ -215,7 +183,7 @@ class MessageAdapter(
     }
 
     override fun getItemViewType(position: Int): Int {
-        val message = getItemCustom(position)?.first ?: return -1
+        val message = getItem(position)?.first ?: return -1
         if(message.idSender == otherUserId) {
             return when {
                 message.images?.isNotEmpty() == true -> {
@@ -296,22 +264,13 @@ class MessageAdapter(
             maxWidth = (screenWidth * 0.65).toInt()
             widthFlag = false
         }
-        if (position < newMessages.size) {
-            message = newMessages[newMessages.size - position - 1].first
-            date = newMessages[newMessages.size - position - 1].second
-        } else {
-            if(position == itemCount) {
-                message = getItem(position - 1)?.first ?: return
-                date = getItem(position - 1)?.second ?: return
-            }
-            else try {
-                message = getItem(position)?.first ?: return
-                date = getItem(position)?.second ?: return
-            } catch (_: IndexOutOfBoundsException) {
-                Toast.makeText(context, "Ошибка индексации", Toast.LENGTH_SHORT).show()
-                message = getItem(position - 1)?.first ?: return
-                date = getItem(position - 1)?.second ?: return
-            }
+        try {
+            message = getItem(position)?.first ?: return
+            date = getItem(position)?.second ?: return
+        } catch (_: IndexOutOfBoundsException) {
+            Toast.makeText(context, "Ошибка индексации", Toast.LENGTH_SHORT).show()
+            message = getItem(position - 1)?.first ?: return
+            date = getItem(position - 1)?.second ?: return
         }
         var flagText = false
         if(!message.text.isNullOrEmpty()) flagText = true
@@ -396,7 +355,7 @@ class MessageAdapter(
         if(tmpId == null) {
             binding.answerMessage.text = "??????????"
         } else {
-            val chk = getItemPositionId(tmpId)
+            val chk = getItemPositionWithId(tmpId)
             if(chk == -1) {
                 uiScopeMain.launch {
                     val mes = async(Dispatchers.IO) { messageViewModel.findMessage(tmpId) }
@@ -416,7 +375,7 @@ class MessageAdapter(
                     }
                 }
             } else {
-                val m = getItemCustom(chk)?.first
+                val m = getItem(chk)?.first
                 uiScopeMain.launch {
                     if(m?.images != null) {
                         messageViewModel.imageSet(m.images!!.first(), binding.answerImageView, context)
@@ -468,7 +427,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message, false)
+                    savePosition(message.id, false)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -483,14 +442,14 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message, false)
+                    savePosition(message.id, false)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message, false)
+                    onLongClick(message.id, false)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -529,7 +488,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message, true)
+                    savePosition(message.id, true)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -544,14 +503,14 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message, true)
+                    savePosition(message.id, true)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message, true)
+                    onLongClick(message.id, true)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -808,7 +767,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message, false)
+                    savePosition(message.id, false)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -823,14 +782,14 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message, false)
+                    savePosition(message.id, false)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message, false)
+                    onLongClick(message.id, false)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -947,7 +906,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message, true)
+                    savePosition(message.id, true)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -962,14 +921,14 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message, true)
+                    savePosition(message.id, true)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message, true)
+                    onLongClick(message.id, true)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1053,7 +1012,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message, false)
+                    savePosition(message.id, false)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1068,14 +1027,14 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message, false)
+                    savePosition(message.id, false)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message, false)
+                    onLongClick(message.id, false)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1159,7 +1118,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message, true)
+                    savePosition(message.id, true)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1174,14 +1133,14 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message, true)
+                    savePosition(message.id, true)
                 }
                 else
                     actionListener.onMessageClick(message, itemView, true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message, true)
+                    onLongClick(message.id, true)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1287,7 +1246,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message, false)
+                    savePosition(message.id, false)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1302,14 +1261,14 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message, false)
+                    savePosition(message.id, false)
                 }
                 else
                     actionListener.onMessageClickImage(message, itemView, arrayListOf(messageViewModel.fileToLocalMedia(File(filePath))), false)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message, false)
+                    onLongClick(message.id, false)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1413,7 +1372,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message, true)
+                    savePosition(message.id, true)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1428,14 +1387,14 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message, true)
+                    savePosition(message.id, true)
                 }
                 else
                     actionListener.onMessageClickImage(message, itemView, arrayListOf(messageViewModel.fileToLocalMedia(File(filePath))), true)
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message, true)
+                    onLongClick(message.id, true)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1454,7 +1413,7 @@ class MessageAdapter(
 
             override fun onLongImageClicked(position: Int) {
                 if(canLongClick) {
-                    onLongClick(mes, false)
+                    onLongClick(mes.id, false)
                     actionListener.onMessageLongClick(itemView)
                 }
             }
@@ -1542,7 +1501,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message, false)
+                    savePosition(message.id, false)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1557,7 +1516,7 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message, false)
+                    savePosition(message.id, false)
                 }
                 else {
                     val medias: ArrayList<LocalMedia> = filePathsForClick.map { messageViewModel.fileToLocalMedia(File(it)) } as ArrayList<LocalMedia>
@@ -1566,7 +1525,7 @@ class MessageAdapter(
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message, false)
+                    onLongClick(message.id, false)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
@@ -1585,7 +1544,7 @@ class MessageAdapter(
 
             override fun onLongImageClicked(position: Int) {
                 if(canLongClick) {
-                    onLongClick(mes, true)
+                    onLongClick(mes.id, true)
                     actionListener.onMessageLongClick(itemView)
                 }
             }
@@ -1675,7 +1634,7 @@ class MessageAdapter(
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
-                    savePosition(message, true)
+                    savePosition(message.id, true)
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
@@ -1690,7 +1649,7 @@ class MessageAdapter(
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
-                    savePosition(message, true)
+                    savePosition(message.id, true)
                 }
                 else {
                     val medias: ArrayList<LocalMedia> = filePathsForClick.map { messageViewModel.fileToLocalMedia(File(it)) } as ArrayList<LocalMedia>
@@ -1699,7 +1658,7 @@ class MessageAdapter(
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick) {
-                    onLongClick(message,true)
+                    onLongClick(message.id,true)
                     actionListener.onMessageLongClick(itemView)
                 }
                 true
