@@ -84,6 +84,7 @@ class MessageFragment(
     private var typingStoppedTimeout = 3000L // delay 3 seconds
     private var typingHandler: Handler = Handler(Looper.getMainLooper())
     private var isTyping = false
+    private var isStopPagination = false
     private val typingRunnable = Runnable {
         if (isTyping) {
             viewModel.sendTypingEvent(false)
@@ -134,21 +135,30 @@ class MessageFragment(
         viewModel.setDialogInfo(dialog.id, dialog.otherUser.id)
         lifecycleScope.launch {
             launch {
-                viewModel.combinedFlow.collectLatest { (_, pagingData) ->
-                    Log.d("testFlow1", "Submitting paging data")
-                    adapter.submitData(pagingData)
+                viewModel.pagingDataFlow.collectLatest { pagingData ->
+                    if(pagingData.isNotEmpty()) {
+                        Log.d("testPagingFlow", "Submitting paging data")
+                        if(viewModel.isFirstPage()) adapter.submitList(pagingData)
+                        else {
+                            val updatedList = adapter.currentList.toMutableList()
+                            updatedList.addAll(pagingData)
+                            adapter.submitList(updatedList)
+                        }
+                    } else {
+                        isStopPagination = true
+                    }
                 }
             }
             launch {
-                viewModel.combinedFlow.collectLatest { (newMessage, _) ->
+                viewModel.newMessageFlow.collectLatest { newMessage ->
                     if (newMessage != null) {
                         viewModel.updateLastDate(newMessage.first.timestamp)
-                        adapter.addNewMessages(newMessage)
+                        adapter.addNewMessage(newMessage)
                     }
                 }
             }
         }
-        val firstItem = adapter.snapshot().items.firstOrNull()
+        val firstItem = adapter.currentList.firstOrNull()
         if(firstItem != null) viewModel.updateLastDate(firstItem.first.timestamp)
         lifecycleScope.launch {
             val lastReadMessageId = viewModel.getLastMessageId()
@@ -287,7 +297,6 @@ class MessageFragment(
                             override fun handleOnBackPressed() {
                                 if (!adapter.canLongClick && flag) {
                                     adapter.clearPositions()
-                                    adapter.notifyDataSetChanged()
                                     binding.floatingActionButtonDelete.visibility = View.GONE
                                     binding.floatingActionButtonForward.visibility = View.GONE
                                 } else {
@@ -501,22 +510,27 @@ class MessageFragment(
             stackFromEnd = false
             reverseLayout = true
         }
-        val tryAgainAction: TryAgainAction = { adapter.retry() }
-        val headerAdapter = DefaultLoadStateAdapter(tryAgainAction)
-        val footerAdapter = DefaultLoadStateAdapter(tryAgainAction)
-        val adapterWithLoadStates = adapter.withLoadStateHeaderAndFooter(headerAdapter, footerAdapter)
         binding.recyclerview.layoutManager = layoutManager
-        binding.recyclerview.adapter = adapterWithLoadStates
+        binding.recyclerview.adapter = adapter
         binding.recyclerview.addItemDecoration(VerticalSpaceItemDecoration(15))
         viewModel.setRecyclerView(binding.recyclerview)
         binding.selectedPhotosRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         binding.selectedPhotosRecyclerView.adapter = imageAdapter
-        lifecycleScope.launch {
-            adapter.loadStateFlow.debounce(200).collectLatest { _ ->
-                headerAdapter.notifyDataSetChanged()
-                footerAdapter.notifyDataSetChanged()
+        binding.recyclerview.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            private val handler = Handler(Looper.getMainLooper())
+            private var isWaiting = false
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                val layoutManagerInside = recyclerView.layoutManager as LinearLayoutManager
+                val lastVisiblePosition = layoutManagerInside.findLastVisibleItemPosition()
+                val totalItemCount = layoutManagerInside.itemCount
+                if (!isStopPagination && !isWaiting &&
+                    lastVisiblePosition >= totalItemCount - 3 && totalItemCount >= 30) {
+                    isWaiting = true
+                    viewModel.loadNextPage()
+                    handler.postDelayed({ isWaiting = false }, 3000)
+                }
             }
-        }
+        })
         binding.enterButton.setOnClickListener {
             val text = binding.enterMessage.text.toString()
             val items = imageAdapter.getData()
@@ -585,7 +599,7 @@ class MessageFragment(
     }
 
     private fun findPositionById(messageId: Int): Int {
-        val currentPagingData = adapter.snapshot().items
+        val currentPagingData = adapter.currentList
         val positionInPagingData = currentPagingData.indexOfFirst { it.first.id == messageId }
 
         if (positionInPagingData != -1) {
@@ -678,14 +692,14 @@ class MessageFragment(
         val layoutManager = binding.recyclerview.layoutManager as LinearLayoutManager
         val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
         val firstMessageId = if (firstVisibleItemPosition != RecyclerView.NO_POSITION && firstVisibleItemPosition < 25) {
-            val firstMessage = adapter.getItemCustom(firstVisibleItemPosition)?.first
-            if(firstMessage?.isRead == true) {
-                adapter.getItemCustom(0)?.first?.id ?: -1
+            val firstMessage = adapter.getItemNotProtected(firstVisibleItemPosition).first
+            if(firstMessage.isRead) {
+                adapter.getItemNotProtected(0).first.id
             } else {
-                firstMessage?.id ?: -1
+                firstMessage.id
             }
         } else {
-            adapter.getItemCustom(0)?.first?.id ?: -1
+            adapter.getItemNotProtected(0).first.id
         }
         viewModel.saveLastMessage(firstMessageId)
     }

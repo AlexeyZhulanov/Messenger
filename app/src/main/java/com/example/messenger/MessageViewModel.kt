@@ -7,15 +7,11 @@ import android.net.Uri
 import android.util.Log
 import android.view.View
 import android.widget.ImageView
-import android.widget.Toast
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
-import androidx.paging.cachedIn
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -48,9 +44,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -85,9 +81,10 @@ class MessageViewModel @Inject constructor(
     private var debounceJob: Job? = null
 
     private val searchBy = MutableLiveData("")
+    private val currentPage = MutableStateFlow(0)
 
     private val _newMessageFlow = MutableStateFlow<Pair<Message, String>?>(null)
-    private val newMessageFlow: StateFlow<Pair<Message, String>?> = _newMessageFlow
+    val newMessageFlow: StateFlow<Pair<Message, String>?> = _newMessageFlow
 
     private val _typingState = MutableStateFlow(false)
     val typingState: StateFlow<Boolean> get() = _typingState
@@ -100,21 +97,20 @@ class MessageViewModel @Inject constructor(
 
     private val tempFiles = mutableSetOf<String>()
 
-
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
-    val combinedFlow = combine(
-        searchBy.asFlow()
-            .debounce(500)
-            .flatMapLatest { searchQuery ->
-                Pager(PagingConfig(pageSize = 30, initialLoadSize = 30, prefetchDistance = 5)) {
-                    MessagePagingSource(retrofitService, messengerService, dialogId, searchQuery, isFirst, fileManager)
-                }.flow.cachedIn(viewModelScope)
-            },
-        newMessageFlow
-    ) { pagingData, newMessage ->
-        newMessage to pagingData
-    }
-
+    val pagingDataFlow = searchBy.asFlow()
+        .debounce(500)
+        .flatMapLatest { searchQuery ->
+            currentPage.flatMapLatest { page ->
+                flow {
+                    val pageSize = 30
+                    val messages = MessagePagingSource(retrofitService, messengerService, dialogId,
+                        searchQuery, isFirst, fileManager).loadPage(page, pageSize)
+                    emit(messages)
+                }
+            }
+        }
+    
     fun updateLastDate(time: Long) {
         val greenwichMessageDate = Calendar.getInstance().apply {
             timeInMillis = time
@@ -123,6 +119,12 @@ class MessageViewModel @Inject constructor(
         this.lastMessageDate = if(isToday(localNow, greenwichMessageDate)) "" else formatMessageDate(time)
     }
 
+    fun loadNextPage() {
+        currentPage.value += 1
+    }
+
+    fun isFirstPage() : Boolean = currentPage.value == 0
+
     fun refresh() {
         if (disableRefresh) {
             pendingRefresh = true
@@ -130,6 +132,7 @@ class MessageViewModel @Inject constructor(
         }
         isFirst = false
         _newMessageFlow.value = null
+        currentPage.value = 0
         this.searchBy.postValue(this.searchBy.value)
     }
 
@@ -192,7 +195,7 @@ class MessageViewModel @Inject constructor(
                 // Проверяем видимые элементы от последнего к первому
                 if (lastVisibleItemPosition != RecyclerView.NO_POSITION && firstVisibleItemPosition != RecyclerView.NO_POSITION) {
                     val visibleMessages = (lastVisibleItemPosition downTo firstVisibleItemPosition).mapNotNull { position ->
-                        adapter.getItemCustom(position)?.first?.takeIf { it.idSender == otherUserId && !it.isRead }
+                        adapter.getItemNotProtected(position).first.takeIf { it.idSender == otherUserId && !it.isRead }
                     }
                     markMessagesAsRead(visibleMessages)
                 }
@@ -500,15 +503,6 @@ class MessageViewModel @Inject constructor(
 
     override fun onEditedMessage(message: Message) {
         Log.d("testSocketsMessage", "Edited Message: $message")
-        val adapterWithLoadStates = recyclerView.adapter
-        if (adapterWithLoadStates is ConcatAdapter) {
-            // Ищем оригинальный MessageAdapter внутри ConcatAdapter(без load states)
-            adapterWithLoadStates.adapters.forEach { adapter ->
-                if (adapter is MessageAdapter) {
-                    adapter.clearNewMessages()
-                }
-            }
-        }
         refresh()
         recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
@@ -517,17 +511,12 @@ class MessageViewModel @Inject constructor(
         })
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     override fun onMessagesDeleted(deletedMessagesEvent: DeletedMessagesEvent) {
         Log.d("testSocketsMessage", "Deleted messages")
-        val adapterWithLoadStates = recyclerView.adapter
-        if (adapterWithLoadStates is ConcatAdapter) {
-            // Ищем оригинальный MessageAdapter внутри ConcatAdapter(без load states)
-            adapterWithLoadStates.adapters.forEach { adapter ->
-                if (adapter is MessageAdapter) {
-                    adapter.clearNewMessages()
-                }
-            }
-        }
+        val adapter = recyclerView.adapter
+        if(adapter is MessageAdapter)
+            viewModelScope.launch { adapter.clearPositions() }
         refresh()
         recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
