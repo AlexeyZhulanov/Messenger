@@ -200,18 +200,21 @@ class RetrofitService(
     override suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?,
         voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
          usernameAuthorOriginal: String?): Boolean = withContext(Dispatchers.IO) {
-        val message = try {
+        return@withContext try {
             messagesSource.sendMessage(idDialog, text, images, voice, file, referenceToMessageId,
                 isForwarded, usernameAuthorOriginal)
+            Log.d("testSendMessage", "Message sent successfully")
+            true
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw DialogNotFoundException(e)
                 403 -> throw NoPermissionException(e)
-                else -> throw e
+                else -> {
+                    Log.e("testSendMessage", "Error sending message: ${e.message}")
+                    false
+                }
             }
         }
-        Log.d("testSendMessage", message)
-        return@withContext true
     }
 
     override suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int): List<Message> = withContext(Dispatchers.IO) {

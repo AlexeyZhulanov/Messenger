@@ -6,6 +6,7 @@ import com.example.messenger.room.dao.GroupMessageDao
 import com.example.messenger.room.dao.LastReadMessageDao
 import com.example.messenger.room.dao.MessageDao
 import com.example.messenger.room.dao.SettingsDao
+import com.example.messenger.room.dao.UnsentMessageDao
 import com.example.messenger.room.dao.UserDao
 import com.example.messenger.room.entities.ChatSettingsDbEntity
 import com.example.messenger.room.entities.ConversationDbEntity
@@ -13,6 +14,7 @@ import com.example.messenger.room.entities.GroupMessageDbEntity
 import com.example.messenger.room.entities.LastReadMessageEntity
 import com.example.messenger.room.entities.MessageDbEntity
 import com.example.messenger.room.entities.SettingsDbEntity
+import com.example.messenger.room.entities.UnsentMessageEntity
 import com.example.messenger.room.entities.UserDbEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -25,7 +27,8 @@ class MessengerService(
     private val groupMessageDao: GroupMessageDao,
     private val userDao: UserDao,
     private val lastReadMessageDao: LastReadMessageDao,
-    private val chatSettingsDao: ChatSettingsDao
+    private val chatSettingsDao: ChatSettingsDao,
+    private val unsentMessageDao: UnsentMessageDao
 ) : MessengerRepository {
     private var settings = Settings(0)
     override suspend fun getSettings(): Settings = withContext(Dispatchers.IO) {
@@ -136,5 +139,18 @@ class MessengerService(
 
     override suspend fun deleteChatSettings(idDialog: Int, type: Boolean) = withContext(Dispatchers.IO) {
         chatSettingsDao.deleteChatSettings(idDialog, type)
+    }
+
+    override suspend fun insertUnsentMessage(idDialog: Int, message: Message) : Int = withContext(Dispatchers.IO) {
+        val v = unsentMessageDao.insertUnsentMessage(UnsentMessageEntity.fromUserInput(idDialog, message))
+        return@withContext v.toInt()
+    }
+
+    override suspend fun getUnsentMessages(idDialog: Int): List<Message>? = withContext(Dispatchers.IO) {
+        return@withContext unsentMessageDao.getUnsentMessages(idDialog)?.map { it.toMessage() }
+    }
+
+    override suspend fun deleteUnsentMessage(messageId: Int) = withContext(Dispatchers.IO) {
+        unsentMessageDao.deleteUnsentMessage(messageId)
     }
 }

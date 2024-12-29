@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "ca1a526d584aa87f3064c141e2a10e2e",
+    "identityHash": "76e0d542cb8cfb9ee105389a161f4442",
     "entities": [
       {
         "tableName": "settings",
@@ -529,12 +529,110 @@
         },
         "indices": [],
         "foreignKeys": []
+      },
+      {
+        "tableName": "unsent_messages",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_dialog` INTEGER NOT NULL, `id_sender` INTEGER NOT NULL, `text` TEXT, `images` TEXT, `voice` TEXT, `file` TEXT, `is_read` INTEGER NOT NULL, `is_edited` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `is_forwarded` INTEGER NOT NULL, `reference_to_message_id` INTEGER, `username_author_original` TEXT, `is_unsent` INTEGER)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "idDialog",
+            "columnName": "id_dialog",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "idSender",
+            "columnName": "id_sender",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "images",
+            "columnName": "images",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "voice",
+            "columnName": "voice",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "file",
+            "columnName": "file",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "isRead",
+            "columnName": "is_read",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isEdited",
+            "columnName": "is_edited",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isForwarded",
+            "columnName": "is_forwarded",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "referenceToMessageId",
+            "columnName": "reference_to_message_id",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "usernameAuthorOriginal",
+            "columnName": "username_author_original",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "isUnsent",
+            "columnName": "is_unsent",
+            "affinity": "INTEGER",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ca1a526d584aa87f3064c141e2a10e2e')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '76e0d542cb8cfb9ee105389a161f4442')"
     ]
   }
 }

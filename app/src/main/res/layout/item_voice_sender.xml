@@ -209,6 +209,18 @@
                 app:layout_constraintBottom_toBottomOf="@id/timeTextView"
                 />
 
+            <ImageView
+                android:id="@+id/ic_error"
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:src="@drawable/ic_error"
+                android:visibility="gone"
+                android:paddingVertical="3dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@id/timeTextView"
+                app:layout_constraintBottom_toBottomOf="@id/timeTextView"
+                app:tint="?attr/colorError" />
+
         </androidx.constraintlayout.widget.ConstraintLayout>
 
     </LinearLayout>

@@ -95,6 +95,9 @@ class MessageViewModel @Inject constructor(
     private val _readMessagesFlow = MutableStateFlow<List<Int>>(emptyList())
     val readMessagesFlow: StateFlow<List<Int>> get() = _readMessagesFlow
 
+    private val _unsentMessageFlow = MutableStateFlow<Message?>(null)
+    val unsentMessageFlow: StateFlow<Message?> get() = _unsentMessageFlow
+
     private val tempFiles = mutableSetOf<String>()
 
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -133,6 +136,7 @@ class MessageViewModel @Inject constructor(
         isFirst = false
         _newMessageFlow.value = null
         currentPage.value = 0
+        _unsentMessageFlow.value = null
         this.searchBy.postValue(this.searchBy.value)
     }
 
@@ -180,7 +184,9 @@ class MessageViewModel @Inject constructor(
     private fun updateLastSession() {
         viewModelScope.launch {
             delay(2000)
-            retrofitService.updateLastSession(dialogId)
+            try {
+                retrofitService.updateLastSession(dialogId)
+            } catch (e: Exception) { return@launch }
         }
     }
 
@@ -226,14 +232,9 @@ class MessageViewModel @Inject constructor(
     }
 
     private fun highlightItem(position: Int) {
-        val adapterWithLoadStates = recyclerView.adapter
-        if (adapterWithLoadStates is ConcatAdapter) {
-            // Ищем оригинальный MessageAdapter внутри ConcatAdapter(без load states)
-            adapterWithLoadStates.adapters.forEach { adapter ->
-                if (adapter is MessageAdapter) {
-                    adapter.highlightPosition(position)
-                }
-            }
+        val adapter = recyclerView.adapter
+        if (adapter is MessageAdapter) {
+            adapter.highlightPosition(position)
         } else {
             Log.e("highlightItem", "Adapter is not of type ConcatAdapter")
         }
@@ -301,10 +302,20 @@ class MessageViewModel @Inject constructor(
         return@withContext retrofitService.uploadFile(dialogId, file)
     }
 
-    suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?,
+    suspend fun sendMessage(text: String?, images: List<String>?,
                             voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
                             usernameAuthorOriginal: String?) = withContext(Dispatchers.IO) {
-     retrofitService.sendMessage(idDialog, text, images, voice, file, referenceToMessageId, isForwarded, usernameAuthorOriginal)
+        val flag = try {
+            retrofitService.sendMessage(dialogId, text, images, voice, file, referenceToMessageId, isForwarded, usernameAuthorOriginal)
+        } catch (e: Exception) { false }
+        if(!flag) {
+            var mes = Message(id = 0, idSender = -5, text = text, images = images, voice = voice,
+                file = file, referenceToMessageId = referenceToMessageId, isForwarded = isForwarded,
+                usernameAuthorOriginal = usernameAuthorOriginal, timestamp = 0, isEdited = false, isUnsent = true)
+            val id = messengerService.insertUnsentMessage(dialogId, mes)
+            mes = mes.copy(id = id)
+            _unsentMessageFlow.value = mes
+        }
     }
 
     suspend fun editMessage(messageId: Int, text: String?, images: List<String>?,
@@ -503,6 +514,7 @@ class MessageViewModel @Inject constructor(
 
     override fun onEditedMessage(message: Message) {
         Log.d("testSocketsMessage", "Edited Message: $message")
+        // todo я думаю здесь можно избавиться от refresh
         refresh()
         recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
@@ -605,6 +617,21 @@ class MessageViewModel @Inject constructor(
 
     suspend fun getPreview(context: Context, filename: String): String = withContext(Dispatchers.IO) {
         return@withContext retrofitService.getMediaPreview(context, dialogId, filename)
+    }
+
+    suspend fun getUnsentMessages(): List<Message>? = withContext(Dispatchers.IO) {
+        return@withContext messengerService.getUnsentMessages(dialogId)
+    }
+
+    suspend fun deleteUnsentMessage(messageId: Int) = withContext(Dispatchers.IO) {
+        messengerService.deleteUnsentMessage(messageId)
+    }
+
+    suspend fun sendUnsentMessage(mes: Message) : Boolean = withContext(Dispatchers.IO) {
+        val flag = try {
+            retrofitService.sendMessage(dialogId, mes.text, mes.images, mes.voice, mes.file, mes.referenceToMessageId, mes.isForwarded, mes.usernameAuthorOriginal)
+        } catch (e: Exception) { false }
+        return@withContext flag
     }
 
     fun parseOriginalFilename(filepath: String): String {

@@ -35,6 +35,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.databinding.FragmentMessageBinding
+import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.Dialog
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
@@ -55,6 +56,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -138,7 +140,14 @@ class MessageFragment(
                 viewModel.pagingDataFlow.collectLatest { pagingData ->
                     if(pagingData.isNotEmpty()) {
                         Log.d("testPagingFlow", "Submitting paging data")
-                        if(viewModel.isFirstPage()) adapter.submitList(pagingData)
+                        if(viewModel.isFirstPage()) {
+                            adapter.submitList(pagingData)
+                            val mes = viewModel.getUnsentMessages()
+                            if(mes != null) {
+                                val pair = mes.map { Pair(it, "") }
+                                adapter.addUnsentMessages(pair)
+                            }
+                        }
                         else {
                             val updatedList = adapter.currentList.toMutableList()
                             updatedList.addAll(pagingData)
@@ -154,6 +163,14 @@ class MessageFragment(
                     if (newMessage != null) {
                         viewModel.updateLastDate(newMessage.first.timestamp)
                         adapter.addNewMessage(newMessage)
+                    }
+                }
+            }
+            launch {
+                viewModel.unsentMessageFlow.collectLatest { uMessage ->
+                    if(uMessage != null) {
+                        Log.d("testUnsentFlow", "OK")
+                        adapter.addNewMessage(Pair(uMessage, ""))
                     }
                 }
             }
@@ -258,7 +275,6 @@ class MessageFragment(
         }
     }
 
-    @OptIn(FlowPreview::class)
     @SuppressLint("InflateParams", "NotifyDataSetChanged", "DiscouragedApi")
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -276,6 +292,17 @@ class MessageFragment(
         }
         val filePickerManager = FilePickerManager(this, null, null)
             adapter = MessageAdapter(object : MessageActionListener {
+                override fun onUnsentMessageClick(message: Message, itemView: View) {
+                    showPopupMenuUnsent(itemView, R.menu.popup_menu_unsent, message)
+                }
+
+                override fun onUnsentMessagesAdd() {
+                    uiScope.launch {
+                        delay(200)
+                        binding.recyclerview.smoothScrollToPosition(0)
+                    }
+                }
+
                 override fun onMessageClick(message: Message, itemView: View, isSender: Boolean) {
                     showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, null, isSender)
                 }
@@ -368,7 +395,12 @@ class MessageFragment(
                 }
             }, dialog.otherUser.id, requireContext(), viewModel)
             uiScope.launch {
-                adapter.dialogSettings = viewModel.getDialogSettings(dialog.id)
+                try {
+                    adapter.dialogSettings = viewModel.getDialogSettings(dialog.id)
+                } catch (e: Exception) {
+                    adapter.dialogSettings = ConversationSettings()
+                }
+
             }
         imageAdapter = ImageAdapter(requireContext(), object: ImageActionListener {
             override fun onImageClicked(image: LocalMedia, position: Int) {
@@ -553,22 +585,22 @@ class MessageFragment(
                     val list = listik.await()
                     if(text.isNotEmpty()) {
                         if (list.isNotEmpty()) {
-                            if(!answerFlag) viewModel.sendMessage(dialog.id, text, list, null, null, null, false, null)
+                            if(!answerFlag) viewModel.sendMessage(text, list, null, null, null, false, null)
                             else {
-                                viewModel.sendMessage(dialog.id, text, list, null, null, answerMessage?.first, false, answerMessage?.second)
+                                viewModel.sendMessage(text, list, null, null, answerMessage?.first, false, answerMessage?.second)
                                 disableAnswer()
                             }
                         } else {
-                            if(!answerFlag) viewModel.sendMessage(dialog.id, text, null, null, null, null, false, null)
+                            if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, false, null)
                             else {
-                                viewModel.sendMessage(dialog.id, text, null, null, null, answerMessage?.first, false, answerMessage?.second)
+                                viewModel.sendMessage(text, null, null, null, answerMessage?.first, false, answerMessage?.second)
                                 disableAnswer()
                             }
                         }
                     } else if (list.isNotEmpty()) {
-                        if(!answerFlag) viewModel.sendMessage(dialog.id, null, list, null, null, null, false, null)
+                        if(!answerFlag) viewModel.sendMessage(null, list, null, null, null, false, null)
                         else {
-                            viewModel.sendMessage(dialog.id, null, list, null, null, answerMessage?.first, false, answerMessage?.second)
+                            viewModel.sendMessage(null, list, null, null, answerMessage?.first, false, answerMessage?.second)
                             disableAnswer()
                         }
                     }
@@ -576,9 +608,9 @@ class MessageFragment(
                     imageAdapter.clearImages()
                 } else {
                     if(text.isNotEmpty()) {
-                        if(!answerFlag) viewModel.sendMessage(dialog.id, text, null, null, null, null, false, null)
+                        if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, false, null)
                         else {
-                            viewModel.sendMessage(dialog.id, text, null, null, null, answerMessage?.first, false, answerMessage?.second)
+                            viewModel.sendMessage(text, null, null, null, answerMessage?.first, false, answerMessage?.second)
                             disableAnswer()
                         }
                     }
@@ -642,9 +674,9 @@ class MessageFragment(
                 uiScope.launch {
                     withContext(Dispatchers.IO) {
                         val response = async(Dispatchers.IO) { viewModel.uploadAudio(fileOgg) }
-                        if(!answerFlag) viewModel.sendMessage(dialog.id, null, null, response.await(), null, null, false, null)
+                        if(!answerFlag) viewModel.sendMessage(null, null, response.await(), null, null, false, null)
                         else {
-                            viewModel.sendMessage(dialog.id, null, null, response.await(), null, answerMessage?.first, false, answerMessage?.second)
+                            viewModel.sendMessage(null, null, response.await(), null, answerMessage?.first, false, answerMessage?.second)
                             withContext(Dispatchers.Main) {
                                 disableAnswer()
                             }
@@ -710,9 +742,9 @@ class MessageFragment(
             uiScope.launch {
                 val response = async(Dispatchers.IO) { viewModel.uploadFile(file) }
                 withContext(Dispatchers.IO) {
-                    if(!answerFlag) viewModel.sendMessage(dialog.id, null, null, null, response.await(), null, false, null)
+                    if(!answerFlag) viewModel.sendMessage(null, null, null, response.await(), null, false, null)
                     else {
-                        viewModel.sendMessage(dialog.id, null, null, file.name, response.await(), answerMessage?.first, false, answerMessage?.second)
+                        viewModel.sendMessage(null, null, file.name, response.await(), answerMessage?.first, false, answerMessage?.second)
                         withContext(Dispatchers.Main) {
                             disableAnswer()
                         }
@@ -801,6 +833,36 @@ class MessageFragment(
 
                         override fun afterTextChanged(s: Editable?) {}
                     })
+                    true
+                }
+                else -> false
+            }
+        }
+        popupMenu.show()
+    }
+
+    private fun showPopupMenuUnsent(view: View, menuRes: Int, message: Message) {
+        val popupMenu = PopupMenu(requireContext(), view)
+        popupMenu.menuInflater.inflate(menuRes, popupMenu.menu)
+        popupMenu.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.item_resent -> {
+                    uiScope.launch {
+                        val flag = viewModel.sendUnsentMessage(message)
+                        if(flag) {
+                            viewModel.deleteUnsentMessage(message.id)
+                            adapter.deleteUnsentMessage(message)
+                        } else {
+                            Toast.makeText(requireContext(), "Не удалось отправить сообщение", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    true
+                }
+                R.id.item_delete -> {
+                    uiScope.launch {
+                        viewModel.deleteUnsentMessage(message.id)
+                        adapter.deleteUnsentMessage(message)
+                    }
                     true
                 }
                 else -> false
