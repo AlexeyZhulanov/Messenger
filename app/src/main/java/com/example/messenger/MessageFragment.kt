@@ -35,6 +35,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.databinding.FragmentMessageBinding
+import com.example.messenger.model.ConnectionException
 import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.Dialog
 import com.example.messenger.model.Message
@@ -61,11 +62,13 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.PrintWriter
+import java.net.UnknownHostException
 import kotlin.coroutines.cancellation.CancellationException
 
 @AndroidEntryPoint
@@ -141,12 +144,12 @@ class MessageFragment(
                     if(pagingData.isNotEmpty()) {
                         Log.d("testPagingFlow", "Submitting paging data")
                         if(viewModel.isFirstPage()) {
-                            adapter.submitList(pagingData)
                             val mes = viewModel.getUnsentMessages()
-                            if(mes != null) {
+                            val summaryPagingData = if(mes != null) {
                                 val pair = mes.map { Pair(it, "") }
-                                adapter.addUnsentMessages(pair)
-                            }
+                                 pair + pagingData
+                            } else pagingData
+                            adapter.submitList(summaryPagingData)
                         }
                         else {
                             val updatedList = adapter.currentList.toMutableList()
@@ -171,6 +174,20 @@ class MessageFragment(
                     if(uMessage != null) {
                         Log.d("testUnsentFlow", "OK")
                         adapter.addNewMessage(Pair(uMessage, ""))
+                    }
+                }
+            }
+            launch {
+                viewModel.editMessageFlow.collectLatest { message ->
+                    if(message != null) {
+                        Log.d("testEditFlow", "OK")
+                        val updatedList = adapter.currentList.toMutableList()
+                        val index = updatedList.indexOfFirst { it.first.id == message.id }
+                        if(index != -1) {
+                            val oldPair = updatedList[index]
+                            updatedList[index] = oldPair.copy(first = message)
+                            adapter.submitList(updatedList)
+                        }
                     }
                 }
             }
@@ -339,13 +356,18 @@ class MessageFragment(
                         if (messagesToDelete.isNotEmpty()) {
                             uiScope.launch {
                                 binding.progressBar.visibility = View.VISIBLE
-                                val response = async(Dispatchers.IO) { viewModel.deleteMessages(messagesToDelete) }
                                 binding.floatingActionButtonDelete.visibility = View.GONE
                                 binding.floatingActionButtonForward.visibility = View.GONE
+                                val response = async(Dispatchers.IO) { viewModel.deleteMessages(messagesToDelete) }
                                 if(response.await()) {
                                     adapter.clearPositions()
                                     viewModel.startRefresh()
                                     binding.progressBar.visibility = View.GONE
+                                } else {
+                                    adapter.clearPositions()
+                                    viewModel.startRefresh()
+                                    binding.progressBar.visibility = View.GONE
+                                    Toast.makeText(requireContext(), "Не удалось удалить сообщения", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
@@ -566,51 +588,79 @@ class MessageFragment(
         binding.enterButton.setOnClickListener {
             val text = binding.enterMessage.text.toString()
             val items = imageAdapter.getData()
+
             uiScope.launch {
                 if (items.isNotEmpty()) {
-                val listik = async {
-                val list = mutableListOf<String>()
-                    for (item1 in items) {
-                        if(item1.duration > 0) {
-                            val file = getFileFromContentUri(requireContext(), Uri.parse(item1.availablePath)) ?: continue
-                            val tmp = async(Dispatchers.IO) { viewModel.uploadPhoto(file) }
-                            list += tmp.await()
-                        } else {
-                            val tmp = async(Dispatchers.IO) { viewModel.uploadPhoto(File(item1.availablePath)) }
-                            list += tmp.await()
+                    val listik = async {
+                        val list = mutableListOf<String>()
+                        var flag = true
+                        val localFilePaths = mutableListOf<String>()
+                        for (item1 in items) {
+                            if (item1.duration > 0) {
+                                val file = getFileFromContentUri(requireContext(), Uri.parse(item1.availablePath)) ?: continue
+                                val tmp = async(Dispatchers.IO) { viewModel.uploadPhoto(file) }
+                                val (path, f) = tmp.await()
+                                list += path
+                                flag = f
+                                if(!f) break
+                            } else {
+                                val tmp = async(Dispatchers.IO) { viewModel.uploadPhoto(File(item1.availablePath)) }
+                                val (path, f) = tmp.await()
+                                list += path
+                                flag = f
+                                if(!f) break
+                            }
                         }
+                         if (!flag) {
+                            list.clear()
+                            for (item1 in items) {
+                                try {
+                                    val file = if (item1.duration > 0) {
+                                        getFileFromContentUri(requireContext(), Uri.parse(item1.availablePath)) ?: continue
+                                    } else {
+                                        File(item1.availablePath)
+                                    }
+                                    val fileName = file.name
+                                    val fileBytes = file.readBytes()
+                                    viewModel.fManagerSaveFileUnsent(fileName, fileBytes)
+                                    localFilePaths.add(viewModel.fManagerGetFilePathUnsent(fileName))
+                                    list.add(fileName)
+                                } catch (fileException: Exception) {
+                                    fileException.printStackTrace()
+                                }
+                            }
+                        }
+                    return@async Pair(list, localFilePaths)
                     }
-                    return@async list
-                }
-                    val list = listik.await()
+                    val (list, localFilePaths) = listik.await()
                     if(text.isNotEmpty()) {
                         if (list.isNotEmpty()) {
-                            if(!answerFlag) viewModel.sendMessage(text, list, null, null, null, false, null)
+                            if(!answerFlag) viewModel.sendMessage(text, list, null, null, null, false, null, localFilePaths)
                             else {
-                                viewModel.sendMessage(text, list, null, null, answerMessage?.first, false, answerMessage?.second)
+                                viewModel.sendMessage(text, list, null, null, answerMessage?.first, false, answerMessage?.second, localFilePaths)
                                 disableAnswer()
                             }
                         } else {
-                            if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, false, null)
+                            if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, false, null, null)
                             else {
-                                viewModel.sendMessage(text, null, null, null, answerMessage?.first, false, answerMessage?.second)
+                                viewModel.sendMessage(text, null, null, null, answerMessage?.first, false, answerMessage?.second, null)
                                 disableAnswer()
                             }
                         }
                     } else if (list.isNotEmpty()) {
-                        if(!answerFlag) viewModel.sendMessage(null, list, null, null, null, false, null)
+                        if(!answerFlag) viewModel.sendMessage(null, list, null, null, null, false, null, localFilePaths)
                         else {
-                            viewModel.sendMessage(null, list, null, null, answerMessage?.first, false, answerMessage?.second)
+                            viewModel.sendMessage(null, list, null, null, answerMessage?.first, false, answerMessage?.second, localFilePaths)
                             disableAnswer()
                         }
                     }
                     else withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "Ошибка отправки изображений", Toast.LENGTH_SHORT).show() }
                     imageAdapter.clearImages()
-                } else {
+            } else {
                     if(text.isNotEmpty()) {
-                        if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, false, null)
+                        if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, false, null, null)
                         else {
-                            viewModel.sendMessage(text, null, null, null, answerMessage?.first, false, answerMessage?.second)
+                            viewModel.sendMessage(text, null, null, null, answerMessage?.first, false, answerMessage?.second, null)
                             disableAnswer()
                         }
                     }
@@ -669,28 +719,33 @@ class MessageFragment(
         val fileOgg = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.ogg")
         if(fileOgg.exists()) fileOgg.delete()
         val converter = AudioConverter()
-        converter.convertPcmToOgg(file.path, fileOgg.path) {success, message ->
+        converter.convertPcmToOgg(file.path, fileOgg.path) {success, _ ->
             if(success) {
                 uiScope.launch {
-                    withContext(Dispatchers.IO) {
-                        val response = async(Dispatchers.IO) { viewModel.uploadAudio(fileOgg) }
-                        if(!answerFlag) viewModel.sendMessage(null, null, response.await(), null, null, false, null)
-                        else {
-                            viewModel.sendMessage(null, null, response.await(), null, answerMessage?.first, false, answerMessage?.second)
-                            withContext(Dispatchers.Main) {
-                                disableAnswer()
-                            }
-                        }
-                        withContext(Dispatchers.Main) {
-                            try {
-                                binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
-                            } catch (e: Exception) {
-                                binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterDataObserver)
-                                binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
-                            }
-                            //viewModel.refresh()
+                    val response = async {
+                        val (path, f) = viewModel.uploadAudio(fileOgg)
+                        if(f) {
+                            return@async Pair(path, null)
+                        } else {
+                            val fileName = fileOgg.name
+                            val fileBytes = fileOgg.readBytes()
+                            viewModel.fManagerSaveFileUnsent(fileName, fileBytes)
+                            return@async Pair(fileName, listOf(viewModel.fManagerGetFilePathUnsent(fileName)))
                         }
                     }
+                    val(first, second) = response.await()
+                    if(!answerFlag) viewModel.sendMessage(null, null, first, null, null, false, null, second)
+                    else {
+                        viewModel.sendMessage(null, null, first, null, answerMessage?.first, false, answerMessage?.second, second)
+                        disableAnswer()
+                    }
+                    try {
+                        binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+                    } catch (e: Exception) {
+                        binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterDataObserver)
+                        binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+                    }
+                //viewModel.refresh()
                 }
             } else {
                 Log.d("testConvert", "Not OK")
@@ -740,15 +795,22 @@ class MessageFragment(
         val file = uriToFile(uri, requireContext())
         if(file != null) {
             uiScope.launch {
-                val response = async(Dispatchers.IO) { viewModel.uploadFile(file) }
-                withContext(Dispatchers.IO) {
-                    if(!answerFlag) viewModel.sendMessage(null, null, null, response.await(), null, false, null)
-                    else {
-                        viewModel.sendMessage(null, null, file.name, response.await(), answerMessage?.first, false, answerMessage?.second)
-                        withContext(Dispatchers.Main) {
-                            disableAnswer()
-                        }
+                val response = async {
+                    val (path, f) = viewModel.uploadFile(file)
+                    if(f) {
+                        return@async Pair(path, null)
+                    } else {
+                        val fileName = file.name
+                        val fileBytes = file.readBytes()
+                        viewModel.fManagerSaveFileUnsent(fileName, fileBytes)
+                        return@async Pair(fileName, listOf(viewModel.fManagerGetFilePathUnsent(fileName)))
                     }
+                }
+                val(first, second) = response.await()
+                if(!answerFlag) viewModel.sendMessage(null, null, null, first, null, false, null, second)
+                else {
+                    viewModel.sendMessage(null, null, file.name, first, answerMessage?.first, false, answerMessage?.second, second)
+                    disableAnswer()
                 }
                 try {
                     binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
@@ -848,7 +910,84 @@ class MessageFragment(
             when (item.itemId) {
                 R.id.item_resent -> {
                     uiScope.launch {
-                        val flag = viewModel.sendUnsentMessage(message)
+                        val localFilePaths = message.localFilePaths
+                        val finalMessage: Message = if(localFilePaths != null) {
+                            val filePathsFinal = async {
+                            when (localFilePaths.size) {
+                                1 -> {
+                                    val file = viewModel.fManagerGetFile(localFilePaths.first())
+                                    if (file != null) {
+                                        return@async when {
+                                            message.images != null -> {
+                                                val (path, f) = viewModel.uploadPhoto(file)
+                                                if(f) listOf(path) else null
+                                            }
+                                            message.file != null -> {
+                                                val (path, f) = viewModel.uploadFile(file)
+                                                if(f) listOf(path) else null
+                                            }
+                                            message.voice != null -> {
+                                                val (path, f) = viewModel.uploadAudio(file)
+                                                if(f) listOf(path) else null
+                                            }
+                                            else -> null
+                                        }
+                                    }
+                                    else return@async null
+                                }
+                                in 2..100 -> {
+                                    val files = localFilePaths.mapNotNull { filePath ->
+                                        viewModel.fManagerGetFile(filePath)
+                                    }
+                                    val uploadedFiles: MutableList<String> = mutableListOf()
+                                    files.forEachIndexed { index, file ->
+                                        val tmp = async(Dispatchers.IO) { viewModel.uploadPhoto(file) }
+                                        val (path, f) = tmp.await()
+                                        if(f) {
+                                            uploadedFiles.add(path)
+                                        } else {
+                                            if(index != 0) {
+                                                Toast.makeText(requireContext(), "Файл №$index не загрузился, вторая попытка...", Toast.LENGTH_SHORT).show()
+                                                // вторая попытка для файла, если до этого файлы загрузились
+                                                val tmp2 = async(Dispatchers.IO) { viewModel.uploadPhoto(file) }
+                                                val (path2, f2) = tmp2.await()
+                                                if(f2) {
+                                                    uploadedFiles.add(path2)
+                                                } else {
+                                                    Toast.makeText(requireContext(), "Не удалось загрузить файлы", Toast.LENGTH_SHORT).show()
+                                                    return@async null
+                                                }
+                                            } else {
+                                                Toast.makeText(requireContext(), "Не удалось загрузить файлы", Toast.LENGTH_SHORT).show()
+                                                return@async null
+                                            }
+                                        }
+                                    }
+                                    return@async uploadedFiles.ifEmpty { null }
+                                }
+                                else -> return@async null
+                            }
+                        }
+                            val finalFiles = filePathsFinal.await()
+                            if(finalFiles != null) {
+                                when {
+                                    message.images != null -> {
+                                        message.images?.let { viewModel.fManagerDeleteUnsent(it) }
+                                        message.copy(images = finalFiles)
+                                    }
+                                    message.file != null -> {
+                                        message.file?.let { viewModel.fManagerDeleteUnsent(listOf(it)) }
+                                        message.copy(file = finalFiles.first())
+                                    }
+                                    message.voice != null -> {
+                                        message.voice?.let { viewModel.fManagerDeleteUnsent(listOf(it)) }
+                                        message.copy(voice = finalFiles.first())
+                                    }
+                                    else -> message
+                                }
+                            } else message
+                        } else message
+                        val flag = viewModel.sendUnsentMessage(finalMessage)
                         if(flag) {
                             viewModel.deleteUnsentMessage(message.id)
                             adapter.deleteUnsentMessage(message)
@@ -924,47 +1063,47 @@ class MessageFragment(
 
                     editButton.setOnClickListener {
                         uiScope.launch {
-                            viewModel.stopRefresh()
-                            val tempItems = imageAdapter.getData()
-                            val text = editText.text.toString()
-                            if (tempItems.isNotEmpty()) {
-                                val itemsToUpload = if (localMedias == null) tempItems
-                                else tempItems.filter { it !in localMedias } as ArrayList<LocalMedia>
-                                // из-за того, что автор библиотеки дохера умный, приходится использовать кастомный компаратор
-                                val removedItemsIndices: List<Int> =
-                                    localMedias?.mapIndexedNotNull { index, localItem ->
-                                        if (tempItems.none { tempItem ->
-                                                tempItem.id == localItem.id
-                                                        && tempItem.path == localItem.path
-                                                        && tempItem.realPath == localItem.realPath
-                                            }) index else null
-                                    } ?: listOf()
+                            try {
+                                viewModel.stopRefresh()
+                                val tempItems = imageAdapter.getData()
+                                val text = editText.text.toString()
+                                if (tempItems.isNotEmpty()) {
+                                    val itemsToUpload = if (localMedias == null) tempItems
+                                    else tempItems.filter { it !in localMedias } as ArrayList<LocalMedia>
+                                    // из-за того, что автор библиотеки дохера умный, приходится использовать кастомный компаратор
+                                    val removedItemsIndices: List<Int> =
+                                        localMedias?.mapIndexedNotNull { index, localItem ->
+                                            if (tempItems.none { tempItem ->
+                                                    tempItem.id == localItem.id
+                                                            && tempItem.path == localItem.path
+                                                            && tempItem.realPath == localItem.realPath
+                                                }) index else null
+                                        } ?: listOf()
 
-                                // Upload new media
-                                val uploadList = async(Dispatchers.Main) {
-                                    val list = mutableListOf<String>()
-                                    for (uItem in itemsToUpload) {
-                                        if (uItem.duration > 0) {
-                                            val file = getFileFromContentUri(
-                                                requireContext(),
-                                                Uri.parse(uItem.availablePath)
-                                            ) ?: continue
-                                            val tmp = async(Dispatchers.IO) {
-                                                viewModel.uploadPhoto(file)
+                                    // Upload new media
+                                    val uploadList = async(Dispatchers.Main) {
+                                        val list = mutableListOf<String>()
+                                        for (uItem in itemsToUpload) {
+                                            if (uItem.duration > 0) {
+                                                val file = getFileFromContentUri(requireContext(), Uri.parse(uItem.availablePath)) ?: continue
+                                                val tmp = async(Dispatchers.IO) {
+                                                    viewModel.uploadPhoto(file)
+                                                }
+                                                val (path, f) = tmp.await()
+                                                if(f) list += path
+                                            } else {
+                                                val tmp = async(Dispatchers.IO) {
+                                                    viewModel.uploadPhoto(File(uItem.availablePath))
+                                                }
+                                                val (path, f) = tmp.await()
+                                                if(f) list += path
                                             }
-                                            list += tmp.await()
-                                        } else {
-                                            val tmp = async(Dispatchers.IO) {
-                                                viewModel.uploadPhoto(File(uItem.availablePath))
-                                            }
-                                            list += tmp.await()
                                         }
+                                        return@async list
                                     }
-                                    return@async list
-                                }
-                                val imagesMessage = message.images?.filterIndexed { index, _ ->
-                                    index !in removedItemsIndices
-                                } ?: emptyList()
+                                    val imagesMessage = message.images?.filterIndexed { index, _ ->
+                                        index !in removedItemsIndices
+                                    } ?: emptyList()
                                     val finalList = imagesMessage + uploadList.await()
                                     val resp = async(Dispatchers.IO) {
                                         if (text.isNotEmpty()) {
@@ -972,34 +1111,39 @@ class MessageFragment(
                                         } else
                                             viewModel.editMessage(message.id, null, finalList, null, null)
                                     }
-                                    if (resp.await()) {
+                                    val f = resp.await()
+                                    editFlag = false
+                                    imageAdapter.clearImages()
+                                    editText.setText("")
+                                    editButton.visibility = View.GONE
+                                    binding.recordView.visibility = View.VISIBLE
+                                    viewModel.startRefresh()
+                                    if (!f) Toast.makeText(requireContext(), "Не удалось редактировать", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    if (text.isNotEmpty()) {
+                                        val resp = async(Dispatchers.IO) {
+                                            viewModel.editMessage(message.id, text, arrayListOf(), null, null)
+                                        }
+                                        val f = resp.await()
                                         editFlag = false
                                         imageAdapter.clearImages()
                                         editText.setText("")
                                         editButton.visibility = View.GONE
                                         binding.recordView.visibility = View.VISIBLE
                                         viewModel.startRefresh()
+                                        if(!f) Toast.makeText(requireContext(), "Не удалось редактировать", Toast.LENGTH_SHORT).show()
+                                    } else withContext(Dispatchers.Main) {
+                                        Toast.makeText(requireContext(), "Сообщение не должно быть пустым", Toast.LENGTH_SHORT).show()
                                     }
-                            } else {
-                                if (text.isNotEmpty()) {
-                                    val resp = async(Dispatchers.IO) {
-                                        viewModel.editMessage(message.id, text, arrayListOf(), null, null)
-                                    }
-                                    if (resp.await()) {
-                                        editFlag = false
-                                        imageAdapter.clearImages()
-                                        editText.setText("")
-                                        editButton.visibility = View.GONE
-                                        binding.recordView.visibility = View.VISIBLE
-                                        viewModel.startRefresh()
-                                    }
-                                } else withContext(Dispatchers.Main) {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Сообщение не должно быть пустым",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
                                 }
+                            }
+                            catch (e: Exception) {
+                                Toast.makeText(requireContext(), "Не удалось редактировать", Toast.LENGTH_SHORT).show()
+                                editText.setText("")
+                                editButton.visibility = View.GONE
+                                binding.recordView.visibility = View.VISIBLE
+                                imageAdapter.clearImages()
+                                editFlag = false
                             }
                         }
                     }

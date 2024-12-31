@@ -18,7 +18,8 @@ data class Message(
     @Json(name = "reference_to_message_id") var referenceToMessageId: Int? = null,
     @Json(name = "is_forwarded") var isForwarded: Boolean,
     @Json(name = "username_author_original") var usernameAuthorOriginal: String? = null,
-    var isUnsent: Boolean? = false
+    var isUnsent: Boolean? = false,
+    var localFilePaths: List<String>? = null
 ) : Parcelable
 
 data class LastMessage(

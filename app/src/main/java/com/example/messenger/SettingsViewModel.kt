@@ -63,15 +63,15 @@ class SettingsViewModel @Inject constructor(
     }
 
     suspend fun fManagerIsExist(fileName: String): Boolean = withContext(Dispatchers.IO) {
-        return@withContext fileManager.isExist(fileName)
+        return@withContext fileManager.isExistMessage(fileName)
     }
 
     suspend fun fManagerGetFilePath(fileName: String): String = withContext(Dispatchers.IO) {
-        return@withContext fileManager.getFilePath(fileName)
+        return@withContext fileManager.getMessageFilePath(fileName)
     }
 
     suspend fun fManagerSaveFile(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
-        fileManager.saveFile(fileName, fileData)
+        fileManager.saveMessageFile(fileName, fileData)
     }
 
     suspend fun uploadAvatar(avatar: File): String = withContext(Dispatchers.IO) {

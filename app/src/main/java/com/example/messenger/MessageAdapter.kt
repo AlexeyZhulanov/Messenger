@@ -93,13 +93,6 @@ class MessageAdapter(
         submitList(updatedList)
     }
 
-    fun addUnsentMessages(messages: List<Pair<Message, String>>) {
-        val updatedList = currentList.toMutableList()
-        updatedList.addAll(0, messages)
-        submitList(updatedList)
-        actionListener.onUnsentMessagesAdd()
-    }
-
     fun deleteUnsentMessage(message: Message) {
         val updatedList = currentList.toMutableList()
         updatedList.remove(Pair(message, ""))
@@ -846,14 +839,18 @@ class MessageAdapter(
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
                 val filePathTemp = async(Dispatchers.IO) {
-                    val voice = message.voice ?: "nonWork"
-                    if (messageViewModel.fManagerIsExist(voice)) {
-                        return@async Pair(messageViewModel.fManagerGetFilePath(voice), true)
+                    if(message.isUnsent == true) {
+                        return@async Pair(message.localFilePaths?.first(), true)
                     } else {
-                        try {
-                            return@async Pair(messageViewModel.downloadFile(context, "audio", message.voice!!), false)
-                        } catch (e: Exception) {
-                            return@async Pair(null, true)
+                        val voice = message.voice ?: "nonWork"
+                        if (messageViewModel.fManagerIsExist(voice)) {
+                            return@async Pair(messageViewModel.fManagerGetFilePath(voice), true)
+                        } else {
+                            try {
+                                return@async Pair(messageViewModel.downloadFile(context, "audio", message.voice!!), false)
+                            } catch (e: Exception) {
+                                return@async Pair(null, true)
+                            }
                         }
                     }
                 }
@@ -921,7 +918,7 @@ class MessageAdapter(
                     binding.errorImageView.visibility = View.VISIBLE
                     binding.playButton.visibility = View.GONE
                 }
-            } // todo возможно нужна переработка для оффлайна-unsent
+            }
             if(message.isUnsent == true) {
                 binding.timeTextView.text = "----"
                 binding.dateTextView.visibility = View.GONE
@@ -1101,15 +1098,19 @@ class MessageAdapter(
             }
             uiScope.launch {
                 val filePathTemp = async(Dispatchers.IO) {
-                    if (messageViewModel.fManagerIsExist(message.file!!)) {
-                        return@async Pair(messageViewModel.fManagerGetFilePath(message.file!!), true)
+                    if(message.isUnsent == true) {
+                        return@async Pair(message.localFilePaths?.first(), true)
                     } else {
-                        try {
-                            return@async Pair(messageViewModel.downloadFile(context, "files", message.file!!), false)
-                        } catch (e: Exception) {
-                            return@async Pair(null, true)
-                        }
+                        if (messageViewModel.fManagerIsExist(message.file!!)) {
+                            return@async Pair(messageViewModel.fManagerGetFilePath(message.file!!), true)
+                        } else {
+                            try {
+                                return@async Pair(messageViewModel.downloadFile(context, "files", message.file!!), false)
+                            } catch (e: Exception) {
+                                return@async Pair(null, true)
+                            }
 
+                        }
                     }
                 }
                 val (first, second) = filePathTemp.await()
@@ -1157,7 +1158,7 @@ class MessageAdapter(
                 binding.root.setOnClickListener {
                     actionListener.onUnsentMessageClick(message, itemView)
                 }
-            } else { // todo протестировать, возможно не будет работать unsent-offline
+            } else {
                 binding.icError.visibility = View.GONE
                 val time = messageViewModel.formatMessageTime(message.timestamp)
                 if(date != "") {
@@ -1357,20 +1358,24 @@ class MessageAdapter(
             uiScope.launch {
                 withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
                 val filePathTemp = async(Dispatchers.IO) {
-                    if (messageViewModel.fManagerIsExist(message.images?.first() ?: "nonWork")) {
-                        return@async Pair(messageViewModel.fManagerGetFilePath(message.images!!.first()), true)
+                    if(message.isUnsent == true) {
+                        return@async Pair(message.localFilePaths?.first(), true)
                     } else {
-                        try {
-                            return@async Pair(messageViewModel.downloadFile(context, "photos", message.images!!.first()), false)
-                        } catch (e: Exception) {
-                            return@async Pair(null, true)
+                        if (messageViewModel.fManagerIsExist(message.images?.first() ?: "nonWork")) {
+                            return@async Pair(messageViewModel.fManagerGetFilePath(message.images!!.first()), true)
+                        } else {
+                            try {
+                                return@async Pair(messageViewModel.downloadFile(context, "photos", message.images!!.first()), false)
+                            } catch (e: Exception) {
+                                return@async Pair(null, true)
+                            }
                         }
                     }
                 }
                 val (first, second) = filePathTemp.await()
                 if (first != null) {
                 val file = File(first)
-                    filePath = first
+                filePath = first
                 if (file.exists()) {
                     if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.images!!.first(), file.readBytes())
                     val uri = Uri.fromFile(file)
@@ -1424,7 +1429,7 @@ class MessageAdapter(
                 binding.root.setOnClickListener {
                     actionListener.onUnsentMessageClick(message, itemView)
                 }
-            } else { // todo также протестировать отдельно
+            } else {
                 binding.icError.visibility = View.GONE
                 val time = messageViewModel.formatMessageTime(message.timestamp)
                 if(date != "") {
@@ -1651,15 +1656,19 @@ class MessageAdapter(
             uiScope.launch {
                 val localMedias = async {
                     val medias = arrayListOf<LocalMedia>()
-                    for (image in message.images!!) {
+                    message.images?.forEachIndexed { index, image ->
                         val filePath = async(Dispatchers.IO) {
-                            if (messageViewModel.fManagerIsExist(image)) {
-                                Pair(messageViewModel.fManagerGetFilePath(image), true)
+                            if(message.isUnsent == true) {
+                                Pair(message.localFilePaths?.get(index), true)
                             } else {
-                                try {
-                                    Pair(messageViewModel.downloadFile(context, "photos", image), false)
-                                } catch (e: Exception) {
-                                    Pair(null, true)
+                                if (messageViewModel.fManagerIsExist(image)) {
+                                    Pair(messageViewModel.fManagerGetFilePath(image), true)
+                                } else {
+                                    try {
+                                        Pair(messageViewModel.downloadFile(context, "photos", image), false)
+                                    } catch (e: Exception) {
+                                        Pair(null, true)
+                                    }
                                 }
                             }
                         }

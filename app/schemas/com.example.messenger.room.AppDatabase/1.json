@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "76e0d542cb8cfb9ee105389a161f4442",
+    "identityHash": "04ae1d6aa9df25170f5ec14a23d05b77",
     "entities": [
       {
         "tableName": "settings",
@@ -532,7 +532,7 @@
       },
       {
         "tableName": "unsent_messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_dialog` INTEGER NOT NULL, `id_sender` INTEGER NOT NULL, `text` TEXT, `images` TEXT, `voice` TEXT, `file` TEXT, `is_read` INTEGER NOT NULL, `is_edited` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `is_forwarded` INTEGER NOT NULL, `reference_to_message_id` INTEGER, `username_author_original` TEXT, `is_unsent` INTEGER)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_dialog` INTEGER NOT NULL, `id_sender` INTEGER NOT NULL, `text` TEXT, `images` TEXT, `voice` TEXT, `file` TEXT, `is_read` INTEGER NOT NULL, `is_edited` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `is_forwarded` INTEGER NOT NULL, `reference_to_message_id` INTEGER, `username_author_original` TEXT, `is_unsent` INTEGER, `local_file_paths` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -617,6 +617,12 @@
             "columnName": "is_unsent",
             "affinity": "INTEGER",
             "notNull": false
+          },
+          {
+            "fieldPath": "localFilePaths",
+            "columnName": "local_file_paths",
+            "affinity": "TEXT",
+            "notNull": false
           }
         ],
         "primaryKey": {
@@ -632,7 +638,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '76e0d542cb8cfb9ee105389a161f4442')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '04ae1d6aa9df25170f5ec14a23d05b77')"
     ]
   }
 }

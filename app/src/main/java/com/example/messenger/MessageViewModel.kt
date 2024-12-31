@@ -98,6 +98,9 @@ class MessageViewModel @Inject constructor(
     private val _unsentMessageFlow = MutableStateFlow<Message?>(null)
     val unsentMessageFlow: StateFlow<Message?> get() = _unsentMessageFlow
 
+    private val _editMessageFlow = MutableStateFlow<Message?>(null)
+    val editMessageFlow: StateFlow<Message?> get() = _editMessageFlow
+
     private val tempFiles = mutableSetOf<String>()
 
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -137,6 +140,7 @@ class MessageViewModel @Inject constructor(
         _newMessageFlow.value = null
         currentPage.value = 0
         _unsentMessageFlow.value = null
+        _editMessageFlow.value = null
         this.searchBy.postValue(this.searchBy.value)
     }
 
@@ -287,31 +291,52 @@ class MessageViewModel @Inject constructor(
     }
 
     suspend fun deleteMessages(ids: List<Int>): Boolean = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.deleteMessages(dialogId, ids)
+        val response = try {
+            retrofitService.deleteMessages(dialogId, ids)
+        } catch (e: Exception) { return@withContext false }
+        return@withContext response
     }
 
-    suspend fun uploadPhoto(photo: File): String = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.uploadPhoto(dialogId, photo)
+    suspend fun uploadPhoto(photo: File): Pair<String, Boolean> = withContext(Dispatchers.IO) {
+        val path = try {
+            retrofitService.uploadPhoto(dialogId, photo)
+        } catch (e: Exception) {
+            return@withContext Pair("", false)
+        }
+        return@withContext Pair(path, true)
     }
 
-    suspend fun uploadAudio(audio: File): String = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.uploadAudio(dialogId, audio)
+    suspend fun uploadAudio(audio: File): Pair<String, Boolean> = withContext(Dispatchers.IO) {
+        val path = try {
+            retrofitService.uploadAudio(dialogId, audio)
+        } catch (e: Exception) {
+            return@withContext Pair("", false)
+        }
+        return@withContext Pair(path, true)
     }
 
-    suspend fun uploadFile(file: File): String = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.uploadFile(dialogId, file)
+    suspend fun uploadFile(file: File): Pair<String, Boolean> = withContext(Dispatchers.IO) {
+        val path = try {
+            retrofitService.uploadFile(dialogId, file)
+        } catch (e: Exception) {
+            return@withContext Pair("", false)
+        }
+        return@withContext Pair(path, true)
     }
 
-    suspend fun sendMessage(text: String?, images: List<String>?,
-                            voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-                            usernameAuthorOriginal: String?) = withContext(Dispatchers.IO) {
-        val flag = try {
-            retrofitService.sendMessage(dialogId, text, images, voice, file, referenceToMessageId, isForwarded, usernameAuthorOriginal)
-        } catch (e: Exception) { false }
+    suspend fun sendMessage(text: String?, images: List<String>?, voice: String?, file: String?,
+                            referenceToMessageId: Int?, isForwarded: Boolean,
+                            usernameAuthorOriginal: String?, localFilePaths: List<String>?) = withContext(Dispatchers.IO) {
+        val flag = if (!localFilePaths.isNullOrEmpty()) { false }
+        else {
+            try {
+                retrofitService.sendMessage(dialogId, text, images, voice, file, referenceToMessageId, isForwarded, usernameAuthorOriginal)
+            } catch (e: Exception) { false }
+        }
         if(!flag) {
-            var mes = Message(id = 0, idSender = -5, text = text, images = images, voice = voice,
-                file = file, referenceToMessageId = referenceToMessageId, isForwarded = isForwarded,
-                usernameAuthorOriginal = usernameAuthorOriginal, timestamp = 0, isEdited = false, isUnsent = true)
+            var mes = Message(id = 0, idSender = -5, text = text, images = images, voice = voice, file = file,
+                referenceToMessageId = referenceToMessageId, isForwarded = isForwarded, usernameAuthorOriginal = usernameAuthorOriginal,
+                timestamp = 0, isEdited = false, isUnsent = true, localFilePaths = localFilePaths)
             val id = messengerService.insertUnsentMessage(dialogId, mes)
             mes = mes.copy(id = id)
             _unsentMessageFlow.value = mes
@@ -319,8 +344,13 @@ class MessageViewModel @Inject constructor(
     }
 
     suspend fun editMessage(messageId: Int, text: String?, images: List<String>?,
-                            voice: String?, file: String?) = withContext(Dispatchers.IO) {
-        retrofitService.editMessage(dialogId, messageId, text, images, voice, file)
+                            voice: String?, file: String?) : Boolean = withContext(Dispatchers.IO) {
+        try {
+            retrofitService.editMessage(dialogId, messageId, text, images, voice, file)
+            return@withContext true
+        } catch (e: Exception) {
+            return@withContext false
+        }
     }
 
     suspend fun downloadFile(context: Context, folder: String, filename: String): String = withContext(Dispatchers.IO) {
@@ -334,27 +364,47 @@ class MessageViewModel @Inject constructor(
     }
 
     suspend fun fManagerIsExist(fileName: String): Boolean = withContext(Dispatchers.IO) {
-        return@withContext fileManager.isExist(fileName)
+        return@withContext fileManager.isExistMessage(fileName)
     }
 
     suspend fun fManagerGetFilePath(fileName: String): String = withContext(Dispatchers.IO) {
-        return@withContext fileManager.getFilePath(fileName)
+        return@withContext fileManager.getMessageFilePath(fileName)
     }
 
     suspend fun fManagerSaveFile(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
-        fileManager.saveFile(fileName, fileData)
+        fileManager.saveMessageFile(fileName, fileData)
+    }
+
+    suspend fun fManagerIsExistUnsent(fileName: String): Boolean = withContext(Dispatchers.IO) {
+        return@withContext fileManager.isExistUnsentMessage(fileName)
+    }
+
+    suspend fun fManagerDeleteUnsent(files: List<String>) = withContext(Dispatchers.IO) {
+        fileManager.deleteFilesUnsent(files)
+    }
+
+    suspend fun fManagerGetFilePathUnsent(fileName: String): String = withContext(Dispatchers.IO) {
+        return@withContext fileManager.getUnsentFilePath(fileName)
+    }
+
+    suspend fun fManagerSaveFileUnsent(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
+        fileManager.saveUnsentFile(fileName, fileData)
+    }
+
+    suspend fun fManagerGetFile(filePath: String): File? = withContext(Dispatchers.IO) {
+        return@withContext fileManager.getFileFromPath(filePath)
     }
 
     fun fManagerIsExistJava(filename: String): Boolean {
-        return fileManager.isExist(filename)
+        return fileManager.isExistMessage(filename)
     }
 
     fun fManagerGetFilePathJava(fileName: String): String {
-        return fileManager.getFilePath(fileName)
+        return fileManager.getMessageFilePath(fileName)
     }
 
     fun fManagerSaveFileJava(fileName: String, fileData: ByteArray) {
-        fileManager.saveFile(fileName, fileData)
+        fileManager.saveMessageFile(fileName, fileData)
     }
 
 
@@ -514,8 +564,7 @@ class MessageViewModel @Inject constructor(
 
     override fun onEditedMessage(message: Message) {
         Log.d("testSocketsMessage", "Edited Message: $message")
-        // todo я думаю здесь можно избавиться от refresh
-        refresh()
+        _editMessageFlow.value = message
         recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
                 recyclerView.scrollToPosition(0)
@@ -730,7 +779,7 @@ class MessageViewModel @Inject constructor(
     fun addTempFile(filename: String) = tempFiles.add(filename)
 
     fun clearTempFiles() {
-        fileManager.deleteFiles(tempFiles.toList())
+        fileManager.deleteFilesMessage(tempFiles.toList())
         tempFiles.clear()
     }
 

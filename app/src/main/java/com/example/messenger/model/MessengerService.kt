@@ -79,7 +79,7 @@ class MessengerService(
                 message.file?.let { add(it) }
             }
         }.toSet()
-        fileManager.cleanupUnusedFiles(usedFiles)
+        fileManager.cleanupUnusedMessageFiles(usedFiles)
     }
 
     override suspend fun getGroupMessages(idGroup: Int): List<GroupMessage> = withContext(Dispatchers.IO) {
@@ -96,7 +96,7 @@ class MessengerService(
                 message.file?.let { add(it) }
             }
         }.toSet()
-        fileManager.cleanupUnusedFiles(usedFiles)
+        fileManager.cleanupUnusedMessageFiles(usedFiles)
     }
 
     override suspend fun getUser(): User? = withContext(Dispatchers.IO) {
