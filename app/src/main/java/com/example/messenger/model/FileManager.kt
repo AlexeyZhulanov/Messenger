@@ -7,32 +7,49 @@ class FileManager(private val context: Context) {
 
     // Получаем директорию для хранения файлов сообщений
     private fun getMessageDirectory(): File {
-        val dir = File(context.filesDir, "conversations")
+        return getOrCreateDirectory("conversations")
+    }
+
+    // Получаем директорию для хранения файлов неотправленных сообщений
+    private fun getUnsentMessageDirectory(): File {
+        return getOrCreateDirectory("unsent_messages")
+    }
+
+    // Вспомогательная функция для создания директории
+    private fun getOrCreateDirectory(name: String): File {
+        val dir = File(context.filesDir, name)
         if (!dir.exists()) {
             dir.mkdirs()
         }
         return dir
     }
 
-    // Сохранение файла в директорию сообщений
-    fun saveFile(fileName: String, fileData: ByteArray): File {
-        val dir = getMessageDirectory()
-        val file = File(dir, fileName)
+    // Сохранение файла в указанную директорию
+    private fun saveFile(directory: File, fileName: String, fileData: ByteArray): File {
+        val file = File(directory, fileName)
         file.writeBytes(fileData)
         return file
     }
 
+    fun saveMessageFile(fileName: String, fileData: ByteArray): File {
+        return saveFile(getMessageDirectory(), fileName, fileData)
+    }
+
+    fun saveUnsentFile(fileName: String, fileData: ByteArray): File {
+        return saveFile(getUnsentMessageDirectory(), fileName, fileData)
+    }
+
     // Проверка на существование файла
-    fun isExist(fileName: String): Boolean {
+    fun isExistMessage(fileName: String): Boolean {
         val dir = getMessageDirectory()
         val file = File(dir, fileName)
         return file.exists()
     }
 
-    // Получение списка всех файлов в директории сообщений
-    private fun getAllFiles(): List<File> {
-        val dir = getMessageDirectory()
-        return dir.listFiles()?.toList() ?: emptyList()
+    fun isExistUnsentMessage(fileName: String): Boolean {
+        val dir = getUnsentMessageDirectory()
+        val file = File(dir, fileName)
+        return file.exists()
     }
 
     // Удаление файла
@@ -40,26 +57,48 @@ class FileManager(private val context: Context) {
         return file.delete()
     }
 
-    fun deleteFiles(files: List<String>) {
+    fun deleteFilesMessage(files: List<String>) {
         val dir = getMessageDirectory()
         files.forEach { filename ->
             deleteFile(File(dir, filename))
         }
     }
 
-    // Удаление всех файлов, не используемых в новых сообщениях
-    fun cleanupUnusedFiles(usedFiles: Set<String>) {
-        val allFiles = getAllFiles()
+    fun deleteFilesUnsent(files: List<String>) {
+        val dir = getUnsentMessageDirectory()
+        files.forEach { filename ->
+            deleteFile(File(dir, filename))
+        }
+    }
+
+    private fun cleanupDirectory(directory: File, usedFiles: Set<String>) {
+        val allFiles = directory.listFiles()?.toList() ?: emptyList()
         allFiles.forEach { file ->
             if (file.name !in usedFiles) {
                 deleteFile(file)
             }
         }
     }
-    // Получение пути к определенному файлу
-    fun getFilePath(fileName: String): String {
-        val dir = getMessageDirectory()
-        val file = File(dir, fileName)
-        return file.absolutePath
+
+    fun cleanupUnusedMessageFiles(usedFiles: Set<String>) {
+        cleanupDirectory(getMessageDirectory(), usedFiles)
+    }
+
+    fun cleanupUnusedUnsentFiles(usedFiles: Set<String>) {
+        cleanupDirectory(getUnsentMessageDirectory(), usedFiles)
+    }
+
+    fun getMessageFilePath(fileName: String): String {
+        return File(getMessageDirectory(), fileName).absolutePath
+    }
+
+    fun getUnsentFilePath(fileName: String): String {
+        return File(getUnsentMessageDirectory(), fileName).absolutePath
+    }
+
+    // Получение файла по filePath
+    fun getFileFromPath(filePath: String): File? {
+        val file = File(filePath)
+        return if (file.exists()) file else null
     }
 }

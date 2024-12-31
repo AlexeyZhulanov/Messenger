@@ -35,4 +35,10 @@ interface MessengerRepository {
     suspend fun insertChatSettings(chatSettings: ChatSettings)
 
     suspend fun deleteChatSettings(idDialog: Int, type: Boolean)
+
+    suspend fun insertUnsentMessage(idDialog: Int, message: Message) : Int
+
+    suspend fun getUnsentMessages(idDialog: Int) : List<Message>?
+
+    suspend fun deleteUnsentMessage(messageId: Int)
 }

@@ -19,6 +19,7 @@ import com.example.messenger.room.dao.GroupMessageDao
 import com.example.messenger.room.dao.LastReadMessageDao
 import com.example.messenger.room.dao.MessageDao
 import com.example.messenger.room.dao.SettingsDao
+import com.example.messenger.room.dao.UnsentMessageDao
 import com.example.messenger.room.dao.UserDao
 import dagger.Module
 import dagger.Provides
@@ -86,6 +87,12 @@ object MessengerModule {
 
     @Provides
     @Singleton
+    fun provideUnsentMessageDao(appDatabase: AppDatabase): UnsentMessageDao {
+        return appDatabase.getUnsentMessageDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideMessengerService(
         settingsDao: SettingsDao,
         conversationDao: ConversationDao,
@@ -93,10 +100,11 @@ object MessengerModule {
         groupMessageDao: GroupMessageDao,
         userDao: UserDao,
         lastReadMessageDao: LastReadMessageDao,
-        chatSettingsDao: ChatSettingsDao
+        chatSettingsDao: ChatSettingsDao,
+        unsentMessageDao: UnsentMessageDao
     ): MessengerService {
         return MessengerService(settingsDao, conversationDao, messageDao, groupMessageDao, userDao,
-            lastReadMessageDao, chatSettingsDao)
+            lastReadMessageDao, chatSettingsDao, unsentMessageDao)
     }
 
     @Provides

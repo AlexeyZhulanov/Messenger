@@ -53,6 +53,8 @@ interface MessageActionListener {
     fun onMessageClickImage(message: Message, itemView: View, localMedias: ArrayList<LocalMedia>, isSender: Boolean)
     fun onMessageLongClick(itemView: View)
     fun onImagesClick(images: ArrayList<LocalMedia>, position: Int)
+    fun onUnsentMessageClick(message: Message, itemView: View)
+    fun onUnsentMessagesAdd()
 }
 
 
@@ -88,6 +90,12 @@ class MessageAdapter(
     fun addNewMessage(message: Pair<Message, String>) {
         val updatedList = currentList.toMutableList()
         updatedList.add(0, message)
+        submitList(updatedList)
+    }
+
+    fun deleteUnsentMessage(message: Message) {
+        val updatedList = currentList.toMutableList()
+        updatedList.remove(Pair(message, ""))
         submitList(updatedList)
     }
 
@@ -476,44 +484,57 @@ class MessageAdapter(
                 binding.forwardLayout.forwardUsername.text = ""
             }
             binding.messageSenderTextView.text = message.text
-            val time = messageViewModel.formatMessageTime(message.timestamp)
-            if(date != "") {
-                binding.dateTextView.visibility = View.VISIBLE
-                binding.dateTextView.text = date
-            } else {
+            if(message.isUnsent == true) {
+                binding.timeTextView.text = "----"
                 binding.dateTextView.visibility = View.GONE
-            }
-            binding.timeTextView.text = time
-            if(!canLongClick) {
-                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
-                binding.checkbox.isChecked = position in checkedPositions
-                binding.checkbox.setOnClickListener {
-                    savePosition(message.id, true)
-                }
-            }
-            else { binding.checkbox.visibility = View.GONE }
-            if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-            } else {
-                binding.icCheck.visibility = View.VISIBLE
                 binding.icCheck2.visibility = View.INVISIBLE
-            }
-            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
-            else binding.editTextView.visibility = View.GONE
-            binding.root.setOnClickListener {
+                binding.editTextView.visibility = View.GONE
+                binding.icError.visibility = View.VISIBLE
+                binding.root.setOnClickListener {
+                    actionListener.onUnsentMessageClick(message, itemView)
+                }
+            } else {
+                binding.icError.visibility = View.GONE
+                val time = messageViewModel.formatMessageTime(message.timestamp)
+                if(date != "") {
+                    binding.dateTextView.visibility = View.VISIBLE
+                    binding.dateTextView.text = date
+                } else {
+                    binding.dateTextView.visibility = View.GONE
+                }
+                binding.timeTextView.text = time
                 if(!canLongClick) {
-                    savePosition(message.id, true)
+                    if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                    binding.checkbox.isChecked = position in checkedPositions
+                    binding.checkbox.setOnClickListener {
+                        savePosition(message.id, true)
+                    }
                 }
-                else
-                    actionListener.onMessageClick(message, itemView, true)
-            }
-            binding.root.setOnLongClickListener {
-                if(canLongClick) {
-                    onLongClick(message.id, true)
-                    actionListener.onMessageLongClick(itemView)
+                else { binding.checkbox.visibility = View.GONE }
+                if (message.isRead) {
+                    binding.icCheck.visibility = View.INVISIBLE
+                    binding.icCheck2.visibility = View.VISIBLE
+                } else {
+                    binding.icCheck.visibility = View.VISIBLE
+                    binding.icCheck2.visibility = View.INVISIBLE
                 }
-                true
+                if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+                else binding.editTextView.visibility = View.GONE
+                binding.root.setOnClickListener {
+                    if(!canLongClick) {
+                        savePosition(message.id, true)
+                    }
+                    else
+                        actionListener.onMessageClick(message, itemView, true)
+                }
+                binding.root.setOnLongClickListener {
+                    if(canLongClick) {
+                        onLongClick(message.id, true)
+                        actionListener.onMessageLongClick(itemView)
+                    }
+                    true
+                }
             }
         }
     }
@@ -818,14 +839,18 @@ class MessageAdapter(
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
                 val filePathTemp = async(Dispatchers.IO) {
-                    val voice = message.voice ?: "nonWork"
-                    if (messageViewModel.fManagerIsExist(voice)) {
-                        return@async Pair(messageViewModel.fManagerGetFilePath(voice), true)
+                    if(message.isUnsent == true) {
+                        return@async Pair(message.localFilePaths?.first(), true)
                     } else {
-                        try {
-                            return@async Pair(messageViewModel.downloadFile(context, "audio", message.voice!!), false)
-                        } catch (e: Exception) {
-                            return@async Pair(null, true)
+                        val voice = message.voice ?: "nonWork"
+                        if (messageViewModel.fManagerIsExist(voice)) {
+                            return@async Pair(messageViewModel.fManagerGetFilePath(voice), true)
+                        } else {
+                            try {
+                                return@async Pair(messageViewModel.downloadFile(context, "audio", message.voice!!), false)
+                            } catch (e: Exception) {
+                                return@async Pair(null, true)
+                            }
                         }
                     }
                 }
@@ -894,44 +919,57 @@ class MessageAdapter(
                     binding.playButton.visibility = View.GONE
                 }
             }
-            val time = messageViewModel.formatMessageTime(message.timestamp)
-            if(date != "") {
-                binding.dateTextView.visibility = View.VISIBLE
-                binding.dateTextView.text = date
-            } else {
+            if(message.isUnsent == true) {
+                binding.timeTextView.text = "----"
                 binding.dateTextView.visibility = View.GONE
-            }
-            binding.timeTextView.text = time
-            if(!canLongClick) {
-                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
-                binding.checkbox.isChecked = position in checkedPositions
-                binding.checkbox.setOnClickListener {
-                    savePosition(message.id, true)
-                }
-            }
-            else { binding.checkbox.visibility = View.GONE }
-            if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-            } else {
-                binding.icCheck.visibility = View.VISIBLE
                 binding.icCheck2.visibility = View.INVISIBLE
-            }
-            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
-            else binding.editTextView.visibility = View.GONE
-            binding.root.setOnClickListener {
+                binding.editTextView.visibility = View.GONE
+                binding.icError.visibility = View.VISIBLE
+                binding.root.setOnClickListener {
+                    actionListener.onUnsentMessageClick(message, itemView)
+                }
+            } else {
+                binding.icError.visibility = View.GONE
+                val time = messageViewModel.formatMessageTime(message.timestamp)
+                if(date != "") {
+                    binding.dateTextView.visibility = View.VISIBLE
+                    binding.dateTextView.text = date
+                } else {
+                    binding.dateTextView.visibility = View.GONE
+                }
+                binding.timeTextView.text = time
                 if(!canLongClick) {
-                    savePosition(message.id, true)
+                    if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                    binding.checkbox.isChecked = position in checkedPositions
+                    binding.checkbox.setOnClickListener {
+                        savePosition(message.id, true)
+                    }
                 }
-                else
-                    actionListener.onMessageClick(message, itemView, true)
-            }
-            binding.root.setOnLongClickListener {
-                if(canLongClick) {
-                    onLongClick(message.id, true)
-                    actionListener.onMessageLongClick(itemView)
+                else { binding.checkbox.visibility = View.GONE }
+                if (message.isRead) {
+                    binding.icCheck.visibility = View.INVISIBLE
+                    binding.icCheck2.visibility = View.VISIBLE
+                } else {
+                    binding.icCheck.visibility = View.VISIBLE
+                    binding.icCheck2.visibility = View.INVISIBLE
                 }
-                true
+                if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+                else binding.editTextView.visibility = View.GONE
+                binding.root.setOnClickListener {
+                    if(!canLongClick) {
+                        savePosition(message.id, true)
+                    }
+                    else
+                        actionListener.onMessageClick(message, itemView, true)
+                }
+                binding.root.setOnLongClickListener {
+                    if(canLongClick) {
+                        onLongClick(message.id, true)
+                        actionListener.onMessageLongClick(itemView)
+                    }
+                    true
+                }
             }
         }
     }
@@ -1060,15 +1098,19 @@ class MessageAdapter(
             }
             uiScope.launch {
                 val filePathTemp = async(Dispatchers.IO) {
-                    if (messageViewModel.fManagerIsExist(message.file!!)) {
-                        return@async Pair(messageViewModel.fManagerGetFilePath(message.file!!), true)
+                    if(message.isUnsent == true) {
+                        return@async Pair(message.localFilePaths?.first(), true)
                     } else {
-                        try {
-                            return@async Pair(messageViewModel.downloadFile(context, "files", message.file!!), false)
-                        } catch (e: Exception) {
-                            return@async Pair(null, true)
-                        }
+                        if (messageViewModel.fManagerIsExist(message.file!!)) {
+                            return@async Pair(messageViewModel.fManagerGetFilePath(message.file!!), true)
+                        } else {
+                            try {
+                                return@async Pair(messageViewModel.downloadFile(context, "files", message.file!!), false)
+                            } catch (e: Exception) {
+                                return@async Pair(null, true)
+                            }
 
+                        }
                     }
                 }
                 val (first, second) = filePathTemp.await()
@@ -1106,44 +1148,57 @@ class MessageAdapter(
                     binding.errorImageView.visibility = View.VISIBLE
                 }
             }
-            val time = messageViewModel.formatMessageTime(message.timestamp)
-            if(date != "") {
-                binding.dateTextView.visibility = View.VISIBLE
-                binding.dateTextView.text = date
-            } else {
+            if(message.isUnsent == true) {
+                binding.timeTextView.text = "----"
                 binding.dateTextView.visibility = View.GONE
-            }
-            binding.timeTextView.text = time
-            if(!canLongClick) {
-                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
-                binding.checkbox.isChecked = position in checkedPositions
-                binding.checkbox.setOnClickListener {
-                    savePosition(message.id, true)
-                }
-            }
-            else { binding.checkbox.visibility = View.GONE }
-            if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-            } else {
-                binding.icCheck.visibility = View.VISIBLE
                 binding.icCheck2.visibility = View.INVISIBLE
-            }
-            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
-            else binding.editTextView.visibility = View.GONE
-            binding.root.setOnClickListener {
+                binding.editTextView.visibility = View.GONE
+                binding.icError.visibility = View.VISIBLE
+                binding.root.setOnClickListener {
+                    actionListener.onUnsentMessageClick(message, itemView)
+                }
+            } else {
+                binding.icError.visibility = View.GONE
+                val time = messageViewModel.formatMessageTime(message.timestamp)
+                if(date != "") {
+                    binding.dateTextView.visibility = View.VISIBLE
+                    binding.dateTextView.text = date
+                } else {
+                    binding.dateTextView.visibility = View.GONE
+                }
+                binding.timeTextView.text = time
                 if(!canLongClick) {
-                    savePosition(message.id, true)
+                    if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                    binding.checkbox.isChecked = position in checkedPositions
+                    binding.checkbox.setOnClickListener {
+                        savePosition(message.id, true)
+                    }
                 }
-                else
-                    actionListener.onMessageClick(message, itemView, true)
-            }
-            binding.root.setOnLongClickListener {
-                if(canLongClick) {
-                    onLongClick(message.id, true)
-                    actionListener.onMessageLongClick(itemView)
+                else { binding.checkbox.visibility = View.GONE }
+                if (message.isRead) {
+                    binding.icCheck.visibility = View.INVISIBLE
+                    binding.icCheck2.visibility = View.VISIBLE
+                } else {
+                    binding.icCheck.visibility = View.VISIBLE
+                    binding.icCheck2.visibility = View.INVISIBLE
                 }
-                true
+                if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+                else binding.editTextView.visibility = View.GONE
+                binding.root.setOnClickListener {
+                    if(!canLongClick) {
+                        savePosition(message.id, true)
+                    }
+                    else
+                        actionListener.onMessageClick(message, itemView, true)
+                }
+                binding.root.setOnLongClickListener {
+                    if(canLongClick) {
+                        onLongClick(message.id, true)
+                        actionListener.onMessageLongClick(itemView)
+                    }
+                    true
+                }
             }
         }
     }
@@ -1303,20 +1358,24 @@ class MessageAdapter(
             uiScope.launch {
                 withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
                 val filePathTemp = async(Dispatchers.IO) {
-                    if (messageViewModel.fManagerIsExist(message.images?.first() ?: "nonWork")) {
-                        return@async Pair(messageViewModel.fManagerGetFilePath(message.images!!.first()), true)
+                    if(message.isUnsent == true) {
+                        return@async Pair(message.localFilePaths?.first(), true)
                     } else {
-                        try {
-                            return@async Pair(messageViewModel.downloadFile(context, "photos", message.images!!.first()), false)
-                        } catch (e: Exception) {
-                            return@async Pair(null, true)
+                        if (messageViewModel.fManagerIsExist(message.images?.first() ?: "nonWork")) {
+                            return@async Pair(messageViewModel.fManagerGetFilePath(message.images!!.first()), true)
+                        } else {
+                            try {
+                                return@async Pair(messageViewModel.downloadFile(context, "photos", message.images!!.first()), false)
+                            } catch (e: Exception) {
+                                return@async Pair(null, true)
+                            }
                         }
                     }
                 }
                 val (first, second) = filePathTemp.await()
                 if (first != null) {
                 val file = File(first)
-                    filePath = first
+                filePath = first
                 if (file.exists()) {
                     if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.images!!.first(), file.readBytes())
                     val uri = Uri.fromFile(file)
@@ -1360,44 +1419,57 @@ class MessageAdapter(
                     binding.errorImageView.visibility = View.VISIBLE
                 }
             }
-            val time = messageViewModel.formatMessageTime(message.timestamp)
-            if(date != "") {
-                binding.dateTextView.visibility = View.VISIBLE
-                binding.dateTextView.text = date
-            } else {
+            if(message.isUnsent == true) {
+                binding.timeTextView.text = "----"
                 binding.dateTextView.visibility = View.GONE
-            }
-            binding.timeTextView.text = time
-            if(!canLongClick) {
-                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
-                binding.checkbox.isChecked = position in checkedPositions
-                binding.checkbox.setOnClickListener {
-                    savePosition(message.id, true)
-                }
-            }
-            else { binding.checkbox.visibility = View.GONE }
-            if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-            } else {
-                binding.icCheck.visibility = View.VISIBLE
                 binding.icCheck2.visibility = View.INVISIBLE
-            }
-            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
-            else binding.editTextView.visibility = View.GONE
-            binding.root.setOnClickListener {
+                binding.editTextView.visibility = View.GONE
+                binding.icError.visibility = View.VISIBLE
+                binding.root.setOnClickListener {
+                    actionListener.onUnsentMessageClick(message, itemView)
+                }
+            } else {
+                binding.icError.visibility = View.GONE
+                val time = messageViewModel.formatMessageTime(message.timestamp)
+                if(date != "") {
+                    binding.dateTextView.visibility = View.VISIBLE
+                    binding.dateTextView.text = date
+                } else {
+                    binding.dateTextView.visibility = View.GONE
+                }
+                binding.timeTextView.text = time
                 if(!canLongClick) {
-                    savePosition(message.id, true)
+                    if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                    binding.checkbox.isChecked = position in checkedPositions
+                    binding.checkbox.setOnClickListener {
+                        savePosition(message.id, true)
+                    }
                 }
-                else
-                    actionListener.onMessageClickImage(message, itemView, arrayListOf(messageViewModel.fileToLocalMedia(File(filePath))), true)
-            }
-            binding.root.setOnLongClickListener {
-                if(canLongClick) {
-                    onLongClick(message.id, true)
-                    actionListener.onMessageLongClick(itemView)
+                else { binding.checkbox.visibility = View.GONE }
+                if (message.isRead) {
+                    binding.icCheck.visibility = View.INVISIBLE
+                    binding.icCheck2.visibility = View.VISIBLE
+                } else {
+                    binding.icCheck.visibility = View.VISIBLE
+                    binding.icCheck2.visibility = View.INVISIBLE
                 }
-                true
+                if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+                else binding.editTextView.visibility = View.GONE
+                binding.root.setOnClickListener {
+                    if(!canLongClick) {
+                        savePosition(message.id, true)
+                    }
+                    else
+                        actionListener.onMessageClickImage(message, itemView, arrayListOf(messageViewModel.fileToLocalMedia(File(filePath))), true)
+                }
+                binding.root.setOnLongClickListener {
+                    if(canLongClick) {
+                        onLongClick(message.id, true)
+                        actionListener.onMessageLongClick(itemView)
+                    }
+                    true
+                }
             }
         }
     }
@@ -1584,15 +1656,19 @@ class MessageAdapter(
             uiScope.launch {
                 val localMedias = async {
                     val medias = arrayListOf<LocalMedia>()
-                    for (image in message.images!!) {
+                    message.images?.forEachIndexed { index, image ->
                         val filePath = async(Dispatchers.IO) {
-                            if (messageViewModel.fManagerIsExist(image)) {
-                                Pair(messageViewModel.fManagerGetFilePath(image), true)
+                            if(message.isUnsent == true) {
+                                Pair(message.localFilePaths?.get(index), true)
                             } else {
-                                try {
-                                    Pair(messageViewModel.downloadFile(context, "photos", image), false)
-                                } catch (e: Exception) {
-                                    Pair(null, true)
+                                if (messageViewModel.fManagerIsExist(image)) {
+                                    Pair(messageViewModel.fManagerGetFilePath(image), true)
+                                } else {
+                                    try {
+                                        Pair(messageViewModel.downloadFile(context, "photos", image), false)
+                                    } catch (e: Exception) {
+                                        Pair(null, true)
+                                    }
                                 }
                             }
                         }
@@ -1622,46 +1698,59 @@ class MessageAdapter(
                     binding.progressBar.visibility = View.GONE
                 }
             }
-            val time = messageViewModel.formatMessageTime(message.timestamp)
-            if(date != "") {
-                binding.dateTextView.visibility = View.VISIBLE
-                binding.dateTextView.text = date
-            } else {
+            if(message.isUnsent == true) {
+                binding.timeTextView.text = "----"
                 binding.dateTextView.visibility = View.GONE
-            }
-            binding.timeTextView.text = time
-            if(!canLongClick) {
-                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
-                binding.checkbox.isChecked = position in checkedPositions
-                binding.checkbox.setOnClickListener {
-                    savePosition(message.id, true)
-                }
-            }
-            else { binding.checkbox.visibility = View.GONE }
-            if (message.isRead) {
                 binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-            } else {
-                binding.icCheck.visibility = View.VISIBLE
                 binding.icCheck2.visibility = View.INVISIBLE
-            }
-            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
-            else binding.editTextView.visibility = View.GONE
-            binding.root.setOnClickListener {
+                binding.editTextView.visibility = View.GONE
+                binding.icError.visibility = View.VISIBLE
+                binding.root.setOnClickListener {
+                    actionListener.onUnsentMessageClick(message, itemView)
+                }
+            } else {
+                binding.icError.visibility = View.GONE
+                val time = messageViewModel.formatMessageTime(message.timestamp)
+                if(date != "") {
+                    binding.dateTextView.visibility = View.VISIBLE
+                    binding.dateTextView.text = date
+                } else {
+                    binding.dateTextView.visibility = View.GONE
+                }
+                binding.timeTextView.text = time
                 if(!canLongClick) {
-                    savePosition(message.id, true)
+                    if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                    binding.checkbox.isChecked = position in checkedPositions
+                    binding.checkbox.setOnClickListener {
+                        savePosition(message.id, true)
+                    }
                 }
-                else {
-                    val medias: ArrayList<LocalMedia> = filePathsForClick.map { messageViewModel.fileToLocalMedia(File(it)) } as ArrayList<LocalMedia>
-                    actionListener.onMessageClickImage(message, itemView, medias, true)
+                else { binding.checkbox.visibility = View.GONE }
+                if (message.isRead) {
+                    binding.icCheck.visibility = View.INVISIBLE
+                    binding.icCheck2.visibility = View.VISIBLE
+                } else {
+                    binding.icCheck.visibility = View.VISIBLE
+                    binding.icCheck2.visibility = View.INVISIBLE
                 }
-            }
-            binding.root.setOnLongClickListener {
-                if(canLongClick) {
-                    onLongClick(message.id,true)
-                    actionListener.onMessageLongClick(itemView)
+                if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
+                else binding.editTextView.visibility = View.GONE
+                binding.root.setOnClickListener {
+                    if(!canLongClick) {
+                        savePosition(message.id, true)
+                    }
+                    else {
+                        val medias: ArrayList<LocalMedia> = filePathsForClick.map { messageViewModel.fileToLocalMedia(File(it)) } as ArrayList<LocalMedia>
+                        actionListener.onMessageClickImage(message, itemView, medias, true)
+                    }
                 }
-                true
+                binding.root.setOnLongClickListener {
+                    if(canLongClick) {
+                        onLongClick(message.id,true)
+                        actionListener.onMessageLongClick(itemView)
+                    }
+                    true
+                }
             }
         }
     }
