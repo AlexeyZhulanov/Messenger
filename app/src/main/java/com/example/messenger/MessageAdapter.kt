@@ -81,8 +81,6 @@ class MessageAdapter(
     private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
     var dialogSettings: ConversationSettings = ConversationSettings()
     private var highlightedPosition: Int? = null
-    private var widthFlag: Boolean = true
-    private var maxWidth: Int = 0 // todo срезать под корень
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.IO + job)
     private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)
@@ -267,12 +265,6 @@ class MessageAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         var message: Message
         var date: String
-        if(widthFlag) {
-            val displayMetrics = holder.itemView.context.resources.displayMetrics
-            val screenWidth = displayMetrics.widthPixels
-            maxWidth = (screenWidth * 0.65).toInt() // todo удалить
-            widthFlag = false
-        }
         try {
             message = getItem(position)?.first ?: return
             date = getItem(position)?.second ?: return
@@ -407,10 +399,12 @@ class MessageAdapter(
     // ViewHolder для текстовых сообщений получателя
     inner class MessagesViewHolderReceiver(private val binding: ItemMessageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         fun clearAnswerLayout() {
-            binding.answerLayout.root.visibility = View.GONE
-            binding.answerLayout.answerMessage.text = ""
-            binding.answerLayout.answerUsername.text = ""
-            binding.answerLayout.answerImageView.setImageDrawable(null)
+            with(binding) {
+                answerLayout.root.visibility = View.GONE
+                answerLayout.answerMessage.text = ""
+                answerLayout.answerUsername.text = ""
+                answerLayout.answerImageView.setImageDrawable(null)
+            }
         }
         fun bind(message: Message, date: String, position: Int, isAnswer: Boolean) {
             if(isAnswer) {
@@ -472,10 +466,12 @@ class MessageAdapter(
     // ViewHolder для текстовых сообщений отправителя
     inner class MessagesViewHolderSender(private val binding: ItemMessageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
         fun clearAnswerLayout() {
-            binding.answerLayout.root.visibility = View.GONE
-            binding.answerLayout.answerMessage.text = ""
-            binding.answerLayout.answerUsername.text = ""
-            binding.answerLayout.answerImageView.setImageDrawable(null)
+            with(binding) {
+                answerLayout.root.visibility = View.GONE
+                answerLayout.answerMessage.text = ""
+                answerLayout.answerUsername.text = ""
+                answerLayout.answerImageView.setImageDrawable(null)
+            }
         }
         fun bind(message: Message, date: String, position: Int, isAnswer: Boolean) {
             if(isAnswer) {
@@ -699,10 +695,12 @@ class MessageAdapter(
         private var isPlaying: Boolean = false
         private val handler = Handler(Looper.getMainLooper())
         fun clearAnswerLayout() {
-            binding.answerLayout.root.visibility = View.GONE
-            binding.answerLayout.answerMessage.text = ""
-            binding.answerLayout.answerUsername.text = ""
-            binding.answerLayout.answerImageView.setImageDrawable(null)
+            with(binding) {
+                answerLayout.root.visibility = View.GONE
+                answerLayout.answerMessage.text = ""
+                answerLayout.answerUsername.text = ""
+                answerLayout.answerImageView.setImageDrawable(null)
+            }
         }
         fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
@@ -808,13 +806,6 @@ class MessageAdapter(
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
-            if (message.isRead) {
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-            } else {
-                binding.icCheck.visibility = View.VISIBLE
-                binding.icCheck2.visibility = View.INVISIBLE
-            }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
@@ -838,10 +829,12 @@ class MessageAdapter(
         private var isPlaying: Boolean = false
         private val handler = Handler(Looper.getMainLooper())
         fun clearAnswerLayout() {
-            binding.answerLayout.root.visibility = View.GONE
-            binding.answerLayout.answerMessage.text = ""
-            binding.answerLayout.answerUsername.text = ""
-            binding.answerLayout.answerImageView.setImageDrawable(null)
+            with(binding) {
+                answerLayout.root.visibility = View.GONE
+                answerLayout.answerMessage.text = ""
+                answerLayout.answerUsername.text = ""
+                answerLayout.answerImageView.setImageDrawable(null)
+            }
         }
         fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
@@ -992,10 +985,12 @@ class MessageAdapter(
 
     inner class MessagesViewHolderFileReceiver(private val binding: ItemFileReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         fun clearAnswerLayout() {
-            binding.answerLayout.root.visibility = View.GONE
-            binding.answerLayout.answerMessage.text = ""
-            binding.answerLayout.answerUsername.text = ""
-            binding.answerLayout.answerImageView.setImageDrawable(null)
+            with(binding) {
+                answerLayout.root.visibility = View.GONE
+                answerLayout.answerMessage.text = ""
+                answerLayout.answerUsername.text = ""
+                answerLayout.answerImageView.setImageDrawable(null)
+            }
         }
         fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
@@ -1070,13 +1065,6 @@ class MessageAdapter(
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
-            if (message.isRead) {
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-            } else {
-                binding.icCheck.visibility = View.VISIBLE
-                binding.icCheck2.visibility = View.INVISIBLE
-            }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
@@ -1098,10 +1086,12 @@ class MessageAdapter(
 
     inner class MessagesViewHolderFileSender(private val binding: ItemFileSenderBinding) : RecyclerView.ViewHolder(binding.root) {
         fun clearAnswerLayout() {
-            binding.answerLayout.root.visibility = View.GONE
-            binding.answerLayout.answerMessage.text = ""
-            binding.answerLayout.answerUsername.text = ""
-            binding.answerLayout.answerImageView.setImageDrawable(null)
+            with(binding) {
+                answerLayout.root.visibility = View.GONE
+                answerLayout.answerMessage.text = ""
+                answerLayout.answerUsername.text = ""
+                answerLayout.answerImageView.setImageDrawable(null)
+            }
         }
         fun bind(message: Message, date: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
@@ -1221,10 +1211,12 @@ class MessageAdapter(
     inner class MessagesViewHolderTextImageReceiver(private val binding: ItemTextImageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         private var filePath: String = ""
         fun clearAnswerLayout() {
-            binding.answerLayout.root.visibility = View.GONE
-            binding.answerLayout.answerMessage.text = ""
-            binding.answerLayout.answerUsername.text = ""
-            binding.answerLayout.answerImageView.setImageDrawable(null)
+            with(binding) {
+                answerLayout.root.visibility = View.GONE
+                answerLayout.answerMessage.text = ""
+                answerLayout.answerUsername.text = ""
+                answerLayout.answerImageView.setImageDrawable(null)
+            }
         }
         fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
@@ -1235,12 +1227,15 @@ class MessageAdapter(
                 binding.forwardLayout.root.visibility = View.GONE
                 binding.forwardLayout.forwardUsername.text = ""
             }
+            val timeTextView = if(flagText) binding.timeTextView else binding.timeTextViewImage
+            val editTextView = if(flagText) binding.editTextView else binding.editTextViewImage
             if(flagText) {
-                binding.messageReceiverTextView.visibility = View.VISIBLE
-                binding.messageReceiverTextView.maxWidth = maxWidth
+                binding.customMessageLayout.visibility = View.VISIBLE
+                binding.timeLayout.visibility = View.GONE
                 binding.messageReceiverTextView.text = message.text
             } else {
-                binding.messageReceiverTextView.visibility = View.GONE
+                binding.customMessageLayout.visibility = View.GONE
+                binding.timeLayout.visibility = View.VISIBLE
             }
 
             uiScope.launch {
@@ -1312,7 +1307,7 @@ class MessageAdapter(
             } else {
                 binding.dateTextView.visibility = View.GONE
             }
-            binding.timeTextView.text = time
+            timeTextView.text = time
             if(!canLongClick && dialogSettings.canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
@@ -1321,15 +1316,8 @@ class MessageAdapter(
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
-            if (message.isRead) {
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-            } else {
-                binding.icCheck.visibility = View.VISIBLE
-                binding.icCheck2.visibility = View.INVISIBLE
-            }
-            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
-            else binding.editTextView.visibility = View.GONE
+            if(message.isEdited) editTextView.visibility = View.VISIBLE
+            else editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
                     savePosition(message.id, false)
@@ -1350,10 +1338,12 @@ class MessageAdapter(
     inner class MessagesViewHolderTextImageSender(private val binding: ItemTextImageSenderBinding) : RecyclerView.ViewHolder(binding.root) {
         private var filePath: String = ""
         fun clearAnswerLayout() {
-            binding.answerLayout.root.visibility = View.GONE
-            binding.answerLayout.answerMessage.text = ""
-            binding.answerLayout.answerUsername.text = ""
-            binding.answerLayout.answerImageView.setImageDrawable(null)
+            with(binding) {
+                answerLayout.root.visibility = View.GONE
+                answerLayout.answerMessage.text = ""
+                answerLayout.answerUsername.text = ""
+                answerLayout.answerImageView.setImageDrawable(null)
+            }
         }
         fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
@@ -1364,12 +1354,18 @@ class MessageAdapter(
                 binding.forwardLayout.root.visibility = View.GONE
                 binding.forwardLayout.forwardUsername.text = ""
             }
+            val timeTextView = if(flagText) binding.timeTextView else binding.timeTextViewImage
+            val editTextView = if(flagText) binding.editTextView else binding.editTextViewImage
+            val icCheck = if(flagText) binding.icCheck else binding.icCheckImage
+            val icCheck2 = if(flagText) binding.icCheck2 else binding.icCheck2Image
+            val icError = if(flagText) binding.icError else binding.icErrorImage
             if(flagText) {
-                binding.messageSenderTextView.visibility = View.VISIBLE
-                binding.messageSenderTextView.maxWidth = maxWidth
+                binding.customMessageLayout.visibility = View.VISIBLE
+                binding.timeLayout.visibility = View.GONE
                 binding.messageSenderTextView.text = message.text
             } else {
-                binding.messageSenderTextView.visibility = View.GONE
+                binding.customMessageLayout.visibility = View.GONE
+                binding.timeLayout.visibility = View.VISIBLE
             }
             uiScope.launch {
                 withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
@@ -1436,17 +1432,17 @@ class MessageAdapter(
                 }
             }
             if(message.isUnsent == true) {
-                binding.timeTextView.text = "----"
                 binding.dateTextView.visibility = View.GONE
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.INVISIBLE
-                binding.editTextView.visibility = View.GONE
-                binding.icError.visibility = View.VISIBLE
+                timeTextView.text = "----"
+                icCheck.visibility = View.INVISIBLE
+                icCheck2.visibility = View.INVISIBLE
+                editTextView.visibility = View.GONE
+                icError.visibility = View.VISIBLE
                 binding.root.setOnClickListener {
                     actionListener.onUnsentMessageClick(message, itemView)
                 }
             } else {
-                binding.icError.visibility = View.GONE
+                icError.visibility = View.GONE
                 val time = messageViewModel.formatMessageTime(message.timestamp)
                 if(date != "") {
                     binding.dateTextView.visibility = View.VISIBLE
@@ -1454,7 +1450,7 @@ class MessageAdapter(
                 } else {
                     binding.dateTextView.visibility = View.GONE
                 }
-                binding.timeTextView.text = time
+                timeTextView.text = time
                 if(!canLongClick) {
                     if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                     binding.checkbox.isChecked = position in checkedPositions
@@ -1464,14 +1460,14 @@ class MessageAdapter(
                 }
                 else { binding.checkbox.visibility = View.GONE }
                 if (message.isRead) {
-                    binding.icCheck.visibility = View.INVISIBLE
-                    binding.icCheck2.visibility = View.VISIBLE
+                    icCheck.visibility = View.INVISIBLE
+                    icCheck2.visibility = View.VISIBLE
                 } else {
-                    binding.icCheck.visibility = View.VISIBLE
-                    binding.icCheck2.visibility = View.INVISIBLE
+                    icCheck.visibility = View.VISIBLE
+                    icCheck2.visibility = View.INVISIBLE
                 }
-                if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
-                else binding.editTextView.visibility = View.GONE
+                if(message.isEdited) editTextView.visibility = View.VISIBLE
+                else editTextView.visibility = View.GONE
                 binding.root.setOnClickListener {
                     if(!canLongClick) {
                         savePosition(message.id, true)
@@ -1514,10 +1510,12 @@ class MessageAdapter(
             binding.recyclerview.adapter = adapter
         }
         fun clearAnswerLayout() {
-            binding.answerLayout.root.visibility = View.GONE
-            binding.answerLayout.answerMessage.text = ""
-            binding.answerLayout.answerUsername.text = ""
-            binding.answerLayout.answerImageView.setImageDrawable(null)
+            with(binding) {
+                answerLayout.root.visibility = View.GONE
+                answerLayout.answerMessage.text = ""
+                answerLayout.answerUsername.text = ""
+                answerLayout.answerImageView.setImageDrawable(null)
+            }
         }
         fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
@@ -1530,12 +1528,15 @@ class MessageAdapter(
             }
             filePathsForClick = emptyList()
             mes = message
+            val timeTextView = if(flagText) binding.timeTextView else binding.timeTextViewImage
+            val editTextView = if(flagText) binding.editTextView else binding.editTextViewImage
             if(flagText) {
-                binding.messageReceiverTextView.visibility = View.VISIBLE
-                binding.messageReceiverTextView.maxWidth = maxWidth
+                binding.customMessageLayout.visibility = View.VISIBLE
+                binding.timeLayout.visibility = View.GONE
                 binding.messageReceiverTextView.text = message.text
             } else {
-                binding.messageReceiverTextView.visibility = View.GONE
+                binding.customMessageLayout.visibility = View.GONE
+                binding.timeLayout.visibility = View.VISIBLE
             }
             binding.progressBar.visibility = View.VISIBLE
             uiScope.launch {
@@ -1584,7 +1585,7 @@ class MessageAdapter(
             } else {
                 binding.dateTextView.visibility = View.GONE
             }
-            binding.timeTextView.text = time
+            timeTextView.text = time
             if(!canLongClick) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
@@ -1593,15 +1594,8 @@ class MessageAdapter(
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
-            if (message.isRead) {
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-            } else {
-                binding.icCheck.visibility = View.VISIBLE
-                binding.icCheck2.visibility = View.INVISIBLE
-            }
-            if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
-            else binding.editTextView.visibility = View.GONE
+            if(message.isEdited) editTextView.visibility = View.VISIBLE
+            else editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
                 if(!canLongClick) {
                     savePosition(message.id, false)
@@ -1645,10 +1639,12 @@ class MessageAdapter(
             binding.recyclerview.adapter = adapter
         }
         fun clearAnswerLayout() {
-            binding.answerLayout.root.visibility = View.GONE
-            binding.answerLayout.answerMessage.text = ""
-            binding.answerLayout.answerUsername.text = ""
-            binding.answerLayout.answerImageView.setImageDrawable(null)
+            with(binding) {
+                answerLayout.root.visibility = View.GONE
+                answerLayout.answerMessage.text = ""
+                answerLayout.answerUsername.text = ""
+                answerLayout.answerImageView.setImageDrawable(null)
+            }
         }
         fun bind(message: Message, date: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             if(isAnswer) handleAnswerLayout(binding, message)
@@ -1661,12 +1657,18 @@ class MessageAdapter(
             }
             filePathsForClick = emptyList()
             mes = message
+            val timeTextView = if(flagText) binding.timeTextView else binding.timeTextViewImage
+            val editTextView = if(flagText) binding.editTextView else binding.editTextViewImage
+            val icCheck = if(flagText) binding.icCheck else binding.icCheckImage
+            val icCheck2 = if(flagText) binding.icCheck2 else binding.icCheck2Image
+            val icError = if(flagText) binding.icError else binding.icErrorImage
             if(flagText) {
-                binding.messageSenderTextView.visibility = View.VISIBLE
-                binding.messageSenderTextView.maxWidth = maxWidth
+                binding.customMessageLayout.visibility = View.VISIBLE
+                binding.timeLayout.visibility = View.GONE
                 binding.messageSenderTextView.text = message.text
             } else {
-                binding.messageSenderTextView.visibility = View.GONE
+                binding.customMessageLayout.visibility = View.GONE
+                binding.timeLayout.visibility = View.VISIBLE
             }
             binding.errorImageView.visibility = View.GONE
             uiScope.launch {
@@ -1715,17 +1717,17 @@ class MessageAdapter(
                 }
             }
             if(message.isUnsent == true) {
-                binding.timeTextView.text = "----"
                 binding.dateTextView.visibility = View.GONE
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.INVISIBLE
-                binding.editTextView.visibility = View.GONE
-                binding.icError.visibility = View.VISIBLE
+                timeTextView.text = "----"
+                icCheck.visibility = View.INVISIBLE
+                icCheck2.visibility = View.INVISIBLE
+                editTextView.visibility = View.GONE
+                icError.visibility = View.VISIBLE
                 binding.root.setOnClickListener {
                     actionListener.onUnsentMessageClick(message, itemView)
                 }
             } else {
-                binding.icError.visibility = View.GONE
+                icError.visibility = View.GONE
                 val time = messageViewModel.formatMessageTime(message.timestamp)
                 if(date != "") {
                     binding.dateTextView.visibility = View.VISIBLE
@@ -1733,7 +1735,7 @@ class MessageAdapter(
                 } else {
                     binding.dateTextView.visibility = View.GONE
                 }
-                binding.timeTextView.text = time
+                timeTextView.text = time
                 if(!canLongClick) {
                     if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                     binding.checkbox.isChecked = position in checkedPositions
@@ -1743,14 +1745,14 @@ class MessageAdapter(
                 }
                 else { binding.checkbox.visibility = View.GONE }
                 if (message.isRead) {
-                    binding.icCheck.visibility = View.INVISIBLE
-                    binding.icCheck2.visibility = View.VISIBLE
+                    icCheck.visibility = View.INVISIBLE
+                    icCheck2.visibility = View.VISIBLE
                 } else {
-                    binding.icCheck.visibility = View.VISIBLE
-                    binding.icCheck2.visibility = View.INVISIBLE
+                    icCheck.visibility = View.VISIBLE
+                    icCheck2.visibility = View.INVISIBLE
                 }
-                if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
-                else binding.editTextView.visibility = View.GONE
+                if(message.isEdited) editTextView.visibility = View.VISIBLE
+                else editTextView.visibility = View.GONE
                 binding.root.setOnClickListener {
                     if(!canLongClick) {
                         savePosition(message.id, true)
