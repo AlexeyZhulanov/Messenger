@@ -14,6 +14,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
@@ -81,7 +82,7 @@ class MessageAdapter(
     var dialogSettings: ConversationSettings = ConversationSettings()
     private var highlightedPosition: Int? = null
     private var widthFlag: Boolean = true
-    private var maxWidth: Int = 0
+    private var maxWidth: Int = 0 // todo срезать под корень
     private val job = Job()
     private val uiScope = CoroutineScope(Dispatchers.IO + job)
     private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)
@@ -269,7 +270,7 @@ class MessageAdapter(
         if(widthFlag) {
             val displayMetrics = holder.itemView.context.resources.displayMetrics
             val screenWidth = displayMetrics.widthPixels
-            maxWidth = (screenWidth * 0.65).toInt()
+            maxWidth = (screenWidth * 0.65).toInt() // todo удалить
             widthFlag = false
         }
         try {
@@ -474,11 +475,23 @@ class MessageAdapter(
             binding.answerLayout.answerImageView.setImageDrawable(null)
         }
         fun bind(message: Message, date: String, position: Int, isAnswer: Boolean) {
-            binding.messageSenderTextView.maxWidth = maxWidth
-            if(isAnswer) handleAnswerLayout(binding, message)
+            if(isAnswer) {
+                handleAnswerLayout(binding, message)
+                if(binding.customMessageLayout.width < binding.answerLayout.root.width) {
+                    val layoutParams = binding.customMessageLayout.layoutParams as ConstraintLayout.LayoutParams
+                    layoutParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                    binding.customMessageLayout.layoutParams = layoutParams
+                }
+            }
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
+                // если длина custom message меньше fwd layout, то растягиваем текст custom на ширину fwd
+                if(binding.customMessageLayout.width < binding.forwardLayout.root.width) {
+                    val layoutParams = binding.customMessageLayout.layoutParams as ConstraintLayout.LayoutParams
+                    layoutParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                    binding.customMessageLayout.layoutParams = layoutParams
+                }
             } else {
                 binding.forwardLayout.root.visibility = View.GONE
                 binding.forwardLayout.forwardUsername.text = ""
