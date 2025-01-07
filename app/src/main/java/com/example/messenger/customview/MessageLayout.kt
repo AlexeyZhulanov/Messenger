@@ -47,6 +47,11 @@ class MessageLayout @JvmOverloads constructor(
 
         // Измеряем все дочерние элементы
         measureChildWithMargins(messageTextView, widthMeasureSpec, 0, heightMeasureSpec, 0)
+
+        val messageLayout: Layout = messageTextView.layout
+        val lastLineWidth = messageLayout.getLineWidth(messageLayout.lineCount - 1).toInt()
+        val remainingWidth = maxWidth - lastLineWidth
+
         measureChildWithMargins(editTextView, widthMeasureSpec, 0, heightMeasureSpec, 0)
         measureChildWithMargins(timeTextView, widthMeasureSpec, 0, heightMeasureSpec, 0)
         mesWid = if(isSender) when {
@@ -65,12 +70,15 @@ class MessageLayout @JvmOverloads constructor(
             else -> 0
         } else 0
 
+        val editWidth = if (editTextView.visibility == View.VISIBLE) editTextView.measuredWidth else 0
+        val timeTopOffset = if (remainingWidth < timeTextView.measuredWidth + editWidth + mesWid) {
+            timeTextView.measuredHeight + paddingTop
+        } else 0
+
         // Общая ширина и высота ViewGroup
-        val wid = if(editTextView.visibility == View.VISIBLE) messageTextView.measuredWidth + timeTextView.measuredWidth +
-                mesWid + editTextView.measuredWidth
-        else messageTextView.measuredWidth + timeTextView.measuredWidth + mesWid
-        val totalWidth = wid.coerceAtMost(maxWidth) + paddingLeft + paddingRight
-        val totalHeight = messageTextView.measuredHeight.coerceAtLeast(timeTextView.measuredHeight) + paddingTop + paddingBottom
+        val wid = messageTextView.measuredWidth + timeTextView.measuredWidth + mesWid + editWidth
+        val totalWidth = if(isSender) wid.coerceAtMost(maxWidth) + paddingLeft + paddingRight else wid.coerceAtMost(maxWidth) + paddingLeft + paddingRight + 25
+        val totalHeight = messageTextView.measuredHeight.coerceAtLeast(timeTextView.measuredHeight) + paddingTop + paddingBottom + timeTopOffset
         setMeasuredDimension(
             resolveSize(totalWidth, widthMeasureSpec),
             resolveSize(totalHeight, heightMeasureSpec)
@@ -84,7 +92,6 @@ class MessageLayout @JvmOverloads constructor(
         // Вычисляем ширину последней строки текста в messageTextView
         val lastLineWidth = messageLayout.getLineWidth(messageLayout.lineCount - 1)
         val remainingWidth = parentWidth - lastLineWidth.toInt()
-
         // Координаты для messageSenderTextView
         val messageLeft = paddingLeft
         val messageTop = paddingTop
@@ -98,7 +105,7 @@ class MessageLayout @JvmOverloads constructor(
         // Определяем, достаточно ли места для timeTextView и editTextView
         if (remainingWidth >= timeTextView.measuredWidth + editWidth + mesWid) {
             // Размещаем timeTextView и editTextView в одной строке с сообщением
-            val timeLeft = parentWidth - timeTextView.measuredWidth - mesWid - paddingRight + 25
+            val timeLeft = if(isSender) parentWidth - timeTextView.measuredWidth - mesWid - paddingRight + 25 else parentWidth - timeTextView.measuredWidth - mesWid - paddingRight
             val timeTop = messageBottom - timeTextView.measuredHeight
             timeTextView.layout(timeLeft, timeTop, timeLeft + timeTextView.measuredWidth, timeTop + timeTextView.measuredHeight)
 
@@ -115,7 +122,7 @@ class MessageLayout @JvmOverloads constructor(
             }
         } else {
             // Размещаем timeTextView и editTextView на следующей строке
-            val timeLeft = parentWidth - timeTextView.measuredWidth - mesWid - paddingRight + 25
+            val timeLeft = if(isSender) parentWidth - timeTextView.measuredWidth - mesWid - paddingRight + 25 else parentWidth - timeTextView.measuredWidth - mesWid - paddingRight
             val timeTop = messageBottom + paddingTop
             timeTextView.layout(timeLeft, timeTop, timeLeft + timeTextView.measuredWidth, timeTop + timeTextView.measuredHeight)
 

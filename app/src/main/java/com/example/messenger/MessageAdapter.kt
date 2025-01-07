@@ -413,12 +413,22 @@ class MessageAdapter(
             binding.answerLayout.answerImageView.setImageDrawable(null)
         }
         fun bind(message: Message, date: String, position: Int, isAnswer: Boolean) {
-            binding.messageReceiverTextView.maxWidth = maxWidth
-            if(isAnswer) handleAnswerLayout(binding, message)
+            if(isAnswer) {
+                handleAnswerLayout(binding, message)
+                if(binding.customMessageLayout.width < binding.answerLayout.root.width) {
+                    val layoutParams = binding.customMessageLayout.layoutParams as ConstraintLayout.LayoutParams
+                    layoutParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                    binding.customMessageLayout.layoutParams = layoutParams
+                }
+            }
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
-
+                if(binding.customMessageLayout.width < binding.forwardLayout.root.width) {
+                    val layoutParams = binding.customMessageLayout.layoutParams as ConstraintLayout.LayoutParams
+                    layoutParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                    binding.customMessageLayout.layoutParams = layoutParams
+                }
             } else {
                 binding.forwardLayout.root.visibility = View.GONE
                 binding.forwardLayout.forwardUsername.text = ""
@@ -440,13 +450,6 @@ class MessageAdapter(
                 }
             }
             else { binding.checkbox.visibility = View.GONE }
-            if (message.isRead) {
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-            } else {
-                binding.icCheck.visibility = View.VISIBLE
-                binding.icCheck2.visibility = View.INVISIBLE
-            }
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             else binding.editTextView.visibility = View.GONE
             binding.root.setOnClickListener {
