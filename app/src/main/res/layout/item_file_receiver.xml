@@ -148,7 +148,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textStyle="italic"
                 android:text="изменено"
                 android:textColor="?attr/colorPrimaryDark"
@@ -164,41 +164,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 tools:text="21:35"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:maxLines="1"
                 android:textStyle="italic"
                 android:textColor="?attr/colorPrimaryDark"
                 android:layout_marginStart="5dp"
                 app:layout_constraintStart_toEndOf="@id/editTextView"
-                app:layout_constraintEnd_toStartOf="@id/ic_check"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent" />
-
-            <ImageView
-                android:id="@+id/ic_check"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_check"
-                app:tint="?attr/colorPrimaryDark"
-                android:paddingVertical="3dp"
-                android:layout_marginStart="-10dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@id/timeTextView"
-                app:layout_constraintBottom_toBottomOf="@id/timeTextView"
-                />
-
-            <ImageView
-                android:id="@+id/ic_check2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_check_two"
-                app:tint="?attr/colorPrimaryDark"
-                android:visibility="invisible"
-                android:paddingVertical="3dp"
-                android:layout_marginStart="-10dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@id/timeTextView"
-                app:layout_constraintBottom_toBottomOf="@id/timeTextView"
-                />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

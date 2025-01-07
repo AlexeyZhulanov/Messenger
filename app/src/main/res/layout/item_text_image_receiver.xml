@@ -25,7 +25,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.85"
+        app:layout_constraintGuide_percent="0.75"
         />
 
     <CheckBox
@@ -39,22 +39,23 @@
         android:visibility="gone"
         />
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layout_message"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="5dp"
+        android:background="@drawable/message_background_receiver"
         app:layout_constraintEnd_toStartOf="@id/receiverGuideLine"
         app:layout_constraintTop_toBottomOf="@id/dateTextView"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:gravity="start"
-        >
+        app:layout_constraintBottom_toBottomOf="parent">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <FrameLayout
+            android:id="@+id/includeLayout"
             android:layout_width="wrap_content"
-            android:background="@drawable/message_background_receiver"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent">
 
             <include
                 android:id="@+id/answer_layout"
@@ -62,31 +63,26 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:visibility="gone"
-                android:layout_marginBottom="5dp"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintBottom_toTopOf="@id/receiverImageView" />
+                android:layout_marginBottom="5dp" />
 
             <include
                 android:id="@+id/forward_layout"
                 layout="@layout/forward_layout"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:visibility="gone"
-                android:layout_marginBottom="5dp"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintBottom_toTopOf="@id/receiverImageView" />
+                android:visibility="gone" />
+
+        </FrameLayout>
 
             <ImageView
                 android:id="@+id/receiverImageView"
-                android:layout_width="250dp"
-                android:layout_height="300dp"
+                android:layout_width="0dp"
+                android:layout_height="325dp"
                 tools:src="@drawable/wallpaper6"
                 android:scaleType="centerCrop"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/includeLayout"
                 android:adjustViewBounds="true" />
 
             <TextView
@@ -128,90 +124,96 @@
                 android:visibility="gone"
                 />
 
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/timeLayout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="3dp"
+                android:layout_marginBottom="3dp"
+                android:background="@drawable/messenger_item_transparent_background"
+                app:layout_constraintBottom_toBottomOf="@id/receiverImageView"
+                app:layout_constraintEnd_toEndOf="parent"
+                >
+
+            <TextView
+                android:id="@+id/editTextViewImage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textSize="12sp"
+                android:textStyle="italic"
+                android:text="изменено"
+                android:visibility="gone"
+                android:textColor="@color/colorDefault"
+                android:layout_marginEnd="5dp"
+                android:layout_marginStart="5dp"
+                android:paddingStart="5dp"
+                app:layout_constraintTop_toTopOf="@id/timeTextViewImage"
+                app:layout_constraintBottom_toBottomOf="@id/timeTextViewImage"
+                app:layout_constraintEnd_toStartOf="@id/timeTextViewImage" />
+
+            <TextView
+                android:id="@+id/timeTextViewImage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="21:35"
+                android:textSize="12sp"
+                android:maxLines="1"
+                android:textStyle="italic"
+                android:textColor="@color/colorDefault"
+                android:paddingHorizontal="4dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <com.example.messenger.customview.MessageLayout
+            android:id="@+id/customMessageLayout"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:layout_marginTop="5dp"
+            android:visibility="gone"
+            tools:visibility="visible"
+            app:layout_constraintTop_toBottomOf="@id/receiverImageView"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
             <TextView
                 android:id="@+id/messageReceiverTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="16sp"
-                android:gravity="center"
+                android:gravity="start"
                 tools:text="Сообщение"
-                android:maxWidth="270dp"
                 android:textColor="?attr/colorPrimaryDark"
-                android:layout_marginTop="5dp"
-                app:layout_constraintTop_toBottomOf="@id/receiverImageView"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent" />
-
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="1"
-                android:background="@drawable/messenger_item_transparent_background"
-                app:layout_constraintStart_toEndOf="@id/messageReceiverTextView"
-                app:layout_constraintBottom_toBottomOf="parent">
+                android:layout_marginEnd="3dp" />
 
             <TextView
                 android:id="@+id/editTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textStyle="italic"
                 android:text="изменено"
-                android:textColor="@color/colorDefault"
-                android:layout_marginEnd="5dp"
-                android:layout_marginStart="5dp"
+                android:textColor="?attr/colorPrimaryDark"
                 android:visibility="gone"
-                app:layout_constraintHorizontal_bias="1"
-                app:layout_constraintTop_toTopOf="@id/timeTextView"
-                app:layout_constraintBottom_toBottomOf="@id/timeTextView"
-                app:layout_constraintEnd_toStartOf="@id/timeTextView" />
+                android:layout_marginEnd="5dp" />
 
             <TextView
                 android:id="@+id/timeTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 tools:text="21:35"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:maxLines="1"
                 android:textStyle="italic"
-                android:textColor="@color/colorDefault"
-                android:paddingStart="3dp"
-                app:layout_constraintVertical_bias="1"
-                app:layout_constraintEnd_toStartOf="@id/ic_check"
-                app:layout_constraintBottom_toBottomOf="parent" />
+                android:textColor="?attr/colorAccent" />
 
-            <ImageView
-                android:id="@+id/ic_check"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_check"
-                app:tint="?attr/colorPrimaryDark"
-                android:paddingVertical="3dp"
-                android:layout_marginStart="-10dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@id/timeTextView"
-                app:layout_constraintBottom_toBottomOf="@id/timeTextView"
-                />
+        </com.example.messenger.customview.MessageLayout>
 
-            <ImageView
-                android:id="@+id/ic_check2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_check_two"
-                app:tint="?attr/colorPrimaryDark"
-                android:visibility="invisible"
-                android:paddingVertical="3dp"
-                android:layout_marginStart="-10dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@id/timeTextView"
-                app:layout_constraintBottom_toBottomOf="@id/timeTextView"
-                />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-    </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
