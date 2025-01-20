@@ -6,15 +6,15 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
-import com.example.messenger.model.Settings
 import com.example.messenger.model.User
-import com.example.messenger.room.entities.SettingsDbEntity
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -28,7 +28,8 @@ class SettingsViewModel @Inject constructor(
     private val prefs: SharedPreferences,
     private val retrofitService: RetrofitService,
     private val messengerService: MessengerService,
-    private val fileManager: FileManager
+    private val fileManager: FileManager,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
     private val _wallpaper = MutableLiveData<String>()
@@ -58,36 +59,36 @@ class SettingsViewModel @Inject constructor(
         _themeNumber.value = themeNumber
     }
 
-    suspend fun getUser(): User = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.getUser(0) // 0 - current user from jwt
+    suspend fun getUser(): User {
+        return retrofitService.getUser(0) // 0 - current user from jwt
     }
 
-    suspend fun fManagerIsExistAvatar(fileName: String): Boolean = withContext(Dispatchers.IO) {
-        return@withContext fileManager.isExistAvatar(fileName)
+    fun fManagerIsExistAvatar(fileName: String): Boolean {
+        return fileManager.isExistAvatar(fileName)
     }
 
-    suspend fun fManagerGetAvatarPath(fileName: String): String = withContext(Dispatchers.IO) {
-        return@withContext fileManager.getAvatarFilePath(fileName)
+    fun fManagerGetAvatarPath(fileName: String): String {
+        return fileManager.getAvatarFilePath(fileName)
     }
 
-    suspend fun fManagerSaveAvatar(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
+    suspend fun fManagerSaveAvatar(fileName: String, fileData: ByteArray) = withContext(ioDispatcher) {
         fileManager.saveAvatarFile(fileName, fileData)
     }
 
-    suspend fun uploadAvatar(avatar: File): String = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.uploadAvatar(avatar)
+    suspend fun uploadAvatar(avatar: File): String {
+        return retrofitService.uploadAvatar(avatar)
     }
 
-    suspend fun downloadAvatar(context: Context, filename: String): String = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.downloadAvatar(context, filename)
+    suspend fun downloadAvatar(context: Context, filename: String): String {
+        return retrofitService.downloadAvatar(context, filename)
     }
 
-    suspend fun updateAvatar(photo: String) : Boolean = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.updateProfile(null, photo)
+    suspend fun updateAvatar(photo: String) : Boolean {
+        return retrofitService.updateProfile(null, photo)
     }
     
-    suspend fun updateUserName(username: String) : Boolean = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.updateProfile(username, null)
+    suspend fun updateUserName(username: String) : Boolean {
+        return retrofitService.updateProfile(username, null)
     }
 
     fun updatePassword(oldPassword: String, newPassword: String, onSuccess: () -> Unit, onError: (String) -> Unit) {

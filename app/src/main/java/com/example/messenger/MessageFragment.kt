@@ -54,7 +54,6 @@ import com.luck.picture.lib.interfaces.OnExternalPreviewEventListener
 import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
 import com.tougee.recorderview.AudioRecordView
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -613,13 +612,13 @@ class MessageFragment(
                         for (item1 in items) {
                             if (item1.duration > 0) {
                                 val file = getFileFromContentUri(requireContext(), Uri.parse(item1.availablePath)) ?: continue
-                                val tmp = async(Dispatchers.IO) { viewModel.uploadPhoto(file) }
+                                val tmp = async { viewModel.uploadPhoto(file) }
                                 val (path, f) = tmp.await()
                                 list += path
                                 flag = f
                                 if(!f) break
                             } else {
-                                val tmp = async(Dispatchers.IO) { viewModel.uploadPhoto(File(item1.availablePath)) }
+                                val tmp = async { viewModel.uploadPhoto(File(item1.availablePath)) }
                                 val (path, f) = tmp.await()
                                 list += path
                                 flag = f
@@ -956,7 +955,7 @@ class MessageFragment(
                                     }
                                     val uploadedFiles: MutableList<String> = mutableListOf()
                                     files.forEachIndexed { index, file ->
-                                        val tmp = async(Dispatchers.IO) { viewModel.uploadPhoto(file) }
+                                        val tmp = async { viewModel.uploadPhoto(file) }
                                         val (path, f) = tmp.await()
                                         if(f) {
                                             uploadedFiles.add(path)
@@ -964,7 +963,7 @@ class MessageFragment(
                                             if(index != 0) {
                                                 Toast.makeText(requireContext(), "Файл №$index не загрузился, вторая попытка...", Toast.LENGTH_SHORT).show()
                                                 // вторая попытка для файла, если до этого файлы загрузились
-                                                val tmp2 = async(Dispatchers.IO) { viewModel.uploadPhoto(file) }
+                                                val tmp2 = async { viewModel.uploadPhoto(file) }
                                                 val (path2, f2) = tmp2.await()
                                                 if(f2) {
                                                     uploadedFiles.add(path2)
@@ -1101,13 +1100,13 @@ class MessageFragment(
                                         for (uItem in itemsToUpload) {
                                             if (uItem.duration > 0) {
                                                 val file = getFileFromContentUri(requireContext(), Uri.parse(uItem.availablePath)) ?: continue
-                                                val tmp = async(Dispatchers.IO) {
+                                                val tmp = async {
                                                     viewModel.uploadPhoto(file)
                                                 }
                                                 val (path, f) = tmp.await()
                                                 if(f) list += path
                                             } else {
-                                                val tmp = async(Dispatchers.IO) {
+                                                val tmp = async {
                                                     viewModel.uploadPhoto(File(uItem.availablePath))
                                                 }
                                                 val (path, f) = tmp.await()

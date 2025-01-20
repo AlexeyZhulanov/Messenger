@@ -43,12 +43,10 @@ import com.masoudss.lib.SeekBarOnProgressChanged
 import com.masoudss.lib.WaveformSeekBar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import kotlinx.coroutines.withContext
 import java.io.File
 
 interface MessageActionListener {
@@ -1019,30 +1017,25 @@ class MessageAdapter(
                 val file = File(first)
                 if (file.exists()) {
                     if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.file!!, file.readBytes())
-                    withContext(Dispatchers.Main) {
-                        binding.fileNameReceiverTextView.text = file.name
-                        binding.fileSizeTextView.text = messageViewModel.formatFileSize(file.length())
-                        binding.fileButton.setOnClickListener {
-                            try {
-                                val uri: Uri = FileProvider.getUriForFile(context, context.applicationContext.packageName + ".provider", file)
+                    binding.fileNameReceiverTextView.text = file.name
+                    binding.fileSizeTextView.text = messageViewModel.formatFileSize(file.length())
+                    binding.fileButton.setOnClickListener {
+                        try {
+                            val uri: Uri = FileProvider.getUriForFile(context, context.applicationContext.packageName + ".provider", file)
+                            val intent = Intent(Intent.ACTION_VIEW)
+                            intent.setDataAndType(uri, context.contentResolver.getType(uri))
+                            intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
 
-                                val intent = Intent(Intent.ACTION_VIEW)
-                                intent.setDataAndType(uri, context.contentResolver.getType(uri))
-                                intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-
-                                val chooser = Intent.createChooser(intent, "Выберите приложение для открытия файла")
-                                context.startActivity(chooser)
-                            } catch (e: IllegalArgumentException) {
-                                e.printStackTrace()
-                            }
+                            val chooser = Intent.createChooser(intent, "Выберите приложение для открытия файла")
+                            context.startActivity(chooser)
+                        } catch (e: IllegalArgumentException) {
+                            e.printStackTrace()
                         }
                     }
                 } else {
-                    withContext(Dispatchers.Main) {
-                        Log.e("FileError", "File does not exist: $first")
-                        binding.progressBar.visibility = View.GONE
-                        binding.errorImageView.visibility = View.VISIBLE
-                    }
+                    Log.e("FileError", "File does not exist: $first")
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
                 }
             } else {
                     binding.progressBar.visibility = View.GONE
@@ -1124,30 +1117,25 @@ class MessageAdapter(
                     val file = File(first)
                     if (file.exists()) {
                         if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.file!!, file.readBytes())
-                        withContext(Dispatchers.Main) {
-                            binding.fileNameSenderTextView.text = file.name
-                            binding.fileSizeTextView.text = messageViewModel.formatFileSize(file.length())
-                            binding.fileButton.setOnClickListener {
-                                try {
-                                    val uri: Uri = FileProvider.getUriForFile(context, context.applicationContext.packageName + ".provider", file)
+                        binding.fileNameSenderTextView.text = file.name
+                        binding.fileSizeTextView.text = messageViewModel.formatFileSize(file.length())
+                        binding.fileButton.setOnClickListener {
+                            try {
+                                val uri: Uri = FileProvider.getUriForFile(context, context.applicationContext.packageName + ".provider", file)
+                                val intent = Intent(Intent.ACTION_VIEW)
+                                intent.setDataAndType(uri, context.contentResolver.getType(uri))
+                                intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
 
-                                    val intent = Intent(Intent.ACTION_VIEW)
-                                    intent.setDataAndType(uri, context.contentResolver.getType(uri))
-                                    intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-
-                                    val chooser = Intent.createChooser(intent, "Выберите приложение для открытия файла")
-                                    context.startActivity(chooser)
-                                } catch (e: IllegalArgumentException) {
-                                    e.printStackTrace()
-                                }
+                                val chooser = Intent.createChooser(intent, "Выберите приложение для открытия файла")
+                                context.startActivity(chooser)
+                            } catch (e: IllegalArgumentException) {
+                                e.printStackTrace()
                             }
                         }
                     } else {
-                        withContext(Dispatchers.Main) {
-                            Log.e("FileError", "File does not exist: $first")
-                            binding.progressBar.visibility = View.GONE
-                            binding.errorImageView.visibility = View.VISIBLE
-                        }
+                        Log.e("FileError", "File does not exist: $first")
+                        binding.progressBar.visibility = View.GONE
+                        binding.errorImageView.visibility = View.VISIBLE
                     }
                 } else {
                     binding.progressBar.visibility = View.GONE
@@ -1534,7 +1522,7 @@ class MessageAdapter(
                 val localMedias = async {
                     val medias = arrayListOf<LocalMedia>()
                     for (image in message.images!!) {
-                        val filePath = async(Dispatchers.IO) {
+                        val filePath = async {
                             semaphore.withPermit {
                                 if (messageViewModel.fManagerIsExist(image)) {
                                     Pair(messageViewModel.fManagerGetFilePath(image), true)
@@ -1667,7 +1655,7 @@ class MessageAdapter(
                 val localMedias = async {
                     val medias = arrayListOf<LocalMedia>()
                     message.images?.forEachIndexed { index, image ->
-                        val filePath = async(Dispatchers.IO) {
+                        val filePath = async {
                             semaphore.withPermit {
                                 if (message.isUnsent == true) {
                                     Pair(message.localFilePaths?.get(index), true)
@@ -1692,11 +1680,9 @@ class MessageAdapter(
                                 if (!second && isInLast30) messageViewModel.fManagerSaveFile(image, file.readBytes())
                                 medias += messageViewModel.fileToLocalMedia(file)
                             } else {
-                                withContext(Dispatchers.Main) {
-                                    Log.e("ImageError", "File does not exist: $filePath")
-                                    binding.progressBar.visibility = View.GONE
-                                    binding.errorImageView.visibility = View.VISIBLE
-                                }
+                                Log.e("ImageError", "File does not exist: $filePath")
+                                binding.progressBar.visibility = View.GONE
+                                binding.errorImageView.visibility = View.VISIBLE
                             }
                         } else {
                             binding.progressBar.visibility = View.GONE
