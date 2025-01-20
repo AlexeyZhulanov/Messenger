@@ -3,6 +3,7 @@ package com.example.messenger
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.text.SpannableString
@@ -25,6 +26,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentMessengerBinding
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.Message
@@ -40,6 +44,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.net.UnknownHostException
 
 @AndroidEntryPoint
@@ -47,7 +52,7 @@ class MessengerFragment : Fragment() {
     private lateinit var binding: FragmentMessengerBinding
     private lateinit var adapter: MessengerAdapter
     private lateinit var preferences: SharedPreferences
-    private lateinit var currentUser: User
+    private var currentUser: User? = null
     private var forwardFlag: Boolean = false
     private var forwardMessages: List<Message>? = null
     private var forwardUsernames: List<String>? = null
@@ -88,6 +93,39 @@ class MessengerFragment : Fragment() {
         val addImageView: ImageView = view.findViewById(R.id.ic_add)
         addImageView.setOnClickListener {
             showPopupMenu(it, R.menu.popup_menu_add)
+        }
+        messengerViewModel.currentUser.observe(viewLifecycleOwner) { user ->
+            currentUser = user
+            uiScope.launch {
+                val avatar = user?.avatar ?: ""
+                if (avatar != "") {
+                    val filePathTemp = async(Dispatchers.IO) {
+                        if (messengerViewModel.fManagerIsExistAvatar(avatar)) {
+                            return@async Pair(messengerViewModel.fManagerGetAvatarPath(avatar), true)
+                        } else {
+                            try {
+                                return@async Pair(messengerViewModel.downloadAvatar(requireContext(), avatar), false)
+                            } catch (e: Exception) {
+                                return@async Pair(null, true)
+                            }
+                        }
+                    }
+                    val (first, second) = filePathTemp.await()
+                    if (first != null) {
+                        val file = File(first)
+                        if (file.exists()) {
+                            if (!second) messengerViewModel.fManagerSaveAvatar(avatar, file.readBytes())
+                            val uri = Uri.fromFile(file)
+                            avatarImageView.imageTintList = null
+                            Glide.with(requireContext())
+                                .load(uri)
+                                .apply(RequestOptions.circleCropTransform())
+                                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                .into(avatarImageView)
+                        }
+                    }
+                }
+            }
         }
         observeViewModel()
     }
@@ -133,19 +171,16 @@ class MessengerFragment : Fragment() {
         messengerViewModel.conversations.observe(viewLifecycleOwner) { conversations ->
             adapter.conversations = conversations
         }
-        messengerViewModel.currentUser.observe(viewLifecycleOwner) { user ->
-            currentUser = user
-        }
     }
 
     private fun setupRecyclerView() {
-        adapter = MessengerAdapter(object : MessengerActionListener {
+        adapter = MessengerAdapter(messengerViewModel, requireContext(), object : MessengerActionListener {
             override fun onConversationClicked(conversation: Conversation, index: Int) {
                 when (conversation.type) {
                     "dialog" -> {
                         if (!forwardFlag) {
                             parentFragmentManager.beginTransaction()
-                                .replace(R.id.fragmentContainer, MessageFragment(conversation.toDialog(), currentUser), "MESSAGE_FRAGMENT_TAG")
+                                .replace(R.id.fragmentContainer, MessageFragment(conversation.toDialog(), currentUser ?: User(0, "", "")), "MESSAGE_FRAGMENT_TAG")
                                 .addToBackStack(null)
                                 .commit()
                         } else {
@@ -160,7 +195,7 @@ class MessengerFragment : Fragment() {
                     "group" -> {
                         if (!forwardFlag) {
                             parentFragmentManager.beginTransaction()
-                                .replace(R.id.fragmentContainer, GroupFragment(conversation.toGroup(), currentUser), "GROUP_FRAGMENT_TAG")
+                                .replace(R.id.fragmentContainer, GroupFragment(conversation.toGroup(), currentUser ?: User(0, "", "")), "GROUP_FRAGMENT_TAG")
                                 .addToBackStack(null)
                                 .commit()
                         } else {
@@ -189,7 +224,7 @@ class MessengerFragment : Fragment() {
             when (item.itemId) {
                 R.id.menu_item1 -> {
                     parentFragmentManager.beginTransaction()
-                        .replace(R.id.fragmentContainer, SettingsFragment(), "SETTINGS_FRAGMENT_TAG")
+                        .replace(R.id.fragmentContainer, SettingsFragment(currentUser ?: User(0, "", "")), "SETTINGS_FRAGMENT_TAG")
                         .addToBackStack(null)
                         .commit()
                     true

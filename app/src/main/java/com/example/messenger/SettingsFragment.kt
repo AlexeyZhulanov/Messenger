@@ -51,10 +51,11 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 @AndroidEntryPoint
-class SettingsFragment : Fragment() {
+class SettingsFragment(
+    private val currentUser: User
+) : Fragment() {
     private lateinit var binding: FragmentSettingsBinding
     private val viewModel: SettingsViewModel by viewModels()
-    private lateinit var currentUser: User
     private var fileUpdate: File? = null
     private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('А'..'Я') + ('а'..'я') + ('!') + ('$')
     private val job = Job()
@@ -81,24 +82,17 @@ class SettingsFragment : Fragment() {
                 "Theme ${themeNumber + 1}" else binding.colorThemeName.text = "Classic"
         }
         uiScope.launch {
-            val user = viewModel.getUser()
-            currentUser = user
-            binding.usernameTextView.text = user.username
-            binding.nameTextView.text = user.name
-            val avatar = user.avatar ?: ""
+            binding.usernameTextView.text = currentUser.username
+            binding.nameTextView.text = currentUser.name
+            val avatar = currentUser.avatar ?: ""
             if (avatar != "") {
             withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
             val filePathTemp = async(Dispatchers.IO) {
-                if (viewModel.fManagerIsExist(avatar)) {
-                    return@async Pair(viewModel.fManagerGetFilePath(avatar), true)
+                if (viewModel.fManagerIsExistAvatar(avatar)) {
+                    return@async Pair(viewModel.fManagerGetAvatarPath(avatar), true)
                 } else {
                     try {
-                        return@async Pair(
-                            viewModel.downloadAvatar(
-                                requireContext(),
-                                avatar,
-                            ), false
-                        )
+                        return@async Pair(viewModel.downloadAvatar(requireContext(), avatar), false)
                     } catch (e: Exception) {
                         return@async Pair(null, true)
                     }
@@ -109,7 +103,7 @@ class SettingsFragment : Fragment() {
                 val file = File(first)
                 if (file.exists()) {
                     fileUpdate = file
-                    if (!second) viewModel.fManagerSaveFile(avatar, file.readBytes())
+                    if (!second) viewModel.fManagerSaveAvatar(avatar, file.readBytes())
                     val uri = Uri.fromFile(file)
                     binding.photoImageView.imageTintList = null
                     Glide.with(requireContext())

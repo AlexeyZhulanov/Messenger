@@ -117,6 +117,8 @@
         android:src="@drawable/ic_volume_off"
         android:padding="10dp"
         app:tint="?attr/colorPrimary"
+        android:visibility="gone"
+        tools:visibility="visible"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="@id/userNameTextView"
         app:layout_constraintBottom_toBottomOf="@id/userNameTextView"

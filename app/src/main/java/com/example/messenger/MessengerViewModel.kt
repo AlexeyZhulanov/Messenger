@@ -1,5 +1,6 @@
 package com.example.messenger
 
+import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.LiveData
@@ -11,6 +12,7 @@ import com.example.messenger.model.DeletedMessagesEvent
 import com.example.messenger.model.DialogCreatedEvent
 import com.example.messenger.model.DialogDeletedEvent
 import com.example.messenger.model.DialogMessagesAllDeleted
+import com.example.messenger.model.FileManager
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.ReadMessagesEvent
@@ -31,6 +33,7 @@ import javax.inject.Inject
 class MessengerViewModel @Inject constructor(
     private val messengerService: MessengerService,
     private val retrofitService: RetrofitService,
+    private val fileManager: FileManager,
     private val webSocketService: WebSocketService
 ) : ViewModel(), WebSocketListenerInterface {
 
@@ -153,6 +156,22 @@ class MessengerViewModel @Inject constructor(
                             voice: String?, file: String?, referenceToMessageId: Int?,
                             usernameAuthorOriginal: String?) = withContext(Dispatchers.IO) {
         retrofitService.sendMessage(idDialog, text, images, voice, file, referenceToMessageId, true, usernameAuthorOriginal)
+    }
+
+    suspend fun fManagerIsExistAvatar(fileName: String): Boolean = withContext(Dispatchers.IO) {
+        return@withContext fileManager.isExistAvatar(fileName)
+    }
+
+    suspend fun fManagerGetAvatarPath(fileName: String): String = withContext(Dispatchers.IO) {
+        return@withContext fileManager.getAvatarFilePath(fileName)
+    }
+
+    suspend fun fManagerSaveAvatar(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
+        fileManager.saveAvatarFile(fileName, fileData)
+    }
+
+    suspend fun downloadAvatar(context: Context, filename: String): String = withContext(Dispatchers.IO) {
+        return@withContext retrofitService.downloadAvatar(context, filename)
     }
 
     override fun onNewMessage(message: Message) {

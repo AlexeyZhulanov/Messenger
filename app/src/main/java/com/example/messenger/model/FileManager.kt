@@ -1,6 +1,7 @@
 package com.example.messenger.model
 
 import android.content.Context
+import android.util.Log
 import java.io.File
 
 class FileManager(private val context: Context) {
@@ -13,6 +14,10 @@ class FileManager(private val context: Context) {
     // Получаем директорию для хранения файлов неотправленных сообщений
     private fun getUnsentMessageDirectory(): File {
         return getOrCreateDirectory("unsent_messages")
+    }
+
+    private fun getAvatarsDirectory(): File {
+        return getOrCreateDirectory("avatars")
     }
 
     // Вспомогательная функция для создания директории
@@ -39,6 +44,10 @@ class FileManager(private val context: Context) {
         return saveFile(getUnsentMessageDirectory(), fileName, fileData)
     }
 
+    fun saveAvatarFile(fileName: String, fileData: ByteArray): File {
+        return saveFile(getAvatarsDirectory(), fileName, fileData)
+    }
+
     // Проверка на существование файла
     fun isExistMessage(fileName: String): Boolean {
         val dir = getMessageDirectory()
@@ -48,6 +57,12 @@ class FileManager(private val context: Context) {
 
     fun isExistUnsentMessage(fileName: String): Boolean {
         val dir = getUnsentMessageDirectory()
+        val file = File(dir, fileName)
+        return file.exists()
+    }
+
+    fun isExistAvatar(fileName: String): Boolean {
+        val dir = getAvatarsDirectory()
         val file = File(dir, fileName)
         return file.exists()
     }
@@ -88,12 +103,20 @@ class FileManager(private val context: Context) {
         cleanupDirectory(getUnsentMessageDirectory(), usedFiles)
     }
 
+    fun cleanupAvatarFiles(usedFiles: Set<String>) {
+        cleanupDirectory(getAvatarsDirectory(), usedFiles)
+    }
+
     fun getMessageFilePath(fileName: String): String {
         return File(getMessageDirectory(), fileName).absolutePath
     }
 
     fun getUnsentFilePath(fileName: String): String {
         return File(getUnsentMessageDirectory(), fileName).absolutePath
+    }
+
+    fun getAvatarFilePath(fileName: String): String {
+        return File(getAvatarsDirectory(), fileName).absolutePath
     }
 
     // Получение файла по filePath

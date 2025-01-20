@@ -1,14 +1,25 @@
 package com.example.messenger
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.ItemMessengerBinding
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.Message
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -20,6 +31,8 @@ interface MessengerActionListener {
 }
 
 class MessengerAdapter(
+    private val messengerViewModel: MessengerViewModel,
+    private val context: Context,
     private val actionListener: MessengerActionListener
 ) : RecyclerView.Adapter<MessengerAdapter.MessengerViewHolder>(), View.OnClickListener {
     var conversations: List<Conversation> = emptyList()
@@ -30,7 +43,8 @@ class MessengerAdapter(
         }
 
     private var index = 0
-
+    private val job = Job()
+    private var uiScope = CoroutineScope(Dispatchers.Main + job)
 
     override fun onClick(v: View) {
         val conversation = v.tag as Conversation
@@ -60,10 +74,41 @@ class MessengerAdapter(
             else {
                 userNameTextView.text = conversation.name
             }
-            lastMessageTextView.text = conversation.lastMessage?.text ?: "Сообщений пока нет"
+            // todo с этим подумать как отобразить фото, файл, аудио
+            lastMessageTextView.text = conversation.lastMessage?.text ?: "Вложение"
             dateText.text = formatMessageDate(conversation.lastMessage?.timestamp)
             if(conversation.lastMessage?.isRead == true) icCheck2.visibility = View.VISIBLE
             else icCheck.visibility = View.VISIBLE
+            uiScope.launch {
+                val avatar = conversation.otherUser?.avatar ?: ""
+                if (avatar != "") {
+                    val filePathTemp = async(Dispatchers.IO) {
+                        if (messengerViewModel.fManagerIsExistAvatar(avatar)) {
+                            return@async Pair(messengerViewModel.fManagerGetAvatarPath(avatar), true)
+                        } else {
+                            try {
+                                return@async Pair(messengerViewModel.downloadAvatar(context, avatar), false)
+                            } catch (e: Exception) {
+                                return@async Pair(null, true)
+                            }
+                        }
+                    }
+                    val (first, second) = filePathTemp.await()
+                    if (first != null) {
+                        val file = File(first)
+                        if (file.exists()) {
+                            if (!second) messengerViewModel.fManagerSaveAvatar(avatar, file.readBytes())
+                            val uri = Uri.fromFile(file)
+                            photoImageView.imageTintList = null
+                            Glide.with(context)
+                                .load(uri)
+                                .apply(RequestOptions.circleCropTransform())
+                                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                .into(photoImageView)
+                        }
+                    }
+                }
+            }
         }
     }
 
