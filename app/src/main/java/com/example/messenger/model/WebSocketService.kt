@@ -10,7 +10,6 @@ import io.socket.emitter.Emitter
 import io.socket.engineio.client.transports.WebSocket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -41,8 +40,7 @@ class WebSocketService @Inject constructor(
     private var listener: WebSocketListenerInterface? = null
     private var lastEvent: String? = null
     private var lastData: JSONObject? = null
-    private val job = Job()
-    private val uiScopeIO = CoroutineScope(Dispatchers.IO + job)
+    private val uiScope = CoroutineScope(Dispatchers.Main)
 
     fun setListener(listener: WebSocketListenerInterface) {
         this.listener = listener
@@ -95,7 +93,7 @@ class WebSocketService @Inject constructor(
 
     private val onTokenExpired = Emitter.Listener {
         Log.d("testSocketIO", "Token has expired, refreshing token")
-        uiScopeIO.launch {
+        uiScope.launch {
             val settingsResponse = messengerService.getSettings()
             val success = retrofitService.login(settingsResponse.name!!, settingsResponse.password!!)
             if(success) {

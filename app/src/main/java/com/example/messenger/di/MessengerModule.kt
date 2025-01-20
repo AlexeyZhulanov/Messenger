@@ -26,6 +26,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import javax.inject.Provider
 import javax.inject.Singleton
 
@@ -101,10 +103,11 @@ object MessengerModule {
         userDao: UserDao,
         lastReadMessageDao: LastReadMessageDao,
         chatSettingsDao: ChatSettingsDao,
-        unsentMessageDao: UnsentMessageDao
+        unsentMessageDao: UnsentMessageDao,
+        @IoDispatcher ioDispatcher: CoroutineDispatcher
     ): MessengerService {
         return MessengerService(settingsDao, conversationDao, messageDao, groupMessageDao, userDao,
-            lastReadMessageDao, chatSettingsDao, unsentMessageDao)
+            lastReadMessageDao, chatSettingsDao, unsentMessageDao, ioDispatcher)
     }
 
     @Provides
@@ -118,7 +121,8 @@ object MessengerModule {
     fun provideRetrofitService(
         sourcesProvider: SourcesProvider,
         appSettings: AppSettings,
-        messengerService: MessengerService
+        messengerService: MessengerService,
+        @IoDispatcher ioDispatcher: CoroutineDispatcher
     ): RetrofitService {
         val usersSource = sourcesProvider.getUsersSource()
         val messagesSource = sourcesProvider.getMessagesSource()
@@ -131,7 +135,8 @@ object MessengerModule {
             groupsSource = groupsSource,
             uploadSource = uploadsSource,
             appSettings = appSettings,
-            messengerRepository = messengerService
+            messengerRepository = messengerService,
+            ioDispatcher = ioDispatcher
         )
     }
 
@@ -172,4 +177,16 @@ object MessengerModule {
     fun provideSharedPreferences(@ApplicationContext context: Context): SharedPreferences {
         return context.getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
     }
+
+    @Provides
+    @DefaultDispatcher
+    fun provideDefaultDispatcher(): CoroutineDispatcher = Dispatchers.Default
+
+    @Provides
+    @IoDispatcher
+    fun provideIoDispatcher(): CoroutineDispatcher = Dispatchers.IO
+
+    @Provides
+    @MainDispatcher
+    fun provideMainDispatcher(): CoroutineDispatcher = Dispatchers.Main
 }

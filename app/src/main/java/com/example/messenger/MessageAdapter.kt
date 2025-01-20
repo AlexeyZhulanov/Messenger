@@ -46,6 +46,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -81,9 +83,7 @@ class MessageAdapter(
     private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
     var dialogSettings: ConversationSettings = ConversationSettings()
     private var highlightedPosition: Int? = null
-    private val job = Job()
-    private val uiScope = CoroutineScope(Dispatchers.IO + job)
-    private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)
+    private val uiScopeMain = CoroutineScope(Dispatchers.Main)
 
 
     fun addNewMessage(message: Pair<Message, String>) {
@@ -359,7 +359,7 @@ class MessageAdapter(
             val chk = getItemPositionWithId(tmpId)
             if(chk == -1) {
                 uiScopeMain.launch {
-                    val mes = async(Dispatchers.IO) { messageViewModel.findMessage(tmpId) }
+                    val mes = async { messageViewModel.findMessage(tmpId) }
                     val (m, p) = mes.await()
                     if(m.images != null) {
                         messageViewModel.imageSet(m.images!!.first(), binding.answerImageView, context)
@@ -713,7 +713,7 @@ class MessageAdapter(
             }
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
-                val filePathTemp = async(Dispatchers.IO) {
+                val filePathTemp = async {
                     val voice = message.voice ?: "nonWork"
                     if (messageViewModel.fManagerIsExist(voice)) {
                         return@async Pair(messageViewModel.fManagerGetFilePath(voice), true)
@@ -847,7 +847,7 @@ class MessageAdapter(
             }
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
-                val filePathTemp = async(Dispatchers.IO) {
+                val filePathTemp = async {
                     if(message.isUnsent == true) {
                         return@async Pair(message.localFilePaths?.first(), true)
                     } else {
@@ -1001,8 +1001,8 @@ class MessageAdapter(
                 binding.forwardLayout.root.visibility = View.GONE
                 binding.forwardLayout.forwardUsername.text = ""
             }
-            uiScope.launch {
-                val filePathTemp = async(Dispatchers.IO) {
+            uiScopeMain.launch {
+                val filePathTemp = async {
                     if (messageViewModel.fManagerIsExist(message.file!!)) {
                         return@async Pair(messageViewModel.fManagerGetFilePath(message.file!!), true)
                     } else {
@@ -1102,8 +1102,8 @@ class MessageAdapter(
                 binding.forwardLayout.root.visibility = View.GONE
                 binding.forwardLayout.forwardUsername.text = ""
             }
-            uiScope.launch {
-                val filePathTemp = async(Dispatchers.IO) {
+            uiScopeMain.launch {
+                val filePathTemp = async {
                     if(message.isUnsent == true) {
                         return@async Pair(message.localFilePaths?.first(), true)
                     } else {
@@ -1238,9 +1238,9 @@ class MessageAdapter(
                 binding.timeLayout.visibility = View.VISIBLE
             }
 
-            uiScope.launch {
-                withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
-                val filePathTemp = async(Dispatchers.IO) {
+            uiScopeMain.launch {
+                binding.progressBar.visibility = View.VISIBLE
+                val filePathTemp = async {
                     if (messageViewModel.fManagerIsExist(message.images?.first() ?: "nonWork")) {
                         return@async Pair(messageViewModel.fManagerGetFilePath(message.images!!.first()), true)
                     } else {
@@ -1260,40 +1260,35 @@ class MessageAdapter(
                     val uri = Uri.fromFile(file)
                     val localMedia = messageViewModel.fileToLocalMedia(file)
                     val chooseModel = localMedia.chooseModel
-                    withContext(Dispatchers.Main) {
-                        binding.tvDuration.visibility =
-                            if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
-                        if (chooseModel == SelectMimeType.ofAudio()) {
-                            binding.tvDuration.visibility = View.VISIBLE
-                            binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                                com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
-                        } else {
-                            binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                                com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
-                        }
-                        binding.tvDuration.text =
-                            (DateUtils.formatDurationTime(localMedia.duration))
-                        if (chooseModel == SelectMimeType.ofAudio()) {
-                            binding.receiverImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
-                        } else {
-                            Glide.with(context)
-                                .load(uri)
-                                .centerCrop()
-                                .placeholder(R.color.app_color_f6)
-                                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                .into(binding.receiverImageView)
-                        }
-                        binding.progressBar.visibility = View.GONE
-                        binding.receiverImageView.setOnClickListener {
-                            actionListener.onImagesClick(arrayListOf(localMedia), 0)
-                        }
+                    binding.tvDuration.visibility =
+                        if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
+                    if (chooseModel == SelectMimeType.ofAudio()) {
+                        binding.tvDuration.visibility = View.VISIBLE
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                            com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
+                    } else {
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                            com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
+                    }
+                    binding.tvDuration.text = (DateUtils.formatDurationTime(localMedia.duration))
+                    if (chooseModel == SelectMimeType.ofAudio()) {
+                        binding.receiverImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
+                    } else {
+                        Glide.with(context)
+                            .load(uri)
+                            .centerCrop()
+                            .placeholder(R.color.app_color_f6)
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .into(binding.receiverImageView)
+                    }
+                    binding.progressBar.visibility = View.GONE
+                    binding.receiverImageView.setOnClickListener {
+                        actionListener.onImagesClick(arrayListOf(localMedia), 0)
                     }
                 } else {
-                    withContext(Dispatchers.Main) {
-                        Log.e("ImageError", "File does not exist: $first")
-                        binding.progressBar.visibility = View.GONE
-                        binding.errorImageView.visibility = View.VISIBLE
-                    }
+                    Log.e("ImageError", "File does not exist: $first")
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
                 }
             } else {
                     binding.progressBar.visibility = View.GONE
@@ -1367,9 +1362,9 @@ class MessageAdapter(
                 binding.customMessageLayout.visibility = View.GONE
                 binding.timeLayout.visibility = View.VISIBLE
             }
-            uiScope.launch {
-                withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
-                val filePathTemp = async(Dispatchers.IO) {
+            uiScopeMain.launch {
+                binding.progressBar.visibility = View.VISIBLE
+                val filePathTemp = async {
                     if(message.isUnsent == true) {
                         return@async Pair(message.localFilePaths?.first(), true)
                     } else {
@@ -1393,38 +1388,33 @@ class MessageAdapter(
                     val uri = Uri.fromFile(file)
                     val localMedia = messageViewModel.fileToLocalMedia(file)
                     val chooseModel = localMedia.chooseModel
-                    withContext(Dispatchers.Main) {
-                        binding.tvDuration.visibility =
-                            if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
-                        if (chooseModel == SelectMimeType.ofAudio()) {
-                            binding.tvDuration.visibility = View.VISIBLE
-                            binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
-                        } else {
-                            binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
-                        }
-                        binding.tvDuration.text =
-                            (DateUtils.formatDurationTime(localMedia.duration))
-                        if (chooseModel == SelectMimeType.ofAudio()) {
-                            binding.senderImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
-                        } else {
-                            Glide.with(context)
-                                .load(uri)
-                                .centerCrop()
-                                .placeholder(R.color.app_color_f6)
-                                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                .into(binding.senderImageView)
-                        }
-                        binding.progressBar.visibility = View.GONE
-                        binding.senderImageView.setOnClickListener {
-                            actionListener.onImagesClick(arrayListOf(localMedia), 0)
-                        }
+                    binding.tvDuration.visibility =
+                        if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
+                    if (chooseModel == SelectMimeType.ofAudio()) {
+                        binding.tvDuration.visibility = View.VISIBLE
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
+                    } else {
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
+                    }
+                    binding.tvDuration.text = (DateUtils.formatDurationTime(localMedia.duration))
+                    if (chooseModel == SelectMimeType.ofAudio()) {
+                        binding.senderImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
+                    } else {
+                        Glide.with(context)
+                            .load(uri)
+                            .centerCrop()
+                            .placeholder(R.color.app_color_f6)
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .into(binding.senderImageView)
+                    }
+                    binding.progressBar.visibility = View.GONE
+                    binding.senderImageView.setOnClickListener {
+                        actionListener.onImagesClick(arrayListOf(localMedia), 0)
                     }
                 } else {
-                    withContext(Dispatchers.Main) {
-                        Log.e("ImageError", "File does not exist: $first")
-                        binding.progressBar.visibility = View.GONE
-                        binding.errorImageView.visibility = View.VISIBLE
-                    }
+                    Log.e("ImageError", "File does not exist: $first")
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
                 }
             } else {
                     binding.progressBar.visibility = View.GONE
@@ -1539,18 +1529,21 @@ class MessageAdapter(
                 binding.timeLayout.visibility = View.VISIBLE
             }
             binding.progressBar.visibility = View.VISIBLE
+            val semaphore = Semaphore(4) // todo возможно 4 следует заменить на другое количество
             uiScopeMain.launch {
                 val localMedias = async {
                     val medias = arrayListOf<LocalMedia>()
                     for (image in message.images!!) {
                         val filePath = async(Dispatchers.IO) {
-                            if (messageViewModel.fManagerIsExist(image)) {
-                                Pair(messageViewModel.fManagerGetFilePath(image), true)
-                            } else {
-                                try {
-                                    Pair(messageViewModel.downloadFile(context, "photos", image), false)
-                                } catch (e: Exception) {
-                                    Pair(null, true)
+                            semaphore.withPermit {
+                                if (messageViewModel.fManagerIsExist(image)) {
+                                    Pair(messageViewModel.fManagerGetFilePath(image), true)
+                                } else {
+                                    try {
+                                        Pair(messageViewModel.downloadFile(context, "photos", image), false)
+                                    } catch (e: Exception) {
+                                        Pair(null, true)
+                                    }
                                 }
                             }
                         }
@@ -1562,11 +1555,9 @@ class MessageAdapter(
                             if (!second && isInLast30) messageViewModel.fManagerSaveFile(image, file.readBytes())
                             medias += messageViewModel.fileToLocalMedia(file)
                         } else {
-                            withContext(Dispatchers.Main) {
-                                Log.e("ImageError", "File does not exist: $filePath")
-                                binding.progressBar.visibility = View.GONE
-                                binding.errorImageView.visibility = View.VISIBLE
-                            }
+                            Log.e("ImageError", "File does not exist: $filePath")
+                            binding.progressBar.visibility = View.GONE
+                            binding.errorImageView.visibility = View.VISIBLE
                         }
                     } else {
                             binding.progressBar.visibility = View.GONE
@@ -1671,21 +1662,24 @@ class MessageAdapter(
                 binding.timeLayout.visibility = View.VISIBLE
             }
             binding.errorImageView.visibility = View.GONE
+            val semaphore = Semaphore(4) // todo возможно 4 следует заменить на другое количество
             uiScopeMain.launch {
                 val localMedias = async {
                     val medias = arrayListOf<LocalMedia>()
                     message.images?.forEachIndexed { index, image ->
                         val filePath = async(Dispatchers.IO) {
-                            if(message.isUnsent == true) {
-                                Pair(message.localFilePaths?.get(index), true)
-                            } else {
-                                if (messageViewModel.fManagerIsExist(image)) {
-                                    Pair(messageViewModel.fManagerGetFilePath(image), true)
+                            semaphore.withPermit {
+                                if (message.isUnsent == true) {
+                                    Pair(message.localFilePaths?.get(index), true)
                                 } else {
-                                    try {
-                                        Pair(messageViewModel.downloadFile(context, "photos", image), false)
-                                    } catch (e: Exception) {
-                                        Pair(null, true)
+                                    if (messageViewModel.fManagerIsExist(image)) {
+                                        Pair(messageViewModel.fManagerGetFilePath(image), true)
+                                    } else {
+                                        try {
+                                            Pair(messageViewModel.downloadFile(context, "photos", image), false)
+                                        } catch (e: Exception) {
+                                            Pair(null, true)
+                                        }
                                     }
                                 }
                             }

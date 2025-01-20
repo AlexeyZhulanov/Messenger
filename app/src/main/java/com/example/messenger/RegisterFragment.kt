@@ -19,7 +19,7 @@ class RegisterFragment : Fragment() {
     private lateinit var binding: FragmentRegisterBinding
     private lateinit var drawableStart : Drawable
     private lateinit var drawableEnd : Drawable
-    private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('!') + ('$')
+    private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('!') + ('$') + ('@') + ('.')
     private val viewModel: RegisterViewModel by viewModels()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {

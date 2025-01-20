@@ -7,7 +7,6 @@ import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.Settings
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope

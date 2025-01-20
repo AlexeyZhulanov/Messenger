@@ -6,16 +6,11 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
-import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.Toast
@@ -24,6 +19,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -31,23 +27,16 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentSettingsBinding
 import com.example.messenger.model.User
-import com.example.messenger.picker.DateUtils
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
 import com.luck.picture.lib.basic.PictureSelector
 import com.luck.picture.lib.config.InjectResourceSource
-import com.luck.picture.lib.config.PictureMimeType
-import com.luck.picture.lib.config.SelectMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 
 @AndroidEntryPoint
@@ -58,9 +47,6 @@ class SettingsFragment(
     private val viewModel: SettingsViewModel by viewModels()
     private var fileUpdate: File? = null
     private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('А'..'Я') + ('а'..'я') + ('!') + ('$')
-    private val job = Job()
-    private val uiScope = CoroutineScope(Dispatchers.Main + job)
-    private val uiScopeIO = CoroutineScope(Dispatchers.IO + job)
 
     @SuppressLint("DiscouragedApi")
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -81,13 +67,13 @@ class SettingsFragment(
             if (themeNumber != 0) binding.colorThemeName.text =
                 "Theme ${themeNumber + 1}" else binding.colorThemeName.text = "Classic"
         }
-        uiScope.launch {
+        lifecycleScope.launch {
             binding.usernameTextView.text = currentUser.username
             binding.nameTextView.text = currentUser.name
             val avatar = currentUser.avatar ?: ""
             if (avatar != "") {
-            withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
-            val filePathTemp = async(Dispatchers.IO) {
+            binding.progressBar.visibility = View.VISIBLE
+            val filePathTemp = async {
                 if (viewModel.fManagerIsExistAvatar(avatar)) {
                     return@async Pair(viewModel.fManagerGetAvatarPath(avatar), true)
                 } else {
@@ -113,10 +99,8 @@ class SettingsFragment(
                         .into(binding.photoImageView)
                     binding.progressBar.visibility = View.GONE
                 } else {
-                    withContext(Dispatchers.Main) {
-                        binding.progressBar.visibility = View.GONE
-                        binding.errorImageView.visibility = View.VISIBLE
-                    }
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
                 }
             } else {
                 binding.progressBar.visibility = View.GONE
@@ -268,8 +252,8 @@ class SettingsFragment(
             when (item.itemId) {
                 R.id.item_delete -> {
                     if(currentUser.avatar != null) {
-                        uiScope.launch {
-                            val success = async(Dispatchers.IO) {viewModel.updateAvatar("delete") }
+                        lifecycleScope.launch {
+                            val success = async { viewModel.updateAvatar("delete") }
                             if(success.await()) {
                                 requireActivity().recreate()
                             }
@@ -282,16 +266,14 @@ class SettingsFragment(
 
                 R.id.item_update -> {
                     if (file != null) {
-                    uiScopeIO.launch {
-                        val res = async {filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf(viewModel.fileToLocalMedia(file))) }
+                    lifecycleScope.launch {
+                        val res = async { filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf(viewModel.fileToLocalMedia(file))) }
                         val photo = res.await()
                         if(photo.isNotEmpty()) {
                             val path = async { viewModel.uploadAvatar(File(photo[0].availablePath)) }
                             val success = async { viewModel.updateAvatar(path.await()) }
                             if(success.await()) {
-                                withContext(Dispatchers.Main) {
-                                    requireActivity().recreate()
-                                }
+                                requireActivity().recreate()
                             }
                         }
                     }
@@ -302,16 +284,14 @@ class SettingsFragment(
                 }
 
                 R.id.item_new -> {
-                    uiScopeIO.launch {
+                    lifecycleScope.launch {
                         val res = async { filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf()) }
                         val photo = res.await()
                         if(photo.isNotEmpty()) {
                             val path = async { viewModel.uploadAvatar(File(photo[0].availablePath)) }
                             val success = async { viewModel.updateAvatar(path.await()) }
                             if(success.await()) {
-                                withContext(Dispatchers.Main) {
-                                    requireActivity().recreate()
-                                }
+                                requireActivity().recreate()
                             }
                         }
                     }
@@ -332,7 +312,7 @@ class SettingsFragment(
         val dialog = AlertDialog.Builder(requireContext())
             .setView(dialogView)
             .setPositiveButton("Изменить") { dialogInterface, _ ->
-                uiScope.launch {
+                lifecycleScope.launch {
                     val input = editText.text.toString()
                     input.forEach {
                         if(it !in alf) {
@@ -341,7 +321,7 @@ class SettingsFragment(
                             return@launch
                         }
                     }
-                    val success = async(Dispatchers.IO) {viewModel.updateUserName(input) }
+                    val success = async { viewModel.updateUserName(input) }
                     if(success.await()) requireActivity().recreate()
                 }
             }

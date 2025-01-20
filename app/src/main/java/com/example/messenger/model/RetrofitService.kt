@@ -2,13 +2,12 @@ package com.example.messenger.model
 
 import android.content.Context
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import com.example.messenger.model.appsettings.AppSettings
 import com.example.messenger.retrofit.source.groups.GroupsSource
 import com.example.messenger.retrofit.source.messages.MessagesSource
 import com.example.messenger.retrofit.source.uploads.UploadsSource
 import com.example.messenger.retrofit.source.users.UsersSource
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -18,40 +17,39 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 
-typealias ConversationsListener = (conversations: List<Conversation>) -> Unit
+//typealias ConversationsListener = (conversations: List<Conversation>) -> Unit
 class RetrofitService(
     private val usersSource: UsersSource,
     private val messagesSource: MessagesSource,
     private val groupsSource: GroupsSource,
     private val uploadSource: UploadsSource,
     private val appSettings: AppSettings,
-    private val messengerRepository: MessengerRepository
+    private val messengerRepository: MessengerRepository,
+    private val ioDispatcher: CoroutineDispatcher
 ) : RetrofitRepository {
     private var conversations = listOf<Conversation>()
     private var messages = listOf<Message>()
     private var groupMessages = listOf<GroupMessage>()
-    private val listeners = mutableSetOf<ConversationsListener>()
-    private val job = Job()
-    private val uiScope = CoroutineScope(Dispatchers.IO + job)
+    //private val listeners = mutableSetOf<ConversationsListener>()
 
-    private val _initCompleted = MutableLiveData<Boolean>()
-    val initCompleted: LiveData<Boolean> get() = _initCompleted
+    //private val _initCompleted = MutableLiveData<Boolean>()
+    //val initCompleted: LiveData<Boolean> get() = _initCompleted
 
     private val messengerService: MessengerService
         get() = messengerRepository as MessengerService
 
-    init {
-        uiScope.launch {
-            _initCompleted.postValue(true)
-        }
-    }
+//    init {
+//        uiScope.launch {
+//            _initCompleted.postValue(true)
+//        }
+//    }
 
     override fun isSignedIn(): Boolean {
         // user is signed-in if auth token exists
         return appSettings.getCurrentToken() != null
     }
 
-    override suspend fun register(name: String, username: String, password: String) : Boolean = withContext(Dispatchers.IO) {
+    override suspend fun register(name: String, username: String, password: String) : Boolean = withContext(ioDispatcher) {
         if (name.isBlank()) throw EmptyFieldException(Field.Name)
         if (username.isBlank()) throw EmptyFieldException(Field.Username)
         if (password.isBlank()) throw EmptyFieldException(Field.Password)
@@ -65,7 +63,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun login(name: String, password: String) : Boolean = withContext(Dispatchers.IO) {
+    override suspend fun login(name: String, password: String) : Boolean = withContext(ioDispatcher) {
         if (name.isBlank()) throw EmptyFieldException(Field.Name)
         if (password.isBlank()) throw EmptyFieldException(Field.Password)
         val token = try {
@@ -83,7 +81,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun getConversations(): List<Conversation> = withContext(Dispatchers.IO) {
+    override suspend fun getConversations(): List<Conversation> = withContext(ioDispatcher) {
         if(isSignedIn()) {
             conversations = try {
                 messagesSource.getConversations()
@@ -100,12 +98,11 @@ class RetrofitService(
             if(settings.name != "" && settings.password != "") {
                 val name = settings.name ?: ""
                 val password = settings.password ?: ""
-                uiScope.launch {
+                CoroutineScope(Dispatchers.Main).launch {
                     val correct = async {
                         login(name, password)
                     }
-                    if(correct.await())
-                        conversations = messagesSource.getConversations()
+                    if(correct.await()) conversations = messagesSource.getConversations()
                 }
             }
         }
@@ -113,7 +110,7 @@ class RetrofitService(
         return@withContext conversations
     }
 
-    override suspend fun updateProfile(username: String?, avatar: String?): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun updateProfile(username: String?, avatar: String?): Boolean = withContext(ioDispatcher) {
         val message = try {
             usersSource.updateProfile(username, avatar)
         } catch (e: BackendException) {
@@ -127,7 +124,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun updatePassword(password: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun updatePassword(password: String): Boolean = withContext(ioDispatcher) {
         val message = try {
             usersSource.updatePassword(password)
         } catch (e: BackendException) {
@@ -141,7 +138,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun updateLastSession(idDialog: Int): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun updateLastSession(idDialog: Int): Boolean = withContext(ioDispatcher) {
         val message = try {
             usersSource.updateLastSession(idDialog)
         } catch (e: BackendException) {
@@ -155,7 +152,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun getLastSession(userId: Int): Long = withContext(Dispatchers.IO) {
+    override suspend fun getLastSession(userId: Int): Long = withContext(ioDispatcher) {
         val time = try {
             usersSource.getLastSession(userId)
         } catch (e: BackendException) {
@@ -169,7 +166,7 @@ class RetrofitService(
         return@withContext time
     }
 
-    override suspend fun getUser(userId: Int): User = withContext(Dispatchers.IO) {
+    override suspend fun getUser(userId: Int): User = withContext(ioDispatcher) {
         val user = try {
             usersSource.getUser(userId)
         } catch (e: BackendException) {
@@ -183,7 +180,7 @@ class RetrofitService(
         return@withContext user
     }
 
-    override suspend fun createDialog(name: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun createDialog(name: String): Boolean = withContext(ioDispatcher) {
         val message = try {
             messagesSource.createDialog(name)
         } catch (e: BackendException) {
@@ -199,7 +196,7 @@ class RetrofitService(
 
     override suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?,
         voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-         usernameAuthorOriginal: String?): Boolean = withContext(Dispatchers.IO) {
+         usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
         return@withContext try {
             messagesSource.sendMessage(idDialog, text, images, voice, file, referenceToMessageId,
                 isForwarded, usernameAuthorOriginal)
@@ -217,7 +214,7 @@ class RetrofitService(
         }
     }
 
-    override suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int): List<Message> = withContext(Dispatchers.IO) {
+    override suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int): List<Message> = withContext(ioDispatcher) {
         messages = try {
             messagesSource.getMessages(idDialog, pageIndex, pageSize)
         } catch (e: BackendException) {
@@ -238,7 +235,7 @@ class RetrofitService(
         return@withContext messages
     }
 
-    override suspend fun findMessage(idMessage: Int, idDialog: Int): Pair<Message, Int> = withContext(Dispatchers.IO) {
+    override suspend fun findMessage(idMessage: Int, idDialog: Int): Pair<Message, Int> = withContext(ioDispatcher) {
         val message = try {
             messagesSource.findMessage(idMessage, idDialog)
         } catch (e: BackendException) {
@@ -252,7 +249,7 @@ class RetrofitService(
         return@withContext message
     }
 
-    override suspend fun addKeyToDialog(dialogId: Int, key: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun addKeyToDialog(dialogId: Int, key: String): Boolean = withContext(ioDispatcher) {
         val message = try {
             messagesSource.addKeyToDialog(dialogId, key)
         } catch (e: BackendException) {
@@ -266,7 +263,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun removeKeyFromDialog(dialogId: Int): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun removeKeyFromDialog(dialogId: Int): Boolean = withContext(ioDispatcher) {
         val message = try {
             messagesSource.removeKeyFromDialog(dialogId)
         } catch (e: BackendException) {
@@ -281,7 +278,7 @@ class RetrofitService(
     }
 
     override suspend fun editMessage(idDialog: Int, messageId: Int, text: String?, images: List<String>?,
-        voice: String?, file: String?): Boolean = withContext(Dispatchers.IO) {
+        voice: String?, file: String?): Boolean = withContext(ioDispatcher) {
         val message = try {
             messagesSource.editMessage(idDialog, messageId, text, images, voice, file)
         } catch (e: BackendException) {
@@ -295,7 +292,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun deleteMessages(idDialog: Int, ids: List<Int>): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun deleteMessages(idDialog: Int, ids: List<Int>): Boolean = withContext(ioDispatcher) {
         val message = try {
             messagesSource.deleteMessages(idDialog, ids)
         } catch (e: BackendException) {
@@ -310,7 +307,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun deleteDialog(dialogId: Int): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun deleteDialog(dialogId: Int): Boolean = withContext(ioDispatcher) {
         val message = try {
             messagesSource.deleteDialog(dialogId)
         } catch (e: BackendException) {
@@ -324,7 +321,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun getUsers(): List<UserShort> = withContext(Dispatchers.IO) {
+    override suspend fun getUsers(): List<UserShort> = withContext(ioDispatcher) {
         val users = try {
             messagesSource.getUsers()
         } catch (e: BackendException) {
@@ -335,7 +332,7 @@ class RetrofitService(
         return@withContext users
     }
 
-    override suspend fun markMessagesAsRead(idDialog: Int, ids: List<Int>): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun markMessagesAsRead(idDialog: Int, ids: List<Int>): Boolean = withContext(ioDispatcher) {
         val message = try {
             messagesSource.markMessagesAsRead(idDialog, ids)
         } catch (e: BackendException) {
@@ -350,7 +347,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun searchMessagesInDialog(dialogId: Int, word: String): List<Message> = withContext(Dispatchers.IO) {
+    override suspend fun searchMessagesInDialog(dialogId: Int, word: String): List<Message> = withContext(ioDispatcher) {
         val messagesSearch = try {
             messagesSource.searchMessagesInDialog(dialogId, word)
         } catch (e: BackendException) {
@@ -364,7 +361,7 @@ class RetrofitService(
         return@withContext messagesSearch
     }
 
-    override suspend fun toggleDialogCanDelete(dialogId: Int): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun toggleDialogCanDelete(dialogId: Int): Boolean = withContext(ioDispatcher) {
         val message = try {
             messagesSource.toggleDialogCanDelete(dialogId)
         } catch (e: BackendException) {
@@ -378,7 +375,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun updateAutoDeleteInterval(dialogId: Int, autoDeleteInterval: Int): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun updateAutoDeleteInterval(dialogId: Int, autoDeleteInterval: Int): Boolean = withContext(ioDispatcher) {
         val message = try {
             messagesSource.updateAutoDeleteInterval(dialogId, autoDeleteInterval)
         } catch (e: BackendException) {
@@ -392,7 +389,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun deleteDialogMessages(dialogId: Int): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun deleteDialogMessages(dialogId: Int): Boolean = withContext(ioDispatcher) {
         val message = try {
             messagesSource.deleteDialogMessages(dialogId)
         } catch (e: BackendException) {
@@ -406,7 +403,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun getDialogSettings(dialogId: Int): ConversationSettings = withContext(Dispatchers.IO) {
+    override suspend fun getDialogSettings(dialogId: Int): ConversationSettings = withContext(ioDispatcher) {
         val settings = try {
             messagesSource.getDialogSettings(dialogId)
         } catch (e: BackendException) {
@@ -419,7 +416,7 @@ class RetrofitService(
         return@withContext settings
     }
 
-    override suspend fun createGroup(name: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun createGroup(name: String): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.createGroup(name)
         } catch (e: BackendException) {
@@ -432,7 +429,7 @@ class RetrofitService(
 
     override suspend fun sendGroupMessage(groupId: Int, text: String?, images: List<String>?,
         voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-        usernameAuthorOriginal: String?): Boolean = withContext(Dispatchers.IO) {
+        usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.sendGroupMessage(groupId, text, images, voice, file, referenceToMessageId,
                 isForwarded, usernameAuthorOriginal)
@@ -447,7 +444,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun getGroupMessages(groupId: Int, start: Int, end: Int): List<GroupMessage> = withContext(Dispatchers.IO) {
+    override suspend fun getGroupMessages(groupId: Int, start: Int, end: Int): List<GroupMessage> = withContext(ioDispatcher) {
         groupMessages = try {
             groupsSource.getGroupMessages(groupId, start, end)
         } catch (e: BackendException) {
@@ -463,7 +460,7 @@ class RetrofitService(
     }
 
     override suspend fun editGroupMessage(groupMessageId: Int, text: String?, images: List<String>?,
-        voice: String?, file: String?): Boolean = withContext(Dispatchers.IO) {
+        voice: String?, file: String?): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.editGroupMessage(groupMessageId, text, images, voice, file)
         } catch (e: BackendException) {
@@ -477,7 +474,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun deleteGroupMessages(ids: List<Int>): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun deleteGroupMessages(ids: List<Int>): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.deleteGroupMessages(ids)
         } catch (e: BackendException) {
@@ -492,7 +489,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun deleteGroup(groupId: Int): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun deleteGroup(groupId: Int): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.deleteGroup(groupId)
         } catch (e: BackendException) {
@@ -506,7 +503,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun editGroupName(groupId: Int, name: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun editGroupName(groupId: Int, name: String): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.editGroupName(groupId, name)
         } catch (e: BackendException) {
@@ -520,7 +517,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun addUserToGroup(groupId: Int, userId: Int): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun addUserToGroup(groupId: Int, userId: Int): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.addUserToGroup(groupId, userId)
         } catch (e: BackendException) {
@@ -534,7 +531,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun deleteUserFromGroup(groupId: Int, userId: Int): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun deleteUserFromGroup(groupId: Int, userId: Int): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.deleteUserFromGroup(groupId, userId)
         } catch (e: BackendException) {
@@ -548,7 +545,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun getAvailableUsersForGroup(groupId: Int): List<UserShort> = withContext(Dispatchers.IO) {
+    override suspend fun getAvailableUsersForGroup(groupId: Int): List<UserShort> = withContext(ioDispatcher) {
         val users = try {
             groupsSource.getAvailableUsersForGroup(groupId)
             } catch (e: BackendException) {
@@ -559,7 +556,7 @@ class RetrofitService(
         return@withContext users
     }
 
-    override suspend fun getGroupMembers(groupId: Int): List<User> = withContext(Dispatchers.IO) {
+    override suspend fun getGroupMembers(groupId: Int): List<User> = withContext(ioDispatcher) {
         val members = try {
             groupsSource.getGroupMembers(groupId)
         } catch (e: BackendException) {
@@ -573,7 +570,7 @@ class RetrofitService(
         return@withContext members
     }
 
-    override suspend fun updateGroupAvatar(groupId: Int, avatar: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun updateGroupAvatar(groupId: Int, avatar: String): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.updateGroupAvatar(groupId, avatar)
             } catch (e: BackendException) {
@@ -587,7 +584,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun markGroupMessagesAsRead(ids: List<Int>): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun markGroupMessagesAsRead(ids: List<Int>): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.markGroupMessagesAsRead(ids)
             } catch (e: BackendException) {
@@ -602,7 +599,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun toggleGroupCanDelete(groupId: Int): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun toggleGroupCanDelete(groupId: Int): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.toggleGroupCanDelete(groupId)
             } catch (e: BackendException) {
@@ -616,7 +613,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun updateGroupAutoDeleteInterval(groupId: Int, autoDeleteInterval: Int): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun updateGroupAutoDeleteInterval(groupId: Int, autoDeleteInterval: Int): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.updateGroupAutoDeleteInterval(groupId, autoDeleteInterval)
             } catch (e: BackendException) {
@@ -630,7 +627,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun deleteGroupMessagesAll(groupId: Int): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun deleteGroupMessagesAll(groupId: Int): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.deleteGroupMessagesAll(groupId)
             } catch (e: BackendException) {
@@ -644,7 +641,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun getGroupSettings(groupId: Int): ConversationSettings = withContext(Dispatchers.IO) {
+    override suspend fun getGroupSettings(groupId: Int): ConversationSettings = withContext(ioDispatcher) {
         val settings = try {
             groupsSource.getGroupSettings(groupId)
             } catch (e: BackendException) {
@@ -657,7 +654,7 @@ class RetrofitService(
         return@withContext settings
     }
 
-    override suspend fun searchMessagesInGroup(groupId: Int, word: String): List<GroupMessage> = withContext(Dispatchers.IO) {
+    override suspend fun searchMessagesInGroup(groupId: Int, word: String): List<GroupMessage> = withContext(ioDispatcher) {
         val messagesGroupSearch = try {
             groupsSource.searchMessagesInGroup(groupId, word)
         } catch (e: BackendException) {
@@ -671,7 +668,7 @@ class RetrofitService(
         return@withContext messagesGroupSearch
     }
 
-    override suspend fun uploadPhoto(dialogId: Int, photo: File): String = withContext(Dispatchers.IO) {
+    override suspend fun uploadPhoto(dialogId: Int, photo: File): String = withContext(ioDispatcher) {
         val file = try {
             uploadSource.uploadPhoto(dialogId, photo)
         } catch (e: BackendException) {
@@ -682,7 +679,7 @@ class RetrofitService(
         return@withContext file
     }
 
-    override suspend fun uploadFile(dialogId: Int, file: File): String = withContext(Dispatchers.IO) {
+    override suspend fun uploadFile(dialogId: Int, file: File): String = withContext(ioDispatcher) {
         val fileUpload = try {
             uploadSource.uploadFile(dialogId, file)
         } catch (e: BackendException) {
@@ -693,7 +690,7 @@ class RetrofitService(
         return@withContext fileUpload
     }
 
-    override suspend fun uploadAudio(dialogId: Int, audio: File): String = withContext(Dispatchers.IO) {
+    override suspend fun uploadAudio(dialogId: Int, audio: File): String = withContext(ioDispatcher) {
         val file = try {
             uploadSource.uploadAudio(dialogId, audio)
         } catch (e: BackendException) {
@@ -704,7 +701,7 @@ class RetrofitService(
         return@withContext file
     }
 
-    override suspend fun uploadAvatar(avatar: File): String = withContext(Dispatchers.IO) {
+    override suspend fun uploadAvatar(avatar: File): String = withContext(ioDispatcher) {
         val file = try {
             uploadSource.uploadAvatar(avatar)
         } catch (e: BackendException) {
@@ -715,7 +712,7 @@ class RetrofitService(
         return@withContext file
     }
 
-    override suspend fun downloadFile(context: Context, folder: String, dialogId: Int, filename: String): String = withContext(Dispatchers.IO) {
+    override suspend fun downloadFile(context: Context, folder: String, dialogId: Int, filename: String): String = withContext(ioDispatcher) {
         val filePath = try {
             uploadSource.downloadFile(context, folder, dialogId, filename)
         } catch (e: BackendException) {
@@ -726,7 +723,7 @@ class RetrofitService(
         return@withContext filePath
     }
 
-    override suspend fun downloadAvatar(context: Context, filename: String): String = withContext(Dispatchers.IO) {
+    override suspend fun downloadAvatar(context: Context, filename: String): String = withContext(ioDispatcher) {
         val filePath = try {
             uploadSource.downloadAvatar(context, filename)
         } catch (e: BackendException) {
@@ -737,7 +734,7 @@ class RetrofitService(
         return@withContext filePath
     }
 
-    override suspend fun deleteFile(folder: String, dialogId: Int, filename: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun deleteFile(folder: String, dialogId: Int, filename: String): Boolean = withContext(ioDispatcher) {
         val message = try {
             uploadSource.deleteFile(folder, dialogId, filename)
         } catch (e: BackendException) {
@@ -751,7 +748,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun getMedias(dialogId: Int, page: Int): List<String>? = withContext(Dispatchers.IO) {
+    override suspend fun getMedias(dialogId: Int, page: Int): List<String>? = withContext(ioDispatcher) {
         val files = try {
             uploadSource.getMediaPreviews(dialogId, page)
         } catch (e: BackendException) {
@@ -764,7 +761,7 @@ class RetrofitService(
         return@withContext files
     }
 
-    override suspend fun getFiles(dialogId: Int, page: Int): List<String>? = withContext(Dispatchers.IO) {
+    override suspend fun getFiles(dialogId: Int, page: Int): List<String>? = withContext(ioDispatcher) {
         val files = try {
             uploadSource.getFiles(dialogId, page)
         } catch (e: BackendException) {
@@ -777,7 +774,7 @@ class RetrofitService(
         return@withContext files
     }
 
-    override suspend fun getAudios(dialogId: Int, page: Int): List<String>? = withContext(Dispatchers.IO) {
+    override suspend fun getAudios(dialogId: Int, page: Int): List<String>? = withContext(ioDispatcher) {
         val files = try {
             uploadSource.getAudios(dialogId, page)
         } catch (e: BackendException) {
@@ -790,7 +787,7 @@ class RetrofitService(
         return@withContext files
     }
 
-    override suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String): String = withContext(Dispatchers.IO) {
+    override suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String): String = withContext(ioDispatcher) {
         val preview = try {
             uploadSource.getMediaPreview(context, dialogId, filename)
         } catch (e: BackendException) {
@@ -803,7 +800,7 @@ class RetrofitService(
         return@withContext preview
     }
 
-    override suspend fun getPermission(): Int = withContext(Dispatchers.IO) {
+    override suspend fun getPermission(): Int = withContext(ioDispatcher) {
         val permission = try {
             usersSource.getPermission()
         } catch (e: BackendException) {
@@ -815,7 +812,7 @@ class RetrofitService(
         return@withContext permission
     }
 
-    override suspend fun getVacation(): Pair<String, String>? = withContext(Dispatchers.IO) {
+    override suspend fun getVacation(): Pair<String, String>? = withContext(ioDispatcher) {
         val vacation = try {
             usersSource.getVacation()
         } catch (e: BackendException) {
