@@ -34,6 +34,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentMessageBinding
 import com.example.messenger.model.ConnectionException
 import com.example.messenger.model.ConversationSettings
@@ -226,6 +229,38 @@ class MessageFragment(
                 .addToBackStack(null)
                 .commit()
         }
+        val icVolumeOff: ImageView = view.findViewById(R.id.ic_volume_off)
+        uiScope.launch {
+            icVolumeOff.visibility = if(viewModel.isNotificationsEnabled(dialog.id)) View.GONE else View.VISIBLE
+            val avatar = dialog.otherUser.avatar ?: ""
+            if (avatar != "") {
+                val filePathTemp = async(Dispatchers.IO) {
+                    if (viewModel.fManagerIsExistAvatar(avatar)) {
+                        return@async Pair(viewModel.fManagerGetAvatarPath(avatar), true)
+                    } else {
+                        try {
+                            return@async Pair(viewModel.downloadAvatar(requireContext(), avatar), false)
+                        } catch (e: Exception) {
+                            return@async Pair(null, true)
+                        }
+                    }
+                }
+                val (first, second) = filePathTemp.await()
+                if (first != null) {
+                    val file = File(first)
+                    if (file.exists()) {
+                        if (!second) viewModel.fManagerSaveAvatar(avatar, file.readBytes())
+                        val uri = Uri.fromFile(file)
+                        profilePhoto.imageTintList = null
+                        Glide.with(requireContext())
+                            .load(uri)
+                            .apply(RequestOptions.circleCropTransform())
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .into(profilePhoto)
+                    }
+                }
+            }
+        }
         val userName: TextView = view.findViewById(R.id.userNameTextView)
         userName.text = dialog.otherUser.username
         userName.setOnClickListener {
@@ -269,6 +304,7 @@ class MessageFragment(
         viewModel.fetchLastSession()
         viewModel.lastSessionString.observe(viewLifecycleOwner) { sessionString ->
             lastSession.text = sessionString
+            lastSessionString = sessionString
         }
         lifecycleScope.launch {
             viewModel.readMessagesFlow.collect { readMessagesIds ->

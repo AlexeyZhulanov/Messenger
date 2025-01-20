@@ -105,11 +105,11 @@ class DialogInfoFragment(
             if (avatar != "") {
                 withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
                 val filePathTemp = async(Dispatchers.IO) {
-                    if (messageViewModel.fManagerIsExist(avatar)) {
-                        return@async Pair(messageViewModel.fManagerGetFilePath(avatar), true)
+                    if (messageViewModel.fManagerIsExistAvatar(avatar)) {
+                        return@async Pair(messageViewModel.fManagerGetAvatarPath(avatar), true)
                     } else {
                         try {
-                            return@async Pair(messageViewModel.downloadFile(requireContext(), "photos", avatar), false)
+                            return@async Pair(messageViewModel.downloadAvatar(requireContext(), avatar), false)
                         } catch (e: Exception) {
                             return@async Pair(null, true)
                         }
@@ -119,11 +119,12 @@ class DialogInfoFragment(
                 if (first != null) {
                     val file = File(first)
                     if (file.exists()) {
-                        if (!second) messageViewModel.fManagerSaveFile(avatar, file.readBytes())
+                        if (!second) messageViewModel.fManagerSaveAvatar(avatar, file.readBytes())
                         val uri = Uri.fromFile(file)
+                        binding.photoImageView.imageTintList = null
                         Glide.with(requireContext())
                             .load(uri)
-                            .apply(RequestOptions.circleCropTransform())
+                            .apply(RequestOptions.centerCropTransform())
                             .placeholder(R.color.app_color_f6)
                             .diskCacheStrategy(DiskCacheStrategy.ALL)
                             .into(binding.photoImageView)

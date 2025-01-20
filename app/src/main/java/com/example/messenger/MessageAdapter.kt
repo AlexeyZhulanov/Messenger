@@ -1539,7 +1539,7 @@ class MessageAdapter(
                 binding.timeLayout.visibility = View.VISIBLE
             }
             binding.progressBar.visibility = View.VISIBLE
-            uiScope.launch {
+            uiScopeMain.launch {
                 val localMedias = async {
                     val medias = arrayListOf<LocalMedia>()
                     for (image in message.images!!) {
@@ -1671,7 +1671,7 @@ class MessageAdapter(
                 binding.timeLayout.visibility = View.VISIBLE
             }
             binding.errorImageView.visibility = View.GONE
-            uiScope.launch {
+            uiScopeMain.launch {
                 val localMedias = async {
                     val medias = arrayListOf<LocalMedia>()
                     message.images?.forEachIndexed { index, image ->
@@ -1711,10 +1711,8 @@ class MessageAdapter(
                     }
                     return@async medias
                 }
-                withContext(Dispatchers.Main) {
-                    adapter.images = localMedias.await()
-                    binding.progressBar.visibility = View.GONE
-                }
+                adapter.images = localMedias.await()
+                binding.progressBar.visibility = View.GONE
             }
             if(message.isUnsent == true) {
                 binding.dateTextView.visibility = View.GONE

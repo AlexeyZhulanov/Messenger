@@ -62,16 +62,16 @@ class SettingsViewModel @Inject constructor(
         return@withContext retrofitService.getUser(0) // 0 - current user from jwt
     }
 
-    suspend fun fManagerIsExist(fileName: String): Boolean = withContext(Dispatchers.IO) {
-        return@withContext fileManager.isExistMessage(fileName)
+    suspend fun fManagerIsExistAvatar(fileName: String): Boolean = withContext(Dispatchers.IO) {
+        return@withContext fileManager.isExistAvatar(fileName)
     }
 
-    suspend fun fManagerGetFilePath(fileName: String): String = withContext(Dispatchers.IO) {
-        return@withContext fileManager.getMessageFilePath(fileName)
+    suspend fun fManagerGetAvatarPath(fileName: String): String = withContext(Dispatchers.IO) {
+        return@withContext fileManager.getAvatarFilePath(fileName)
     }
 
-    suspend fun fManagerSaveFile(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
-        fileManager.saveMessageFile(fileName, fileData)
+    suspend fun fManagerSaveAvatar(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
+        fileManager.saveAvatarFile(fileName, fileData)
     }
 
     suspend fun uploadAvatar(avatar: File): String = withContext(Dispatchers.IO) {

@@ -238,9 +238,9 @@ class MessageViewModel @Inject constructor(
     private fun highlightItem(position: Int) {
         val adapter = recyclerView.adapter
         if (adapter is MessageAdapter) {
-            adapter.highlightPosition(position)
-        } else {
-            Log.e("highlightItem", "Adapter is not of type ConcatAdapter")
+            recyclerView.post {
+                adapter.highlightPosition(position)
+            }
         }
     }
 
@@ -251,7 +251,7 @@ class MessageViewModel @Inject constructor(
         if (currentPos >= targetPosition) {
             // Целевая позиция уже на экране
             recyclerView.smoothScrollToPosition(targetPosition)
-            highlightItem(targetPosition)
+            recyclerView.post { highlightItem(targetPosition) }
             return
         }
 
@@ -264,7 +264,7 @@ class MessageViewModel @Inject constructor(
                 if (lastVisiblePosition >= targetPosition) {
                     // Достигли целевой позиции, остановим скролл
                     recyclerView.removeOnScrollListener(this)
-                    highlightItem(targetPosition)
+                    recyclerView.post { highlightItem(targetPosition) }
                 } else {
                     // Если не достигли целевой позиции, продолжаем скролл
                     recyclerView.smoothScrollToPosition(lastVisiblePosition + 1)
@@ -277,7 +277,7 @@ class MessageViewModel @Inject constructor(
             recyclerView.smoothScrollToPosition(currentPos + 10)
         else {
             recyclerView.smoothScrollToPosition(targetPosition)
-            highlightItem(targetPosition)
+            recyclerView.post { highlightItem(targetPosition) }
         }
     }
 
@@ -373,6 +373,18 @@ class MessageViewModel @Inject constructor(
 
     suspend fun fManagerSaveFile(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
         fileManager.saveMessageFile(fileName, fileData)
+    }
+
+    suspend fun fManagerIsExistAvatar(fileName: String): Boolean = withContext(Dispatchers.IO) {
+        return@withContext fileManager.isExistAvatar(fileName)
+    }
+
+    suspend fun fManagerGetAvatarPath(fileName: String): String = withContext(Dispatchers.IO) {
+        return@withContext fileManager.getAvatarFilePath(fileName)
+    }
+
+    suspend fun fManagerSaveAvatar(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
+        fileManager.saveAvatarFile(fileName, fileData)
     }
 
     suspend fun fManagerIsExistUnsent(fileName: String): Boolean = withContext(Dispatchers.IO) {
@@ -681,6 +693,10 @@ class MessageViewModel @Inject constructor(
             retrofitService.sendMessage(dialogId, mes.text, mes.images, mes.voice, mes.file, mes.referenceToMessageId, mes.isForwarded, mes.usernameAuthorOriginal)
         } catch (e: Exception) { false }
         return@withContext flag
+    }
+
+    suspend fun downloadAvatar(context: Context, filename: String): String = withContext(Dispatchers.IO) {
+        return@withContext retrofitService.downloadAvatar(context, filename)
     }
 
     fun parseOriginalFilename(filepath: String): String {
