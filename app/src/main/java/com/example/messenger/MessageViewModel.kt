@@ -12,11 +12,11 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
-import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.ChatSettings
 import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.DeletedMessagesEvent
@@ -36,7 +36,7 @@ import com.example.messenger.model.WebSocketService
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -64,7 +64,8 @@ class MessageViewModel @Inject constructor(
     private val messengerService: MessengerService,
     private val retrofitService: RetrofitService,
     private val fileManager: FileManager,
-    private val webSocketService: WebSocketService
+    private val webSocketService: WebSocketService,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel(), WebSocketListenerInterface {
 
     private val _lastSessionString = MutableLiveData<String>()
@@ -175,9 +176,7 @@ class MessageViewModel @Inject constructor(
     fun fetchLastSession() {
         viewModelScope.launch {
             try {
-                val session = withContext(Dispatchers.IO) {
-                    retrofitService.getLastSession(otherUserId)
-                }
+                val session = retrofitService.getLastSession(otherUserId)
                 _lastSessionString.value = formatUserSessionDate(session)
             } catch (e: Exception) {
                 _lastSessionString.value = "Unknown"
@@ -221,17 +220,17 @@ class MessageViewModel @Inject constructor(
 
             val messageIds = visibleMessages.map { it.id }
             if (messageIds.isNotEmpty()) {
-                sendReadReceiptsToServer(messageIds)
+                sendReadMessagesToServer(messageIds)
             }
         }
     }
 
-    private suspend fun sendReadReceiptsToServer(messageIds: List<Int>) {
+    private suspend fun sendReadMessagesToServer(messageIds: List<Int>) {
         try {
             // Отправляем список прочитанных сообщений на сервер
             retrofitService.markMessagesAsRead(dialogId, messageIds)
         } catch (e: Exception) {
-            Log.e("ReadReceiptError", "Failed to send read receipts: ${e.message}")
+            Log.e("ReadMessagesError", "Failed to send read messages: ${e.message}")
         }
     }
 
@@ -286,47 +285,48 @@ class MessageViewModel @Inject constructor(
         this.searchBy.value = query
     }
 
-    suspend fun getDialogSettings(idDialog: Int): ConversationSettings = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.getDialogSettings(idDialog)
+    suspend fun getDialogSettings(idDialog: Int): ConversationSettings {
+        return retrofitService.getDialogSettings(idDialog)
     }
 
-    suspend fun deleteMessages(ids: List<Int>): Boolean = withContext(Dispatchers.IO) {
+    suspend fun deleteMessages(ids: List<Int>): Boolean {
         val response = try {
             retrofitService.deleteMessages(dialogId, ids)
-        } catch (e: Exception) { return@withContext false }
-        return@withContext response
+        } catch (e: Exception) { return false }
+        return response
     }
 
-    suspend fun uploadPhoto(photo: File): Pair<String, Boolean> = withContext(Dispatchers.IO) {
+    suspend fun uploadPhoto(photo: File): Pair<String, Boolean> {
         val path = try {
             retrofitService.uploadPhoto(dialogId, photo)
         } catch (e: Exception) {
-            return@withContext Pair("", false)
+            return Pair("", false)
         }
-        return@withContext Pair(path, true)
+        return Pair(path, true)
     }
 
-    suspend fun uploadAudio(audio: File): Pair<String, Boolean> = withContext(Dispatchers.IO) {
+    suspend fun uploadAudio(audio: File): Pair<String, Boolean> {
         val path = try {
             retrofitService.uploadAudio(dialogId, audio)
         } catch (e: Exception) {
-            return@withContext Pair("", false)
+            return Pair("", false)
         }
-        return@withContext Pair(path, true)
+        return Pair(path, true)
     }
 
-    suspend fun uploadFile(file: File): Pair<String, Boolean> = withContext(Dispatchers.IO) {
+    suspend fun uploadFile(file: File): Pair<String, Boolean> {
         val path = try {
             retrofitService.uploadFile(dialogId, file)
         } catch (e: Exception) {
-            return@withContext Pair("", false)
+            return Pair("", false)
         }
-        return@withContext Pair(path, true)
+        return Pair(path, true)
     }
 
-    suspend fun sendMessage(text: String?, images: List<String>?, voice: String?, file: String?,
+    fun sendMessage(text: String?, images: List<String>?, voice: String?, file: String?,
                             referenceToMessageId: Int?, isForwarded: Boolean,
-                            usernameAuthorOriginal: String?, localFilePaths: List<String>?) = withContext(Dispatchers.IO) {
+                            usernameAuthorOriginal: String?, localFilePaths: List<String>?) {
+        viewModelScope.launch {
         val flag = if (!localFilePaths.isNullOrEmpty()) { false }
         else {
             try {
@@ -341,20 +341,20 @@ class MessageViewModel @Inject constructor(
             mes = mes.copy(id = id)
             _unsentMessageFlow.value = mes
         }
-    }
-
-    suspend fun editMessage(messageId: Int, text: String?, images: List<String>?,
-                            voice: String?, file: String?) : Boolean = withContext(Dispatchers.IO) {
-        try {
-            retrofitService.editMessage(dialogId, messageId, text, images, voice, file)
-            return@withContext true
-        } catch (e: Exception) {
-            return@withContext false
         }
     }
 
-    suspend fun downloadFile(context: Context, folder: String, filename: String): String = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.downloadFile(context, folder, dialogId, filename)
+    suspend fun editMessage(messageId: Int, text: String?, images: List<String>?, voice: String?, file: String?) : Boolean {
+        try {
+            retrofitService.editMessage(dialogId, messageId, text, images, voice, file)
+            return true
+        } catch (e: Exception) {
+            return false
+        }
+    }
+
+    suspend fun downloadFile(context: Context, folder: String, filename: String): String {
+        return retrofitService.downloadFile(context, folder, dialogId, filename)
     }
 
     fun downloadFileJava(context: Context, folder: String, filename: String): String {
@@ -363,47 +363,47 @@ class MessageViewModel @Inject constructor(
         }
     }
 
-    suspend fun fManagerIsExist(fileName: String): Boolean = withContext(Dispatchers.IO) {
-        return@withContext fileManager.isExistMessage(fileName)
+    fun fManagerIsExist(fileName: String): Boolean {
+        return fileManager.isExistMessage(fileName)
     }
 
-    suspend fun fManagerGetFilePath(fileName: String): String = withContext(Dispatchers.IO) {
-        return@withContext fileManager.getMessageFilePath(fileName)
+    fun fManagerGetFilePath(fileName: String): String {
+        return fileManager.getMessageFilePath(fileName)
     }
 
-    suspend fun fManagerSaveFile(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
+    suspend fun fManagerSaveFile(fileName: String, fileData: ByteArray) = withContext(ioDispatcher) {
         fileManager.saveMessageFile(fileName, fileData)
     }
 
-    suspend fun fManagerIsExistAvatar(fileName: String): Boolean = withContext(Dispatchers.IO) {
-        return@withContext fileManager.isExistAvatar(fileName)
+    fun fManagerIsExistAvatar(fileName: String): Boolean {
+        return fileManager.isExistAvatar(fileName)
     }
 
-    suspend fun fManagerGetAvatarPath(fileName: String): String = withContext(Dispatchers.IO) {
-        return@withContext fileManager.getAvatarFilePath(fileName)
+    fun fManagerGetAvatarPath(fileName: String): String {
+        return fileManager.getAvatarFilePath(fileName)
     }
 
-    suspend fun fManagerSaveAvatar(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
+    suspend fun fManagerSaveAvatar(fileName: String, fileData: ByteArray) = withContext(ioDispatcher) {
         fileManager.saveAvatarFile(fileName, fileData)
     }
 
-    suspend fun fManagerIsExistUnsent(fileName: String): Boolean = withContext(Dispatchers.IO) {
-        return@withContext fileManager.isExistUnsentMessage(fileName)
+    fun fManagerIsExistUnsent(fileName: String): Boolean {
+        return fileManager.isExistUnsentMessage(fileName)
     }
 
-    suspend fun fManagerDeleteUnsent(files: List<String>) = withContext(Dispatchers.IO) {
+    suspend fun fManagerDeleteUnsent(files: List<String>) = withContext(ioDispatcher) {
         fileManager.deleteFilesUnsent(files)
     }
 
-    suspend fun fManagerGetFilePathUnsent(fileName: String): String = withContext(Dispatchers.IO) {
-        return@withContext fileManager.getUnsentFilePath(fileName)
+    fun fManagerGetFilePathUnsent(fileName: String): String {
+        return fileManager.getUnsentFilePath(fileName)
     }
 
-    suspend fun fManagerSaveFileUnsent(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
+    suspend fun fManagerSaveFileUnsent(fileName: String, fileData: ByteArray) = withContext(ioDispatcher) {
         fileManager.saveUnsentFile(fileName, fileData)
     }
 
-    suspend fun fManagerGetFile(filePath: String): File? = withContext(Dispatchers.IO) {
+    suspend fun fManagerGetFile(filePath: String): File? = withContext(ioDispatcher) {
         return@withContext fileManager.getFileFromPath(filePath)
     }
 
@@ -420,11 +420,11 @@ class MessageViewModel @Inject constructor(
     }
 
 
-    suspend fun findMessage(idMessage: Int): Pair<Message, Int> = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.findMessage(idMessage, dialogId)
+    suspend fun findMessage(idMessage: Int): Pair<Message, Int> {
+        return retrofitService.findMessage(idMessage, dialogId)
     }
 
-    suspend fun updateAutoDeleteInterval(interval: Int) = withContext(Dispatchers.IO) {
+    suspend fun updateAutoDeleteInterval(interval: Int) {
         retrofitService.updateAutoDeleteInterval(dialogId, interval)
     }
 
@@ -500,8 +500,9 @@ class MessageViewModel @Inject constructor(
         }
     }
 
-    suspend fun imageSet(image: String, imageView: ImageView, context: Context) = withContext(Dispatchers.IO) {
-        val filePathTemp = async(Dispatchers.IO) {
+    fun imageSet(image: String, imageView: ImageView, context: Context) {
+        viewModelScope.launch {
+        val filePathTemp = async {
             if (fManagerIsExist(image)) {
                 return@async fManagerGetFilePath(image)
             } else {
@@ -516,17 +517,16 @@ class MessageViewModel @Inject constructor(
         if (first != null) {
             val file = File(first)
             if (file.exists()) {
-                withContext(Dispatchers.Main) {
-                    val uri = Uri.fromFile(file)
-                    imageView.visibility = View.VISIBLE
-                    Glide.with(context)
-                        .load(uri)
-                        .centerCrop()
-                        .placeholder(R.color.app_color_f6)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .into(imageView)
-                }
+                val uri = Uri.fromFile(file)
+                imageView.visibility = View.VISIBLE
+                Glide.with(context)
+                    .load(uri)
+                    .centerCrop()
+                    .placeholder(R.color.app_color_f6)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .into(imageView)
             }
+        }
         }
     }
 
@@ -538,12 +538,12 @@ class MessageViewModel @Inject constructor(
         }
     }
 
-    suspend fun getLastMessageId(): Int = withContext(Dispatchers.IO) {
-        return@withContext messengerService.getLastReadMessage(dialogId)?.second ?: -1
+    suspend fun getLastMessageId(): Int {
+        return messengerService.getLastReadMessage(dialogId)?.second ?: -1
     }
 
-    suspend fun getPreviousMessageId(id: Int): Int = withContext(Dispatchers.IO) {
-        return@withContext messengerService.getPreviousMessage(dialogId, id)?.id ?: -1
+    suspend fun getPreviousMessageId(id: Int): Int {
+        return messengerService.getPreviousMessage(dialogId, id)?.id ?: -1
     }
 
     private fun joinDialog() {
@@ -641,62 +641,62 @@ class MessageViewModel @Inject constructor(
         Log.d("testSocketsMessage", "User $userId left Dialog $dialogId")
     }
 
-    suspend fun isNotificationsEnabled(dialogId: Int): Boolean = withContext(Dispatchers.IO) {
-        return@withContext messengerService.isNotificationsEnabled(dialogId, false)
+    suspend fun isNotificationsEnabled(dialogId: Int): Boolean {
+        return messengerService.isNotificationsEnabled(dialogId, false)
     }
 
-    suspend fun turnNotifications(dialogId: Int) = withContext(Dispatchers.IO) {
+    suspend fun turnNotifications(dialogId: Int) {
         val isEnabled = messengerService.isNotificationsEnabled(dialogId, false)
         if(isEnabled) messengerService.insertChatSettings(ChatSettings(dialogId, false))
         else messengerService.deleteChatSettings(dialogId, false)
     }
 
-    suspend fun toggleCanDeleteDialog(dialogId: Int) = withContext(Dispatchers.IO) {
+    suspend fun toggleCanDeleteDialog(dialogId: Int) {
         retrofitService.toggleDialogCanDelete(dialogId)
     }
 
-    suspend fun deleteAllMessages(dialogId: Int) = withContext(Dispatchers.IO) {
+    suspend fun deleteAllMessages(dialogId: Int) {
         retrofitService.deleteDialogMessages(dialogId)
         _deleteState.value = 1
     }
 
-    suspend fun deleteDialog(dialogId: Int) = withContext(Dispatchers.IO) {
+    suspend fun deleteDialog(dialogId: Int) {
         retrofitService.deleteDialog(dialogId)
     }
 
-    suspend fun getMediaPreviews(page: Int): List<String>? = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.getMedias(dialogId, page)
+    suspend fun getMediaPreviews(page: Int): List<String>? {
+        return retrofitService.getMedias(dialogId, page)
     }
 
-    suspend fun getFiles(page: Int): List<String>? = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.getFiles(dialogId, page)
+    suspend fun getFiles(page: Int): List<String>? {
+        return retrofitService.getFiles(dialogId, page)
     }
 
-    suspend fun getAudios(page: Int): List<String>? = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.getAudios(dialogId, page)
+    suspend fun getAudios(page: Int): List<String>? {
+        return retrofitService.getAudios(dialogId, page)
     }
 
-    suspend fun getPreview(context: Context, filename: String): String = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.getMediaPreview(context, dialogId, filename)
+    suspend fun getPreview(context: Context, filename: String): String {
+        return retrofitService.getMediaPreview(context, dialogId, filename)
     }
 
-    suspend fun getUnsentMessages(): List<Message>? = withContext(Dispatchers.IO) {
-        return@withContext messengerService.getUnsentMessages(dialogId)
+    suspend fun getUnsentMessages(): List<Message>? {
+        return messengerService.getUnsentMessages(dialogId)
     }
 
-    suspend fun deleteUnsentMessage(messageId: Int) = withContext(Dispatchers.IO) {
+    suspend fun deleteUnsentMessage(messageId: Int) {
         messengerService.deleteUnsentMessage(messageId)
     }
 
-    suspend fun sendUnsentMessage(mes: Message) : Boolean = withContext(Dispatchers.IO) {
+    suspend fun sendUnsentMessage(mes: Message) : Boolean {
         val flag = try {
             retrofitService.sendMessage(dialogId, mes.text, mes.images, mes.voice, mes.file, mes.referenceToMessageId, mes.isForwarded, mes.usernameAuthorOriginal)
         } catch (e: Exception) { false }
-        return@withContext flag
+        return flag
     }
 
-    suspend fun downloadAvatar(context: Context, filename: String): String = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.downloadAvatar(context, filename)
+    suspend fun downloadAvatar(context: Context, filename: String): String {
+        return retrofitService.downloadAvatar(context, filename)
     }
 
     fun parseOriginalFilename(filepath: String): String {

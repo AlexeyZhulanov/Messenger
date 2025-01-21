@@ -16,14 +16,13 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.NumberPicker
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -32,27 +31,17 @@ import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentDialogInfoBinding
 import com.example.messenger.model.Dialog
 import com.example.messenger.model.MediaItem
-import com.example.messenger.model.MessengerService
-import com.example.messenger.model.RetrofitService
-import com.example.messenger.model.User
 import com.example.messenger.picker.CustomPreviewFragment
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
-import com.luck.picture.lib.PictureSelectorPreviewFragment
 import com.luck.picture.lib.basic.PictureSelector
 import com.luck.picture.lib.config.InjectResourceSource
 import com.luck.picture.lib.entity.LocalMedia
-import com.luck.picture.lib.interfaces.OnExternalPreviewEventListener
-import com.luck.picture.lib.interfaces.OnInjectActivityPreviewListener
 import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 
 class DialogInfoFragment(
@@ -67,8 +56,6 @@ class DialogInfoFragment(
     private var currentPage: Int = 0
     private var isCanDoPagination: Boolean = true
     private var isPaginationAllowed: Boolean = true
-    private val job = Job()
-    private val uiScope = CoroutineScope(Dispatchers.Main + job)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -100,11 +87,11 @@ class DialogInfoFragment(
         val colorAccent = typedValue.data
         context?.theme?.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
         val colorPrimary = typedValue.data
-        uiScope.launch {
+        lifecycleScope.launch {
             val avatar = dialog.otherUser.avatar ?: ""
             if (avatar != "") {
-                withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
-                val filePathTemp = async(Dispatchers.IO) {
+                binding.progressBar.visibility = View.VISIBLE
+                val filePathTemp = async {
                     if (messageViewModel.fManagerIsExistAvatar(avatar)) {
                         return@async Pair(messageViewModel.fManagerGetAvatarPath(avatar), true)
                     } else {
@@ -130,10 +117,8 @@ class DialogInfoFragment(
                             .into(binding.photoImageView)
                         binding.progressBar.visibility = View.GONE
                     } else {
-                        withContext(Dispatchers.Main) {
-                            binding.progressBar.visibility = View.GONE
-                            binding.errorImageView.visibility = View.VISIBLE
-                        }
+                        binding.progressBar.visibility = View.GONE
+                        binding.errorImageView.visibility = View.VISIBLE
                     }
                 } else {
                     binding.progressBar.visibility = View.GONE
@@ -144,7 +129,7 @@ class DialogInfoFragment(
         binding.userNameTextView.text = dialog.otherUser.username
         binding.lastSessionTextView.text = lastSessionString
         binding.nickTextView.text = dialog.otherUser.name
-        uiScope.launch {
+        lifecycleScope.launch {
             binding.switchNotifications.isChecked = messageViewModel.isNotificationsEnabled(dialog.id)
         }
         binding.switchDelete.isChecked = dialog.canDelete
@@ -155,7 +140,7 @@ class DialogInfoFragment(
         }
         binding.switchNotifications.setOnClickListener {
             binding.switchNotifications.isEnabled = false
-            uiScope.launch {
+            lifecycleScope.launch {
                 messageViewModel.turnNotifications(dialog.id)
                 delay(5000)
                 binding.switchNotifications.isEnabled = true
@@ -163,7 +148,7 @@ class DialogInfoFragment(
         }
         binding.switchDelete.setOnClickListener {
             binding.switchDelete.isEnabled = false
-            uiScope.launch {
+            lifecycleScope.launch {
                 messageViewModel.toggleCanDeleteDialog(dialog.id)
                 delay(5000)
                 binding.switchDelete.isEnabled = true
@@ -268,7 +253,7 @@ class DialogInfoFragment(
                     // Достигнут конец списка, подгружаем новые элементы
                     loadMoreMediaItems(selectedType, currentPage) {}
                     isPaginationAllowed = false
-                    uiScope.launch {
+                    lifecycleScope.launch {
                         delay(3000)
                         isPaginationAllowed = true
                     }
@@ -283,10 +268,10 @@ class DialogInfoFragment(
         val context = requireContext()
         when(type) {
             MediaItem.TYPE_MEDIA -> {
-                uiScope.launch {
+                lifecycleScope.launch {
                     val list = messageViewModel.getMediaPreviews(page)
                     if(!list.isNullOrEmpty()) {
-                        val items = async(Dispatchers.IO) {
+                        val items = async {
                             val tmp = mutableListOf<String>()
                             list.forEach {
                                 tmp.add(messageViewModel.getPreview(context, it))
@@ -304,7 +289,7 @@ class DialogInfoFragment(
                 }
             }
             MediaItem.TYPE_FILE -> {
-                uiScope.launch {
+                lifecycleScope.launch {
                     val list = messageViewModel.getFiles(page)
                     if(!list.isNullOrEmpty()) {
                         adapter.addMediaItems(MediaItem.TYPE_FILE, list.map { MediaItem(type, it) })
@@ -318,7 +303,7 @@ class DialogInfoFragment(
                 }
             }
             MediaItem.TYPE_AUDIO -> {
-                uiScope.launch {
+                lifecycleScope.launch {
                     val list = messageViewModel.getAudios(page)
                     if(!list.isNullOrEmpty()) {
                         adapter.addMediaItems(MediaItem.TYPE_AUDIO, list.map { MediaItem(type, it) })
@@ -376,22 +361,18 @@ class DialogInfoFragment(
                 true
             }
             R.id.delete_all_messages -> {
-                uiScope.launch {
+                lifecycleScope.launch {
                     messageViewModel.deleteAllMessages(dialog.id)
                 }
                 requireActivity().onBackPressedDispatcher.onBackPressed()
                 true
             }
             R.id.delete_dialog -> {
-                uiScope.launch {
+                lifecycleScope.launch {
                     messageViewModel.deleteDialog(dialog.id)
                 }
                 parentFragmentManager.beginTransaction()
-                    .replace(
-                        R.id.fragmentContainer,
-                        MessengerFragment(),
-                        "MESSENGER_FRAGMENT_FROM_DIALOG_TAG"
-                    )
+                    .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_FROM_DIALOG_TAG")
                     .commit()
                 true
             }
@@ -434,7 +415,7 @@ class DialogInfoFragment(
                         4 -> 600
                         else -> 0
                     }
-                    uiScope.launch {
+                    lifecycleScope.launch {
                         messageViewModel.updateAutoDeleteInterval(interval)
                     }
                 }

@@ -38,7 +38,6 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentMessageBinding
-import com.example.messenger.model.ConnectionException
 import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.Dialog
 import com.example.messenger.model.Message
@@ -55,23 +54,17 @@ import com.luck.picture.lib.interfaces.OnExternalPreviewEventListener
 import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
 import com.tougee.recorderview.AudioRecordView
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.supervisorScope
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.PrintWriter
-import java.net.UnknownHostException
 import kotlin.coroutines.cancellation.CancellationException
 
 @AndroidEntryPoint
@@ -99,9 +92,6 @@ class MessageFragment(
             isTyping = false
         }
     }
-    private val job = Job()
-    private val uiScope = CoroutineScope(Dispatchers.Main + job)
-    private val uiScopeIO = CoroutineScope(Dispatchers.IO + job)
     private val viewModel: MessageViewModel by viewModels()
 
     private val file: File by lazy {
@@ -230,11 +220,11 @@ class MessageFragment(
                 .commit()
         }
         val icVolumeOff: ImageView = view.findViewById(R.id.ic_volume_off)
-        uiScope.launch {
+        lifecycleScope.launch {
             icVolumeOff.visibility = if(viewModel.isNotificationsEnabled(dialog.id)) View.GONE else View.VISIBLE
             val avatar = dialog.otherUser.avatar ?: ""
             if (avatar != "") {
-                val filePathTemp = async(Dispatchers.IO) {
+                val filePathTemp = async {
                     if (viewModel.fManagerIsExistAvatar(avatar)) {
                         return@async Pair(viewModel.fManagerGetAvatarPath(avatar), true)
                     } else {
@@ -350,7 +340,7 @@ class MessageFragment(
                 }
 
                 override fun onUnsentMessagesAdd() {
-                    uiScope.launch {
+                    lifecycleScope.launch {
                         delay(200)
                         binding.recyclerview.smoothScrollToPosition(0)
                     }
@@ -366,7 +356,7 @@ class MessageFragment(
 
                 override fun onMessageLongClick(itemView: View) {
                     var flag = true
-                    uiScope.launch {
+                    lifecycleScope.launch {
                         viewModel.stopRefresh()
                         binding.floatingActionButtonDelete.visibility = View.VISIBLE
                         binding.floatingActionButtonForward.visibility = View.VISIBLE
@@ -390,11 +380,11 @@ class MessageFragment(
                     binding.floatingActionButtonDelete.setOnClickListener {
                        val messagesToDelete = adapter.getDeleteList()
                         if (messagesToDelete.isNotEmpty()) {
-                            uiScope.launch {
+                            lifecycleScope.launch {
                                 binding.progressBar.visibility = View.VISIBLE
                                 binding.floatingActionButtonDelete.visibility = View.GONE
                                 binding.floatingActionButtonForward.visibility = View.GONE
-                                val response = async(Dispatchers.IO) { viewModel.deleteMessages(messagesToDelete) }
+                                val response = async { viewModel.deleteMessages(messagesToDelete) }
                                 if(response.await()) {
                                     adapter.clearPositions()
                                     viewModel.startRefresh()
@@ -452,7 +442,7 @@ class MessageFragment(
                         .startActivityPreview(position, false, images)
                 }
             }, dialog.otherUser.id, requireContext(), viewModel)
-            uiScope.launch {
+            lifecycleScope.launch {
                 try {
                     adapter.dialogSettings = viewModel.getDialogSettings(dialog.id)
                 } catch (e: Exception) {
@@ -532,48 +522,36 @@ class MessageFragment(
             callback = this@MessageFragment
         }
         binding.attachButton.setOnClickListener {
-            uiScopeIO.launch {
+            lifecycleScope.launch {
                 try {
                     val res = async { filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = false, imageAdapter.getData()) }
-                    withContext(Dispatchers.Main) {
-                        imageAdapter.images = res.await()
-                        if(res.await().isNotEmpty()) {
-                            binding.recordView.visibility = View.INVISIBLE
-                            if(!editFlag) binding.enterButton.visibility = View.VISIBLE
-                        }
+                    imageAdapter.images = res.await()
+                    if(res.await().isNotEmpty()) {
+                        binding.recordView.visibility = View.INVISIBLE
+                        if(!editFlag) binding.enterButton.visibility = View.VISIBLE
                     }
                 } catch (e: CancellationException) {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "Выходим...", Toast.LENGTH_SHORT).show()
-                    }
+                    Toast.makeText(requireContext(), "Выходим...", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "Неизвестная ошибка", Toast.LENGTH_SHORT).show()
-                    }
+                    Toast.makeText(requireContext(), "Неизвестная ошибка", Toast.LENGTH_SHORT).show()
                 }
             }
         }
         binding.attachButton.setOnLongClickListener {
             ChoosePickFragment(object: ChoosePickListener {
                 override fun onGalleryClick() {
-                    uiScopeIO.launch {
+                    lifecycleScope.launch {
                         try {
                             val res = async { filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = true, imageAdapter.getData()) }
-                            withContext(Dispatchers.Main) {
-                                imageAdapter.images = res.await()
-                                if(res.await().isNotEmpty()) {
-                                    binding.recordView.visibility = View.INVISIBLE
-                                    binding.enterButton.visibility = View.VISIBLE
-                                }
+                            imageAdapter.images = res.await()
+                            if(res.await().isNotEmpty()) {
+                                binding.recordView.visibility = View.INVISIBLE
+                                binding.enterButton.visibility = View.VISIBLE
                             }
                         } catch (e: CancellationException) {
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(requireContext(), "Выходим...", Toast.LENGTH_SHORT).show()
-                            }
+                            Toast.makeText(requireContext(), "Выходим...", Toast.LENGTH_SHORT).show()
                         } catch (e: Exception) {
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(requireContext(), "Неизвестная ошибка", Toast.LENGTH_SHORT).show()
-                            }
+                            Toast.makeText(requireContext(), "Неизвестная ошибка", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -625,7 +603,7 @@ class MessageFragment(
             val text = binding.enterMessage.text.toString()
             val items = imageAdapter.getData()
 
-            uiScope.launch {
+            lifecycleScope.launch {
                 if (items.isNotEmpty()) {
                     val listik = async {
                         val list = mutableListOf<String>()
@@ -634,13 +612,13 @@ class MessageFragment(
                         for (item1 in items) {
                             if (item1.duration > 0) {
                                 val file = getFileFromContentUri(requireContext(), Uri.parse(item1.availablePath)) ?: continue
-                                val tmp = async(Dispatchers.IO) { viewModel.uploadPhoto(file) }
+                                val tmp = async { viewModel.uploadPhoto(file) }
                                 val (path, f) = tmp.await()
                                 list += path
                                 flag = f
                                 if(!f) break
                             } else {
-                                val tmp = async(Dispatchers.IO) { viewModel.uploadPhoto(File(item1.availablePath)) }
+                                val tmp = async { viewModel.uploadPhoto(File(item1.availablePath)) }
                                 val (path, f) = tmp.await()
                                 list += path
                                 flag = f
@@ -690,7 +668,7 @@ class MessageFragment(
                             disableAnswer()
                         }
                     }
-                    else withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "Ошибка отправки изображений", Toast.LENGTH_SHORT).show() }
+                    else Toast.makeText(requireContext(), "Ошибка отправки изображений", Toast.LENGTH_SHORT).show()
                     imageAdapter.clearImages()
             } else {
                     if(text.isNotEmpty()) {
@@ -757,7 +735,7 @@ class MessageFragment(
         val converter = AudioConverter()
         converter.convertPcmToOgg(file.path, fileOgg.path) {success, _ ->
             if(success) {
-                uiScope.launch {
+                lifecycleScope.launch {
                     val response = async {
                         val (path, f) = viewModel.uploadAudio(fileOgg)
                         if(f) {
@@ -830,7 +808,7 @@ class MessageFragment(
     private fun handleFileUri(uri: Uri) {
         val file = uriToFile(uri, requireContext())
         if(file != null) {
-            uiScope.launch {
+            lifecycleScope.launch {
                 val response = async {
                     val (path, f) = viewModel.uploadFile(file)
                     if(f) {
@@ -945,7 +923,7 @@ class MessageFragment(
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.item_resent -> {
-                    uiScope.launch {
+                    lifecycleScope.launch {
                         val localFilePaths = message.localFilePaths
                         val finalMessage: Message = if(localFilePaths != null) {
                             val filePathsFinal = async {
@@ -977,7 +955,7 @@ class MessageFragment(
                                     }
                                     val uploadedFiles: MutableList<String> = mutableListOf()
                                     files.forEachIndexed { index, file ->
-                                        val tmp = async(Dispatchers.IO) { viewModel.uploadPhoto(file) }
+                                        val tmp = async { viewModel.uploadPhoto(file) }
                                         val (path, f) = tmp.await()
                                         if(f) {
                                             uploadedFiles.add(path)
@@ -985,7 +963,7 @@ class MessageFragment(
                                             if(index != 0) {
                                                 Toast.makeText(requireContext(), "Файл №$index не загрузился, вторая попытка...", Toast.LENGTH_SHORT).show()
                                                 // вторая попытка для файла, если до этого файлы загрузились
-                                                val tmp2 = async(Dispatchers.IO) { viewModel.uploadPhoto(file) }
+                                                val tmp2 = async { viewModel.uploadPhoto(file) }
                                                 val (path2, f2) = tmp2.await()
                                                 if(f2) {
                                                     uploadedFiles.add(path2)
@@ -1034,7 +1012,7 @@ class MessageFragment(
                     true
                 }
                 R.id.item_delete -> {
-                    uiScope.launch {
+                    lifecycleScope.launch {
                         viewModel.deleteUnsentMessage(message.id)
                         adapter.deleteUnsentMessage(message)
                     }
@@ -1098,7 +1076,7 @@ class MessageFragment(
                     }, 100)
 
                     editButton.setOnClickListener {
-                        uiScope.launch {
+                        lifecycleScope.launch {
                             try {
                                 viewModel.stopRefresh()
                                 val tempItems = imageAdapter.getData()
@@ -1117,18 +1095,18 @@ class MessageFragment(
                                         } ?: listOf()
 
                                     // Upload new media
-                                    val uploadList = async(Dispatchers.Main) {
+                                    val uploadList = async {
                                         val list = mutableListOf<String>()
                                         for (uItem in itemsToUpload) {
                                             if (uItem.duration > 0) {
                                                 val file = getFileFromContentUri(requireContext(), Uri.parse(uItem.availablePath)) ?: continue
-                                                val tmp = async(Dispatchers.IO) {
+                                                val tmp = async {
                                                     viewModel.uploadPhoto(file)
                                                 }
                                                 val (path, f) = tmp.await()
                                                 if(f) list += path
                                             } else {
-                                                val tmp = async(Dispatchers.IO) {
+                                                val tmp = async {
                                                     viewModel.uploadPhoto(File(uItem.availablePath))
                                                 }
                                                 val (path, f) = tmp.await()
@@ -1141,7 +1119,7 @@ class MessageFragment(
                                         index !in removedItemsIndices
                                     } ?: emptyList()
                                     val finalList = imagesMessage + uploadList.await()
-                                    val resp = async(Dispatchers.IO) {
+                                    val resp = async {
                                         if (text.isNotEmpty()) {
                                             viewModel.editMessage(message.id, text, finalList, null, null)
                                         } else
@@ -1157,7 +1135,7 @@ class MessageFragment(
                                     if (!f) Toast.makeText(requireContext(), "Не удалось редактировать", Toast.LENGTH_SHORT).show()
                                 } else {
                                     if (text.isNotEmpty()) {
-                                        val resp = async(Dispatchers.IO) {
+                                        val resp = async {
                                             viewModel.editMessage(message.id, text, arrayListOf(), null, null)
                                         }
                                         val f = resp.await()
@@ -1168,9 +1146,7 @@ class MessageFragment(
                                         binding.recordView.visibility = View.VISIBLE
                                         viewModel.startRefresh()
                                         if(!f) Toast.makeText(requireContext(), "Не удалось редактировать", Toast.LENGTH_SHORT).show()
-                                    } else withContext(Dispatchers.Main) {
-                                        Toast.makeText(requireContext(), "Сообщение не должно быть пустым", Toast.LENGTH_SHORT).show()
-                                    }
+                                    } else Toast.makeText(requireContext(), "Сообщение не должно быть пустым", Toast.LENGTH_SHORT).show()
                                 }
                             }
                             catch (e: Exception) {
@@ -1201,7 +1177,7 @@ class MessageFragment(
                     }
                     if(message.images != null) {
                         binding.answerImageView.visibility = View.VISIBLE
-                        uiScope.launch {
+                        lifecycleScope.launch {
                             viewModel.imageSet(message.images!!.first(), binding.answerImageView, requireContext())
                         }
                     }
@@ -1240,7 +1216,7 @@ class MessageFragment(
     }
 
     private fun searchMessages(query: CharSequence?) {
-        uiScope.launch {
+        lifecycleScope.launch {
             if (query.isNullOrEmpty()) {
                 viewModel.refresh()
             }

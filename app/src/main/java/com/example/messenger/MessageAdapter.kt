@@ -43,10 +43,10 @@ import com.masoudss.lib.SeekBarOnProgressChanged
 import com.masoudss.lib.WaveformSeekBar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.io.File
 
 interface MessageActionListener {
@@ -81,9 +81,7 @@ class MessageAdapter(
     private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
     var dialogSettings: ConversationSettings = ConversationSettings()
     private var highlightedPosition: Int? = null
-    private val job = Job()
-    private val uiScope = CoroutineScope(Dispatchers.IO + job)
-    private val uiScopeMain = CoroutineScope(Dispatchers.Main + job)
+    private val uiScopeMain = CoroutineScope(Dispatchers.Main)
 
 
     fun addNewMessage(message: Pair<Message, String>) {
@@ -359,7 +357,7 @@ class MessageAdapter(
             val chk = getItemPositionWithId(tmpId)
             if(chk == -1) {
                 uiScopeMain.launch {
-                    val mes = async(Dispatchers.IO) { messageViewModel.findMessage(tmpId) }
+                    val mes = async { messageViewModel.findMessage(tmpId) }
                     val (m, p) = mes.await()
                     if(m.images != null) {
                         messageViewModel.imageSet(m.images!!.first(), binding.answerImageView, context)
@@ -561,135 +559,149 @@ class MessageAdapter(
 
             if (itemCount == 0) return
 
-            val columns = when {
-                itemCount <= 2 -> 2
-                itemCount == 3 -> 2
-                itemCount == 4 -> 2
-                itemCount in 5..6 -> 3
+            // Определяем количество колонок
+            val columns = when (itemCount) {
+                in 2..5 -> 2
                 else -> 3
             }
 
-            val rows = when {
-                itemCount <= 2 -> 1
-                itemCount == 3 -> 2
-                itemCount == 4 -> 2
-                itemCount in 5..6 -> 2
-                itemCount in 7..9 -> 3
+            // Определяем количество строк
+            val rows = when (itemCount) {
+                in 2..3 -> 2
+                in 4..8 -> 3
                 else -> 4
             }
 
             columnWidth = width / columns
             rowHeight = height / rows
 
-            var leftOffset = 0
-            var topOffset = 0
-            var currentColumn = 0
+            // Матрица занятых клеток
+            val occupiedCells = Array(rows) { BooleanArray(columns) { false } }
 
-            if (itemCount % 2 != 0) {
-
-                for (i in 0 until itemCount) {
-                    val view = recycler.getViewForPosition(i)
-                    val spanSize = if (itemCount % 2 == 0 && i == itemCount - 1) 2 else if (i == 0 && itemCount > 1) 2 else 1
-                    val itemWidth = columnWidth * spanSize
-                    val widthSpec = View.MeasureSpec.makeMeasureSpec(itemWidth, View.MeasureSpec.EXACTLY)
-                    val heightSpec = View.MeasureSpec.makeMeasureSpec(rowHeight, View.MeasureSpec.EXACTLY)
-                    view.measure(widthSpec, heightSpec)
-                    addView(view)
-
-                    val outRect = Rect()
-                    calculateItemDecorationsForChild(view, outRect)
-
-                    if ((currentColumn + spanSize) > columns) {
-                        currentColumn = 0
-                        leftOffset = 0
-                        topOffset += rowHeight
-                    }
-
-                    layoutDecorated(
-                        view,
-                        leftOffset + outRect.left,
-                        topOffset + outRect.top,
-                        leftOffset + itemWidth - outRect.right,
-                        topOffset + rowHeight - outRect.bottom
-                    )
-
-                    leftOffset += itemWidth
-                    currentColumn += spanSize
-                }
-            } else {
-                for (i in 0 until itemCount) {
+            for (i in 0 until itemCount) {
                 val view = recycler.getViewForPosition(i)
-                addView(view)
-                measureChildWithMargins(view, 0, 0)
+                var spanSizeW = 1
+                var spanSizeH = 1
 
-                val itemHeight = measuredHeightWithMargins(view)
-                val itemWidth = columnWidth
+                // Логика определения размеров элемента
+                when (itemCount) {
+                    2 -> spanSizeH = 2
+                    3 -> if (i == 0) spanSizeW = 2
+                    4 -> if (i == 0) spanSizeH = 3
+                    5 -> if (i == 0) spanSizeH = 2
+                    6 -> if (i == 0) spanSizeW = 3 else if (i == 1) spanSizeW = 2
+                    7 -> if (i == 0) spanSizeH = 2 else if (i == 1) spanSizeW = 2
+                    8 -> if (i == 0) spanSizeW = 2
+                    9 -> if (i == 0) spanSizeW = 3 else if (i == 1) spanSizeW = 2
+                    10 -> if (i == 0) spanSizeH = 2 else if (i == 1) spanSizeW = 2
+                }
 
-                    val outRect = Rect()
-                    calculateItemDecorationsForChild(view, outRect)
-
-                layoutDecorated(
-                    view,
-                    leftOffset + outRect.left,
-                    topOffset + outRect.top,
-                    leftOffset + itemWidth - outRect.right,
-                    topOffset + itemHeight - outRect.bottom
-                )
-
-                leftOffset += itemWidth
-                currentColumn++
-
-                if (currentColumn >= columns) {
-                    leftOffset = 0
-                    topOffset += rowHeight
-                    currentColumn = 0
+                // Находим первую доступную позицию
+                var positionFound = false
+                for (row in 0 until rows) {
+                    for (col in 0 until columns) {
+                        if (canPlaceItem(row, col, spanSizeW, spanSizeH, occupiedCells)) {
+                            placeItem(view, row, col, spanSizeW, spanSizeH, occupiedCells)
+                            positionFound = true
+                            break
+                        }
+                    }
+                    if (positionFound) break
                 }
             }
-            }
         }
 
-        private fun measuredHeightWithMargins(view: View): Int {
-            val lp = view.layoutParams as RecyclerView.LayoutParams
-            val height = view.measuredHeight
-            val marginTop = lp.topMargin
-            val marginBottom = lp.bottomMargin
-            return height + marginTop + marginBottom
+        private fun canPlaceItem(row: Int, col: Int, spanSizeW: Int, spanSizeH: Int, occupiedCells: Array<BooleanArray>): Boolean {
+            for (r in row until row + spanSizeH) {
+                for (c in col until col + spanSizeW) {
+                    if (r >= occupiedCells.size || c >= occupiedCells[0].size || occupiedCells[r][c]) {
+                        return false
+                    }
+                }
+            }
+            return true
         }
-        override fun measureChildWithMargins(child: View, widthUsed: Int, heightUsed: Int) {
-            val widthSpec = View.MeasureSpec.makeMeasureSpec(columnWidth, View.MeasureSpec.EXACTLY)
-            val heightSpec = View.MeasureSpec.makeMeasureSpec(rowHeight, View.MeasureSpec.EXACTLY)
-            child.measure(widthSpec, heightSpec)
+
+        private fun placeItem(view: View, row: Int, col: Int, spanSizeW: Int, spanSizeH: Int, occupiedCells: Array<BooleanArray>) {
+            val left = col * columnWidth
+            val top = row * rowHeight
+            val right = left + columnWidth * spanSizeW
+            val bottom = top + rowHeight * spanSizeH
+
+            // Отмечаем клетки как занятые
+            for (r in row until row + spanSizeH) {
+                for (c in col until col + spanSizeW) {
+                    occupiedCells[r][c] = true
+                }
+            }
+
+            // Измеряем и размещаем view
+            val widthSpec = View.MeasureSpec.makeMeasureSpec(right - left, View.MeasureSpec.EXACTLY)
+            val heightSpec = View.MeasureSpec.makeMeasureSpec(bottom - top, View.MeasureSpec.EXACTLY)
+            view.measure(widthSpec, heightSpec)
+            addView(view)
+
+            val outRect = Rect()
+            calculateItemDecorationsForChild(view, outRect)
+
+            layoutDecorated(
+                view,
+                left + outRect.left,
+                top + outRect.top,
+                right - outRect.right,
+                bottom - outRect.bottom
+            )
         }
+
         override fun generateDefaultLayoutParams(): RecyclerView.LayoutParams {
             return RecyclerView.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, // Use MATCH_PARENT for width
+                ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
         }
     }
 
-    class GridSpacingItemDecoration(private val spanCount: Int, private val spacing: Int, private val includeEdge: Boolean) : RecyclerView.ItemDecoration() {
+    class AdaptiveGridSpacingItemDecoration(
+        private val spacing: Int,
+        private val includeEdge: Boolean
+    ) : RecyclerView.ItemDecoration() {
+
         override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
             val position = (view.layoutParams as RecyclerView.LayoutParams).bindingAdapterPosition
-            val column = position % spanCount
+            if (position == RecyclerView.NO_POSITION) return
+
+            val itemCount = state.itemCount
+
+            val columns = when (itemCount) {
+                in 2..5 -> 2
+                else -> 3
+            }
+
+            val rows = when (itemCount) {
+                in 2..3 -> 2
+                in 4..8 -> 3
+                else -> 4
+            }
+
+            val column = position % columns
+            val row = position / columns
+
+            val horizontalSpacing = spacing
+            val verticalSpacing = spacing
 
             if (includeEdge) {
-                outRect.left = spacing - column * spacing / spanCount
-                outRect.right = (column + 1) * spacing / spanCount
-                if (position < spanCount) {
-                    outRect.top = spacing
-                }
-                outRect.bottom = spacing
+                outRect.left = if (column == 0) horizontalSpacing else horizontalSpacing / 2
+                outRect.right = if (column == columns - 1) horizontalSpacing else horizontalSpacing / 2
+                outRect.top = if (row == 0) verticalSpacing else verticalSpacing / 2
+                outRect.bottom = if (row == rows - 1) verticalSpacing else verticalSpacing / 2
             } else {
-                outRect.left = column * spacing / spanCount
-                outRect.right = spacing - (column + 1) * spacing / spanCount
-                if (position >= spanCount) {
-                    outRect.top = spacing
-                }
+                outRect.left = horizontalSpacing / 2
+                outRect.right = horizontalSpacing / 2
+                outRect.top = if (row > 0) verticalSpacing / 2 else 0
+                outRect.bottom = if (row < rows - 1) verticalSpacing / 2 else 0
             }
         }
     }
-
 
     inner class MessagesViewHolderVoiceReceiver(private val binding: ItemVoiceReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         private var isPlaying: Boolean = false
@@ -713,7 +725,7 @@ class MessageAdapter(
             }
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
-                val filePathTemp = async(Dispatchers.IO) {
+                val filePathTemp = async {
                     val voice = message.voice ?: "nonWork"
                     if (messageViewModel.fManagerIsExist(voice)) {
                         return@async Pair(messageViewModel.fManagerGetFilePath(voice), true)
@@ -847,7 +859,7 @@ class MessageAdapter(
             }
             binding.playButton.visibility = View.VISIBLE
             uiScopeMain.launch {
-                val filePathTemp = async(Dispatchers.IO) {
+                val filePathTemp = async {
                     if(message.isUnsent == true) {
                         return@async Pair(message.localFilePaths?.first(), true)
                     } else {
@@ -1001,8 +1013,8 @@ class MessageAdapter(
                 binding.forwardLayout.root.visibility = View.GONE
                 binding.forwardLayout.forwardUsername.text = ""
             }
-            uiScope.launch {
-                val filePathTemp = async(Dispatchers.IO) {
+            uiScopeMain.launch {
+                val filePathTemp = async {
                     if (messageViewModel.fManagerIsExist(message.file!!)) {
                         return@async Pair(messageViewModel.fManagerGetFilePath(message.file!!), true)
                     } else {
@@ -1019,30 +1031,25 @@ class MessageAdapter(
                 val file = File(first)
                 if (file.exists()) {
                     if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.file!!, file.readBytes())
-                    withContext(Dispatchers.Main) {
-                        binding.fileNameReceiverTextView.text = file.name
-                        binding.fileSizeTextView.text = messageViewModel.formatFileSize(file.length())
-                        binding.fileButton.setOnClickListener {
-                            try {
-                                val uri: Uri = FileProvider.getUriForFile(context, context.applicationContext.packageName + ".provider", file)
+                    binding.fileNameReceiverTextView.text = file.name
+                    binding.fileSizeTextView.text = messageViewModel.formatFileSize(file.length())
+                    binding.fileButton.setOnClickListener {
+                        try {
+                            val uri: Uri = FileProvider.getUriForFile(context, context.applicationContext.packageName + ".provider", file)
+                            val intent = Intent(Intent.ACTION_VIEW)
+                            intent.setDataAndType(uri, context.contentResolver.getType(uri))
+                            intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
 
-                                val intent = Intent(Intent.ACTION_VIEW)
-                                intent.setDataAndType(uri, context.contentResolver.getType(uri))
-                                intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-
-                                val chooser = Intent.createChooser(intent, "Выберите приложение для открытия файла")
-                                context.startActivity(chooser)
-                            } catch (e: IllegalArgumentException) {
-                                e.printStackTrace()
-                            }
+                            val chooser = Intent.createChooser(intent, "Выберите приложение для открытия файла")
+                            context.startActivity(chooser)
+                        } catch (e: IllegalArgumentException) {
+                            e.printStackTrace()
                         }
                     }
                 } else {
-                    withContext(Dispatchers.Main) {
-                        Log.e("FileError", "File does not exist: $first")
-                        binding.progressBar.visibility = View.GONE
-                        binding.errorImageView.visibility = View.VISIBLE
-                    }
+                    Log.e("FileError", "File does not exist: $first")
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
                 }
             } else {
                     binding.progressBar.visibility = View.GONE
@@ -1102,8 +1109,8 @@ class MessageAdapter(
                 binding.forwardLayout.root.visibility = View.GONE
                 binding.forwardLayout.forwardUsername.text = ""
             }
-            uiScope.launch {
-                val filePathTemp = async(Dispatchers.IO) {
+            uiScopeMain.launch {
+                val filePathTemp = async {
                     if(message.isUnsent == true) {
                         return@async Pair(message.localFilePaths?.first(), true)
                     } else {
@@ -1124,30 +1131,25 @@ class MessageAdapter(
                     val file = File(first)
                     if (file.exists()) {
                         if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.file!!, file.readBytes())
-                        withContext(Dispatchers.Main) {
-                            binding.fileNameSenderTextView.text = file.name
-                            binding.fileSizeTextView.text = messageViewModel.formatFileSize(file.length())
-                            binding.fileButton.setOnClickListener {
-                                try {
-                                    val uri: Uri = FileProvider.getUriForFile(context, context.applicationContext.packageName + ".provider", file)
+                        binding.fileNameSenderTextView.text = file.name
+                        binding.fileSizeTextView.text = messageViewModel.formatFileSize(file.length())
+                        binding.fileButton.setOnClickListener {
+                            try {
+                                val uri: Uri = FileProvider.getUriForFile(context, context.applicationContext.packageName + ".provider", file)
+                                val intent = Intent(Intent.ACTION_VIEW)
+                                intent.setDataAndType(uri, context.contentResolver.getType(uri))
+                                intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
 
-                                    val intent = Intent(Intent.ACTION_VIEW)
-                                    intent.setDataAndType(uri, context.contentResolver.getType(uri))
-                                    intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-
-                                    val chooser = Intent.createChooser(intent, "Выберите приложение для открытия файла")
-                                    context.startActivity(chooser)
-                                } catch (e: IllegalArgumentException) {
-                                    e.printStackTrace()
-                                }
+                                val chooser = Intent.createChooser(intent, "Выберите приложение для открытия файла")
+                                context.startActivity(chooser)
+                            } catch (e: IllegalArgumentException) {
+                                e.printStackTrace()
                             }
                         }
                     } else {
-                        withContext(Dispatchers.Main) {
-                            Log.e("FileError", "File does not exist: $first")
-                            binding.progressBar.visibility = View.GONE
-                            binding.errorImageView.visibility = View.VISIBLE
-                        }
+                        Log.e("FileError", "File does not exist: $first")
+                        binding.progressBar.visibility = View.GONE
+                        binding.errorImageView.visibility = View.VISIBLE
                     }
                 } else {
                     binding.progressBar.visibility = View.GONE
@@ -1238,9 +1240,9 @@ class MessageAdapter(
                 binding.timeLayout.visibility = View.VISIBLE
             }
 
-            uiScope.launch {
-                withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
-                val filePathTemp = async(Dispatchers.IO) {
+            uiScopeMain.launch {
+                binding.progressBar.visibility = View.VISIBLE
+                val filePathTemp = async {
                     if (messageViewModel.fManagerIsExist(message.images?.first() ?: "nonWork")) {
                         return@async Pair(messageViewModel.fManagerGetFilePath(message.images!!.first()), true)
                     } else {
@@ -1260,40 +1262,35 @@ class MessageAdapter(
                     val uri = Uri.fromFile(file)
                     val localMedia = messageViewModel.fileToLocalMedia(file)
                     val chooseModel = localMedia.chooseModel
-                    withContext(Dispatchers.Main) {
-                        binding.tvDuration.visibility =
-                            if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
-                        if (chooseModel == SelectMimeType.ofAudio()) {
-                            binding.tvDuration.visibility = View.VISIBLE
-                            binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                                com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
-                        } else {
-                            binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                                com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
-                        }
-                        binding.tvDuration.text =
-                            (DateUtils.formatDurationTime(localMedia.duration))
-                        if (chooseModel == SelectMimeType.ofAudio()) {
-                            binding.receiverImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
-                        } else {
-                            Glide.with(context)
-                                .load(uri)
-                                .centerCrop()
-                                .placeholder(R.color.app_color_f6)
-                                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                .into(binding.receiverImageView)
-                        }
-                        binding.progressBar.visibility = View.GONE
-                        binding.receiverImageView.setOnClickListener {
-                            actionListener.onImagesClick(arrayListOf(localMedia), 0)
-                        }
+                    binding.tvDuration.visibility =
+                        if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
+                    if (chooseModel == SelectMimeType.ofAudio()) {
+                        binding.tvDuration.visibility = View.VISIBLE
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                            com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
+                    } else {
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                            com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
+                    }
+                    binding.tvDuration.text = (DateUtils.formatDurationTime(localMedia.duration))
+                    if (chooseModel == SelectMimeType.ofAudio()) {
+                        binding.receiverImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
+                    } else {
+                        Glide.with(context)
+                            .load(uri)
+                            .centerCrop()
+                            .placeholder(R.color.app_color_f6)
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .into(binding.receiverImageView)
+                    }
+                    binding.progressBar.visibility = View.GONE
+                    binding.receiverImageView.setOnClickListener {
+                        actionListener.onImagesClick(arrayListOf(localMedia), 0)
                     }
                 } else {
-                    withContext(Dispatchers.Main) {
-                        Log.e("ImageError", "File does not exist: $first")
-                        binding.progressBar.visibility = View.GONE
-                        binding.errorImageView.visibility = View.VISIBLE
-                    }
+                    Log.e("ImageError", "File does not exist: $first")
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
                 }
             } else {
                     binding.progressBar.visibility = View.GONE
@@ -1367,9 +1364,9 @@ class MessageAdapter(
                 binding.customMessageLayout.visibility = View.GONE
                 binding.timeLayout.visibility = View.VISIBLE
             }
-            uiScope.launch {
-                withContext(Dispatchers.Main) { binding.progressBar.visibility = View.VISIBLE }
-                val filePathTemp = async(Dispatchers.IO) {
+            uiScopeMain.launch {
+                binding.progressBar.visibility = View.VISIBLE
+                val filePathTemp = async {
                     if(message.isUnsent == true) {
                         return@async Pair(message.localFilePaths?.first(), true)
                     } else {
@@ -1393,38 +1390,33 @@ class MessageAdapter(
                     val uri = Uri.fromFile(file)
                     val localMedia = messageViewModel.fileToLocalMedia(file)
                     val chooseModel = localMedia.chooseModel
-                    withContext(Dispatchers.Main) {
-                        binding.tvDuration.visibility =
-                            if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
-                        if (chooseModel == SelectMimeType.ofAudio()) {
-                            binding.tvDuration.visibility = View.VISIBLE
-                            binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
-                        } else {
-                            binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
-                        }
-                        binding.tvDuration.text =
-                            (DateUtils.formatDurationTime(localMedia.duration))
-                        if (chooseModel == SelectMimeType.ofAudio()) {
-                            binding.senderImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
-                        } else {
-                            Glide.with(context)
-                                .load(uri)
-                                .centerCrop()
-                                .placeholder(R.color.app_color_f6)
-                                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                .into(binding.senderImageView)
-                        }
-                        binding.progressBar.visibility = View.GONE
-                        binding.senderImageView.setOnClickListener {
-                            actionListener.onImagesClick(arrayListOf(localMedia), 0)
-                        }
+                    binding.tvDuration.visibility =
+                        if (PictureMimeType.isHasVideo(localMedia.mimeType)) View.VISIBLE else View.GONE
+                    if (chooseModel == SelectMimeType.ofAudio()) {
+                        binding.tvDuration.visibility = View.VISIBLE
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
+                    } else {
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
+                    }
+                    binding.tvDuration.text = (DateUtils.formatDurationTime(localMedia.duration))
+                    if (chooseModel == SelectMimeType.ofAudio()) {
+                        binding.senderImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
+                    } else {
+                        Glide.with(context)
+                            .load(uri)
+                            .centerCrop()
+                            .placeholder(R.color.app_color_f6)
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .into(binding.senderImageView)
+                    }
+                    binding.progressBar.visibility = View.GONE
+                    binding.senderImageView.setOnClickListener {
+                        actionListener.onImagesClick(arrayListOf(localMedia), 0)
                     }
                 } else {
-                    withContext(Dispatchers.Main) {
-                        Log.e("ImageError", "File does not exist: $first")
-                        binding.progressBar.visibility = View.GONE
-                        binding.errorImageView.visibility = View.VISIBLE
-                    }
+                    Log.e("ImageError", "File does not exist: $first")
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorImageView.visibility = View.VISIBLE
                 }
             } else {
                     binding.progressBar.visibility = View.GONE
@@ -1506,7 +1498,7 @@ class MessageAdapter(
         private var filePathsForClick: List<String> = listOf()
         init {
             binding.recyclerview.layoutManager = CustomLayoutManager()
-            binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 2, true))
+            binding.recyclerview.addItemDecoration(AdaptiveGridSpacingItemDecoration(2, true))
             binding.recyclerview.adapter = adapter
         }
         fun clearAnswerLayout() {
@@ -1539,18 +1531,21 @@ class MessageAdapter(
                 binding.timeLayout.visibility = View.VISIBLE
             }
             binding.progressBar.visibility = View.VISIBLE
+            val semaphore = Semaphore(4) // todo возможно 4 следует заменить на другое количество
             uiScopeMain.launch {
                 val localMedias = async {
                     val medias = arrayListOf<LocalMedia>()
                     for (image in message.images!!) {
-                        val filePath = async(Dispatchers.IO) {
-                            if (messageViewModel.fManagerIsExist(image)) {
-                                Pair(messageViewModel.fManagerGetFilePath(image), true)
-                            } else {
-                                try {
-                                    Pair(messageViewModel.downloadFile(context, "photos", image), false)
-                                } catch (e: Exception) {
-                                    Pair(null, true)
+                        val filePath = async {
+                            semaphore.withPermit {
+                                if (messageViewModel.fManagerIsExist(image)) {
+                                    Pair(messageViewModel.fManagerGetFilePath(image), true)
+                                } else {
+                                    try {
+                                        Pair(messageViewModel.downloadFile(context, "photos", image), false)
+                                    } catch (e: Exception) {
+                                        Pair(null, true)
+                                    }
                                 }
                             }
                         }
@@ -1562,11 +1557,9 @@ class MessageAdapter(
                             if (!second && isInLast30) messageViewModel.fManagerSaveFile(image, file.readBytes())
                             medias += messageViewModel.fileToLocalMedia(file)
                         } else {
-                            withContext(Dispatchers.Main) {
-                                Log.e("ImageError", "File does not exist: $filePath")
-                                binding.progressBar.visibility = View.GONE
-                                binding.errorImageView.visibility = View.VISIBLE
-                            }
+                            Log.e("ImageError", "File does not exist: $filePath")
+                            binding.progressBar.visibility = View.GONE
+                            binding.errorImageView.visibility = View.VISIBLE
                         }
                     } else {
                             binding.progressBar.visibility = View.GONE
@@ -1635,7 +1628,7 @@ class MessageAdapter(
         private var filePathsForClick: List<String> = listOf()
         init {
             binding.recyclerview.layoutManager = CustomLayoutManager()
-            binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 2, true))
+            binding.recyclerview.addItemDecoration(AdaptiveGridSpacingItemDecoration(2, true))
             binding.recyclerview.adapter = adapter
         }
         fun clearAnswerLayout() {
@@ -1671,21 +1664,24 @@ class MessageAdapter(
                 binding.timeLayout.visibility = View.VISIBLE
             }
             binding.errorImageView.visibility = View.GONE
+            val semaphore = Semaphore(4) // todo возможно 4 следует заменить на другое количество
             uiScopeMain.launch {
                 val localMedias = async {
                     val medias = arrayListOf<LocalMedia>()
                     message.images?.forEachIndexed { index, image ->
-                        val filePath = async(Dispatchers.IO) {
-                            if(message.isUnsent == true) {
-                                Pair(message.localFilePaths?.get(index), true)
-                            } else {
-                                if (messageViewModel.fManagerIsExist(image)) {
-                                    Pair(messageViewModel.fManagerGetFilePath(image), true)
+                        val filePath = async {
+                            semaphore.withPermit {
+                                if (message.isUnsent == true) {
+                                    Pair(message.localFilePaths?.get(index), true)
                                 } else {
-                                    try {
-                                        Pair(messageViewModel.downloadFile(context, "photos", image), false)
-                                    } catch (e: Exception) {
-                                        Pair(null, true)
+                                    if (messageViewModel.fManagerIsExist(image)) {
+                                        Pair(messageViewModel.fManagerGetFilePath(image), true)
+                                    } else {
+                                        try {
+                                            Pair(messageViewModel.downloadFile(context, "photos", image), false)
+                                        } catch (e: Exception) {
+                                            Pair(null, true)
+                                        }
                                     }
                                 }
                             }
@@ -1698,11 +1694,9 @@ class MessageAdapter(
                                 if (!second && isInLast30) messageViewModel.fManagerSaveFile(image, file.readBytes())
                                 medias += messageViewModel.fileToLocalMedia(file)
                             } else {
-                                withContext(Dispatchers.Main) {
-                                    Log.e("ImageError", "File does not exist: $filePath")
-                                    binding.progressBar.visibility = View.GONE
-                                    binding.errorImageView.visibility = View.VISIBLE
-                                }
+                                Log.e("ImageError", "File does not exist: $filePath")
+                                binding.progressBar.visibility = View.GONE
+                                binding.errorImageView.visibility = View.VISIBLE
                             }
                         } else {
                             binding.progressBar.visibility = View.GONE

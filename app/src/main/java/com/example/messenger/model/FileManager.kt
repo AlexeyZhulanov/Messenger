@@ -1,7 +1,6 @@
 package com.example.messenger.model
 
 import android.content.Context
-import android.util.Log
 import java.io.File
 
 class FileManager(private val context: Context) {

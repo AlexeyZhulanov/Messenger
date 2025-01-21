@@ -3,7 +3,6 @@ package com.example.messenger
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,18 +12,14 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.ItemMessengerBinding
 import com.example.messenger.model.Conversation
-import com.example.messenger.model.Message
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 import java.util.Locale
-import java.util.TimeZone
 
 interface MessengerActionListener {
     fun onConversationClicked(conversation: Conversation, index: Int)
@@ -43,8 +38,7 @@ class MessengerAdapter(
         }
 
     private var index = 0
-    private val job = Job()
-    private var uiScope = CoroutineScope(Dispatchers.Main + job)
+    private var uiScope = CoroutineScope(Dispatchers.Main)
 
     override fun onClick(v: View) {
         val conversation = v.tag as Conversation
@@ -82,7 +76,7 @@ class MessengerAdapter(
             uiScope.launch {
                 val avatar = conversation.otherUser?.avatar ?: ""
                 if (avatar != "") {
-                    val filePathTemp = async(Dispatchers.IO) {
+                    val filePathTemp = async {
                         if (messengerViewModel.fManagerIsExistAvatar(avatar)) {
                             return@async Pair(messengerViewModel.fManagerGetAvatarPath(avatar), true)
                         } else {

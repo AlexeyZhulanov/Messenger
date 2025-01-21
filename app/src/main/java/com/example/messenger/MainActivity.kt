@@ -2,22 +2,12 @@ package com.example.messenger
 
 import android.content.Context
 import android.os.Bundle
-import android.text.SpannableString
-import android.text.style.ForegroundColorSpan
-import android.util.Log
-import android.util.TypedValue
-import android.view.Menu
-import android.view.MenuItem
-import android.widget.EditText
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.messenger.databinding.ActivityMainBinding
 import com.example.messenger.model.MessengerService
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -30,8 +20,6 @@ const val PREF_THEME = "PREF_THEME"
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private val job = Job()
-    private val uiScope = CoroutineScope(Dispatchers.Main + job)
     @Inject
     lateinit var messengerService: MessengerService
 
@@ -54,7 +42,7 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         binding = ActivityMainBinding.inflate(layoutInflater).also { setContentView(it.root) }
         setContentView(binding.root)
-        uiScope.launch {
+        lifecycleScope.launch {
             val s = async { messengerService.getSettings() }
             val settings = s.await()
             if (savedInstanceState == null) {

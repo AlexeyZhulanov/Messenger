@@ -8,7 +8,6 @@ import android.os.Build
 import android.os.Bundle
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
@@ -32,20 +31,12 @@ import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentMessengerBinding
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.Message
-import com.example.messenger.model.MessengerService
-import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.User
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.UnknownHostException
 
 @AndroidEntryPoint
 class MessengerFragment : Fragment() {
@@ -57,8 +48,6 @@ class MessengerFragment : Fragment() {
     private var forwardMessages: List<Message>? = null
     private var forwardUsernames: List<String>? = null
     private var updateJob: Job? = null
-    private val job = Job()
-    private var uiScope = CoroutineScope(Dispatchers.Main + job)
     private val messengerViewModel: MessengerViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -96,10 +85,10 @@ class MessengerFragment : Fragment() {
         }
         messengerViewModel.currentUser.observe(viewLifecycleOwner) { user ->
             currentUser = user
-            uiScope.launch {
+            lifecycleScope.launch {
                 val avatar = user?.avatar ?: ""
                 if (avatar != "") {
-                    val filePathTemp = async(Dispatchers.IO) {
+                    val filePathTemp = async {
                         if (messengerViewModel.fManagerIsExistAvatar(avatar)) {
                             return@async Pair(messengerViewModel.fManagerGetAvatarPath(avatar), true)
                         } else {

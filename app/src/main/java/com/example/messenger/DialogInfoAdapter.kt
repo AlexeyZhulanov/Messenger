@@ -7,7 +7,6 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -24,7 +23,6 @@ import com.masoudss.lib.SeekBarOnProgressChanged
 import com.masoudss.lib.WaveformSeekBar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.io.File
@@ -43,8 +41,7 @@ class DialogInfoAdapter(
     private val localMedias = arrayListOf<LocalMedia>()
     private val durations = mutableListOf<String?>()
     private var currentType: Int? = null
-    private val job = Job()
-    private val uiScope = CoroutineScope(Dispatchers.Main + job)
+    private val uiScope = CoroutineScope(Dispatchers.Main)
 
     @SuppressLint("NotifyDataSetChanged")
     private fun setMediaItems(type: Int, items: List<MediaItem>) {
@@ -140,7 +137,7 @@ class DialogInfoAdapter(
     inner class FileViewHolder(private val binding: ItemFileBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(content: String) {
             uiScope.launch {
-                val filePathTemp = async(Dispatchers.IO) {
+                val filePathTemp = async {
                     if (messageViewModel.fManagerIsExist(content)) {
                         return@async Pair(messageViewModel.fManagerGetFilePath(content), false)
                     } else {
@@ -191,7 +188,7 @@ class DialogInfoAdapter(
 
         fun bind(content: String) {
             uiScope.launch {
-                val filePathTemp = async(Dispatchers.IO) {
+                val filePathTemp = async {
                     if (messageViewModel.fManagerIsExist(content)) {
                         return@async Pair(messageViewModel.fManagerGetFilePath(content), false)
                     } else {

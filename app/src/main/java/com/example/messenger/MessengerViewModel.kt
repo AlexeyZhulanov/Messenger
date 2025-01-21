@@ -2,11 +2,11 @@ package com.example.messenger
 
 import android.content.Context
 import android.util.Log
-import android.widget.Toast
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.DeletedMessagesEvent
 import com.example.messenger.model.DialogCreatedEvent
@@ -23,6 +23,7 @@ import com.example.messenger.model.UserSessionUpdatedEvent
 import com.example.messenger.model.WebSocketListenerInterface
 import com.example.messenger.model.WebSocketService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,7 +35,8 @@ class MessengerViewModel @Inject constructor(
     private val messengerService: MessengerService,
     private val retrofitService: RetrofitService,
     private val fileManager: FileManager,
-    private val webSocketService: WebSocketService
+    private val webSocketService: WebSocketService,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel(), WebSocketListenerInterface {
 
     private val _conversations = MutableLiveData<List<Conversation>>()
@@ -58,7 +60,7 @@ class MessengerViewModel @Inject constructor(
     }
 
     private fun fetchVacation() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch{
             try {
                 val pair = retrofitService.getVacation()
                 _vacation.postValue(pair)
@@ -69,7 +71,7 @@ class MessengerViewModel @Inject constructor(
     }
 
     private fun fetchCurrentUser() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             try {
                 var initialUser: User? = null
                 try {
@@ -94,7 +96,7 @@ class MessengerViewModel @Inject constructor(
     }
 
     private fun fetchConversations() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             try {
                 val initialConversations = messengerService.getConversations()
                 _conversations.postValue(initialConversations)
@@ -116,12 +118,12 @@ class MessengerViewModel @Inject constructor(
         }
     }
 
-    suspend fun getPermission() : Int = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.getPermission()
+    suspend fun getPermission() : Int {
+        return retrofitService.getPermission()
     }
 
     fun createDialog(input: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             if (retrofitService.createDialog(input)) {
                 _conversations.postValue(retrofitService.getConversations())
             }
@@ -129,7 +131,7 @@ class MessengerViewModel @Inject constructor(
     }
 
     fun createGroup(input: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             if (retrofitService.createGroup(input)) {
                 _conversations.postValue(retrofitService.getConversations())
             }
@@ -138,15 +140,13 @@ class MessengerViewModel @Inject constructor(
 
     fun forwardMessages(list: List<Message>?, usernames: List<String>?, id: Int) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                list?.forEachIndexed { index, message ->
-                    if(message.usernameAuthorOriginal == null) {
-                        forwardMessage(id, message.text, message.images, message.voice, message.file,
-                            message.referenceToMessageId, usernames?.get(index))
-                    } else {
-                        forwardMessage(id, message.text, message.images, message.voice, message.file,
-                            message.referenceToMessageId, message.usernameAuthorOriginal)
-                    }
+            list?.forEachIndexed { index, message ->
+                if(message.usernameAuthorOriginal == null) {
+                    forwardMessage(id, message.text, message.images, message.voice, message.file,
+                        message.referenceToMessageId, usernames?.get(index))
+                } else {
+                    forwardMessage(id, message.text, message.images, message.voice, message.file,
+                        message.referenceToMessageId, message.usernameAuthorOriginal)
                 }
             }
         }
@@ -154,24 +154,24 @@ class MessengerViewModel @Inject constructor(
 
     private suspend fun forwardMessage(idDialog: Int, text: String?, images: List<String>?,
                             voice: String?, file: String?, referenceToMessageId: Int?,
-                            usernameAuthorOriginal: String?) = withContext(Dispatchers.IO) {
+                            usernameAuthorOriginal: String?) {
         retrofitService.sendMessage(idDialog, text, images, voice, file, referenceToMessageId, true, usernameAuthorOriginal)
     }
 
-    suspend fun fManagerIsExistAvatar(fileName: String): Boolean = withContext(Dispatchers.IO) {
-        return@withContext fileManager.isExistAvatar(fileName)
+    fun fManagerIsExistAvatar(fileName: String): Boolean {
+        return fileManager.isExistAvatar(fileName)
     }
 
-    suspend fun fManagerGetAvatarPath(fileName: String): String = withContext(Dispatchers.IO) {
-        return@withContext fileManager.getAvatarFilePath(fileName)
+    fun fManagerGetAvatarPath(fileName: String): String {
+        return fileManager.getAvatarFilePath(fileName)
     }
 
-    suspend fun fManagerSaveAvatar(fileName: String, fileData: ByteArray) = withContext(Dispatchers.IO) {
+    suspend fun fManagerSaveAvatar(fileName: String, fileData: ByteArray) = withContext(ioDispatcher) {
         fileManager.saveAvatarFile(fileName, fileData)
     }
 
-    suspend fun downloadAvatar(context: Context, filename: String): String = withContext(Dispatchers.IO) {
-        return@withContext retrofitService.downloadAvatar(context, filename)
+    suspend fun downloadAvatar(context: Context, filename: String): String {
+        return retrofitService.downloadAvatar(context, filename)
     }
 
     override fun onNewMessage(message: Message) {
