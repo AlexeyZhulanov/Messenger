@@ -559,135 +559,149 @@ class MessageAdapter(
 
             if (itemCount == 0) return
 
-            val columns = when {
-                itemCount <= 2 -> 2
-                itemCount == 3 -> 2
-                itemCount == 4 -> 2
-                itemCount in 5..6 -> 3
+            // Определяем количество колонок
+            val columns = when (itemCount) {
+                in 2..5 -> 2
                 else -> 3
             }
 
-            val rows = when {
-                itemCount <= 2 -> 1
-                itemCount == 3 -> 2
-                itemCount == 4 -> 2
-                itemCount in 5..6 -> 2
-                itemCount in 7..9 -> 3
+            // Определяем количество строк
+            val rows = when (itemCount) {
+                in 2..3 -> 2
+                in 4..8 -> 3
                 else -> 4
             }
 
             columnWidth = width / columns
             rowHeight = height / rows
 
-            var leftOffset = 0
-            var topOffset = 0
-            var currentColumn = 0
+            // Матрица занятых клеток
+            val occupiedCells = Array(rows) { BooleanArray(columns) { false } }
 
-            if (itemCount % 2 != 0) {
-
-                for (i in 0 until itemCount) {
-                    val view = recycler.getViewForPosition(i)
-                    val spanSize = if (itemCount % 2 == 0 && i == itemCount - 1) 2 else if (i == 0 && itemCount > 1) 2 else 1
-                    val itemWidth = columnWidth * spanSize
-                    val widthSpec = View.MeasureSpec.makeMeasureSpec(itemWidth, View.MeasureSpec.EXACTLY)
-                    val heightSpec = View.MeasureSpec.makeMeasureSpec(rowHeight, View.MeasureSpec.EXACTLY)
-                    view.measure(widthSpec, heightSpec)
-                    addView(view)
-
-                    val outRect = Rect()
-                    calculateItemDecorationsForChild(view, outRect)
-
-                    if ((currentColumn + spanSize) > columns) {
-                        currentColumn = 0
-                        leftOffset = 0
-                        topOffset += rowHeight
-                    }
-
-                    layoutDecorated(
-                        view,
-                        leftOffset + outRect.left,
-                        topOffset + outRect.top,
-                        leftOffset + itemWidth - outRect.right,
-                        topOffset + rowHeight - outRect.bottom
-                    )
-
-                    leftOffset += itemWidth
-                    currentColumn += spanSize
-                }
-            } else {
-                for (i in 0 until itemCount) {
+            for (i in 0 until itemCount) {
                 val view = recycler.getViewForPosition(i)
-                addView(view)
-                measureChildWithMargins(view, 0, 0)
+                var spanSizeW = 1
+                var spanSizeH = 1
 
-                val itemHeight = measuredHeightWithMargins(view)
-                val itemWidth = columnWidth
+                // Логика определения размеров элемента
+                when (itemCount) {
+                    2 -> spanSizeH = 2
+                    3 -> if (i == 0) spanSizeW = 2
+                    4 -> if (i == 0) spanSizeH = 3
+                    5 -> if (i == 0) spanSizeH = 2
+                    6 -> if (i == 0) spanSizeW = 3 else if (i == 1) spanSizeW = 2
+                    7 -> if (i == 0) spanSizeH = 2 else if (i == 1) spanSizeW = 2
+                    8 -> if (i == 0) spanSizeW = 2
+                    9 -> if (i == 0) spanSizeW = 3 else if (i == 1) spanSizeW = 2
+                    10 -> if (i == 0) spanSizeH = 2 else if (i == 1) spanSizeW = 2
+                }
 
-                    val outRect = Rect()
-                    calculateItemDecorationsForChild(view, outRect)
-
-                layoutDecorated(
-                    view,
-                    leftOffset + outRect.left,
-                    topOffset + outRect.top,
-                    leftOffset + itemWidth - outRect.right,
-                    topOffset + itemHeight - outRect.bottom
-                )
-
-                leftOffset += itemWidth
-                currentColumn++
-
-                if (currentColumn >= columns) {
-                    leftOffset = 0
-                    topOffset += rowHeight
-                    currentColumn = 0
+                // Находим первую доступную позицию
+                var positionFound = false
+                for (row in 0 until rows) {
+                    for (col in 0 until columns) {
+                        if (canPlaceItem(row, col, spanSizeW, spanSizeH, occupiedCells)) {
+                            placeItem(view, row, col, spanSizeW, spanSizeH, occupiedCells)
+                            positionFound = true
+                            break
+                        }
+                    }
+                    if (positionFound) break
                 }
             }
-            }
         }
 
-        private fun measuredHeightWithMargins(view: View): Int {
-            val lp = view.layoutParams as RecyclerView.LayoutParams
-            val height = view.measuredHeight
-            val marginTop = lp.topMargin
-            val marginBottom = lp.bottomMargin
-            return height + marginTop + marginBottom
+        private fun canPlaceItem(row: Int, col: Int, spanSizeW: Int, spanSizeH: Int, occupiedCells: Array<BooleanArray>): Boolean {
+            for (r in row until row + spanSizeH) {
+                for (c in col until col + spanSizeW) {
+                    if (r >= occupiedCells.size || c >= occupiedCells[0].size || occupiedCells[r][c]) {
+                        return false
+                    }
+                }
+            }
+            return true
         }
-        override fun measureChildWithMargins(child: View, widthUsed: Int, heightUsed: Int) {
-            val widthSpec = View.MeasureSpec.makeMeasureSpec(columnWidth, View.MeasureSpec.EXACTLY)
-            val heightSpec = View.MeasureSpec.makeMeasureSpec(rowHeight, View.MeasureSpec.EXACTLY)
-            child.measure(widthSpec, heightSpec)
+
+        private fun placeItem(view: View, row: Int, col: Int, spanSizeW: Int, spanSizeH: Int, occupiedCells: Array<BooleanArray>) {
+            val left = col * columnWidth
+            val top = row * rowHeight
+            val right = left + columnWidth * spanSizeW
+            val bottom = top + rowHeight * spanSizeH
+
+            // Отмечаем клетки как занятые
+            for (r in row until row + spanSizeH) {
+                for (c in col until col + spanSizeW) {
+                    occupiedCells[r][c] = true
+                }
+            }
+
+            // Измеряем и размещаем view
+            val widthSpec = View.MeasureSpec.makeMeasureSpec(right - left, View.MeasureSpec.EXACTLY)
+            val heightSpec = View.MeasureSpec.makeMeasureSpec(bottom - top, View.MeasureSpec.EXACTLY)
+            view.measure(widthSpec, heightSpec)
+            addView(view)
+
+            val outRect = Rect()
+            calculateItemDecorationsForChild(view, outRect)
+
+            layoutDecorated(
+                view,
+                left + outRect.left,
+                top + outRect.top,
+                right - outRect.right,
+                bottom - outRect.bottom
+            )
         }
+
         override fun generateDefaultLayoutParams(): RecyclerView.LayoutParams {
             return RecyclerView.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, // Use MATCH_PARENT for width
+                ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
         }
     }
 
-    class GridSpacingItemDecoration(private val spanCount: Int, private val spacing: Int, private val includeEdge: Boolean) : RecyclerView.ItemDecoration() {
+    class AdaptiveGridSpacingItemDecoration(
+        private val spacing: Int,
+        private val includeEdge: Boolean
+    ) : RecyclerView.ItemDecoration() {
+
         override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
             val position = (view.layoutParams as RecyclerView.LayoutParams).bindingAdapterPosition
-            val column = position % spanCount
+            if (position == RecyclerView.NO_POSITION) return
+
+            val itemCount = state.itemCount
+
+            val columns = when (itemCount) {
+                in 2..5 -> 2
+                else -> 3
+            }
+
+            val rows = when (itemCount) {
+                in 2..3 -> 2
+                in 4..8 -> 3
+                else -> 4
+            }
+
+            val column = position % columns
+            val row = position / columns
+
+            val horizontalSpacing = spacing
+            val verticalSpacing = spacing
 
             if (includeEdge) {
-                outRect.left = spacing - column * spacing / spanCount
-                outRect.right = (column + 1) * spacing / spanCount
-                if (position < spanCount) {
-                    outRect.top = spacing
-                }
-                outRect.bottom = spacing
+                outRect.left = if (column == 0) horizontalSpacing else horizontalSpacing / 2
+                outRect.right = if (column == columns - 1) horizontalSpacing else horizontalSpacing / 2
+                outRect.top = if (row == 0) verticalSpacing else verticalSpacing / 2
+                outRect.bottom = if (row == rows - 1) verticalSpacing else verticalSpacing / 2
             } else {
-                outRect.left = column * spacing / spanCount
-                outRect.right = spacing - (column + 1) * spacing / spanCount
-                if (position >= spanCount) {
-                    outRect.top = spacing
-                }
+                outRect.left = horizontalSpacing / 2
+                outRect.right = horizontalSpacing / 2
+                outRect.top = if (row > 0) verticalSpacing / 2 else 0
+                outRect.bottom = if (row < rows - 1) verticalSpacing / 2 else 0
             }
         }
     }
-
 
     inner class MessagesViewHolderVoiceReceiver(private val binding: ItemVoiceReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         private var isPlaying: Boolean = false
@@ -1484,7 +1498,7 @@ class MessageAdapter(
         private var filePathsForClick: List<String> = listOf()
         init {
             binding.recyclerview.layoutManager = CustomLayoutManager()
-            binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 2, true))
+            binding.recyclerview.addItemDecoration(AdaptiveGridSpacingItemDecoration(2, true))
             binding.recyclerview.adapter = adapter
         }
         fun clearAnswerLayout() {
@@ -1614,7 +1628,7 @@ class MessageAdapter(
         private var filePathsForClick: List<String> = listOf()
         init {
             binding.recyclerview.layoutManager = CustomLayoutManager()
-            binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, 2, true))
+            binding.recyclerview.addItemDecoration(AdaptiveGridSpacingItemDecoration(2, true))
             binding.recyclerview.adapter = adapter
         }
         fun clearAnswerLayout() {
