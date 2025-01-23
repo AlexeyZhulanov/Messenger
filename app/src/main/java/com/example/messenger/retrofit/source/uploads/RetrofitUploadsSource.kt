@@ -15,31 +15,31 @@ class RetrofitUploadsSource(
 ) : BaseRetrofitSource(config), UploadsSource {
 
     private val uploadsApi = retrofit.create(UploadsApi::class.java)
-    override suspend fun uploadPhoto(dialogId: Int, photo: File): String = wrapRetrofitExceptions {
+    override suspend fun uploadPhoto(dialogId: Int, isGroup: Int, photo: File): String = wrapRetrofitExceptions {
         val requestBody = MultipartBody.Part.createFormData(
             "file",
             photo.name,
             photo.asRequestBody("image/*".toMediaTypeOrNull())
         )
-        uploadsApi.uploadPhoto(dialogId, requestBody).filename
+        uploadsApi.uploadPhoto(dialogId, isGroup, requestBody).filename
     }
 
-    override suspend fun uploadFile(dialogId: Int, file: File): String = wrapRetrofitExceptions {
+    override suspend fun uploadFile(dialogId: Int, isGroup: Int, file: File): String = wrapRetrofitExceptions {
         val requestBody = MultipartBody.Part.createFormData(
             "file",
             file.name,
             file.asRequestBody("file/*".toMediaTypeOrNull())
         )
-        uploadsApi.uploadFile(dialogId, requestBody).filename
+        uploadsApi.uploadFile(dialogId, isGroup, requestBody).filename
     }
 
-    override suspend fun uploadAudio(dialogId: Int, audio: File): String = wrapRetrofitExceptions {
+    override suspend fun uploadAudio(dialogId: Int, isGroup: Int, audio: File): String = wrapRetrofitExceptions {
         val requestBody = MultipartBody.Part.createFormData(
             "file",
             audio.name,
             audio.asRequestBody("audio/*".toMediaTypeOrNull())
         )
-        uploadsApi.uploadAudio(dialogId, requestBody).filename
+        uploadsApi.uploadAudio(dialogId, isGroup, requestBody).filename
     }
 
     override suspend fun uploadAvatar(avatar: File): String = wrapRetrofitExceptions {
@@ -51,9 +51,10 @@ class RetrofitUploadsSource(
         uploadsApi.uploadAvatar(requestBody).filename
     }
 
-    override suspend fun downloadFile(context: Context, folder: String, dialogId: Int, filename: String) : String = wrapRetrofitExceptions {
+    override suspend fun downloadFile(context: Context, folder: String, dialogId: Int,
+                                      filename: String, isGroup: Int) : String = wrapRetrofitExceptions {
         try {
-            val responseBody = uploadsApi.downloadFile(folder, dialogId, filename)
+            val responseBody = uploadsApi.downloadFile(folder, dialogId, filename, isGroup)
 
             val fileTypeDir = when (folder) {
                 "photos" -> "photos"
@@ -112,14 +113,15 @@ class RetrofitUploadsSource(
         uploadsApi.deleteFile(folder, dialogId, filename).message
     }
 
-    override suspend fun getMediaPreviews(dialogId: Int, page: Int): List<String>? = wrapRetrofitExceptions {
-        val response = uploadsApi.getMediaPreviews(dialogId, page)
+    override suspend fun getMediaPreviews(isGroup: Int, dialogId: Int, page: Int): List<String>? = wrapRetrofitExceptions {
+        val response = uploadsApi.getMediaPreviews(isGroup, dialogId, page)
         return@wrapRetrofitExceptions response?.filename
     }
 
-    override suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String): String = wrapRetrofitExceptions {
+    override suspend fun getMediaPreview(context: Context, dialogId: Int,
+                                         filename: String, isGroup: Int): String = wrapRetrofitExceptions {
         try {
-            val responseBody = uploadsApi.getMediaPreview(dialogId, filename)
+            val responseBody = uploadsApi.getMediaPreview(dialogId, filename, isGroup)
             val directory = File(context.filesDir, "previews")
             if (!directory.exists()) {
                 directory.mkdirs()
@@ -139,13 +141,13 @@ class RetrofitUploadsSource(
         }
     }
 
-    override suspend fun getFiles(dialogId: Int, page: Int): List<String>? = wrapRetrofitExceptions {
-        val response = uploadsApi.getFiles(dialogId, page)
+    override suspend fun getFiles(isGroup: Int, dialogId: Int, page: Int): List<String>? = wrapRetrofitExceptions {
+        val response = uploadsApi.getFiles(isGroup, dialogId, page)
         return@wrapRetrofitExceptions response?.filename
     }
 
-    override suspend fun getAudios(dialogId: Int, page: Int): List<String>? = wrapRetrofitExceptions {
-        val response = uploadsApi.getAudios(dialogId, page)
+    override suspend fun getAudios(isGroup: Int, dialogId: Int, page: Int): List<String>? = wrapRetrofitExceptions {
+        val response = uploadsApi.getAudios(isGroup, dialogId, page)
         return@wrapRetrofitExceptions response?.filename
     }
 }

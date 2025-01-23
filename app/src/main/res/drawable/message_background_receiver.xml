@@ -2,8 +2,4 @@
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <solid android:color="@color/colorMessageReceiverBack"/> <!-- Цвет фона сообщения получателя -->
     <corners android:radius="16dp"/> <!-- Закругление углов -->
-    <padding android:left="8dp"
-        android:top="8dp"
-        android:right="8dp"
-        android:bottom="8dp"/> <!-- Внутренние отступы -->
 </shape>

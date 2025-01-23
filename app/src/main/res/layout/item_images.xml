@@ -5,15 +5,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <androidx.appcompat.widget.AppCompatImageView
+    <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/photo_image_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:src="@drawable/wallpaper6"
-        android:src="@drawable/wallpaper6"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:scaleType="centerCrop"/>
+        android:scaleType="centerCrop"
+        app:shapeAppearanceOverlay="@style/RoundedCornersImageView" />
 
     <ImageView
         android:id="@+id/ic_error"

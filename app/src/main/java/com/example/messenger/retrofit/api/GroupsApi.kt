@@ -2,13 +2,14 @@ package com.example.messenger.retrofit.api
 
 import com.example.messenger.retrofit.entities.ResponseEntityMessageAnswer
 import com.example.messenger.retrofit.entities.groups.AddUserToGroupRequestEntity
-import com.example.messenger.retrofit.entities.groups.CreateGroupRequestEntity
-import com.example.messenger.retrofit.entities.groups.Message
-import com.example.messenger.retrofit.entities.groups.SendGroupMessageRequestEntity
 import com.example.messenger.retrofit.entities.groups.UpdateGroupAvatarRequestEntity
+import com.example.messenger.retrofit.entities.messages.AddKeyToDialogRequestEntity
 import com.example.messenger.retrofit.entities.messages.DeleteMessagesRequestEntity
+import com.example.messenger.retrofit.entities.messages.DialogCreateRequestEntity
 import com.example.messenger.retrofit.entities.messages.GetDialogSettingsResponseEntity
 import com.example.messenger.retrofit.entities.messages.GetUsersResponseEntity
+import com.example.messenger.retrofit.entities.messages.Message
+import com.example.messenger.retrofit.entities.messages.SendMessageRequestEntity
 import com.example.messenger.retrofit.entities.messages.UpdateAutoDeleteIntervalRequestEntity
 import com.example.messenger.retrofit.entities.messages.UserEntity
 import retrofit2.http.Body
@@ -23,30 +24,48 @@ import retrofit2.http.Query
 interface GroupsApi {
     @POST("groups")
     suspend fun createGroup(
-        @Body createGroupRequestEntity: CreateGroupRequestEntity
-    ) : ResponseEntityMessageAnswer
+        @Body createGroupRequestEntity: DialogCreateRequestEntity) : ResponseEntityMessageAnswer
 
     @POST("group/{group_id}/messages")
     suspend fun sendGroupMessage(
         @Path("group_id") groupId: Int,
-        @Body sendGroupMessageRequestEntity: SendGroupMessageRequestEntity
+        @Body sendGroupMessageRequestEntity: SendMessageRequestEntity
     ) : ResponseEntityMessageAnswer
 
-    @GET("group/messages")
+    @GET("group/messages/{group_id}")
     suspend fun getGroupMessages(
-        @Query("group_id") groupId: Int,
-        @Query("start") start: Int,
-        @Query("end") end: Int
+        @Path("group_id") groupId: Int,
+        @Query("page") pageIndex: Int,
+        @Query("size") pageSize: Int
     ) : List<Message>
 
-    @PUT("group_messages/{group_message_id}")
-    suspend fun editGroupMessage(
-        @Path("group_message_id") groupMessageId: Int,
-        @Body sendGroupMessageRequestEntity: SendGroupMessageRequestEntity
+    @GET("group/message/{message_id}")
+    suspend fun findMessage(
+        @Path("message_id") messageId: Int,
+        @Query("group_id") groupId: Int
+    ) : Message
+
+    @PUT("group/{group_id}/key")
+    suspend fun addKeyToGroup(
+        @Path("group_id") groupId: Int,
+        @Body addKeyToDialogRequestEntity: AddKeyToDialogRequestEntity
     ) : ResponseEntityMessageAnswer
 
-    @HTTP(method = "DELETE", path = "group/messages", hasBody = true)
+    @DELETE("group/{group_id}/key")
+    suspend fun removeKeyFromGroup(
+        @Path("group_id") groupId: Int
+    ) : ResponseEntityMessageAnswer
+
+    @PUT("group_messages/{message_id}")
+    suspend fun editGroupMessage(
+        @Path("message_id") messageId: Int,
+        @Query("group_id") groupId: Int,
+        @Body sendGroupMessageRequestEntity: SendMessageRequestEntity
+    ) : ResponseEntityMessageAnswer
+
+    @HTTP(method = "DELETE", path = "group/messages/{group_id}", hasBody = true)
     suspend fun deleteGroupMessages(
+        @Path("group_id") groupId: Int,
         @Body deleteMessagesRequestEntity: DeleteMessagesRequestEntity
     ) : ResponseEntityMessageAnswer
 
@@ -58,7 +77,7 @@ interface GroupsApi {
     @PUT("groups/{group_id}")
     suspend fun editGroupName(
         @Path("group_id") groupId: Int,
-        @Body createGroupRequestEntity: CreateGroupRequestEntity
+        @Body createGroupRequestEntity: DialogCreateRequestEntity
     ) : ResponseEntityMessageAnswer
 
     @POST("groups/{group_id}/members")
@@ -89,8 +108,9 @@ interface GroupsApi {
         @Body updateGroupAvatarRequestEntity: UpdateGroupAvatarRequestEntity
     ) : ResponseEntityMessageAnswer
 
-    @PUT("group_messages/read")
+    @PUT("group_messages/{group_id}/read")
     suspend fun markGroupMessagesAsRead(
+        @Path("group_id") groupId: Int,
         @Body deleteMessagesRequestEntity: DeleteMessagesRequestEntity
     ) : ResponseEntityMessageAnswer
 

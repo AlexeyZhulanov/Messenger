@@ -1,7 +1,7 @@
 package com.example.messenger.retrofit.source.groups
 
 import com.example.messenger.model.ConversationSettings
-import com.example.messenger.model.GroupMessage
+import com.example.messenger.model.Message
 import com.example.messenger.model.User
 import com.example.messenger.model.UserShort
 
@@ -14,13 +14,19 @@ interface GroupsSource {
                            file: String? = null, referenceToMessageId: Int? = null,
                            isForwarded: Boolean = false, usernameAuthorOriginal: String? = null) : String
 
-    suspend fun getGroupMessages(groupId: Int, start: Int, end: Int) : List<GroupMessage>
+    suspend fun getGroupMessages(groupId: Int, pageIndex: Int, pageSize: Int) : List<Message>
 
-    suspend fun editGroupMessage(groupMessageId: Int, text: String? = null,
+    suspend fun findGroupMessage(idMessage: Int, groupId: Int) : Pair<Message, Int>
+
+    suspend fun addKeyToGroup(groupId: Int, key: String) : String
+
+    suspend fun removeKeyFromGroup(groupId: Int) : String
+
+    suspend fun editGroupMessage(groupId: Int, messageId: Int, text: String? = null,
                                  images: List<String>? = null, voice: String? = null,
                                  file: String? = null) : String
 
-    suspend fun deleteGroupMessages(ids: List<Int>) : String
+    suspend fun deleteGroupMessages(groupId: Int, ids: List<Int>) : String
 
     suspend fun deleteGroup(groupId: Int) : String
 
@@ -36,7 +42,7 @@ interface GroupsSource {
 
     suspend fun updateGroupAvatar(groupId: Int, avatar: String) : String
 
-    suspend fun markGroupMessagesAsRead(ids: List<Int>) : String
+    suspend fun markGroupMessagesAsRead(groupId: Int, ids: List<Int>) : String
 
     suspend fun toggleGroupCanDelete(groupId: Int) : String
 
@@ -46,6 +52,6 @@ interface GroupsSource {
 
     suspend fun getGroupSettings(groupId: Int) : ConversationSettings
 
-    suspend fun searchMessagesInGroup(groupId: Int, word: String) : List<GroupMessage>
+    suspend fun searchMessagesInGroup(groupId: Int, word: String) : List<Message>
 
 }

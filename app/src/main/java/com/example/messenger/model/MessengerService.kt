@@ -83,12 +83,12 @@ class MessengerService(
         fileManager.cleanupUnusedMessageFiles(usedFiles)
     }
 
-    override suspend fun getGroupMessages(idGroup: Int): List<GroupMessage> = withContext(ioDispatcher) {
-        return@withContext groupMessageDao.getGroupMessages(idGroup).map { it.toGroupMessage() }
+    override suspend fun getGroupMessages(idGroup: Int): List<Message> = withContext(ioDispatcher) {
+        return@withContext groupMessageDao.getGroupMessages(idGroup).map { it.toMessage() }
     }
 
-    override suspend fun replaceGroupMessages(idGroup: Int, groupMessages: List<GroupMessage>, fileManager: FileManager) = withContext(ioDispatcher) {
-        val groupMessageDbEntities = groupMessages.map { GroupMessageDbEntity.fromUserInput(it) }
+    override suspend fun replaceGroupMessages(idGroup: Int, groupMessages: List<Message>, fileManager: FileManager) = withContext(ioDispatcher) {
+        val groupMessageDbEntities = groupMessages.map { GroupMessageDbEntity.fromUserInput(it, idGroup) }
         groupMessageDao.replaceGroupMessages(idGroup, groupMessageDbEntities)
         val usedFiles = groupMessages.flatMap { message ->
             mutableListOf<String>().apply {
@@ -143,12 +143,23 @@ class MessengerService(
     }
 
     override suspend fun insertUnsentMessage(idDialog: Int, message: Message) : Int = withContext(ioDispatcher) {
-        val v = unsentMessageDao.insertUnsentMessage(UnsentMessageEntity.fromUserInput(idDialog, message))
+        val v = unsentMessageDao.insertUnsentMessage(UnsentMessageEntity.fromUserInput(message,
+            idDialog = idDialog, idGroup = null))
+        return@withContext v.toInt()
+    }
+
+    override suspend fun insertUnsentMessageGroup(idGroup: Int, message: Message): Int = withContext(ioDispatcher) {
+        val v = unsentMessageDao.insertUnsentMessage(UnsentMessageEntity.fromUserInput(message,
+            idDialog = null, idGroup = idGroup))
         return@withContext v.toInt()
     }
 
     override suspend fun getUnsentMessages(idDialog: Int): List<Message>? = withContext(ioDispatcher) {
         return@withContext unsentMessageDao.getUnsentMessages(idDialog)?.map { it.toMessage() }
+    }
+
+    override suspend fun getUnsentMessagesGroup(idGroup: Int): List<Message>? = withContext(ioDispatcher) {
+        return@withContext unsentMessageDao.getUnsentMessagesGroup(idGroup)?.map { it.toMessage() }
     }
 
     override suspend fun deleteUnsentMessage(messageId: Int) = withContext(ioDispatcher) {

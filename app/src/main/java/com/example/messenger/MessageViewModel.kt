@@ -298,7 +298,7 @@ class MessageViewModel @Inject constructor(
 
     suspend fun uploadPhoto(photo: File): Pair<String, Boolean> {
         val path = try {
-            retrofitService.uploadPhoto(dialogId, photo)
+            retrofitService.uploadPhoto(dialogId, photo, 0)
         } catch (e: Exception) {
             return Pair("", false)
         }
@@ -307,7 +307,7 @@ class MessageViewModel @Inject constructor(
 
     suspend fun uploadAudio(audio: File): Pair<String, Boolean> {
         val path = try {
-            retrofitService.uploadAudio(dialogId, audio)
+            retrofitService.uploadAudio(dialogId, audio, 0)
         } catch (e: Exception) {
             return Pair("", false)
         }
@@ -316,7 +316,7 @@ class MessageViewModel @Inject constructor(
 
     suspend fun uploadFile(file: File): Pair<String, Boolean> {
         val path = try {
-            retrofitService.uploadFile(dialogId, file)
+            retrofitService.uploadFile(dialogId, file, 0)
         } catch (e: Exception) {
             return Pair("", false)
         }
@@ -354,12 +354,12 @@ class MessageViewModel @Inject constructor(
     }
 
     suspend fun downloadFile(context: Context, folder: String, filename: String): String {
-        return retrofitService.downloadFile(context, folder, dialogId, filename)
+        return retrofitService.downloadFile(context, folder, dialogId, filename, 0)
     }
 
     fun downloadFileJava(context: Context, folder: String, filename: String): String {
         return runBlocking {
-            retrofitService.downloadFile(context, folder, dialogId, filename)
+            retrofitService.downloadFile(context, folder, dialogId, filename, 0)
         }
     }
 
@@ -665,19 +665,19 @@ class MessageViewModel @Inject constructor(
     }
 
     suspend fun getMediaPreviews(page: Int): List<String>? {
-        return retrofitService.getMedias(dialogId, page)
+        return retrofitService.getMedias(dialogId, page, 0)
     }
 
     suspend fun getFiles(page: Int): List<String>? {
-        return retrofitService.getFiles(dialogId, page)
+        return retrofitService.getFiles(dialogId, page, 0)
     }
 
     suspend fun getAudios(page: Int): List<String>? {
-        return retrofitService.getAudios(dialogId, page)
+        return retrofitService.getAudios(dialogId, page, 0)
     }
 
     suspend fun getPreview(context: Context, filename: String): String {
-        return retrofitService.getMediaPreview(context, dialogId, filename)
+        return retrofitService.getMediaPreview(context, dialogId, filename, 0)
     }
 
     suspend fun getUnsentMessages(): List<Message>? {
