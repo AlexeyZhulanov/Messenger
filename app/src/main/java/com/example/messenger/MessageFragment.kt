@@ -130,7 +130,7 @@ class MessageFragment(
     @OptIn(FlowPreview::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel.setDialogInfo(dialog.id, dialog.otherUser.id)
+        viewModel.setConvInfo(dialog.id, dialog.otherUser.id, 0)
         lifecycleScope.launch {
             launch {
                 viewModel.pagingDataFlow.collectLatest { pagingData ->
@@ -221,7 +221,7 @@ class MessageFragment(
         }
         val icVolumeOff: ImageView = view.findViewById(R.id.ic_volume_off)
         lifecycleScope.launch {
-            icVolumeOff.visibility = if(viewModel.isNotificationsEnabled(dialog.id)) View.GONE else View.VISIBLE
+            icVolumeOff.visibility = if(viewModel.isNotificationsEnabled()) View.GONE else View.VISIBLE
             val avatar = dialog.otherUser.avatar ?: ""
             if (avatar != "") {
                 val filePathTemp = async {
@@ -444,11 +444,10 @@ class MessageFragment(
             }, dialog.otherUser.id, requireContext(), viewModel)
             lifecycleScope.launch {
                 try {
-                    adapter.dialogSettings = viewModel.getDialogSettings(dialog.id)
+                    adapter.dialogSettings = viewModel.getConvSettings()
                 } catch (e: Exception) {
                     adapter.dialogSettings = ConversationSettings()
                 }
-
             }
         imageAdapter = ImageAdapter(requireContext(), object: ImageActionListener {
             override fun onImageClicked(image: LocalMedia, position: Int) {
@@ -581,7 +580,7 @@ class MessageFragment(
         binding.recyclerview.layoutManager = layoutManager
         binding.recyclerview.adapter = adapter
         binding.recyclerview.addItemDecoration(VerticalSpaceItemDecoration(15))
-        viewModel.setRecyclerView(binding.recyclerview)
+        viewModel.bindRecyclerView(binding.recyclerview)
         binding.selectedPhotosRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         binding.selectedPhotosRecyclerView.adapter = imageAdapter
         binding.recyclerview.addOnScrollListener(object : RecyclerView.OnScrollListener() {

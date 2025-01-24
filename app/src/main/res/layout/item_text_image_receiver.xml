@@ -39,6 +39,19 @@
         android:visibility="gone"
         />
 
+    <ImageView
+        android:id="@+id/photoImageView"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:src="@drawable/ic_user_avatar"
+        android:visibility="gone"
+        tools:visibility="visible"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/layout_message"
+        app:layout_constraintBottom_toBottomOf="@id/layout_message"
+        app:layout_constraintVertical_bias="1"
+        app:tint="?attr/colorPrimary" />
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layout_message"
         android:layout_width="0dp"
@@ -48,14 +61,32 @@
         android:background="@drawable/message_background_receiver"
         app:layout_constraintEnd_toStartOf="@id/receiverGuideLine"
         app:layout_constraintTop_toBottomOf="@id/dateTextView"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintStart_toEndOf="@id/photoImageView"
         app:layout_constraintBottom_toBottomOf="parent">
+
+        <TextView
+            android:id="@+id/userNameTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:fontFamily="casual"
+            android:textStyle="bold|italic"
+            tools:text="Алексей"
+            android:visibility="gone"
+            tools:visibility="visible"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="2dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0"
+            />
 
         <FrameLayout
             android:id="@+id/includeLayout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/userNameTextView"
             app:layout_constraintStart_toStartOf="parent">
 
             <include

@@ -130,7 +130,7 @@ class DialogInfoFragment(
         binding.lastSessionTextView.text = lastSessionString
         binding.nickTextView.text = dialog.otherUser.name
         lifecycleScope.launch {
-            binding.switchNotifications.isChecked = messageViewModel.isNotificationsEnabled(dialog.id)
+            binding.switchNotifications.isChecked = messageViewModel.isNotificationsEnabled()
         }
         binding.switchDelete.isChecked = dialog.canDelete
         binding.copyImageView.setOnClickListener {
@@ -141,7 +141,7 @@ class DialogInfoFragment(
         binding.switchNotifications.setOnClickListener {
             binding.switchNotifications.isEnabled = false
             lifecycleScope.launch {
-                messageViewModel.turnNotifications(dialog.id)
+                messageViewModel.turnNotifications()
                 delay(5000)
                 binding.switchNotifications.isEnabled = true
             }
@@ -149,7 +149,7 @@ class DialogInfoFragment(
         binding.switchDelete.setOnClickListener {
             binding.switchDelete.isEnabled = false
             lifecycleScope.launch {
-                messageViewModel.toggleCanDeleteDialog(dialog.id)
+                messageViewModel.toggleCanDeleteDialog()
                 delay(5000)
                 binding.switchDelete.isEnabled = true
             }
@@ -362,14 +362,14 @@ class DialogInfoFragment(
             }
             R.id.delete_all_messages -> {
                 lifecycleScope.launch {
-                    messageViewModel.deleteAllMessages(dialog.id)
+                    messageViewModel.deleteAllMessages()
                 }
                 requireActivity().onBackPressedDispatcher.onBackPressed()
                 true
             }
             R.id.delete_dialog -> {
                 lifecycleScope.launch {
-                    messageViewModel.deleteDialog(dialog.id)
+                    messageViewModel.deleteConv()
                 }
                 parentFragmentManager.beginTransaction()
                     .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_FROM_DIALOG_TAG")

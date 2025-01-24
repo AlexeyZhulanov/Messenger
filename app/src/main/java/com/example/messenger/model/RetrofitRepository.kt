@@ -17,7 +17,7 @@ interface RetrofitRepository {
 
     suspend fun updatePassword(password: String) : Boolean
 
-    suspend fun updateLastSession(idDialog: Int) : Boolean
+    suspend fun updateLastSession(convId: Int, isGroup: Int) : Boolean
 
     suspend fun getUser(userId: Int) : User
 
@@ -63,6 +63,12 @@ interface RetrofitRepository {
      file: String?, referenceToMessageId: Int?, isForwarded: Boolean, usernameAuthorOriginal: String?) : Boolean
 
     suspend fun getGroupMessages(groupId: Int, start: Int, end: Int): List<Message>
+
+    suspend fun findGroupMessage(idMessage: Int, groupId: Int) : Pair<Message, Int>
+
+    suspend fun addKeyToGroup(groupId: Int, key: String) : Boolean
+
+    suspend fun removeKeyFromGroup(groupId: Int) : Boolean
 
     suspend fun editGroupMessage(groupId: Int, messageId: Int, text: String?,
                                  images: List<String>?, voice: String?, file: String?) : Boolean

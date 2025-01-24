@@ -138,9 +138,9 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun updateLastSession(idDialog: Int): Boolean = withContext(ioDispatcher) {
+    override suspend fun updateLastSession(convId: Int, isGroup: Int): Boolean = withContext(ioDispatcher) {
         val message = try {
-            usersSource.updateLastSession(idDialog)
+            usersSource.updateLastSession(convId, isGroup)
         } catch (e: BackendException) {
             if (e.code == 404) {
                 throw UserNotFoundException(e)
@@ -457,6 +457,48 @@ class RetrofitService(
         }
         Log.d("testGetGroupMessages", groupMessages.toString())
         return@withContext groupMessages
+    }
+
+    override suspend fun findGroupMessage(idMessage: Int, groupId: Int): Pair<Message, Int> = withContext(ioDispatcher) {
+        val message = try {
+            groupsSource.findGroupMessage(idMessage, groupId)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw MessageNotFoundException(e)
+                403 -> throw NoPermissionException(e)
+                else -> throw e
+            }
+        }
+        Log.d("testFindGroupMessage", message.toString())
+        return@withContext message
+    }
+
+    override suspend fun addKeyToGroup(groupId: Int, key: String): Boolean = withContext(ioDispatcher) {
+        val message = try {
+            groupsSource.addKeyToGroup(groupId, key)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw GroupNotFoundException(e)
+                403 -> throw NoPermissionException(e)
+                else -> throw e
+            }
+        }
+        Log.d("testAddKeyToGroup", message)
+        return@withContext true
+    }
+
+    override suspend fun removeKeyFromGroup(groupId: Int): Boolean = withContext(ioDispatcher) {
+        val message = try {
+            groupsSource.removeKeyFromGroup(groupId)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw GroupNotFoundException(e)
+                403 -> throw NoPermissionException(e)
+                else -> throw e
+            }
+        }
+        Log.d("testRemoveKeyFromGroup", message)
+        return@withContext true
     }
 
     override suspend fun editGroupMessage(groupId: Int, messageId: Int, text: String?,
