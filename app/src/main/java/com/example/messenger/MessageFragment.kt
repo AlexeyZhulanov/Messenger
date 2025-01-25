@@ -143,6 +143,8 @@ class MessageFragment(
                                  pair + pagingData
                             } else pagingData
                             adapter.submitList(summaryPagingData)
+                            val firstItem = pagingData.firstOrNull()?.first
+                            if(firstItem != null) viewModel.updateLastDate(firstItem.timestamp)
                         }
                         else {
                             val updatedList = adapter.currentList.toMutableList()
@@ -185,8 +187,6 @@ class MessageFragment(
                 }
             }
         }
-        val firstItem = adapter.currentList.firstOrNull()
-        if(firstItem != null) viewModel.updateLastDate(firstItem.first.timestamp)
         lifecycleScope.launch {
             val lastReadMessageId = viewModel.getLastMessageId()
             if(lastReadMessageId != -1) {

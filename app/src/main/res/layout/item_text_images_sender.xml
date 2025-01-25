@@ -124,6 +124,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="7dp"
                 android:layout_marginBottom="7dp"
+                android:elevation="5dp"
                 android:background="@drawable/messenger_item_transparent_background"
                 app:layout_constraintBottom_toBottomOf="@id/cardview"
                 app:layout_constraintEnd_toEndOf="parent">

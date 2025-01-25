@@ -132,7 +132,7 @@ open class BaseChatViewModel(
         viewModelScope.launch {
             delay(2000)
             try {
-                retrofitService.updateLastSession(convId, isGroup)
+                retrofitService.updateLastSession()
             } catch (e: Exception) { return@launch }
         }
     }

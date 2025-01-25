@@ -45,9 +45,10 @@ data class UserEntity(
     val id: Int,
     val name: String,
     val username: String,
-    val avatar: String? = null
+    val avatar: String? = null,
+    @Json(name = "last_session") val lastSession: Long? = 0
 ) {
-    fun toUser() : User = User(id = id, name = name, username = username, avatar = avatar)
+    fun toUser() : User = User(id = id, name = name, username = username, avatar = avatar, lastSession = lastSession)
 }
 
 private fun parseTimestampToLong(timestamp: String): Long {

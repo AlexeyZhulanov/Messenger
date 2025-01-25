@@ -33,11 +33,8 @@ interface UsersApi {
     suspend fun updatePassword(
         @Body updatePasswordRequestEntity: UpdatePasswordRequestEntity) : ResponseEntityMessageAnswer
 
-    @PUT("update_last_session/{id_dialog}/{is_group}")
-    suspend fun updateLastSession(
-        @Path("id_dialog") idDialog: Int,
-        @Path("is_group") isGroup: Int
-    ) : ResponseEntityMessageAnswer
+    @PUT("update_last_session")
+    suspend fun updateLastSession() : ResponseEntityMessageAnswer
 
     @GET("last_session/{user_id}")
     suspend fun getLastSession(

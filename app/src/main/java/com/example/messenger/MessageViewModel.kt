@@ -73,6 +73,7 @@ class MessageViewModel @Inject constructor(
     val lastSessionString: LiveData<String> get() = _lastSessionString
 
     private var otherUserId: Int = -1
+    private var isOtherUserInChat: Boolean = false
 
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     val pagingDataFlow = searchBy.asFlow()
@@ -105,6 +106,7 @@ class MessageViewModel @Inject constructor(
                 val session = retrofitService.getLastSession(otherUserId)
                 _lastSessionString.value = formatUserSessionDate(session)
             } catch (e: Exception) {
+                Log.d("testSessionExcept", e.message.toString())
                 _lastSessionString.value = "Unknown"
             }
         }
@@ -207,9 +209,11 @@ class MessageViewModel @Inject constructor(
     }
 
     override fun onUserSessionUpdated(userSessionUpdatedEvent: UserSessionUpdatedEvent) {
-        Log.d("testSocketsMessage", "Session updated")
-        val sessionString = formatUserSessionDate(userSessionUpdatedEvent.lastSession)
-        _lastSessionString.postValue(sessionString)
+        if(userSessionUpdatedEvent.userId == otherUserId && !isOtherUserInChat) {
+            Log.d("testSocketsMessage", "Session updated")
+            val sessionString = formatUserSessionDate(userSessionUpdatedEvent.lastSession)
+            _lastSessionString.postValue(sessionString)
+        }
     }
 
     override fun onStartTyping(typingEvent: TypingEvent) {
@@ -234,10 +238,14 @@ class MessageViewModel @Inject constructor(
 
     override fun onUserJoinedDialog(dialogId: Int, userId: Int) {
         Log.d("testSocketsMessage", "User $userId joined Dialog $dialogId")
+        _lastSessionString.postValue("в этом чате")
+        isOtherUserInChat = true
     }
 
     override fun onUserLeftDialog(dialogId: Int, userId: Int) {
         Log.d("testSocketsMessage", "User $userId left Dialog $dialogId")
+        _lastSessionString.postValue("был в сети только что")
+        isOtherUserInChat = false
     }
 
     override fun onCleared() {
