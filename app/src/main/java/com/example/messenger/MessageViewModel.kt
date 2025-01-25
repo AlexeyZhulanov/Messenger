@@ -1,63 +1,28 @@
 package com.example.messenger
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.media.MediaMetadataRetriever
-import android.net.Uri
 import android.util.Log
-import android.view.View
-import android.widget.ImageView
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.messenger.di.IoDispatcher
-import com.example.messenger.model.ChatSettings
-import com.example.messenger.model.ConversationSettings
-import com.example.messenger.model.DeletedMessagesEvent
-import com.example.messenger.model.DialogCreatedEvent
-import com.example.messenger.model.DialogDeletedEvent
-import com.example.messenger.model.DialogMessagesAllDeleted
 import com.example.messenger.model.FileManager
-import com.example.messenger.model.Message
 import com.example.messenger.model.MessagePagingSource
 import com.example.messenger.model.MessengerService
-import com.example.messenger.model.ReadMessagesEvent
 import com.example.messenger.model.RetrofitService
-import com.example.messenger.model.TypingEvent
-import com.example.messenger.model.UserSessionUpdatedEvent
-import com.example.messenger.model.WebSocketListenerInterface
 import com.example.messenger.model.WebSocketService
-import com.luck.picture.lib.config.PictureMimeType
-import com.luck.picture.lib.entity.LocalMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import kotlin.math.abs
 
 @HiltViewModel
 class MessageViewModel @Inject constructor(
@@ -66,8 +31,7 @@ class MessageViewModel @Inject constructor(
     fileManager: FileManager,
     webSocketService: WebSocketService,
     @IoDispatcher ioDispatcher: CoroutineDispatcher
-) : BaseChatViewModel(messengerService, retrofitService, fileManager, webSocketService, ioDispatcher),
-    WebSocketListenerInterface {
+) : BaseChatViewModel(messengerService, retrofitService, fileManager, webSocketService, ioDispatcher) {
 
     private val _lastSessionString = MutableLiveData<String>()
     val lastSessionString: LiveData<String> get() = _lastSessionString
@@ -90,8 +54,83 @@ class MessageViewModel @Inject constructor(
         }
 
     init {
-        webSocketService.setListener(this)
         webSocketService.connect()
+        viewModelScope.launch {
+            webSocketService.newMessageFlow.collect { message ->
+                Log.d("testSocketsMessage", "New Message: $message")
+                val newMessagePair = if(lastMessageDate == "") message to "" else message to formatMessageDate(message.timestamp)
+                _newMessageFlow.value = newMessagePair
+            }
+        }
+        viewModelScope.launch {
+            webSocketService.editMessageFlow.collect { message ->
+                Log.d("testSocketsMessage", "Edited Message: $message")
+                _editMessageFlow.value = message
+                recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+                    override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                        recyclerView.scrollToPosition(0)
+                    }
+                })
+            }
+        }
+        viewModelScope.launch {
+            webSocketService.deleteMessageFlow.collect {
+                Log.d("testSocketsMessage", "Deleted messages ids: ${it.deletedMessagesIds}")
+                val adapter = recyclerView.adapter
+                if(adapter is MessageAdapter) adapter.clearPositions()
+                refresh()
+                recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+                    override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                        recyclerView.scrollToPosition(0)
+                    }
+                })
+            }
+        }
+        viewModelScope.launch {
+            webSocketService.readMessageFlow.collect {
+                Log.d("testSocketsMessage", "Messages read: ${it.messagesReadIds}")
+                _readMessagesFlow.value = it.messagesReadIds
+            }
+        }
+        viewModelScope.launch {
+            webSocketService.deleteAllMessageFlow.collect {
+                Log.d("testSocketsMessage", "All messages deleted")
+                refresh()
+            }
+        }
+        viewModelScope.launch {
+            webSocketService.dialogDeletedFlow.collect {
+                Log.d("testSocketsMessage", "Dialog deleted")
+                _deleteState.value = 2
+            }
+        }
+        viewModelScope.launch {
+            webSocketService.userSessionFlow.collect {
+                if(it.userId == otherUserId && !isOtherUserInChat) {
+                    Log.d("testSocketsMessage", "Session updated")
+                    val sessionString = formatUserSessionDate(it.lastSession)
+                    _lastSessionString.postValue(sessionString)
+                }
+            }
+        }
+        viewModelScope.launch {
+            webSocketService.typingFlow.collect { (userId, isStart) ->
+                Log.d("testSocketsMessage", "User#$userId is typing: $isStart")
+                _typingState.value = isStart
+            }
+        }
+        viewModelScope.launch {
+            webSocketService.joinLeaveDialogFlow.collect { (dialogId, userId, isJoin) ->
+                isOtherUserInChat = isJoin
+                if(isJoin) {
+                    Log.d("testSocketsMessage", "User $userId joined Dialog $dialogId")
+                    _lastSessionString.postValue("в этом чате")
+                } else {
+                    Log.d("testSocketsMessage", "User $userId left Dialog $dialogId")
+                    _lastSessionString.postValue("был в сети только что")
+                }
+            }
+        }
     }
 
     override fun setConvInfo(convId: Int, otherUserId: Int, isGroup: Int) {
@@ -167,85 +206,6 @@ class MessageViewModel @Inject constructor(
         } else {
             webSocketService.send("stop_typing", typingData)
         }
-    }
-
-    override fun onNewMessage(message: Message) {
-        Log.d("testSocketsMessage", "New Message: $message")
-        val newMessagePair = if(lastMessageDate == "") message to "" else message to formatMessageDate(message.timestamp)
-        _newMessageFlow.value = newMessagePair
-    }
-
-    override fun onEditedMessage(message: Message) {
-        Log.d("testSocketsMessage", "Edited Message: $message")
-        _editMessageFlow.value = message
-        recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                recyclerView.scrollToPosition(0)
-            }
-        })
-    }
-
-    @SuppressLint("NotifyDataSetChanged")
-    override fun onMessagesDeleted(deletedMessagesEvent: DeletedMessagesEvent) {
-        Log.d("testSocketsMessage", "Deleted messages")
-        val adapter = recyclerView.adapter
-        if(adapter is MessageAdapter)
-            viewModelScope.launch { adapter.clearPositions() }
-        refresh()
-        recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                recyclerView.scrollToPosition(0)
-            }
-        })
-    }
-
-    override fun onDialogCreated(dialogCreatedEvent: DialogCreatedEvent) {
-        Log.d("testSocketsMessage", "Dialog created")
-    }
-
-    override fun onDialogDeleted(dialogDeletedEvent: DialogDeletedEvent) {
-        Log.d("testSocketsMessage", "Dialog deleted")
-        _deleteState.value = 2
-    }
-
-    override fun onUserSessionUpdated(userSessionUpdatedEvent: UserSessionUpdatedEvent) {
-        if(userSessionUpdatedEvent.userId == otherUserId && !isOtherUserInChat) {
-            Log.d("testSocketsMessage", "Session updated")
-            val sessionString = formatUserSessionDate(userSessionUpdatedEvent.lastSession)
-            _lastSessionString.postValue(sessionString)
-        }
-    }
-
-    override fun onStartTyping(typingEvent: TypingEvent) {
-        Log.d("testSocketsMessage", "Typing started")
-        _typingState.value = true
-    }
-
-    override fun onStopTyping(typingEvent: TypingEvent) {
-        Log.d("testSocketsMessage", "Typing stopped")
-        _typingState.value = false
-    }
-
-    override fun onMessagesRead(readMessagesEvent: ReadMessagesEvent) {
-        Log.d("testSocketsMessage", "Messages read")
-        _readMessagesFlow.value = readMessagesEvent.messagesReadIds
-    }
-
-    override fun onAllMessagesDeleted(dialogMessagesAllDeleted: DialogMessagesAllDeleted) {
-        Log.d("testSocketsMessage", "All messages deleted")
-        refresh()
-    }
-
-    override fun onUserJoinedDialog(dialogId: Int, userId: Int) {
-        Log.d("testSocketsMessage", "User $userId joined Dialog $dialogId")
-        _lastSessionString.postValue("в этом чате")
-        isOtherUserInChat = true
-    }
-
-    override fun onUserLeftDialog(dialogId: Int, userId: Int) {
-        Log.d("testSocketsMessage", "User $userId left Dialog $dialogId")
-        _lastSessionString.postValue("был в сети только что")
-        isOtherUserInChat = false
     }
 
     override fun onCleared() {
