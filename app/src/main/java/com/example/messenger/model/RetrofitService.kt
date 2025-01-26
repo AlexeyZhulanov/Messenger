@@ -29,7 +29,7 @@ class RetrofitService(
 ) : RetrofitRepository {
     private var conversations = listOf<Conversation>()
     private var messages = listOf<Message>()
-    private var groupMessages = listOf<GroupMessage>()
+    private var groupMessages = listOf<Message>()
     //private val listeners = mutableSetOf<ConversationsListener>()
 
     //private val _initCompleted = MutableLiveData<Boolean>()
@@ -138,9 +138,9 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun updateLastSession(idDialog: Int): Boolean = withContext(ioDispatcher) {
+    override suspend fun updateLastSession(): Boolean = withContext(ioDispatcher) {
         val message = try {
-            usersSource.updateLastSession(idDialog)
+            usersSource.updateLastSession()
         } catch (e: BackendException) {
             if (e.code == 404) {
                 throw UserNotFoundException(e)
@@ -444,7 +444,7 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun getGroupMessages(groupId: Int, start: Int, end: Int): List<GroupMessage> = withContext(ioDispatcher) {
+    override suspend fun getGroupMessages(groupId: Int, start: Int, end: Int): List<Message> = withContext(ioDispatcher) {
         groupMessages = try {
             groupsSource.getGroupMessages(groupId, start, end)
         } catch (e: BackendException) {
@@ -459,10 +459,52 @@ class RetrofitService(
         return@withContext groupMessages
     }
 
-    override suspend fun editGroupMessage(groupMessageId: Int, text: String?, images: List<String>?,
-        voice: String?, file: String?): Boolean = withContext(ioDispatcher) {
+    override suspend fun findGroupMessage(idMessage: Int, groupId: Int): Pair<Message, Int> = withContext(ioDispatcher) {
         val message = try {
-            groupsSource.editGroupMessage(groupMessageId, text, images, voice, file)
+            groupsSource.findGroupMessage(idMessage, groupId)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw MessageNotFoundException(e)
+                403 -> throw NoPermissionException(e)
+                else -> throw e
+            }
+        }
+        Log.d("testFindGroupMessage", message.toString())
+        return@withContext message
+    }
+
+    override suspend fun addKeyToGroup(groupId: Int, key: String): Boolean = withContext(ioDispatcher) {
+        val message = try {
+            groupsSource.addKeyToGroup(groupId, key)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw GroupNotFoundException(e)
+                403 -> throw NoPermissionException(e)
+                else -> throw e
+            }
+        }
+        Log.d("testAddKeyToGroup", message)
+        return@withContext true
+    }
+
+    override suspend fun removeKeyFromGroup(groupId: Int): Boolean = withContext(ioDispatcher) {
+        val message = try {
+            groupsSource.removeKeyFromGroup(groupId)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw GroupNotFoundException(e)
+                403 -> throw NoPermissionException(e)
+                else -> throw e
+            }
+        }
+        Log.d("testRemoveKeyFromGroup", message)
+        return@withContext true
+    }
+
+    override suspend fun editGroupMessage(groupId: Int, messageId: Int, text: String?,
+        images: List<String>?, voice: String?, file: String?): Boolean = withContext(ioDispatcher) {
+        val message = try {
+            groupsSource.editGroupMessage(groupId, messageId, text, images, voice, file)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw MessageNotFoundException(e)
@@ -474,9 +516,9 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun deleteGroupMessages(ids: List<Int>): Boolean = withContext(ioDispatcher) {
+    override suspend fun deleteGroupMessages(groupId: Int, ids: List<Int>): Boolean = withContext(ioDispatcher) {
         val message = try {
-            groupsSource.deleteGroupMessages(ids)
+            groupsSource.deleteGroupMessages(groupId, ids)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw MessageNotFoundException(e)
@@ -584,9 +626,9 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun markGroupMessagesAsRead(ids: List<Int>): Boolean = withContext(ioDispatcher) {
+    override suspend fun markGroupMessagesAsRead(groupId: Int, ids: List<Int>): Boolean = withContext(ioDispatcher) {
         val message = try {
-            groupsSource.markGroupMessagesAsRead(ids)
+            groupsSource.markGroupMessagesAsRead(groupId, ids)
             } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw MessageNotFoundException(e)
@@ -654,7 +696,7 @@ class RetrofitService(
         return@withContext settings
     }
 
-    override suspend fun searchMessagesInGroup(groupId: Int, word: String): List<GroupMessage> = withContext(ioDispatcher) {
+    override suspend fun searchMessagesInGroup(groupId: Int, word: String): List<Message> = withContext(ioDispatcher) {
         val messagesGroupSearch = try {
             groupsSource.searchMessagesInGroup(groupId, word)
         } catch (e: BackendException) {
@@ -668,9 +710,9 @@ class RetrofitService(
         return@withContext messagesGroupSearch
     }
 
-    override suspend fun uploadPhoto(dialogId: Int, photo: File): String = withContext(ioDispatcher) {
+    override suspend fun uploadPhoto(dialogId: Int, photo: File, isGroup: Int?): String = withContext(ioDispatcher) {
         val file = try {
-            uploadSource.uploadPhoto(dialogId, photo)
+            uploadSource.uploadPhoto(dialogId, isGroup ?: 0, photo)
         } catch (e: BackendException) {
             if(e.code == 400) throw InvalidCredentialsException(e)
             else throw e
@@ -679,9 +721,9 @@ class RetrofitService(
         return@withContext file
     }
 
-    override suspend fun uploadFile(dialogId: Int, file: File): String = withContext(ioDispatcher) {
+    override suspend fun uploadFile(dialogId: Int, file: File, isGroup: Int?): String = withContext(ioDispatcher) {
         val fileUpload = try {
-            uploadSource.uploadFile(dialogId, file)
+            uploadSource.uploadFile(dialogId, isGroup ?: 0, file)
         } catch (e: BackendException) {
             if(e.code == 400) throw InvalidCredentialsException(e)
             else throw e
@@ -690,9 +732,9 @@ class RetrofitService(
         return@withContext fileUpload
     }
 
-    override suspend fun uploadAudio(dialogId: Int, audio: File): String = withContext(ioDispatcher) {
+    override suspend fun uploadAudio(dialogId: Int, audio: File, isGroup: Int?): String = withContext(ioDispatcher) {
         val file = try {
-            uploadSource.uploadAudio(dialogId, audio)
+            uploadSource.uploadAudio(dialogId, isGroup ?: 0, audio)
         } catch (e: BackendException) {
             if(e.code == 400) throw InvalidCredentialsException(e)
             else throw e
@@ -712,9 +754,10 @@ class RetrofitService(
         return@withContext file
     }
 
-    override suspend fun downloadFile(context: Context, folder: String, dialogId: Int, filename: String): String = withContext(ioDispatcher) {
+    override suspend fun downloadFile(context: Context, folder: String, dialogId: Int,
+                                      filename: String, isGroup: Int?): String = withContext(ioDispatcher) {
         val filePath = try {
-            uploadSource.downloadFile(context, folder, dialogId, filename)
+            uploadSource.downloadFile(context, folder, dialogId, filename, isGroup ?: 0)
         } catch (e: BackendException) {
             if(e.code == 400) throw InvalidCredentialsException(e)
             else throw e
@@ -748,9 +791,9 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun getMedias(dialogId: Int, page: Int): List<String>? = withContext(ioDispatcher) {
+    override suspend fun getMedias(dialogId: Int, page: Int, isGroup: Int?): List<String>? = withContext(ioDispatcher) {
         val files = try {
-            uploadSource.getMediaPreviews(dialogId, page)
+            uploadSource.getMediaPreviews(isGroup ?: 0, dialogId, page)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw FileNotFoundException(e)
@@ -761,9 +804,9 @@ class RetrofitService(
         return@withContext files
     }
 
-    override suspend fun getFiles(dialogId: Int, page: Int): List<String>? = withContext(ioDispatcher) {
+    override suspend fun getFiles(dialogId: Int, page: Int, isGroup: Int?): List<String>? = withContext(ioDispatcher) {
         val files = try {
-            uploadSource.getFiles(dialogId, page)
+            uploadSource.getFiles(isGroup ?: 0, dialogId, page)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw FileNotFoundException(e)
@@ -774,9 +817,9 @@ class RetrofitService(
         return@withContext files
     }
 
-    override suspend fun getAudios(dialogId: Int, page: Int): List<String>? = withContext(ioDispatcher) {
+    override suspend fun getAudios(dialogId: Int, page: Int, isGroup: Int?): List<String>? = withContext(ioDispatcher) {
         val files = try {
-            uploadSource.getAudios(dialogId, page)
+            uploadSource.getAudios(isGroup ?: 0, dialogId, page)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw FileNotFoundException(e)
@@ -787,9 +830,10 @@ class RetrofitService(
         return@withContext files
     }
 
-    override suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String): String = withContext(ioDispatcher) {
+    override suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String,
+                                         isGroup: Int?): String = withContext(ioDispatcher) {
         val preview = try {
-            uploadSource.getMediaPreview(context, dialogId, filename)
+            uploadSource.getMediaPreview(context, dialogId, filename, isGroup ?: 0)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw FileNotFoundException(e)

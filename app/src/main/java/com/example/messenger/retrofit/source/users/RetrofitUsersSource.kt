@@ -35,12 +35,12 @@ class RetrofitUsersSource(
         usersApi.updatePassword(updatePasswordRequestEntity).message
     }
 
-    override suspend fun updateLastSession(idDialog: Int): String = wrapRetrofitExceptions {
-        usersApi.updateLastSession(idDialog).message
+    override suspend fun updateLastSession(): String = wrapRetrofitExceptions {
+        usersApi.updateLastSession().message
     }
 
     override suspend fun getLastSession(userId: Int): Long = wrapRetrofitExceptions {
-        usersApi.getLastSession(userId).timestamp!!
+        usersApi.getLastSession(userId).lastSession ?: -1
     }
 
     override suspend fun getUser(userId: Int): User = wrapRetrofitExceptions {

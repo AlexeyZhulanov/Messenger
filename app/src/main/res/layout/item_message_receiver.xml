@@ -44,6 +44,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="5dp"
+        android:orientation="horizontal"
         app:layout_constraintEnd_toStartOf="@id/receiverGuideLine"
         app:layout_constraintTop_toBottomOf="@id/dateTextView"
         app:layout_constraintStart_toStartOf="parent"
@@ -51,10 +52,39 @@
         android:gravity="start"
         >
 
+        <ImageView
+            android:id="@+id/photoImageView"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:src="@drawable/ic_user_avatar"
+            android:visibility="gone"
+            tools:visibility="visible"
+            android:layout_gravity="bottom"
+            app:tint="?attr/colorPrimary" />
+
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="wrap_content"
+            android:padding="8dp"
             android:background="@drawable/message_background_receiver"
             android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/userNameTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:fontFamily="casual"
+                android:textStyle="bold|italic"
+                tools:text="Алексей"
+                android:visibility="gone"
+                tools:visibility="visible"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginBottom="4dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0"
+                app:layout_constraintBottom_toTopOf="@id/customMessageLayout"
+                />
 
             <include
                 android:layout_height="wrap_content"
@@ -64,7 +94,7 @@
                 android:visibility="gone"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintBottom_toTopOf="@id/customMessageLayout"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toBottomOf="@id/userNameTextView" />
 
             <include
                 android:layout_height="wrap_content"
@@ -73,7 +103,7 @@
                 layout="@layout/forward_layout"
                 android:visibility="gone"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/userNameTextView"
                 app:layout_constraintBottom_toTopOf="@id/customMessageLayout" />
 
             <com.example.messenger.customview.MessageLayout

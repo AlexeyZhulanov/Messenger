@@ -14,6 +14,9 @@ interface UnsentMessageDao {
     @Query("SELECT * FROM unsent_messages WHERE id_dialog = :idDialog ORDER BY id ASC")
     suspend fun getUnsentMessages(idDialog: Int): List<UnsentMessageEntity>?
 
+    @Query("SELECT * FROM unsent_messages WHERE id_group = :idGroup ORDER BY id ASC")
+    suspend fun getUnsentMessagesGroup(idGroup: Int): List<UnsentMessageEntity>?
+
     @Query("DELETE FROM unsent_messages WHERE id = :messageId")
     suspend fun deleteUnsentMessage(messageId: Int)
 }

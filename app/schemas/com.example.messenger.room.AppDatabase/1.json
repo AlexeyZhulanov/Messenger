@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "04ae1d6aa9df25170f5ec14a23d05b77",
+    "identityHash": "4350ac8eed707c403ee72bbda914e0e6",
     "entities": [
       {
         "tableName": "settings",
@@ -416,11 +416,17 @@
       },
       {
         "tableName": "current_user",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `username` TEXT NOT NULL, `avatar` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_user` INTEGER NOT NULL, `name` TEXT NOT NULL, `username` TEXT NOT NULL, `avatar` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
             "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "idUser",
+            "columnName": "id_user",
             "affinity": "INTEGER",
             "notNull": true
           },
@@ -532,7 +538,7 @@
       },
       {
         "tableName": "unsent_messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_dialog` INTEGER NOT NULL, `id_sender` INTEGER NOT NULL, `text` TEXT, `images` TEXT, `voice` TEXT, `file` TEXT, `is_read` INTEGER NOT NULL, `is_edited` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `is_forwarded` INTEGER NOT NULL, `reference_to_message_id` INTEGER, `username_author_original` TEXT, `is_unsent` INTEGER, `local_file_paths` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_dialog` INTEGER, `id_group` INTEGER, `id_sender` INTEGER NOT NULL, `text` TEXT, `images` TEXT, `voice` TEXT, `file` TEXT, `is_read` INTEGER NOT NULL, `is_edited` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `is_forwarded` INTEGER NOT NULL, `reference_to_message_id` INTEGER, `username_author_original` TEXT, `is_unsent` INTEGER, `local_file_paths` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -544,7 +550,13 @@
             "fieldPath": "idDialog",
             "columnName": "id_dialog",
             "affinity": "INTEGER",
-            "notNull": true
+            "notNull": false
+          },
+          {
+            "fieldPath": "idGroup",
+            "columnName": "id_group",
+            "affinity": "INTEGER",
+            "notNull": false
           },
           {
             "fieldPath": "idSender",
@@ -638,7 +650,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '04ae1d6aa9df25170f5ec14a23d05b77')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4350ac8eed707c403ee72bbda914e0e6')"
     ]
   }
 }

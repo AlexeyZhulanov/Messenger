@@ -11,7 +11,7 @@ interface UsersSource {
 
     suspend fun updatePassword(password: String) : String
 
-    suspend fun updateLastSession(idDialog: Int) : String
+    suspend fun updateLastSession() : String
 
     suspend fun getLastSession(userId: Int) : Long
 

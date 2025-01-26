@@ -8,23 +8,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.Conversation
-import com.example.messenger.model.DeletedMessagesEvent
-import com.example.messenger.model.DialogCreatedEvent
-import com.example.messenger.model.DialogDeletedEvent
-import com.example.messenger.model.DialogMessagesAllDeleted
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
-import com.example.messenger.model.ReadMessagesEvent
 import com.example.messenger.model.RetrofitService
-import com.example.messenger.model.TypingEvent
 import com.example.messenger.model.User
-import com.example.messenger.model.UserSessionUpdatedEvent
-import com.example.messenger.model.WebSocketListenerInterface
 import com.example.messenger.model.WebSocketService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.UnknownHostException
@@ -37,7 +28,7 @@ class MessengerViewModel @Inject constructor(
     private val fileManager: FileManager,
     private val webSocketService: WebSocketService,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
-) : ViewModel(), WebSocketListenerInterface {
+) : ViewModel() {
 
     private val _conversations = MutableLiveData<List<Conversation>>()
     val conversations: LiveData<List<Conversation>> = _conversations
@@ -51,7 +42,7 @@ class MessengerViewModel @Inject constructor(
         fetchCurrentUser()
         fetchConversations()
         //webSocketService.connect() временное отключение
-        //webSocketService.setListener(this) временное отключение
+        // todo подписаться на нужные flow WebSocketService
     }
 
     override fun onCleared() {
@@ -78,20 +69,18 @@ class MessengerViewModel @Inject constructor(
                     val initUser = messengerService.getUser()
                     Log.d("testInitUser", initUser.toString())
                     if(initUser != null) {
-                        _currentUser.postValue(initUser!!)
+                        _currentUser.postValue(initUser ?: null)
                         initialUser = initUser
                     }
                 } catch (e: Exception) {Log.e("Can't take user in db", e.toString())}
                 val user = retrofitService.getUser(0)
                 _currentUser.postValue(user)
-                if(user.username != initialUser?.username || user.avatar != initialUser.avatar ||
-                    initialUser == null) {
+                if(user.id != initialUser?.id || user.username != initialUser.username ||
+                    user.avatar != initialUser.avatar) {
                     Log.d("testUpdateCurUser", user.toString())
                     messengerService.updateUser(user)
                 }
-            } catch (e: Exception) {
-                // todo Toast error
-            }
+            } catch (e: Exception) { return@launch }
         }
     }
 
@@ -112,9 +101,7 @@ class MessengerViewModel @Inject constructor(
                     }
                     kotlinx.coroutines.delay(30000)
                 }
-            } catch (e: Exception) {
-                // Handle exceptions
-            }
+            } catch (e: Exception) { return@launch }
         }
     }
 
@@ -172,53 +159,5 @@ class MessengerViewModel @Inject constructor(
 
     suspend fun downloadAvatar(context: Context, filename: String): String {
         return retrofitService.downloadAvatar(context, filename)
-    }
-
-    override fun onNewMessage(message: Message) {
-        Log.d("testSocketsMessenger", "New Message: $message")
-    }
-
-    override fun onEditedMessage(message: Message) {
-        Log.d("testSocketsMessenger", "Edited Message: $message")
-    }
-
-    override fun onMessagesDeleted(deletedMessagesEvent: DeletedMessagesEvent) {
-        Log.d("testSocketsMessenger", "Messages deleted")
-    }
-
-    override fun onDialogCreated(dialogCreatedEvent: DialogCreatedEvent) {
-        Log.d("testSocketsMessenger", "Dialog created")
-    }
-
-    override fun onDialogDeleted(dialogDeletedEvent: DialogDeletedEvent) {
-        Log.d("testSocketsMessenger", "Dialog deleted")
-    }
-
-    override fun onUserSessionUpdated(userSessionUpdatedEvent: UserSessionUpdatedEvent) {
-        Log.d("testSocketsMessenger", "Session updated")
-    }
-
-    override fun onStartTyping(typingEvent: TypingEvent) {
-        Log.d("testSocketsMessenger", "Typing started")
-    }
-
-    override fun onStopTyping(typingEvent: TypingEvent) {
-        Log.d("testSocketsMessenger", "Typing stopped")
-    }
-
-    override fun onMessagesRead(readMessagesEvent: ReadMessagesEvent) {
-        Log.d("testSocketsMessenger", "Messages read")
-    }
-
-    override fun onAllMessagesDeleted(dialogMessagesAllDeleted: DialogMessagesAllDeleted) {
-        Log.d("testSocketsMessenger", "All messages deleted")
-    }
-
-    override fun onUserJoinedDialog(dialogId: Int, userId: Int) {
-        Log.d("testSocketsMessenger", "User $userId joined Dialog $dialogId")
-    }
-
-    override fun onUserLeftDialog(dialogId: Int, userId: Int) {
-        Log.d("testSocketsMessenger", "User $userId left Dialog $dialogId")
     }
 }

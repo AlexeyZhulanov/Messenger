@@ -8,7 +8,8 @@ import com.example.messenger.model.Message
 @Entity(tableName = "unsent_messages")
 class UnsentMessageEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    @ColumnInfo(name = "id_dialog") val idDialog: Int,
+    @ColumnInfo(name = "id_dialog") val idDialog: Int?,
+    @ColumnInfo(name = "id_group") val idGroup: Int?,
     @ColumnInfo(name = "id_sender") val idSender: Int = -5,
     val text: String?,
     val images: List<String>?,
@@ -30,9 +31,9 @@ class UnsentMessageEntity(
         usernameAuthorOriginal = usernameAuthorOriginal, isUnsent = isUnsent, localFilePaths = localFilePaths
     )
     companion object {
-        fun fromUserInput(idDialog: Int, message: Message): UnsentMessageEntity = UnsentMessageEntity(
-            idDialog = idDialog, idSender = message.idSender, text = message.text,
-            images = message.images, voice = message.voice, file = message.file,
+        fun fromUserInput(message: Message, idDialog: Int?, idGroup: Int?): UnsentMessageEntity = UnsentMessageEntity(
+            idDialog = idDialog, idGroup = idGroup, idSender = message.idSender,
+            text = message.text, images = message.images, voice = message.voice, file = message.file,
             isRead = message.isRead, isEdited = message.isEdited, timestamp = message.timestamp,
             isForwarded = message.isForwarded, referenceToMessageId = message.referenceToMessageId,
             usernameAuthorOriginal = message.usernameAuthorOriginal, isUnsent = message.isUnsent,

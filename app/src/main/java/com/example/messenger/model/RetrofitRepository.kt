@@ -17,7 +17,7 @@ interface RetrofitRepository {
 
     suspend fun updatePassword(password: String) : Boolean
 
-    suspend fun updateLastSession(idDialog: Int) : Boolean
+    suspend fun updateLastSession() : Boolean
 
     suspend fun getUser(userId: Int) : User
 
@@ -62,12 +62,18 @@ interface RetrofitRepository {
     suspend fun sendGroupMessage(groupId: Int, text: String?, images: List<String>?, voice: String?,
      file: String?, referenceToMessageId: Int?, isForwarded: Boolean, usernameAuthorOriginal: String?) : Boolean
 
-    suspend fun getGroupMessages(groupId: Int, start: Int, end: Int): List<GroupMessage>
+    suspend fun getGroupMessages(groupId: Int, start: Int, end: Int): List<Message>
 
-    suspend fun editGroupMessage(groupMessageId: Int, text: String?,
+    suspend fun findGroupMessage(idMessage: Int, groupId: Int) : Pair<Message, Int>
+
+    suspend fun addKeyToGroup(groupId: Int, key: String) : Boolean
+
+    suspend fun removeKeyFromGroup(groupId: Int) : Boolean
+
+    suspend fun editGroupMessage(groupId: Int, messageId: Int, text: String?,
                                  images: List<String>?, voice: String?, file: String?) : Boolean
 
-    suspend fun deleteGroupMessages(ids: List<Int>) : Boolean
+    suspend fun deleteGroupMessages(groupId: Int, ids: List<Int>) : Boolean
 
     suspend fun deleteGroup(groupId: Int) : Boolean
 
@@ -83,7 +89,7 @@ interface RetrofitRepository {
 
     suspend fun updateGroupAvatar(groupId: Int, avatar: String) : Boolean
 
-    suspend fun markGroupMessagesAsRead(ids: List<Int>) : Boolean
+    suspend fun markGroupMessagesAsRead(groupId: Int, ids: List<Int>) : Boolean
 
     suspend fun toggleGroupCanDelete(groupId: Int) : Boolean
 
@@ -93,29 +99,29 @@ interface RetrofitRepository {
 
     suspend fun getGroupSettings(groupId: Int): ConversationSettings
 
-    suspend fun searchMessagesInGroup(groupId: Int, word: String) : List<GroupMessage>
+    suspend fun searchMessagesInGroup(groupId: Int, word: String) : List<Message>
 
-    suspend fun uploadPhoto(dialogId: Int, photo: File) : String
+    suspend fun uploadPhoto(dialogId: Int, photo: File, isGroup: Int?) : String
 
-    suspend fun uploadFile(dialogId: Int, file: File) : String
+    suspend fun uploadFile(dialogId: Int, file: File, isGroup: Int?) : String
 
-    suspend fun uploadAudio(dialogId: Int, audio: File) : String
+    suspend fun uploadAudio(dialogId: Int, audio: File, isGroup: Int?) : String
 
     suspend fun uploadAvatar(avatar: File) : String
 
-    suspend fun downloadFile(context: Context, folder: String, dialogId: Int, filename: String) : String
+    suspend fun downloadFile(context: Context, folder: String, dialogId: Int, filename: String, isGroup: Int?) : String
 
     suspend fun downloadAvatar(context: Context, filename: String) : String
 
     suspend fun deleteFile(folder: String, dialogId: Int, filename: String) : Boolean
 
-    suspend fun getMedias(dialogId: Int, page: Int) : List<String>?
+    suspend fun getMedias(dialogId: Int, page: Int, isGroup: Int?) : List<String>?
 
-    suspend fun getFiles(dialogId: Int, page: Int) : List<String>?
+    suspend fun getFiles(dialogId: Int, page: Int, isGroup: Int?) : List<String>?
 
-    suspend fun getAudios(dialogId: Int, page: Int) : List<String>?
+    suspend fun getAudios(dialogId: Int, page: Int, isGroup: Int?) : List<String>?
 
-    suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String) : String
+    suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String, isGroup: Int?) : String
 
     suspend fun getVacation() : Pair<String, String>?
 

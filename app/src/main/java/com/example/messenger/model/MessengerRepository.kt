@@ -14,9 +14,9 @@ interface MessengerRepository {
 
     suspend fun replaceMessages(idDialog: Int, messages: List<Message>, fileManager: FileManager)
 
-    suspend fun getGroupMessages(idGroup: Int): List<GroupMessage>
+    suspend fun getGroupMessages(idGroup: Int): List<Message>
 
-    suspend fun replaceGroupMessages(idGroup: Int, groupMessages: List<GroupMessage>, fileManager: FileManager)
+    suspend fun replaceGroupMessages(idGroup: Int, groupMessages: List<Message>, fileManager: FileManager)
 
     suspend fun getUser(): User?
 
@@ -38,7 +38,11 @@ interface MessengerRepository {
 
     suspend fun insertUnsentMessage(idDialog: Int, message: Message) : Int
 
+    suspend fun insertUnsentMessageGroup(idGroup: Int, message: Message) : Int
+
     suspend fun getUnsentMessages(idDialog: Int) : List<Message>?
+
+    suspend fun getUnsentMessagesGroup(idGroup: Int) : List<Message>?
 
     suspend fun deleteUnsentMessage(messageId: Int)
 }

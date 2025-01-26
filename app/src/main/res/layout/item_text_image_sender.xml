@@ -44,6 +44,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginEnd="5dp"
+        android:padding="2dp"
         android:background="@drawable/message_background_sender"
         app:layout_constraintStart_toEndOf="@id/receiverGuideLine"
         app:layout_constraintTop_toBottomOf="@id/dateTextView"
@@ -75,7 +76,7 @@
 
         </FrameLayout>
 
-            <ImageView
+            <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/senderImageView"
                 android:layout_width="0dp"
                 android:layout_height="325dp"
@@ -84,7 +85,8 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/includeLayout"
-                android:adjustViewBounds="true" />
+                android:adjustViewBounds="true"
+                app:shapeAppearanceOverlay="@style/RoundedCornersImageView" />
 
             <TextView
                 android:id="@+id/tv_duration"
@@ -129,8 +131,8 @@
                 android:id="@+id/timeLayout"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="3dp"
-                android:layout_marginBottom="3dp"
+                android:layout_marginEnd="5dp"
+                android:layout_marginBottom="5dp"
                 android:background="@drawable/messenger_item_transparent_background"
                 app:layout_constraintBottom_toBottomOf="@id/senderImageView"
                 app:layout_constraintEnd_toEndOf="parent">
@@ -218,6 +220,8 @@
                 android:layout_marginTop="5dp"
                 android:visibility="gone"
                 tools:visibility="visible"
+                android:paddingBottom="6dp"
+                android:paddingHorizontal="6dp"
                 app:layout_constraintTop_toBottomOf="@id/senderImageView"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"

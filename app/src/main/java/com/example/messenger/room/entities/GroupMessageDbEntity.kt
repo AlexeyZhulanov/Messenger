@@ -3,7 +3,7 @@ package com.example.messenger.room.entities
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.example.messenger.model.GroupMessage
+import com.example.messenger.model.Message
 
 @Entity(tableName = "group_messages")
 data class GroupMessageDbEntity(
@@ -21,16 +21,16 @@ data class GroupMessageDbEntity(
     @ColumnInfo(name = "reference_to_message_id") val referenceToMessageId: Int?,
     @ColumnInfo(name = "username_author_original") val usernameAuthorOriginal: String?
 ) {
-    fun toGroupMessage(): GroupMessage = GroupMessage(
-        id = id, senderId = idSender, groupId = groupId, text = text, images = images,
+    fun toMessage(): Message = Message(
+        id = id, idSender = idSender, text = text, images = images,
         voice = voice, file = file, timestamp = timestamp, isRead = isRead, isEdited = isEdited,
         referenceToMessageId = referenceToMessageId, isForwarded = isForwarded,
         usernameAuthorOriginal = usernameAuthorOriginal
     )
     companion object {
-        fun fromUserInput(groupMessage: GroupMessage): GroupMessageDbEntity = groupMessage.let {
+        fun fromUserInput(message: Message, groupId: Int): GroupMessageDbEntity = message.let {
             GroupMessageDbEntity(
-                id = it.id, groupId = it.groupId, idSender = it.senderId, text = it.text,
+                id = it.id, groupId = groupId, idSender = it.idSender, text = it.text,
                 images = it.images, voice = it.voice, file = it.file, isRead = it.isRead,
                 timestamp = it.timestamp, isEdited = it.isEdited, isForwarded = it.isForwarded,
                 referenceToMessageId = it.referenceToMessageId,

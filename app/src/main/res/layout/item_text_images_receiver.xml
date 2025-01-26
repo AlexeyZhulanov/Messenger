@@ -39,22 +39,54 @@
         android:visibility="gone"
         />
 
+    <ImageView
+        android:id="@+id/photoImageView"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:src="@drawable/ic_user_avatar"
+        android:visibility="gone"
+        tools:visibility="visible"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/layout_message"
+        app:layout_constraintBottom_toBottomOf="@id/layout_message"
+        app:layout_constraintVertical_bias="1"
+        app:tint="?attr/colorPrimary" />
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layout_message"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="5dp"
+        android:padding="1dp"
         android:background="@drawable/message_background_receiver"
         app:layout_constraintEnd_toStartOf="@id/receiverGuideLine"
         app:layout_constraintTop_toBottomOf="@id/dateTextView"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintStart_toEndOf="@id/photoImageView"
         app:layout_constraintBottom_toBottomOf="parent">
+
+        <TextView
+            android:id="@+id/userNameTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:fontFamily="casual"
+            android:textStyle="bold|italic"
+            tools:text="Алексей"
+            android:visibility="gone"
+            tools:visibility="visible"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="2dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0"
+            />
 
         <FrameLayout
             android:id="@+id/includeLayout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/userNameTextView"
             app:layout_constraintStart_toStartOf="parent">
 
             <include
@@ -75,13 +107,25 @@
 
         </FrameLayout>
 
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardview"
+            android:layout_width="0dp"
+            android:layout_height="400dp"
+            app:cardBackgroundColor="@color/colorMessageReceiverBack"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/includeLayout"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp">
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerview"
                 android:layout_width="match_parent"
-                android:layout_height="400dp"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/includeLayout" />
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:padding="8dp" />
+
+        </androidx.cardview.widget.CardView>
 
             <ImageView
                 android:id="@+id/errorImageView"
@@ -90,29 +134,30 @@
                 android:src="@drawable/ic_error"
                 app:tint="?attr/colorError"
                 android:visibility="gone"
-                app:layout_constraintStart_toStartOf="@id/recyclerview"
-                app:layout_constraintTop_toTopOf="@id/recyclerview"
-                app:layout_constraintBottom_toBottomOf="@id/recyclerview"
-                app:layout_constraintEnd_toEndOf="@id/recyclerview" />
+                app:layout_constraintStart_toStartOf="@id/cardview"
+                app:layout_constraintTop_toTopOf="@id/cardview"
+                app:layout_constraintBottom_toBottomOf="@id/cardview"
+                app:layout_constraintEnd_toEndOf="@id/cardview" />
 
             <ProgressBar
                 android:id="@+id/progressBar"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
                 android:visibility="gone"
-                app:layout_constraintStart_toStartOf="@id/recyclerview"
-                app:layout_constraintEnd_toEndOf="@id/recyclerview"
-                app:layout_constraintTop_toTopOf="@id/recyclerview"
-                app:layout_constraintBottom_toBottomOf="@id/recyclerview"/>
+                app:layout_constraintStart_toStartOf="@id/cardview"
+                app:layout_constraintEnd_toEndOf="@id/cardview"
+                app:layout_constraintTop_toTopOf="@id/cardview"
+                app:layout_constraintBottom_toBottomOf="@id/cardview"/>
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/timeLayout"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="3dp"
-                android:layout_marginBottom="3dp"
+                android:layout_marginEnd="7dp"
+                android:layout_marginBottom="7dp"
+                android:elevation="5dp"
                 android:background="@drawable/messenger_item_transparent_background"
-                app:layout_constraintBottom_toBottomOf="@id/recyclerview"
+                app:layout_constraintBottom_toBottomOf="@id/cardview"
                 app:layout_constraintEnd_toEndOf="parent">
 
                 <TextView
@@ -156,7 +201,9 @@
             android:layout_marginTop="5dp"
             android:visibility="gone"
             tools:visibility="visible"
-            app:layout_constraintTop_toBottomOf="@id/recyclerview"
+            android:paddingHorizontal="7dp"
+            android:paddingBottom="7dp"
+            app:layout_constraintTop_toBottomOf="@id/cardview"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">

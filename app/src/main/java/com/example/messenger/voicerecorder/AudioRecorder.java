@@ -17,7 +17,7 @@ import static android.os.Process.setThreadPriority;
 
 import androidx.core.app.ActivityCompat;
 
-import com.example.messenger.MessageFragment;
+import com.example.messenger.BaseChatFragment;
 
 
 public class AudioRecorder {
@@ -49,7 +49,7 @@ public class AudioRecorder {
     }
 
     /** Starts recording audio. */
-    public void start(MessageFragment fragment) {
+    public void start(BaseChatFragment fragment) {
         if (isRecording()) {
             Log.w(TAG, "Already running");
             return;
