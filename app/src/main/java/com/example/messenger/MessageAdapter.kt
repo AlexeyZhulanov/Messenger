@@ -71,9 +71,9 @@ class MessageDiffCallback : DiffUtil.ItemCallback<Pair<Message, String>>() {
 
 class MessageAdapter(
     private val actionListener: MessageActionListener,
-    private val otherUserId: Int,
+    private val currentUserId: Int,
     private val context: Context,
-    private val messageViewModel: MessageViewModel
+    private val messageViewModel: BaseChatViewModel
 ) : ListAdapter<Pair<Message, String>, RecyclerView.ViewHolder>(MessageDiffCallback()) {
 
     var canLongClick: Boolean = true
@@ -189,23 +189,7 @@ class MessageAdapter(
 
     override fun getItemViewType(position: Int): Int {
         val message = getItem(position)?.first ?: return -1
-        if(message.idSender == otherUserId) {
-            return when {
-                message.images?.isNotEmpty() == true -> {
-                    when {
-                        message.images?.size == 1 -> TYPE_TEXT_IMAGE_RECEIVER
-                        else -> TYPE_TEXT_IMAGES_RECEIVER
-                    }
-                }
-                message.text?.isNotEmpty() == true -> TYPE_TEXT_RECEIVER
-                else -> {
-                    when {
-                        message.file?.isNotEmpty() == true -> TYPE_FILE_RECEIVER
-                        else -> TYPE_VOICE_RECEIVER
-                    }
-                }
-            }
-        } else {
+        if(message.idSender == currentUserId || message.idSender == -5) { // -5 is unsent message
             return when {
                 message.images?.isNotEmpty() == true -> {
                     when {
@@ -218,6 +202,22 @@ class MessageAdapter(
                     when {
                         message.file?.isNotEmpty() == true -> TYPE_FILE_SENDER
                         else -> TYPE_VOICE_SENDER
+                    }
+                }
+            }
+        } else {
+            return when {
+                message.images?.isNotEmpty() == true -> {
+                    when {
+                        message.images?.size == 1 -> TYPE_TEXT_IMAGE_RECEIVER
+                        else -> TYPE_TEXT_IMAGES_RECEIVER
+                    }
+                }
+                message.text?.isNotEmpty() == true -> TYPE_TEXT_RECEIVER
+                else -> {
+                    when {
+                        message.file?.isNotEmpty() == true -> TYPE_FILE_RECEIVER
+                        else -> TYPE_VOICE_RECEIVER
                     }
                 }
             }

@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.ChatSettings
 import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.FileManager
@@ -39,15 +40,15 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
-open class BaseChatViewModel(
+abstract class BaseChatViewModel(
     protected val messengerService: MessengerService,
     protected val retrofitService: RetrofitService,
     protected val fileManager: FileManager,
     protected val webSocketService: WebSocketService,
-    protected val ioDispatcher: CoroutineDispatcher
+    @IoDispatcher protected val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
     protected var convId: Int = -1
-    protected var isGroup: Int = 0
+    private var isGroup: Int = 0
     protected var isFirst = true
     private var disableRefresh: Boolean = false
     private var pendingRefresh: Boolean = false
