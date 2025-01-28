@@ -2,6 +2,7 @@ package com.example.messenger.model
 
 import com.example.messenger.room.dao.ChatSettingsDao
 import com.example.messenger.room.dao.ConversationDao
+import com.example.messenger.room.dao.GroupMemberDao
 import com.example.messenger.room.dao.GroupMessageDao
 import com.example.messenger.room.dao.LastReadMessageDao
 import com.example.messenger.room.dao.MessageDao
@@ -10,6 +11,7 @@ import com.example.messenger.room.dao.UnsentMessageDao
 import com.example.messenger.room.dao.UserDao
 import com.example.messenger.room.entities.ChatSettingsDbEntity
 import com.example.messenger.room.entities.ConversationDbEntity
+import com.example.messenger.room.entities.GroupMemberDbEntity
 import com.example.messenger.room.entities.GroupMessageDbEntity
 import com.example.messenger.room.entities.LastReadMessageEntity
 import com.example.messenger.room.entities.MessageDbEntity
@@ -29,6 +31,7 @@ class MessengerService(
     private val lastReadMessageDao: LastReadMessageDao,
     private val chatSettingsDao: ChatSettingsDao,
     private val unsentMessageDao: UnsentMessageDao,
+    private val groupMemberDao: GroupMemberDao,
     private val ioDispatcher: CoroutineDispatcher
 ) : MessengerRepository {
     private var settings = Settings(0)
@@ -117,16 +120,20 @@ class MessengerService(
         return@withContext messageDao.getPreviousMessage(idDialog, lastMessageId)?.toMessage()
     }
 
-    override suspend fun saveLastReadMessage(idDialog: Int, lastMessageId: Int) = withContext(ioDispatcher) {
-        lastReadMessageDao.saveLastReadMessage(LastReadMessageEntity.fromUserInput(idDialog, lastMessageId))
+    override suspend fun saveLastReadMessage(lastMessageId: Int, idDialog: Int?, idGroup: Int?) = withContext(ioDispatcher) {
+        lastReadMessageDao.saveLastReadMessage(LastReadMessageEntity.fromUserInput(lastMessageId, idDialog, idGroup))
     }
 
-    override suspend fun getLastReadMessage(idDialog: Int): Pair<Int, Int>? = withContext(ioDispatcher) {
-        return@withContext lastReadMessageDao.getLastReadMessage(idDialog)?.toPair()
+    override suspend fun getLastReadMessage(idDialog: Int): Int? = withContext(ioDispatcher) {
+        return@withContext lastReadMessageDao.getLastReadMessage(idDialog)?.toEntity()
     }
 
-    override suspend fun updateLastReadMessage(idDialog: Int, lastMessageId: Int) = withContext(ioDispatcher) {
-        lastReadMessageDao.updateLastReadMessage(LastReadMessageEntity.fromUserInput(idDialog, lastMessageId))
+    override suspend fun getLastReadMessageGroup(idGroup: Int): Int? = withContext(ioDispatcher) {
+        return@withContext lastReadMessageDao.getLastReadMessageGroup(idGroup)?.toEntity()
+    }
+
+    override suspend fun updateLastReadMessage(lastMessageId: Int, idDialog: Int?, idGroup: Int?) = withContext(ioDispatcher) {
+        lastReadMessageDao.updateLastReadMessage(LastReadMessageEntity.fromUserInput(lastMessageId, idDialog, idGroup))
     }
 
     override suspend fun isNotificationsEnabled(id: Int, type: Boolean): Boolean = withContext(ioDispatcher) {
@@ -164,5 +171,14 @@ class MessengerService(
 
     override suspend fun deleteUnsentMessage(messageId: Int) = withContext(ioDispatcher) {
         unsentMessageDao.deleteUnsentMessage(messageId)
+    }
+
+    override suspend fun getGroupMembers(groupId: Int): List<Pair<String, String?>> = withContext(ioDispatcher) {
+        return@withContext groupMemberDao.getMembers(groupId).map { it.toMember() }
+    }
+
+    override suspend fun replaceGroupMembers(groupId: Int, groupMembers: List<GroupMember>) {
+        val groupMemberDbEntities = groupMembers.map { GroupMemberDbEntity.fromUserInput(groupId, it.username, it.avatar) }
+        groupMemberDao.replaceMembers(groupId, groupMemberDbEntities)
     }
 }

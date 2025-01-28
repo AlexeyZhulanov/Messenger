@@ -15,6 +15,9 @@ interface LastReadMessageDao {
     @Query("SELECT * FROM last_read_message WHERE dialog_id = :dialogId LIMIT 1")
     suspend fun getLastReadMessage(dialogId: Int): LastReadMessageEntity?
 
+    @Query("SELECT * FROM last_read_message WHERE group_id = :groupId LIMIT 1")
+    suspend fun getLastReadMessageGroup(groupId: Int): LastReadMessageEntity?
+
     @Update
     suspend fun updateLastReadMessage(lastReadMessageEntity: LastReadMessageEntity)
 }
