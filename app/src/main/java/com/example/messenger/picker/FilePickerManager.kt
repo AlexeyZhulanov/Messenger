@@ -4,8 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.example.messenger.BaseChatFragment
-import com.example.messenger.DialogInfoFragment
-import com.example.messenger.MessageFragment
+import com.example.messenger.BaseInfoFragment
 import com.example.messenger.R
 import com.example.messenger.SettingsFragment
 import com.luck.picture.lib.basic.PictureSelector
@@ -26,7 +25,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 
-class FilePickerManager(private val fragment1: BaseChatFragment?, private val fragment2: SettingsFragment?, private val fragment3: DialogInfoFragment?) {
+class FilePickerManager(private val fragment1: BaseChatFragment?, private val fragment2: SettingsFragment?, private val fragment3: BaseInfoFragment?) {
 
     val selectorStyle = PictureSelectorStyle()
 

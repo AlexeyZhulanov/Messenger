@@ -1,24 +1,24 @@
 package com.example.messenger.picker
 
 import android.os.Bundle
-import com.example.messenger.MessageViewModel
+import com.example.messenger.BaseInfoViewModel
 import com.luck.picture.lib.PictureSelectorPreviewFragment
 import com.luck.picture.lib.adapter.PicturePreviewAdapter
 
 class CustomPreviewFragment(
-    private val messageViewModel: MessageViewModel
+    private val viewModel: BaseInfoViewModel
 ) : PictureSelectorPreviewFragment() {
     override fun getFragmentTag(): String {
         return CustomPreviewFragment::class.java.simpleName
     }
 
     override fun createAdapter(): PicturePreviewAdapter {
-        return CustomPreviewAdapter(messageViewModel)
+        return CustomPreviewAdapter(viewModel)
     }
 
     companion object {
-        fun newInstance(messageViewModel: MessageViewModel): CustomPreviewFragment {
-            val fragment = CustomPreviewFragment(messageViewModel)
+        fun newInstance(viewModel: BaseInfoViewModel): CustomPreviewFragment {
+            val fragment = CustomPreviewFragment(viewModel)
             fragment.arguments = Bundle()
             return fragment
         }

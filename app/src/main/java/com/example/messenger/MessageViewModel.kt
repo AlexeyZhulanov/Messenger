@@ -174,13 +174,13 @@ class MessageViewModel @Inject constructor(
     fun saveLastMessage(id: Int) {
         viewModelScope.launch {
             val temp = messengerService.getLastReadMessage(convId)
-            if(temp != null) messengerService.updateLastReadMessage(convId, id)
-            else messengerService.saveLastReadMessage(convId, id)
+            if(temp != null) messengerService.updateLastReadMessage(id, convId, null)
+            else messengerService.saveLastReadMessage(id, convId, null)
         }
     }
 
     suspend fun getLastMessageId(): Int {
-        return messengerService.getLastReadMessage(convId)?.second ?: -1
+        return messengerService.getLastReadMessage(convId) ?: -1
     }
 
     suspend fun getPreviousMessageId(id: Int): Int {

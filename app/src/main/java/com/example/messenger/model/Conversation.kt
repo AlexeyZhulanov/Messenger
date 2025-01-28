@@ -42,6 +42,13 @@ data class Group(
     val autoDeleteInterval: Int
 )
 
+data class GroupMember(
+    val id: Int,
+    val groupId: Int,
+    val username: String,
+    val avatar: String?
+)
+
 data class ConversationSettings(
     val canDelete: Boolean = false,
     val autoDeleteInterval: Int = 0

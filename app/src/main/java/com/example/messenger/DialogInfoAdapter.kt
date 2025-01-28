@@ -34,7 +34,7 @@ interface DialogActionListener {
 class DialogInfoAdapter(
     private val context: Context,
     private val imageSize: Int,
-    private val messageViewModel: MessageViewModel,
+    private val viewModel: BaseInfoViewModel,
     private val actionListener: DialogActionListener
 ): RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private val mediaItems = mutableListOf<MediaItem>()
@@ -51,8 +51,8 @@ class DialogInfoAdapter(
         mediaItems.addAll(items)
         if(type == MediaItem.TYPE_MEDIA) {
             items.forEach {
-                localMedias.add(messageViewModel.fileToLocalMedia(File(it.content)))
-                messageViewModel.parseDuration(it.content).let { duration ->
+                localMedias.add(viewModel.fileToLocalMedia(File(it.content)))
+                viewModel.parseDuration(it.content).let { duration ->
                     durations.add(duration)
                 }
             }
@@ -67,8 +67,8 @@ class DialogInfoAdapter(
             mediaItems.addAll(items)
             if (type == MediaItem.TYPE_MEDIA) {
                 items.forEach {
-                    localMedias.add(messageViewModel.fileToLocalMedia(File(it.content)))
-                    messageViewModel.parseDuration(it.content).let { duration ->
+                    localMedias.add(viewModel.fileToLocalMedia(File(it.content)))
+                    viewModel.parseDuration(it.content).let { duration ->
                         durations.add(duration)
                     }
                 }
@@ -138,11 +138,11 @@ class DialogInfoAdapter(
         fun bind(content: String) {
             uiScope.launch {
                 val filePathTemp = async {
-                    if (messageViewModel.fManagerIsExist(content)) {
-                        return@async Pair(messageViewModel.fManagerGetFilePath(content), false)
+                    if (viewModel.fManagerIsExist(content)) {
+                        return@async Pair(viewModel.fManagerGetFilePath(content), false)
                     } else {
                         try {
-                            return@async Pair(messageViewModel.downloadFile(context, "files", content), true)
+                            return@async Pair(viewModel.downloadFile(context, "files", content), true)
                         } catch (e: Exception) {
                             return@async Pair(null, false)
                         }
@@ -153,11 +153,11 @@ class DialogInfoAdapter(
                     val file = File(filePath)
                     if(file.exists()) {
                         if(isNeedSave) {
-                            messageViewModel.fManagerSaveFile(content, file.readBytes())
-                            messageViewModel.addTempFile(content)
+                            viewModel.fManagerSaveFile(content, file.readBytes())
+                            viewModel.addTempFile(content)
                         }
                         binding.fileNameTextView.text = file.name
-                        binding.fileSizeTextView.text = messageViewModel.formatFileSize(file.length())
+                        binding.fileSizeTextView.text = viewModel.formatFileSize(file.length())
                         binding.fileButton.setOnClickListener {
                             try {
                                 val uri: Uri = FileProvider.getUriForFile(context, context.applicationContext.packageName + ".provider", file)
@@ -189,11 +189,11 @@ class DialogInfoAdapter(
         fun bind(content: String) {
             uiScope.launch {
                 val filePathTemp = async {
-                    if (messageViewModel.fManagerIsExist(content)) {
-                        return@async Pair(messageViewModel.fManagerGetFilePath(content), false)
+                    if (viewModel.fManagerIsExist(content)) {
+                        return@async Pair(viewModel.fManagerGetFilePath(content), false)
                     } else {
                         try {
-                            return@async Pair(messageViewModel.downloadFile(context, "audio", content), true)
+                            return@async Pair(viewModel.downloadFile(context, "audio", content), true)
                         } catch (e: Exception) {
                             return@async Pair(null, false)
                         }
@@ -204,8 +204,8 @@ class DialogInfoAdapter(
                     val file = File(filePath)
                     if (file.exists()) {
                         if (isNeedSave) {
-                            messageViewModel.fManagerSaveFile(content, file.readBytes())
-                            messageViewModel.addTempFile(content)
+                            viewModel.fManagerSaveFile(content, file.readBytes())
+                            viewModel.addTempFile(content)
                         }
                         val mediaPlayer = MediaPlayer().apply {
                             setDataSource(filePath)
@@ -214,14 +214,14 @@ class DialogInfoAdapter(
                         val duration = mediaPlayer.duration
                         binding.waveformSeekBar.setSampleFrom(file)
                         binding.waveformSeekBar.maxProgress = duration.toFloat()
-                        binding.timeVoiceTextView.text = messageViewModel.formatTime(duration.toLong())
+                        binding.timeVoiceTextView.text = viewModel.formatTime(duration.toLong())
 
                         val updateSeekBarRunnable = object : Runnable {
                             override fun run() {
                                 if (isPlaying && mediaPlayer.isPlaying) {
                                     val currentPosition = mediaPlayer.currentPosition.toFloat()
                                     binding.waveformSeekBar.progress = currentPosition
-                                    binding.timeVoiceTextView.text = messageViewModel.formatTime(currentPosition.toLong())
+                                    binding.timeVoiceTextView.text = viewModel.formatTime(currentPosition.toLong())
                                     handler.postDelayed(this, 100)
                                 }
                             }
@@ -245,14 +245,14 @@ class DialogInfoAdapter(
                             override fun onProgressChanged(waveformSeekBar: WaveformSeekBar, progress: Float, fromUser: Boolean) {
                                 if (fromUser) {
                                     mediaPlayer.seekTo(progress.toInt())
-                                    binding.timeVoiceTextView.text = messageViewModel.formatTime(progress.toLong())
+                                    binding.timeVoiceTextView.text = viewModel.formatTime(progress.toLong())
                                 }
                             }
                         }
                         mediaPlayer.setOnCompletionListener {
                             binding.playButton.setImageResource(R.drawable.ic_play)
                             binding.waveformSeekBar.progress = 0f
-                            binding.timeVoiceTextView.text = messageViewModel.formatTime(duration.toLong())
+                            binding.timeVoiceTextView.text = viewModel.formatTime(duration.toLong())
                             isPlaying = false
                             handler.removeCallbacks(updateSeekBarRunnable)
                         }

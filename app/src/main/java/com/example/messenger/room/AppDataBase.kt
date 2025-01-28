@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.messenger.room.dao.ChatSettingsDao
 import com.example.messenger.room.dao.ConversationDao
+import com.example.messenger.room.dao.GroupMemberDao
 import com.example.messenger.room.dao.GroupMessageDao
 import com.example.messenger.room.dao.LastReadMessageDao
 import com.example.messenger.room.dao.MessageDao
@@ -13,6 +14,7 @@ import com.example.messenger.room.dao.UnsentMessageDao
 import com.example.messenger.room.dao.UserDao
 import com.example.messenger.room.entities.ChatSettingsDbEntity
 import com.example.messenger.room.entities.ConversationEntity
+import com.example.messenger.room.entities.GroupMemberDbEntity
 import com.example.messenger.room.entities.GroupMessageDbEntity
 import com.example.messenger.room.entities.LastMessageEntity
 import com.example.messenger.room.entities.LastReadMessageEntity
@@ -34,7 +36,8 @@ import com.example.messenger.room.entities.UserEntity
         UserDbEntity::class,
         LastReadMessageEntity::class,
         ChatSettingsDbEntity::class,
-        UnsentMessageEntity::class
+        UnsentMessageEntity::class,
+        GroupMemberDbEntity::class
     ]
 )
 
@@ -55,4 +58,6 @@ abstract class AppDatabase: RoomDatabase() {
     abstract fun getChatSettingsDao(): ChatSettingsDao
 
     abstract fun getUnsentMessageDao(): UnsentMessageDao
+
+    abstract fun getGroupMemberDao(): GroupMemberDao
 }

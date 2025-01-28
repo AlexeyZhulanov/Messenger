@@ -6,18 +6,16 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 
-import com.example.messenger.MessageViewModel;
+import com.example.messenger.BaseInfoViewModel;
 import com.example.messenger.R;
 import com.luck.picture.lib.adapter.PicturePreviewAdapter;
 import com.luck.picture.lib.adapter.holder.BasePreviewHolder;
 
-import java.util.ArrayList;
-
 public class CustomPreviewAdapter extends PicturePreviewAdapter {
-    private final MessageViewModel messageViewModel;
+    private final BaseInfoViewModel viewModel;
 
-    public CustomPreviewAdapter(MessageViewModel messageViewModel) {
-        this.messageViewModel = messageViewModel;
+    public CustomPreviewAdapter(BaseInfoViewModel viewModel) {
+        this.viewModel = viewModel;
     }
 
     @NonNull
@@ -25,7 +23,7 @@ public class CustomPreviewAdapter extends PicturePreviewAdapter {
     public BasePreviewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         if (viewType == BasePreviewHolder.ADAPTER_TYPE_IMAGE) {
             View itemView = LayoutInflater.from(parent.getContext()).inflate(R.layout.ps_custom_preview_image, parent, false);
-            return new CustomPreviewImageHolder(itemView, messageViewModel);
+            return new CustomPreviewImageHolder(itemView, viewModel);
         } else {
             return super.onCreateViewHolder(parent, viewType);
         }

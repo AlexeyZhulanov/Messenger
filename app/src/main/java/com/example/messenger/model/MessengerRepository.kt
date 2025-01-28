@@ -24,11 +24,13 @@ interface MessengerRepository {
 
     suspend fun getPreviousMessage(idDialog: Int, lastMessageId: Int): Message?
 
-    suspend fun saveLastReadMessage(idDialog: Int, lastMessageId: Int)
+    suspend fun saveLastReadMessage(lastMessageId: Int, idDialog: Int?, idGroup: Int?)
 
-    suspend fun getLastReadMessage(idDialog: Int): Pair<Int, Int>?
+    suspend fun getLastReadMessage(idDialog: Int): Int?
 
-    suspend fun updateLastReadMessage(idDialog: Int, lastMessageId: Int)
+    suspend fun getLastReadMessageGroup(idGroup: Int): Int?
+
+    suspend fun updateLastReadMessage(lastMessageId: Int, idDialog: Int?, idGroup: Int?)
 
     suspend fun isNotificationsEnabled(id: Int, type: Boolean) : Boolean
 
@@ -45,4 +47,8 @@ interface MessengerRepository {
     suspend fun getUnsentMessagesGroup(idGroup: Int) : List<Message>?
 
     suspend fun deleteUnsentMessage(messageId: Int)
+
+    suspend fun getGroupMembers(groupId: Int) : List<Pair<String, String?>>
+
+    suspend fun replaceGroupMembers(groupId: Int, groupMembers: List<GroupMember>)
 }
