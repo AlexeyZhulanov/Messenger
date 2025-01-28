@@ -28,6 +28,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentDialogInfoBinding
 import com.example.messenger.model.MediaItem
+import com.example.messenger.model.User
 import com.example.messenger.picker.CustomPreviewFragment
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
@@ -45,18 +46,20 @@ abstract class BaseInfoFragment : Fragment() {
     protected lateinit var binding: FragmentDialogInfoBinding
     private lateinit var preferences: SharedPreferences
     private lateinit var adapter: DialogInfoAdapter
-    private var selectedType: Int = 0
-    private var currentPage: Int = 0
-    private var isCanDoPagination: Boolean = true
+    protected var selectedType: Int = 0
+    protected var currentPage: Int = 0
+    protected var isCanDoPagination: Boolean = true
     private var isPaginationAllowed: Boolean = true
+    protected var colorAccent: Int = 0
+    protected var colorPrimary: Int = 0
 
     abstract val viewModel: BaseInfoViewModel
 
     abstract fun getAvatarString(): String
     abstract fun getUpperName(): String
-    abstract fun getSessionName(): String
     abstract fun getCanDelete(): Boolean
     abstract fun getInterval(): Int
+    abstract fun getMembers(): List<User>
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -85,11 +88,11 @@ abstract class BaseInfoFragment : Fragment() {
         val filePickerManager = FilePickerManager(null, null, this)
         val typedValue = TypedValue()
         context?.theme?.resolveAttribute(android.R.attr.colorAccent, typedValue, true)
-        val colorAccent = typedValue.data
+        colorAccent = typedValue.data
         context?.theme?.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
-        val colorPrimary = typedValue.data
+        colorPrimary = typedValue.data
         lifecycleScope.launch {
-            val avatar = getAvatarString() // todo dialog.otherUser.avatar ?: ""
+            val avatar = getAvatarString()
             if (avatar != "") {
                 binding.progressBar.visibility = View.VISIBLE
                 val filePathTemp = async {
@@ -127,18 +130,11 @@ abstract class BaseInfoFragment : Fragment() {
                 }
             }
         }
-        binding.userNameTextView.text = getUpperName() // todo dialog.otherUser.username
-        binding.lastSessionTextView.text = getSessionName() // todo lastSessionString
-        //binding.nickTextView.text = dialog.otherUser.name // todo только в Dialog
+        binding.userNameTextView.text = getUpperName()
         lifecycleScope.launch {
             binding.switchNotifications.isChecked = viewModel.isNotificationsEnabled()
         }
-        binding.switchDelete.isChecked = getCanDelete() // todo dialog.canDelete
-//        binding.copyImageView.setOnClickListener {
-//            val clipboard = context?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-//            val clip = ClipData.newPlainText("label", dialog.otherUser.name)
-//            clipboard.setPrimaryClip(clip)
-//        } // todo только Dialog
+        binding.switchDelete.isChecked = getCanDelete()
         binding.switchNotifications.setOnClickListener {
             binding.switchNotifications.isEnabled = false
             lifecycleScope.launch {
@@ -165,6 +161,7 @@ abstract class BaseInfoFragment : Fragment() {
                         binding.buttonMedia.setTextColor(colorPrimary)
                         binding.buttonFiles.setTextColor(colorAccent)
                         binding.buttonAudio.setTextColor(colorAccent)
+                        binding.buttonMembers.setTextColor(colorAccent)
                         selectedType = 0
                         currentPage = 1
                         isCanDoPagination = true
@@ -173,12 +170,13 @@ abstract class BaseInfoFragment : Fragment() {
             }
         }
         binding.buttonFiles.setOnClickListener {
-            if(selectedType != MediaItem.TYPE_FILE) {
-                loadMoreMediaItems(1, 0) { success ->
-                    if(success) {
+            loadMoreMediaItems(1, 0) { success ->
+                if(success) {
+                    if(selectedType != MediaItem.TYPE_FILE) {
                         binding.buttonMedia.setTextColor(colorAccent)
                         binding.buttonFiles.setTextColor(colorPrimary)
                         binding.buttonAudio.setTextColor(colorAccent)
+                        binding.buttonMembers.setTextColor(colorAccent)
                         selectedType = 1
                         currentPage = 1
                         isCanDoPagination = true
@@ -193,6 +191,7 @@ abstract class BaseInfoFragment : Fragment() {
                         binding.buttonMedia.setTextColor(colorAccent)
                         binding.buttonFiles.setTextColor(colorAccent)
                         binding.buttonAudio.setTextColor(colorPrimary)
+                        binding.buttonMembers.setTextColor(colorAccent)
                         selectedType = 2
                         currentPage = 1
                         isCanDoPagination = true
@@ -265,7 +264,7 @@ abstract class BaseInfoFragment : Fragment() {
         return binding.root
     }
 
-    private fun loadMoreMediaItems(type: Int, page: Int, callback: (Boolean) -> Unit) {
+    protected fun loadMoreMediaItems(type: Int, page: Int, callback: (Boolean) -> Unit) {
         val context = requireContext()
         when(type) {
             MediaItem.TYPE_MEDIA -> {
@@ -315,6 +314,16 @@ abstract class BaseInfoFragment : Fragment() {
                         if(currentPage == 0) callback(false) else isCanDoPagination = false
                     }
                     binding.loadButton.visibility = View.GONE
+                }
+            }
+            MediaItem.TYPE_USER -> {
+                val members = getMembers()
+                if(members.isNotEmpty()) {
+                    adapter.addMediaItems(MediaItem.TYPE_USER, members.map { MediaItem(type, "", it)})
+                    callback(true)
+                } else {
+                    callback(false)
+                    isCanDoPagination = false
                 }
             }
         }
@@ -390,7 +399,7 @@ abstract class BaseInfoFragment : Fragment() {
         numberPicker.minValue = 0
         numberPicker.maxValue = values.size - 1
         numberPicker.displayedValues = values
-        val numb = when(getInterval()) { // todo dialog.autoDeleteInterval
+        val numb = when(getInterval()) {
             0 -> 0
             30 -> 1
             60 -> 2

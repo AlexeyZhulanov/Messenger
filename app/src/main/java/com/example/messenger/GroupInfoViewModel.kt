@@ -17,6 +17,13 @@ class GroupInfoViewModel @Inject constructor(
     webSocketService: WebSocketService,
     @IoDispatcher ioDispatcher: CoroutineDispatcher
 ) : BaseInfoViewModel(messengerService, retrofitService, fileManager, webSocketService, ioDispatcher) {
-    // todo fetchMembersList
-    // todo val currentMemberList
+
+    override fun setConvInfo(convId: Int) {
+        this.convId = convId
+        this.isGroup = 1
+    }
+
+    suspend fun addMember(name: String) {
+        //retrofitService.addUserToGroup(convId, )
+    }
 }

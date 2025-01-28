@@ -96,6 +96,7 @@ class MessageViewModel @Inject constructor(
         viewModelScope.launch {
             webSocketService.deleteAllMessageFlow.collect {
                 Log.d("testSocketsMessage", "All messages deleted")
+                _deleteState.value = 1
                 refresh()
             }
         }

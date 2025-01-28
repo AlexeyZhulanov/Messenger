@@ -48,7 +48,7 @@ interface MessengerRepository {
 
     suspend fun deleteUnsentMessage(messageId: Int)
 
-    suspend fun getGroupMembers(groupId: Int) : List<Pair<String, String?>>
+    suspend fun getGroupMembers(groupId: Int) : List<User>
 
-    suspend fun replaceGroupMembers(groupId: Int, groupMembers: List<GroupMember>)
+    suspend fun replaceGroupMembers(groupId: Int, groupMembers: List<User>)
 }

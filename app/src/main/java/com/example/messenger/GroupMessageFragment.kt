@@ -1,17 +1,39 @@
 package com.example.messenger
 
+import android.os.Bundle
+import android.view.View
+import android.widget.TextView
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.example.messenger.model.Group
 import com.example.messenger.model.User
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class GroupFragment(
+class GroupMessageFragment(
     private val group: Group,
     currentUser: User
 ) : BaseChatFragment(currentUser) {
 
     override val viewModel: GroupMessageViewModel by viewModels()
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val lastSession: TextView = view.findViewById(R.id.lastSessionTextView)
+        lifecycleScope.launch {
+            viewModel.membersCount.collectLatest {
+                lastSession.text = when(it) {
+                    0 -> "" // если не удалось получить, то не отображаем
+                    1 -> "1 участник"
+                    in 2..4 -> "$it участника"
+                    else -> "$it участников"
+                }
+            }
+        }
+        viewModel.fetchMembersList()
+    }
 
     override fun composeAnswer(messageId: Int) {
         TODO("Not yet implemented")

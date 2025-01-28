@@ -77,7 +77,7 @@ class MessageFragment(
         parentFragmentManager.beginTransaction()
             .replace(
                 R.id.fragmentContainer,
-                DialogInfoFragment(dialog, lastSessionString, viewModel),
+                DialogInfoFragment(dialog, lastSessionString),
                 "DIALOG_INFO_FRAGMENT_TAG"
             )
             .addToBackStack(null)

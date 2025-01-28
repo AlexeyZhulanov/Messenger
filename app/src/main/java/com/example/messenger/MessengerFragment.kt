@@ -184,7 +184,7 @@ class MessengerFragment : Fragment() {
                     "group" -> {
                         if (!forwardFlag) {
                             parentFragmentManager.beginTransaction()
-                                .replace(R.id.fragmentContainer, GroupFragment(conversation.toGroup(), currentUser ?: User(0, "", "")), "GROUP_FRAGMENT_TAG")
+                                .replace(R.id.fragmentContainer, GroupMessageFragment(conversation.toGroup(), currentUser ?: User(0, "", "")), "GROUP_FRAGMENT_TAG")
                                 .addToBackStack(null)
                                 .commit()
                         } else {

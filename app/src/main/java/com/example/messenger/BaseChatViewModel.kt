@@ -15,7 +15,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.messenger.di.IoDispatcher
-import com.example.messenger.model.ChatSettings
 import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.Message
@@ -31,7 +30,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
@@ -78,7 +76,6 @@ abstract class BaseChatViewModel(
     protected val _editMessageFlow = MutableStateFlow<Message?>(null)
     val editMessageFlow: StateFlow<Message?> get() = _editMessageFlow
 
-    private val tempFiles = mutableSetOf<String>()
 
     fun updateLastDate(time: Long) {
         val greenwichMessageDate = Calendar.getInstance().apply {
@@ -264,26 +261,6 @@ abstract class BaseChatViewModel(
         else retrofitService.findGroupMessage(idMessage, convId)
     }
 
-    suspend fun updateAutoDeleteInterval(interval: Int) {
-        if(isGroup == 0) retrofitService.updateAutoDeleteInterval(convId, interval)
-        else retrofitService.updateGroupAutoDeleteInterval(convId, interval)
-    }
-
-    suspend fun toggleCanDeleteDialog() {
-        if(isGroup == 0) retrofitService.toggleDialogCanDelete(convId)
-        else retrofitService.toggleGroupCanDelete(convId)
-    }
-
-    suspend fun deleteAllMessages() {
-        if(isGroup == 0) retrofitService.deleteDialogMessages(convId)
-        else retrofitService.deleteGroupMessagesAll(convId)
-        _deleteState.value = 1
-    }
-
-    suspend fun deleteConv() {
-        if(isGroup == 0) retrofitService.deleteDialog(convId) else retrofitService.deleteGroup(convId)
-    }
-
     suspend fun getUnsentMessages(): List<Message>? {
         return if(isGroup == 0) messengerService.getUnsentMessages(convId)
         else messengerService.getUnsentMessagesGroup(convId)
@@ -334,12 +311,6 @@ abstract class BaseChatViewModel(
         return retrofitService.downloadFile(context, folder, convId, filename, isGroup)
     }
 
-    fun downloadFileJava(context: Context, folder: String, filename: String): String {
-        return runBlocking {
-            retrofitService.downloadFile(context, folder, convId, filename, isGroup)
-        }
-    }
-
     fun fManagerIsExist(fileName: String): Boolean {
         return fileManager.isExistMessage(fileName)
     }
@@ -382,18 +353,6 @@ abstract class BaseChatViewModel(
 
     suspend fun fManagerGetFile(filePath: String): File? = withContext(ioDispatcher) {
         return@withContext fileManager.getFileFromPath(filePath)
-    }
-
-    fun fManagerIsExistJava(filename: String): Boolean {
-        return fileManager.isExistMessage(filename)
-    }
-
-    fun fManagerGetFilePathJava(fileName: String): String {
-        return fileManager.getMessageFilePath(fileName)
-    }
-
-    fun fManagerSaveFileJava(fileName: String, fileData: ByteArray) {
-        fileManager.saveMessageFile(fileName, fileData)
     }
 
     fun formatMessageTime(timestamp: Long?): String {
@@ -503,62 +462,8 @@ abstract class BaseChatViewModel(
         return messengerService.isNotificationsEnabled(convId, type)
     }
 
-    suspend fun turnNotifications() {
-        val type = isGroup == 1
-        val isEnabled = messengerService.isNotificationsEnabled(convId, type)
-        if(isEnabled) messengerService.insertChatSettings(ChatSettings(convId, type))
-        else messengerService.deleteChatSettings(convId, type)
-    }
-
-    suspend fun getMediaPreviews(page: Int): List<String>? {
-        return retrofitService.getMedias(convId, page, isGroup)
-    }
-
-    suspend fun getFiles(page: Int): List<String>? {
-        return retrofitService.getFiles(convId, page, isGroup)
-    }
-
-    suspend fun getAudios(page: Int): List<String>? {
-        return retrofitService.getAudios(convId, page, isGroup)
-    }
-
-    suspend fun getPreview(context: Context, filename: String): String {
-        return retrofitService.getMediaPreview(context, convId, filename, isGroup)
-    }
-
     suspend fun downloadAvatar(context: Context, filename: String): String {
         return retrofitService.downloadAvatar(context, filename)
-    }
-
-    fun parseOriginalFilename(filepath: String): String {
-        val filename = File(filepath).name
-        val regex = Regex("(.*)_([0-9]+)s:([a-zA-Z0-9]+)\\.jpg$")
-        val matchResult = regex.find(filename)
-
-        return if (matchResult != null) {
-            "${matchResult.groupValues[1]}.${matchResult.groupValues[3]}"
-        } else {
-            filename
-        }
-    }
-
-    fun parseDuration(filepath: String): String? {
-        val filename = File(filepath).name
-        val regex = Regex("(.*)_([0-9]+)s:([a-zA-Z0-9]+)\\.jpg$")
-        val matchResult = regex.find(filename)
-
-        return if (matchResult != null) {
-            val durationInSeconds = matchResult.groupValues[2].toInt()
-            formatDuration(durationInSeconds)
-        } else {
-            null
-        }
-    }
-
-    private fun formatDuration(durationInSeconds: Int): String {
-        val minutes = durationInSeconds / 60
-        val seconds = durationInSeconds % 60
-        return String.format(Locale.ROOT,"%02d:%02d", minutes, seconds)
     }
 
     fun fileToLocalMedia(file: File): LocalMedia {
@@ -623,10 +528,4 @@ abstract class BaseChatViewModel(
         return String.format(Locale.ROOT,"%02d:%02d", minutes, seconds)
     }
 
-    fun addTempFile(filename: String) = tempFiles.add(filename)
-
-    fun clearTempFiles() {
-        fileManager.deleteFilesMessage(tempFiles.toList())
-        tempFiles.clear()
-    }
 }

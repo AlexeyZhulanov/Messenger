@@ -173,12 +173,12 @@ class MessengerService(
         unsentMessageDao.deleteUnsentMessage(messageId)
     }
 
-    override suspend fun getGroupMembers(groupId: Int): List<Pair<String, String?>> = withContext(ioDispatcher) {
-        return@withContext groupMemberDao.getMembers(groupId).map { it.toMember() }
+    override suspend fun getGroupMembers(groupId: Int): List<User> = withContext(ioDispatcher) {
+        return@withContext groupMemberDao.getMembers(groupId).map { it.toUser() }
     }
 
-    override suspend fun replaceGroupMembers(groupId: Int, groupMembers: List<GroupMember>) {
-        val groupMemberDbEntities = groupMembers.map { GroupMemberDbEntity.fromUserInput(groupId, it.username, it.avatar) }
+    override suspend fun replaceGroupMembers(groupId: Int, groupMembers: List<User>) {
+        val groupMemberDbEntities = groupMembers.map { GroupMemberDbEntity.fromUserInput(groupId, it) }
         groupMemberDao.replaceMembers(groupId, groupMemberDbEntities)
     }
 }

@@ -17,5 +17,10 @@ class DialogInfoViewModel @Inject constructor(
     webSocketService: WebSocketService,
     @IoDispatcher ioDispatcher: CoroutineDispatcher
 ) : BaseInfoViewModel(messengerService, retrofitService, fileManager, webSocketService, ioDispatcher) {
-    // todo возможно только групповой viewmodel можно обойтись
+
+    override fun setConvInfo(convId: Int) {
+        this.convId = convId
+        this.isGroup = 0
+    }
+
 }

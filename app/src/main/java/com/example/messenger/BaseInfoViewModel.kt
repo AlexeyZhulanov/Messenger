@@ -15,6 +15,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -26,8 +28,10 @@ abstract class BaseInfoViewModel(
     @IoDispatcher protected val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
     protected var convId: Int = -1
-    private var isGroup: Int = 0
+    protected var isGroup: Int = 0
     private val tempFiles = mutableSetOf<String>()
+
+    abstract fun setConvInfo(convId: Int)
 
     fun fManagerIsExistAvatar(fileName: String): Boolean {
         return fileManager.isExistAvatar(fileName)
@@ -81,7 +85,6 @@ abstract class BaseInfoViewModel(
     suspend fun deleteAllMessages() {
         if(isGroup == 0) retrofitService.deleteDialogMessages(convId)
         else retrofitService.deleteGroupMessagesAll(convId)
-        //_deleteState.value = 1 // todo подумать над этим
     }
 
     suspend fun deleteConv() {
@@ -120,14 +123,6 @@ abstract class BaseInfoViewModel(
         return runBlocking {
             retrofitService.downloadFile(context, folder, convId, filename, isGroup)
         }
-    }
-
-    fun fManagerIsExistJava(filename: String): Boolean {
-        return fileManager.isExistMessage(filename)
-    }
-
-    fun fManagerGetFilePathJava(fileName: String): String {
-        return fileManager.getMessageFilePath(fileName)
     }
 
     fun fManagerSaveFileJava(fileName: String, fileData: ByteArray) {
@@ -224,6 +219,42 @@ abstract class BaseInfoViewModel(
             return 0
         } finally {
             retriever.release()
+        }
+    }
+
+    fun formatUserSessionDate(timestamp: Long?): String {
+        if (timestamp == null) return "Никогда не был в сети"
+
+        val greenwichSessionDate = Calendar.getInstance().apply {
+            timeInMillis = timestamp
+        }
+        val now = Calendar.getInstance()
+
+        val diffInMillis = now.timeInMillis - greenwichSessionDate.timeInMillis
+        val diffInMinutes = (diffInMillis / 60000).toInt()
+
+        val dateFormatTime = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val dateFormatDayMonth = SimpleDateFormat("d MMM", Locale.getDefault())
+        val dateFormatYear = SimpleDateFormat("d.MM.yyyy", Locale.getDefault())
+
+        return when {
+            diffInMinutes < 2 -> "в сети"
+            diffInMinutes < 5 -> "был в сети только что"
+            diffInMinutes < 60 -> "был в сети $diffInMinutes минут назад"
+            diffInMinutes < 120 -> "был в сети час назад"
+            diffInMinutes < 180 -> "был в сети два часа назад"
+            diffInMinutes < 240 -> "был в сети три часа назад"
+            diffInMinutes < 1440 -> "был в сети в ${dateFormatTime.format(greenwichSessionDate.time)}"
+            else -> {
+                // Проверка года
+                val currentYear = now.get(Calendar.YEAR)
+                val sessionYear = greenwichSessionDate.get(Calendar.YEAR)
+                if (currentYear == sessionYear) {
+                    "был в сети ${dateFormatDayMonth.format(greenwichSessionDate.time)}"
+                } else {
+                    "был в сети ${dateFormatYear.format(greenwichSessionDate.time)}"
+                }
+            }
         }
     }
 }
