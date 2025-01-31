@@ -303,12 +303,15 @@ class DialogInfoAdapter(
                                 binding.photoImageView.imageTintList = null
                                 Glide.with(context)
                                     .load(uri)
-                                    .apply(RequestOptions.centerCropTransform())
+                                    .apply(RequestOptions.circleCropTransform())
                                     .placeholder(R.color.app_color_f6)
                                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                                     .into(binding.photoImageView)
                             }
                         }
+                    }
+                    binding.icDeleteImageView.setOnClickListener {
+                        // todo delete user from group and get callback true/false with Toast
                     }
                 }
             }

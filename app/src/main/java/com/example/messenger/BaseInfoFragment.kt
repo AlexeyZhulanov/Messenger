@@ -20,6 +20,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -37,11 +38,13 @@ import com.luck.picture.lib.basic.PictureSelector
 import com.luck.picture.lib.config.InjectResourceSource
 import com.luck.picture.lib.entity.LocalMedia
 import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
+@AndroidEntryPoint
 abstract class BaseInfoFragment : Fragment() {
     protected lateinit var binding: FragmentDialogInfoBinding
     private lateinit var preferences: SharedPreferences
@@ -53,7 +56,7 @@ abstract class BaseInfoFragment : Fragment() {
     protected var colorAccent: Int = 0
     protected var colorPrimary: Int = 0
 
-    abstract val viewModel: BaseInfoViewModel
+    protected val viewModel: BaseInfoViewModel by viewModels()
 
     abstract fun getAvatarString(): String
     abstract fun getUpperName(): String
@@ -236,7 +239,7 @@ abstract class BaseInfoFragment : Fragment() {
                 override fun getSpanSize(position: Int): Int {
                     return when (adapter.getItemViewType(position)) {
                         MediaItem.TYPE_MEDIA -> 1 // Медиа по одному элементу
-                        MediaItem.TYPE_FILE, MediaItem.TYPE_AUDIO -> 3 // Файлы и аудио занимают всю строку
+                        MediaItem.TYPE_FILE, MediaItem.TYPE_AUDIO, MediaItem.TYPE_USER -> 3 // Файлы и аудио занимают всю строку
                         else -> 1
                     }
                 }

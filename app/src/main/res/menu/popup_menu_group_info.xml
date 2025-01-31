@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/item_new_avatar"
+        android:title="Новая аватарка" />
+    <item
+        android:id="@+id/item_edit_avatar"
+        android:title="Редактировать аватарку" />
+    <item
+        android:id="@+id/item_delete_avatar"
+        android:title="Удалить аватарку" />
+    <item
+        android:id="@+id/item_rename"
+        android:title="Переименовать группу" />
+</menu>

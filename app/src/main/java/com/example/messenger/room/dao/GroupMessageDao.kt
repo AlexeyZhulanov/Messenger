@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.example.messenger.room.entities.GroupMessageDbEntity
+import com.example.messenger.room.entities.MessageDbEntity
 
 @Dao
 interface GroupMessageDao {
@@ -24,4 +25,7 @@ interface GroupMessageDao {
 
     @Query("DELETE FROM group_messages WHERE group_id = :groupId")
     suspend fun deleteGroupMessagesByGroupId(groupId: Int)
+
+    @Query("SELECT * FROM group_messages WHERE group_id = :groupId AND id < :lastMessageId ORDER BY id DESC LIMIT 1")
+    suspend fun getPreviousMessage(groupId: Int, lastMessageId: Int): GroupMessageDbEntity?
 }

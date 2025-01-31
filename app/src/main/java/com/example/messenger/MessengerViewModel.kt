@@ -89,18 +89,11 @@ class MessengerViewModel @Inject constructor(
             try {
                 val initialConversations = messengerService.getConversations()
                 _conversations.postValue(initialConversations)
-                while (true) {
-                    try {
-                        val updatedConversations = retrofitService.getConversations()
-                        _conversations.postValue(updatedConversations)
-                        messengerService.replaceConversations(updatedConversations)
-                    } catch (e: UnknownHostException) {
-                        // Handle network issues
-                    } catch (e: Exception) {
-                        // Handle other exceptions
-                    }
-                    kotlinx.coroutines.delay(30000)
-                }
+
+                val updatedConversations = retrofitService.getConversations()
+                _conversations.postValue(updatedConversations)
+                messengerService.replaceConversations(updatedConversations)
+
             } catch (e: Exception) { return@launch }
         }
     }

@@ -8,10 +8,11 @@ import java.util.Locale
 class MessagePagingSource(
     private val retrofitService: RetrofitService,
     private val messengerService: MessengerService,
-    private val dialogId: Int,
+    private val convId: Int,
     private val query: String,
     isFirst: Boolean,
-    private val fileManager: FileManager
+    private val fileManager: FileManager,
+    private val isDialog: Boolean = true
 ) {
 
     private var flag = isFirst
@@ -20,18 +21,23 @@ class MessagePagingSource(
         return try {
             val messages = if (query.isEmpty()) {
                 try {
-                    retrofitService.getMessages(dialogId, pageIndex, pageSize)
+                    if(isDialog) retrofitService.getMessages(convId, pageIndex, pageSize)
+                    else retrofitService.getGroupMessages(convId, pageIndex, pageSize)
                 } catch (e: Exception) {
                     if(flag) {
                         flag = false
-                        messengerService.getMessages(dialogId)
+                        if(isDialog) messengerService.getMessages(convId)
+                        else messengerService.getGroupMessages(convId)
                     } else throw e
                 }
             } else {
-                retrofitService.searchMessagesInDialog(dialogId, query)
+                if(isDialog) retrofitService.searchMessagesInDialog(convId, query)
+                else retrofitService.searchMessagesInGroup(convId, query)
             }
-            if(pageIndex == 0)
-                messengerService.replaceMessages(dialogId, messages, fileManager)
+            if(pageIndex == 0) {
+                if(isDialog) messengerService.replaceMessages(convId, messages, fileManager)
+                else messengerService.replaceGroupMessages(convId, messages, fileManager)
+            }
 
             // Формирование дат для адаптера
             val dates = mutableSetOf<String>()

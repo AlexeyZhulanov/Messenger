@@ -24,6 +24,8 @@ interface MessengerRepository {
 
     suspend fun getPreviousMessage(idDialog: Int, lastMessageId: Int): Message?
 
+    suspend fun getPreviousMessageGroup(groupId: Int, lastMessageId: Int): Message?
+
     suspend fun saveLastReadMessage(lastMessageId: Int, idDialog: Int?, idGroup: Int?)
 
     suspend fun getLastReadMessage(idDialog: Int): Int?

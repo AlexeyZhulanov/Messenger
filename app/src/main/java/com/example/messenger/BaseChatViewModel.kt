@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.FileManager
@@ -116,7 +117,7 @@ abstract class BaseChatViewModel(
         }
     }
 
-    open fun setConvInfo(convId: Int, otherUserId: Int, isGroup: Int) {
+    fun setConvInfo(convId: Int, isGroup: Int) {
         this.convId = convId
         this.isGroup = isGroup
         updateLastSession()
@@ -409,6 +410,9 @@ abstract class BaseChatViewModel(
         return when {
             diffInMinutes < 2 -> "в сети"
             diffInMinutes < 5 -> "был в сети только что"
+            diffInMinutes in 5..20 -> "был в сети $diffInMinutes минут назад"
+            diffInMinutes % 10 == 1 && diffInMinutes in 21..59 -> "был в сети $diffInMinutes минуту назад"
+            diffInMinutes % 10 in 2..4 && diffInMinutes in 21..59 -> "был в сети $diffInMinutes минуты назад"
             diffInMinutes < 60 -> "был в сети $diffInMinutes минут назад"
             diffInMinutes < 120 -> "был в сети час назад"
             diffInMinutes < 180 -> "был в сети два часа назад"
@@ -526,6 +530,38 @@ abstract class BaseChatViewModel(
         val minutes = TimeUnit.MILLISECONDS.toMinutes(milliseconds)
         val seconds = TimeUnit.MILLISECONDS.toSeconds(milliseconds) % 60
         return String.format(Locale.ROOT,"%02d:%02d", minutes, seconds)
+    }
+
+    fun avatarSet(avatar: String, imageView: ImageView, context: Context) {
+        viewModelScope.launch {
+            if (avatar != "") {
+                val filePathTemp = async {
+                    if (fManagerIsExistAvatar(avatar)) {
+                        return@async Pair(fManagerGetAvatarPath(avatar), true)
+                    } else {
+                        try {
+                            return@async Pair(downloadAvatar(context, avatar), false)
+                        } catch (e: Exception) {
+                            return@async Pair(null, true)
+                        }
+                    }
+                }
+                val (first, second) = filePathTemp.await()
+                if (first != null) {
+                    val file = File(first)
+                    if (file.exists()) {
+                        if (!second) fManagerSaveAvatar(avatar, file.readBytes())
+                        val uri = Uri.fromFile(file)
+                        imageView.imageTintList = null
+                        Glide.with(context)
+                            .load(uri)
+                            .apply(RequestOptions.circleCropTransform())
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .into(imageView)
+                    }
+                }
+            }
+        }
     }
 
 }

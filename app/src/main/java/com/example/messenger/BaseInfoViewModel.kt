@@ -11,6 +11,7 @@ import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.WebSocketService
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -19,19 +20,28 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
-abstract class BaseInfoViewModel(
-    protected val messengerService: MessengerService,
-    protected val retrofitService: RetrofitService,
-    protected val fileManager: FileManager,
-    protected val webSocketService: WebSocketService,
-    @IoDispatcher protected val ioDispatcher: CoroutineDispatcher
+@HiltViewModel
+class BaseInfoViewModel @Inject constructor(
+    private val messengerService: MessengerService,
+    private val retrofitService: RetrofitService,
+    private val fileManager: FileManager,
+    private val webSocketService: WebSocketService,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
-    protected var convId: Int = -1
-    protected var isGroup: Int = 0
+    private var convId: Int = -1
+    private var isGroup: Int = 0
     private val tempFiles = mutableSetOf<String>()
 
-    abstract fun setConvInfo(convId: Int)
+    fun setConvInfo(convId: Int, isGroup: Int) {
+        this.convId = convId
+        this.isGroup = isGroup
+    }
+
+    suspend fun addMember(name: String) : Boolean {
+        return if(name != "") retrofitService.addUserToGroup(convId, name) else false
+    }
 
     fun fManagerIsExistAvatar(fileName: String): Boolean {
         return fileManager.isExistAvatar(fileName)
@@ -240,6 +250,9 @@ abstract class BaseInfoViewModel(
         return when {
             diffInMinutes < 2 -> "в сети"
             diffInMinutes < 5 -> "был в сети только что"
+            diffInMinutes in 5..20 -> "был в сети $diffInMinutes минут назад"
+            diffInMinutes % 10 == 1 && diffInMinutes in 21..59 -> "был в сети $diffInMinutes минуту назад"
+            diffInMinutes % 10 in 2..4 && diffInMinutes in 21..59 -> "был в сети $diffInMinutes минуты назад"
             diffInMinutes < 60 -> "был в сети $diffInMinutes минут назад"
             diffInMinutes < 120 -> "был в сети час назад"
             diffInMinutes < 180 -> "был в сети два часа назад"

@@ -1,5 +1,6 @@
 package com.example.messenger.model
 
+import android.util.Log
 import com.example.messenger.room.dao.ChatSettingsDao
 import com.example.messenger.room.dao.ConversationDao
 import com.example.messenger.room.dao.GroupMemberDao
@@ -118,6 +119,10 @@ class MessengerService(
 
     override suspend fun getPreviousMessage(idDialog: Int, lastMessageId: Int): Message? = withContext(ioDispatcher) {
         return@withContext messageDao.getPreviousMessage(idDialog, lastMessageId)?.toMessage()
+    }
+
+    override suspend fun getPreviousMessageGroup(groupId: Int, lastMessageId: Int): Message? = withContext(ioDispatcher) {
+        return@withContext groupMessageDao.getPreviousMessage(groupId, lastMessageId)?.toMessage()
     }
 
     override suspend fun saveLastReadMessage(lastMessageId: Int, idDialog: Int?, idGroup: Int?) = withContext(ioDispatcher) {

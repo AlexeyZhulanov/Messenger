@@ -2,13 +2,16 @@ package com.example.messenger
 
 import android.os.Bundle
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.model.Dialog
+import com.example.messenger.model.Message
 import com.example.messenger.model.User
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
@@ -23,7 +26,7 @@ class MessageFragment(
     override val viewModel: MessageViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        viewModel.setConvInfo(dialog.id, dialog.otherUser.id, 0)
+        viewModel.setInfo(dialog.otherUser.id)
         Log.d("testCurrentUser", currentUser.toString())
         super.onViewCreated(view, savedInstanceState)
         lifecycleScope.launch {
@@ -71,6 +74,11 @@ class MessageFragment(
         }
     }
 
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        viewModel.setConvInfo(dialog.id, 0)
+        return super.onCreateView(inflater, container, savedInstanceState)
+    }
+
     override fun sendTypingEvent(isSend: Boolean) = viewModel.sendTypingEvent(isSend)
 
     override fun replaceToInfoFragment() {
@@ -92,6 +100,8 @@ class MessageFragment(
     override fun getUserName(): String = dialog.otherUser.username
 
     override fun rememberLastMessage() {
+        if (adapter.itemCount == 0) return
+
         // Получаем последнее видимое сообщение
         val layoutManager = binding.recyclerview.layoutManager as LinearLayoutManager
         val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
@@ -110,8 +120,17 @@ class MessageFragment(
 
     override fun replaceCurrentFragment() = replaceFragment(MessageFragment(dialog, currentUser))
 
-    override fun composeAnswer(messageId: Int) {
+    override fun composeAnswer(message: Message) {
         binding.answerUsername.text = dialog.otherUser.username
-        answerMessage = Pair(messageId, dialog.otherUser.username)
+        answerMessage = Pair(message.id, dialog.otherUser.username)
     }
+
+    override fun getMembers(): List<User> = emptyList()
+    override fun setupAdapterDialog() {
+        setupAdapter(emptyList())
+    }
+
+    //override fun getConvId(): Int = dialog.id
+
+    //override fun getIsGroup(): Int = 0
 }

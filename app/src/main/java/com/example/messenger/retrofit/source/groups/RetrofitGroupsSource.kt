@@ -75,8 +75,8 @@ class RetrofitGroupsSource(
         groupsApi.editGroupName(groupId, createGroupRequestEntity).message
     }
 
-    override suspend fun addUserToGroup(groupId: Int, userId: Int): String = wrapRetrofitExceptions  {
-        val addUserToGroupRequestEntity = AddUserToGroupRequestEntity(userId = userId)
+    override suspend fun addUserToGroup(groupId: Int, name: String): String = wrapRetrofitExceptions  {
+        val addUserToGroupRequestEntity = AddUserToGroupRequestEntity(name = name)
         groupsApi.addUserToGroup(groupId, addUserToGroupRequestEntity).message
     }
 
