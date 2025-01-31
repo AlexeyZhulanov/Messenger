@@ -139,6 +139,22 @@ class BaseInfoViewModel @Inject constructor(
         fileManager.saveMessageFile(fileName, fileData)
     }
 
+    suspend fun deleteUserFromGroup(userId: Int): Boolean {
+        return retrofitService.deleteUserFromGroup(convId, userId)
+    }
+
+    suspend fun updateGroupAvatar(avatar: String): Boolean {
+        return retrofitService.updateGroupAvatar(convId, avatar)
+    }
+
+    suspend fun updateGroupName(name: String): Boolean {
+        return retrofitService.editGroupName(convId, name)
+    }
+
+    suspend fun uploadAvatar(avatar: File): String {
+        return retrofitService.uploadAvatar(avatar)
+    }
+
     fun formatFileSize(size: Long): String {
         val kb = 1024.0
         val mb = kb * 1024

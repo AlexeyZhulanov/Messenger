@@ -118,7 +118,7 @@ class GroupMessageFragment(
         parentFragmentManager.beginTransaction()
             .replace(
                 R.id.fragmentContainer,
-                GroupInfoFragment(group, viewModel.currentMemberList),
+                GroupInfoFragment(group, viewModel.currentMemberList, currentUser),
                 "GROUP_INFO_FRAGMENT_TAG"
             )
             .addToBackStack(null)

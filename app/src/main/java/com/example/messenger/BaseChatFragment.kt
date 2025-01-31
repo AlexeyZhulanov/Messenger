@@ -99,8 +99,6 @@ abstract class BaseChatFragment(
     abstract fun composeAnswer(message: Message)
     abstract fun getMembers(): List<User>
     abstract fun setupAdapterDialog()
-    //abstract fun getConvId(): Int //todo
-    //abstract fun getIsGroup(): Int
 
     private val file: File by lazy {
         val f = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.pcm")
@@ -245,7 +243,6 @@ abstract class BaseChatFragment(
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         binding = FragmentMessageBinding.inflate(inflater, container, false)
         preferences = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
-        // todo viewModel.setConvInfo(getConvId(), getIsGroup()) возможно убрать
         val wallpaper = preferences.getString(PREF_WALLPAPER, "")
         if (wallpaper != "") {
             val resId = resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
@@ -254,7 +251,7 @@ abstract class BaseChatFragment(
                     ContextCompat.getDrawable(requireContext(), resId)
         }
         filePickerManager = FilePickerManager(this, null, null)
-        setupAdapterDialog() // todo проверить
+        setupAdapterDialog()
         imageAdapter = ImageAdapter(requireContext(), object: ImageActionListener {
             override fun onImageClicked(image: LocalMedia, position: Int) {
                 Log.d("testClick", "Image clicked: $image")
@@ -384,7 +381,6 @@ abstract class BaseChatFragment(
             reverseLayout = true
         }
         binding.recyclerview.layoutManager = layoutManager
-        // binding.recyclerview.adapter = adapter // todo
         binding.recyclerview.addItemDecoration(VerticalSpaceItemDecoration(15))
         viewModel.bindRecyclerView(binding.recyclerview)
         binding.selectedPhotosRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
@@ -724,8 +720,6 @@ abstract class BaseChatFragment(
     override fun onPause() {
         viewModel.stopRefresh()
         super.onPause()
-        // todo пока что абстрактную функцию сделаю, возможно придется потом переделать
-        // todo подумать над этим, скорее всего нужно создать отдельный dao либо тот допилить
         rememberLastMessage()
     }
 

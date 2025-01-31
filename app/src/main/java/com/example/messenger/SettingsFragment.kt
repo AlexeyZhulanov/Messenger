@@ -46,7 +46,7 @@ class SettingsFragment(
     private lateinit var binding: FragmentSettingsBinding
     private val viewModel: SettingsViewModel by viewModels()
     private var fileUpdate: File? = null
-    private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('А'..'Я') + ('а'..'я') + ('!') + ('$')
+    private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('А'..'Я') + ('а'..'я') + ('!') + ('$') + (' ')
 
     @SuppressLint("DiscouragedApi")
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {

@@ -44,4 +44,10 @@ class DialogInfoFragment(
     override fun getInterval(): Int = dialog.autoDeleteInterval
 
     override fun getMembers(): List<User> = emptyList()
+
+    override fun getCurrentUserId(): Int = 0 // only for group
+
+    override fun getGroupOwnerId(): Int = 0 // only for group
+
+    override fun deleteUserFromGroup(user: User) {} // only for group
 }

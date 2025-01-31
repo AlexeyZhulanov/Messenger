@@ -14,13 +14,18 @@ import com.example.messenger.model.MediaItem
 import com.example.messenger.model.User
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import java.io.File
 
 @AndroidEntryPoint
 class GroupInfoFragment(
     private val group: Group,
-    private val members: List<User>
+    private val members: List<User>,
+    private val currentUser: User
 ) : BaseInfoFragment() {
+
+    private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('А'..'Я') + ('а'..'я') + ('!') + ('$') + (' ')
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         viewModel.setConvInfo(group.id, 1)
@@ -85,6 +90,28 @@ class GroupInfoFragment(
 
     override fun getMembers(): List<User> = members
 
+    override fun getCurrentUserId(): Int = currentUser.id
+
+    override fun getGroupOwnerId(): Int = group.createdBy
+
+    override fun deleteUserFromGroup(user: User) {
+        showDeleteUserDialog(user.username) {
+            lifecycleScope.launch {
+                val success = viewModel.deleteUserFromGroup(user.id)
+                val txt = if(success) "Участник успешно удален" else "Не удалось удалить"
+                Toast.makeText(requireContext(), txt, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun showDeleteUserDialog(username: String, onDeleteClick: () -> Unit) {
+        AlertDialog.Builder(requireContext())
+            .setMessage("Вы уверены, что хотите удалить пользователя $username из группы?")
+            .setPositiveButton("Удалить") { _, _ -> onDeleteClick() }
+            .setNegativeButton("Назад") { dialog, _ -> dialog.dismiss() }
+            .show()
+    }
+
     private fun showAddMember() {
         // Inflate the custom layout for the dialog
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_item, null)
@@ -115,21 +142,87 @@ class GroupInfoFragment(
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.item_new_avatar -> {
+                    lifecycleScope.launch {
+                        val res = async { filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf()) }
+                        val photo = res.await()
+                        if(photo.isNotEmpty()) {
+                            val path = async { viewModel.uploadAvatar(File(photo[0].availablePath)) }
+                            val success = async { viewModel.updateGroupAvatar(path.await()) }
+                            if(success.await()) {
+                                Toast.makeText(requireContext(), "Аватарка установлена, полностью перезайдите чтобы увидеть", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
                     true
                 }
                 R.id.item_edit_avatar -> {
+                    val fileTemp = fileUpdate
+                    if (fileTemp != null) {
+                        lifecycleScope.launch {
+                            val res = async { filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf(viewModel.fileToLocalMedia(fileTemp))) }
+                            val photo = res.await()
+                            if(photo.isNotEmpty()) {
+                                val path = async { viewModel.uploadAvatar(File(photo[0].availablePath)) }
+                                val success = async { viewModel.updateGroupAvatar(path.await()) }
+                                if(success.await()) {
+                                    Toast.makeText(requireContext(), "Аватарка изменена, полностью перезайдите чтобы увидеть", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    } else {
+                        Toast.makeText(requireContext(), "Нельзя редактировать пустоту!", Toast.LENGTH_SHORT).show()
+                    }
                     true
                 }
                 R.id.item_delete_avatar -> {
+                    if(group.avatar != null) {
+                        lifecycleScope.launch {
+                            val success = async { viewModel.updateGroupAvatar("delete") }
+                            if(success.await()) {
+                                Toast.makeText(requireContext(), "Аватарка удалена, полностью перезайдите чтобы увидеть", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } else {
+                        Toast.makeText(requireContext(), "Аватарки и так нет!", Toast.LENGTH_SHORT).show()
+                    }
                     true
                 }
                 R.id.item_rename -> {
-                    // todo проверка на алфавит
+                    showAddDialog(group.name)
                     true
                 }
                 else -> false
             }
         }
         popupMenu.show()
+    }
+
+    private fun showAddDialog(name: String) {
+        val dialogView = layoutInflater.inflate(R.layout.group_add_item, null)
+        val editText = dialogView.findViewById<EditText>(R.id.group_input)
+        editText.setText(name)
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .setPositiveButton("Изменить") { dialogInterface, _ ->
+                lifecycleScope.launch {
+                    val input = editText.text.toString()
+                    input.forEach {
+                        if(it !in alf) {
+                            dialogInterface.dismiss()
+                            Toast.makeText(requireContext(), "Недопустимые символы в названии", Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+                    }
+                    val success = async { viewModel.updateGroupName(input) }
+                    if(success.await()) Toast.makeText(requireContext(), "Название изменено, полностью перезайдите чтобы увидеть", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Назад") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+            }
+            .create()
+
+        dialog.show()
     }
 }

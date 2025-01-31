@@ -269,14 +269,13 @@ class MessengerFragment : Fragment() {
 
     private fun showAddGroup() {
         // Inflate the custom layout for the dialog
-        val dialogView = layoutInflater.inflate(R.layout.dialog_add_item, null)
+        val dialogView = layoutInflater.inflate(R.layout.group_add_item, null)
 
         // Create the AlertDialog
         val dialog = AlertDialog.Builder(requireContext())
-            .setTitle("Введите название группы")
             .setView(dialogView)
             .setPositiveButton("Создать") { dialogInterface, _ ->
-                val input = dialogView.findViewById<EditText>(R.id.dialog_input).text.toString()
+                val input = dialogView.findViewById<EditText>(R.id.group_input).text.toString()
                 messengerViewModel.createGroup(input)
                 dialogInterface.dismiss()
             }

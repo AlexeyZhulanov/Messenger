@@ -7,6 +7,7 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.text.Html
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -32,12 +33,15 @@ import java.io.File
 
 interface DialogActionListener {
     fun onItemClicked(position: Int, localMedias: ArrayList<LocalMedia>)
+    fun onUserDeleteClicked(user: User)
 }
 
 class DialogInfoAdapter(
     private val context: Context,
     private val imageSize: Int,
     private val viewModel: BaseInfoViewModel,
+    private val currentUserId: Int,
+    private val groupOwnerId: Int,
     private val actionListener: DialogActionListener
 ): RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private val mediaItems = mutableListOf<MediaItem>()
@@ -310,8 +314,19 @@ class DialogInfoAdapter(
                             }
                         }
                     }
-                    binding.icDeleteImageView.setOnClickListener {
-                        // todo delete user from group and get callback true/false with Toast
+                    if(user.id == currentUserId) {
+                        val txt = binding.lastSessionTextView.text.toString() + " <b>(Вы)</b>"
+                        binding.lastSessionTextView.text = Html.fromHtml(txt, Html.FROM_HTML_MODE_LEGACY)
+                    }
+                    if(user.id == groupOwnerId) {
+                        val txt = binding.lastSessionTextView.text.toString() + " <b>(Владелец)</b>"
+                        binding.lastSessionTextView.text = Html.fromHtml(txt, Html.FROM_HTML_MODE_LEGACY)
+                    }
+                    if(currentUserId == groupOwnerId && user.id != currentUserId) {
+                        binding.icDeleteImageView.visibility = View.VISIBLE
+                        binding.icDeleteImageView.setOnClickListener {
+                            actionListener.onUserDeleteClicked(user)
+                        }
                     }
                 }
             }

@@ -49,12 +49,14 @@ abstract class BaseInfoFragment : Fragment() {
     protected lateinit var binding: FragmentDialogInfoBinding
     private lateinit var preferences: SharedPreferences
     private lateinit var adapter: DialogInfoAdapter
+    protected lateinit var filePickerManager: FilePickerManager
     protected var selectedType: Int = 0
     protected var currentPage: Int = 0
     protected var isCanDoPagination: Boolean = true
     private var isPaginationAllowed: Boolean = true
     protected var colorAccent: Int = 0
     protected var colorPrimary: Int = 0
+    protected var fileUpdate: File? = null
 
     protected val viewModel: BaseInfoViewModel by viewModels()
 
@@ -63,6 +65,9 @@ abstract class BaseInfoFragment : Fragment() {
     abstract fun getCanDelete(): Boolean
     abstract fun getInterval(): Int
     abstract fun getMembers(): List<User>
+    abstract fun getCurrentUserId(): Int
+    abstract fun getGroupOwnerId(): Int
+    abstract fun deleteUserFromGroup(user: User)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -88,7 +93,7 @@ abstract class BaseInfoFragment : Fragment() {
             if(resId != 0)
                 binding.dialogInfoLayout.background = ContextCompat.getDrawable(requireContext(), resId)
         }
-        val filePickerManager = FilePickerManager(null, null, this)
+        filePickerManager = FilePickerManager(null, null, this)
         val typedValue = TypedValue()
         context?.theme?.resolveAttribute(android.R.attr.colorAccent, typedValue, true)
         colorAccent = typedValue.data
@@ -113,6 +118,7 @@ abstract class BaseInfoFragment : Fragment() {
                 if (first != null) {
                     val file = File(first)
                     if (file.exists()) {
+                        fileUpdate = file
                         if (!second) viewModel.fManagerSaveAvatar(avatar, file.readBytes())
                         val uri = Uri.fromFile(file)
                         binding.photoImageView.imageTintList = null
@@ -202,11 +208,16 @@ abstract class BaseInfoFragment : Fragment() {
                 }
             }
         }
+        binding.photoImageView.setOnClickListener {
+            val fileTemp = fileUpdate
+            if(fileTemp != null)
+                openPictureSelector(filePickerManager, viewModel.fileToLocalMedia(fileTemp))
+        }
         val displayMetrics = context?.resources?.displayMetrics
         val imageSize: Int
         val spacing = 3
         imageSize = if(displayMetrics != null) (displayMetrics.widthPixels - spacing * 4) / 3 else 100
-        adapter = DialogInfoAdapter(requireContext(), imageSize, viewModel, object: DialogActionListener {
+        adapter = DialogInfoAdapter(requireContext(), imageSize, viewModel, getCurrentUserId(), getGroupOwnerId(), object: DialogActionListener {
             override fun onItemClicked(position: Int, localMedias: ArrayList<LocalMedia>) {
                 PictureSelector.create(requireActivity())
                     .openPreview()
@@ -229,6 +240,10 @@ abstract class BaseInfoFragment : Fragment() {
                         CustomPreviewFragment.newInstance(viewModel)
                     }
                     .startActivityPreview(position, false, localMedias)
+            }
+
+            override fun onUserDeleteClicked(user: User) {
+                deleteUserFromGroup(user)
             }
         })
         binding.recyclerview.adapter = adapter
@@ -435,6 +450,27 @@ abstract class BaseInfoFragment : Fragment() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun openPictureSelector(filePickerManager: FilePickerManager, localMedia: LocalMedia) {
+        PictureSelector.create(requireActivity())
+            .openPreview()
+            .setImageEngine(GlideEngine.createGlideEngine())
+            .setVideoPlayerEngine(ExoPlayerEngine())
+            .isAutoVideoPlay(false)
+            .isLoopAutoVideoPlay(false)
+            .isVideoPauseResumePlay(true)
+            .setSelectorUIStyle(filePickerManager.selectorStyle)
+            .isPreviewFullScreenMode(true)
+            .setInjectLayoutResourceListener(object: OnInjectLayoutResourceListener {
+                override fun getLayoutResourceId(context: Context?, resourceSource: Int): Int {
+                    @Suppress("DEPRECATED_IDENTITY_EQUALS")
+                    return if (resourceSource === InjectResourceSource.PREVIEW_LAYOUT_RESOURCE
+                    ) R.layout.ps_custom_fragment_preview
+                    else InjectResourceSource.DEFAULT_LAYOUT_RESOURCE
+                }
+            })
+            .startActivityPreview(0, false, arrayListOf(localMedia))
     }
 
     override fun onDestroy() {
