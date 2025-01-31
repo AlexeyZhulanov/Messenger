@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "4350ac8eed707c403ee72bbda914e0e6",
+    "identityHash": "607698244299eb765b828dd55affe3a5",
     "entities": [
       {
         "tableName": "settings",
@@ -470,13 +470,25 @@
       },
       {
         "tableName": "last_read_message",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`dialog_id` INTEGER NOT NULL, `last_read_message_id` INTEGER NOT NULL, PRIMARY KEY(`dialog_id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `dialog_id` INTEGER, `group_id` INTEGER, `last_read_message_id` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
           {
             "fieldPath": "dialogId",
             "columnName": "dialog_id",
             "affinity": "INTEGER",
-            "notNull": true
+            "notNull": false
+          },
+          {
+            "fieldPath": "groupId",
+            "columnName": "group_id",
+            "affinity": "INTEGER",
+            "notNull": false
           },
           {
             "fieldPath": "lastReadMessageId",
@@ -488,7 +500,7 @@
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "dialog_id"
+            "id"
           ]
         },
         "indices": [
@@ -500,6 +512,15 @@
             ],
             "orders": [],
             "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_last_read_message_dialog_id` ON `${TABLE_NAME}` (`dialog_id`)"
+          },
+          {
+            "name": "index_last_read_message_group_id",
+            "unique": true,
+            "columnNames": [
+              "group_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_last_read_message_group_id` ON `${TABLE_NAME}` (`group_id`)"
           }
         ],
         "foreignKeys": []
@@ -645,12 +666,68 @@
         },
         "indices": [],
         "foreignKeys": []
+      },
+      {
+        "tableName": "group_members",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `user_id` INTEGER NOT NULL, `group_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `username` TEXT NOT NULL, `avatar` TEXT, `last_session` INTEGER)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "user_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "groupId",
+            "columnName": "group_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "username",
+            "columnName": "username",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "avatar",
+            "columnName": "avatar",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "lastSession",
+            "columnName": "last_session",
+            "affinity": "INTEGER",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4350ac8eed707c403ee72bbda914e0e6')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '607698244299eb765b828dd55affe3a5')"
     ]
   }
 }

@@ -74,7 +74,7 @@ class MessengerAdapter(
             if(conversation.lastMessage?.isRead == true) icCheck2.visibility = View.VISIBLE
             else icCheck.visibility = View.VISIBLE
             uiScope.launch {
-                val avatar = conversation.otherUser?.avatar ?: ""
+                val avatar = conversation.otherUser?.avatar ?: conversation.avatar ?: ""
                 if (avatar != "") {
                     val filePathTemp = async {
                         if (messengerViewModel.fManagerIsExistAvatar(avatar)) {

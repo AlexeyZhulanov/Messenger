@@ -29,15 +29,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.request.RequestOptions
 import kotlin.coroutines.cancellation.CancellationException
 import com.example.messenger.databinding.FragmentMessageBinding
 import com.example.messenger.model.ConversationSettings
@@ -77,6 +72,7 @@ abstract class BaseChatFragment(
     private lateinit var imageAdapter: ImageAdapter
     private lateinit var preferences: SharedPreferences
     private lateinit var pickFileLauncher: ActivityResultLauncher<Array<String>>
+    private lateinit var filePickerManager: FilePickerManager
     private var audioRecord: AudioRecorder? = null
     private var editFlag = false
     private var answerFlag = false
@@ -100,7 +96,9 @@ abstract class BaseChatFragment(
     abstract fun getUserName(): String
     abstract fun rememberLastMessage()
     abstract fun replaceCurrentFragment()
-    abstract fun composeAnswer(messageId: Int)
+    abstract fun composeAnswer(message: Message)
+    abstract fun getMembers(): List<User>
+    abstract fun setupAdapterDialog()
 
     private val file: File by lazy {
         val f = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.pcm")
@@ -185,33 +183,7 @@ abstract class BaseChatFragment(
         lifecycleScope.launch {
             icVolumeOff.visibility = if(viewModel.isNotificationsEnabled()) View.GONE else View.VISIBLE
             val avatar = getAvatarString()
-            if (avatar != "") {
-                val filePathTemp = async {
-                    if (viewModel.fManagerIsExistAvatar(avatar)) {
-                        return@async Pair(viewModel.fManagerGetAvatarPath(avatar), true)
-                    } else {
-                        try {
-                            return@async Pair(viewModel.downloadAvatar(requireContext(), avatar), false)
-                        } catch (e: Exception) {
-                            return@async Pair(null, true)
-                        }
-                    }
-                }
-                val (first, second) = filePathTemp.await()
-                if (first != null) {
-                    val file = File(first)
-                    if (file.exists()) {
-                        if (!second) viewModel.fManagerSaveAvatar(avatar, file.readBytes())
-                        val uri = Uri.fromFile(file)
-                        profilePhoto.imageTintList = null
-                        Glide.with(requireContext())
-                            .load(uri)
-                            .apply(RequestOptions.circleCropTransform())
-                            .diskCacheStrategy(DiskCacheStrategy.ALL)
-                            .into(profilePhoto)
-                    }
-                }
-            }
+            viewModel.avatarSet(avatar, profilePhoto, requireContext())
         }
         val userName: TextView = view.findViewById(R.id.userNameTextView)
         userName.text = getUpperName()
@@ -278,122 +250,8 @@ abstract class BaseChatFragment(
                 binding.messageLayout.background =
                     ContextCompat.getDrawable(requireContext(), resId)
         }
-        val filePickerManager = FilePickerManager(this, null, null)
-        adapter = MessageAdapter(object : MessageActionListener {
-            override fun onUnsentMessageClick(message: Message, itemView: View) {
-                showPopupMenuUnsent(itemView, R.menu.popup_menu_unsent, message)
-            }
-
-            override fun onUnsentMessagesAdd() {
-                lifecycleScope.launch {
-                    delay(200)
-                    binding.recyclerview.smoothScrollToPosition(0)
-                }
-            }
-
-            override fun onMessageClick(message: Message, itemView: View, isSender: Boolean) {
-                showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, null, isSender)
-            }
-
-            override fun onMessageClickImage(message: Message, itemView: View, localMedias: ArrayList<LocalMedia>, isSender: Boolean) {
-                showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, localMedias, isSender)
-            }
-
-            override fun onMessageLongClick(itemView: View) {
-                var flag = true
-                lifecycleScope.launch {
-                    viewModel.stopRefresh()
-                    binding.floatingActionButtonDelete.visibility = View.VISIBLE
-                    binding.floatingActionButtonForward.visibility = View.VISIBLE
-                    requireActivity().onBackPressedDispatcher.addCallback(
-                        viewLifecycleOwner,
-                        object : OnBackPressedCallback(true) {
-                            @SuppressLint("NotifyDataSetChanged")
-                            override fun handleOnBackPressed() {
-                                if (!adapter.canLongClick && flag) {
-                                    adapter.clearPositions()
-                                    binding.floatingActionButtonDelete.visibility = View.GONE
-                                    binding.floatingActionButtonForward.visibility = View.GONE
-                                } else {
-                                    //Removing this callback
-                                    remove()
-                                    requireActivity().onBackPressedDispatcher.onBackPressed()
-                                }
-                                viewModel.startRefresh()
-                            }
-                        })
-                    binding.floatingActionButtonDelete.setOnClickListener {
-                        val messagesToDelete = adapter.getDeleteList()
-                        if (messagesToDelete.isNotEmpty()) {
-                            lifecycleScope.launch {
-                                binding.progressBar.visibility = View.VISIBLE
-                                binding.floatingActionButtonDelete.visibility = View.GONE
-                                binding.floatingActionButtonForward.visibility = View.GONE
-                                val response = async { viewModel.deleteMessages(messagesToDelete) }
-                                if(response.await()) {
-                                    adapter.clearPositions()
-                                    viewModel.startRefresh()
-                                    binding.progressBar.visibility = View.GONE
-                                } else {
-                                    adapter.clearPositions()
-                                    viewModel.startRefresh()
-                                    binding.progressBar.visibility = View.GONE
-                                    Toast.makeText(requireContext(), "Не удалось удалить сообщения", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        }
-                    }
-                    binding.floatingActionButtonForward.setOnClickListener {
-                        flag = false
-                        val fMessages = adapter.getForwardList()
-                        fMessages.sortedBy { it.first.timestamp }
-                        val (messages, booleans) = fMessages.unzip()
-                        if(fMessages.isNotEmpty()) {
-                            Log.d("testForwardItems", fMessages.toString())
-                            val strings = mutableListOf<String>()
-                            booleans.forEach {
-                                if(it) strings.add(currentUser.username)
-                                else strings.add(getUserName())
-                            }
-                            val bundle = Bundle().apply {
-                                putParcelableArrayList("forwardedMessages", ArrayList(messages))
-                                putStringArrayList("forwardedUsernames", ArrayList(strings))
-                            }
-                            parentFragmentManager.setFragmentResult("forwardMessagesRequestKey", bundle)
-                            requireActivity().onBackPressedDispatcher.onBackPressed()
-                        }
-                    }
-                }
-            }
-            override fun onImagesClick(images: ArrayList<LocalMedia>, position: Int) {
-                Log.d("testClickImages", "images: $images")
-                PictureSelector.create(requireActivity())
-                    .openPreview()
-                    .setImageEngine(GlideEngine.createGlideEngine())
-                    .setVideoPlayerEngine(ExoPlayerEngine())
-                    .isAutoVideoPlay(false)
-                    .isLoopAutoVideoPlay(false)
-                    .isVideoPauseResumePlay(true)
-                    .setSelectorUIStyle(filePickerManager.selectorStyle)
-                    .isPreviewFullScreenMode(true)
-                    .setInjectLayoutResourceListener(object: OnInjectLayoutResourceListener {
-                        override fun getLayoutResourceId(context: Context?, resourceSource: Int): Int {
-                            @Suppress("DEPRECATED_IDENTITY_EQUALS")
-                            return if (resourceSource === InjectResourceSource.PREVIEW_LAYOUT_RESOURCE
-                            ) R.layout.ps_custom_fragment_preview
-                            else InjectResourceSource.DEFAULT_LAYOUT_RESOURCE
-                        }
-                    })
-                    .startActivityPreview(position, false, images)
-            }
-        }, currentUser.id, requireContext(), viewModel)
-        lifecycleScope.launch {
-            try {
-                adapter.dialogSettings = viewModel.getConvSettings()
-            } catch (e: Exception) {
-                adapter.dialogSettings = ConversationSettings()
-            }
-        }
+        filePickerManager = FilePickerManager(this, null, null)
+        setupAdapterDialog()
         imageAdapter = ImageAdapter(requireContext(), object: ImageActionListener {
             override fun onImageClicked(image: LocalMedia, position: Int) {
                 Log.d("testClick", "Image clicked: $image")
@@ -523,7 +381,6 @@ abstract class BaseChatFragment(
             reverseLayout = true
         }
         binding.recyclerview.layoutManager = layoutManager
-        binding.recyclerview.adapter = adapter
         binding.recyclerview.addItemDecoration(VerticalSpaceItemDecoration(15))
         viewModel.bindRecyclerView(binding.recyclerview)
         binding.selectedPhotosRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
@@ -638,6 +495,136 @@ abstract class BaseChatFragment(
         return binding.root
     }
 
+    protected fun setupAdapter(members: List<User>) {
+        adapter = MessageAdapter(object : MessageActionListener {
+            override fun onUnsentMessageClick(message: Message, itemView: View) {
+                showPopupMenuUnsent(itemView, R.menu.popup_menu_unsent, message)
+            }
+
+            override fun onUnsentMessagesAdd() {
+                lifecycleScope.launch {
+                    delay(200)
+                    binding.recyclerview.smoothScrollToPosition(0)
+                }
+            }
+
+            override fun onMessageClick(message: Message, itemView: View, isSender: Boolean) {
+                showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, null, isSender)
+            }
+
+            override fun onMessageClickImage(message: Message, itemView: View, localMedias: ArrayList<LocalMedia>, isSender: Boolean) {
+                showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, localMedias, isSender)
+            }
+
+            override fun onMessageLongClick(itemView: View) {
+                var flag = true
+                lifecycleScope.launch {
+                    viewModel.stopRefresh()
+                    binding.floatingActionButtonDelete.visibility = View.VISIBLE
+                    binding.floatingActionButtonForward.visibility = View.VISIBLE
+                    requireActivity().onBackPressedDispatcher.addCallback(
+                        viewLifecycleOwner,
+                        object : OnBackPressedCallback(true) {
+                            @SuppressLint("NotifyDataSetChanged")
+                            override fun handleOnBackPressed() {
+                                if (!adapter.canLongClick && flag) {
+                                    adapter.clearPositions()
+                                    binding.floatingActionButtonDelete.visibility = View.GONE
+                                    binding.floatingActionButtonForward.visibility = View.GONE
+                                } else {
+                                    //Removing this callback
+                                    remove()
+                                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                                }
+                                viewModel.startRefresh()
+                            }
+                        })
+                    binding.floatingActionButtonDelete.setOnClickListener {
+                        val messagesToDelete = adapter.getDeleteList()
+                        if (messagesToDelete.isNotEmpty()) {
+                            lifecycleScope.launch {
+                                binding.progressBar.visibility = View.VISIBLE
+                                binding.floatingActionButtonDelete.visibility = View.GONE
+                                binding.floatingActionButtonForward.visibility = View.GONE
+                                val response = async { viewModel.deleteMessages(messagesToDelete) }
+                                if(response.await()) {
+                                    adapter.clearPositions()
+                                    viewModel.startRefresh()
+                                    binding.progressBar.visibility = View.GONE
+                                } else {
+                                    adapter.clearPositions()
+                                    viewModel.startRefresh()
+                                    binding.progressBar.visibility = View.GONE
+                                    Toast.makeText(requireContext(), "Не удалось удалить сообщения", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                    binding.floatingActionButtonForward.setOnClickListener {
+                        flag = false
+                        val fMessages = adapter.getForwardList()
+                        fMessages.sortedBy { it.first.timestamp }
+                        val (messages, booleans) = fMessages.unzip()
+                        if(fMessages.isNotEmpty()) {
+                            Log.d("testForwardItems", fMessages.toString())
+                            val strings = mutableListOf<String>()
+                            val uName = getUserName()
+                            if(members.isEmpty()) {
+                                booleans.forEach {
+                                    if(it) strings.add(currentUser.username)
+                                    else strings.add(uName)
+                                }
+                            } else {
+                                messages.forEachIndexed { index, message ->
+                                    if(booleans[index]) strings.add(currentUser.username)
+                                    else {
+                                        val username = members.find { it.id == message.idSender }?.username
+                                        strings.add(username ?: "")
+                                    }
+                                }
+                            }
+                            val bundle = Bundle().apply {
+                                putParcelableArrayList("forwardedMessages", ArrayList(messages))
+                                putStringArrayList("forwardedUsernames", ArrayList(strings))
+                            }
+                            parentFragmentManager.setFragmentResult("forwardMessagesRequestKey", bundle)
+                            requireActivity().onBackPressedDispatcher.onBackPressed()
+                        }
+                    }
+                }
+            }
+            override fun onImagesClick(images: ArrayList<LocalMedia>, position: Int) {
+                Log.d("testClickImages", "images: $images")
+                PictureSelector.create(requireActivity())
+                    .openPreview()
+                    .setImageEngine(GlideEngine.createGlideEngine())
+                    .setVideoPlayerEngine(ExoPlayerEngine())
+                    .isAutoVideoPlay(false)
+                    .isLoopAutoVideoPlay(false)
+                    .isVideoPauseResumePlay(true)
+                    .setSelectorUIStyle(filePickerManager.selectorStyle)
+                    .isPreviewFullScreenMode(true)
+                    .setInjectLayoutResourceListener(object: OnInjectLayoutResourceListener {
+                        override fun getLayoutResourceId(context: Context?, resourceSource: Int): Int {
+                            @Suppress("DEPRECATED_IDENTITY_EQUALS")
+                            return if (resourceSource === InjectResourceSource.PREVIEW_LAYOUT_RESOURCE
+                            ) R.layout.ps_custom_fragment_preview
+                            else InjectResourceSource.DEFAULT_LAYOUT_RESOURCE
+                        }
+                    })
+                    .startActivityPreview(position, false, images)
+            }
+        }, currentUser.id, requireContext(), viewModel, members)
+        lifecycleScope.launch {
+            try {
+                adapter.dialogSettings = viewModel.getConvSettings()
+            } catch (e: Exception) {
+                adapter.dialogSettings = ConversationSettings()
+            }
+        }
+        binding.recyclerview.adapter = adapter
+    }
+
     protected fun findPositionById(messageId: Int): Int {
         val currentPagingData = adapter.currentList
         val positionInPagingData = currentPagingData.indexOfFirst { it.first.id == messageId }
@@ -651,7 +638,7 @@ abstract class BaseChatFragment(
     override val defaultViewModelCreationExtras: CreationExtras
         get() = super.defaultViewModelCreationExtras
 
-    protected fun getFileFromContentUri(context: Context, contentUri: Uri): File? {
+    private fun getFileFromContentUri(context: Context, contentUri: Uri): File? {
         val projection = arrayOf(MediaStore.Video.Media.DATA)
         val cursor = context.contentResolver.query(contentUri, projection, null, null, null)
         cursor?.use {
@@ -733,8 +720,6 @@ abstract class BaseChatFragment(
     override fun onPause() {
         viewModel.stopRefresh()
         super.onPause()
-        // todo пока что абстрактную функцию сделаю, возможно придется потом переделать
-        // todo подумать над этим, скорее всего нужно создать отдельный dao либо тот допилить
         rememberLastMessage()
     }
 
@@ -1105,7 +1090,7 @@ abstract class BaseChatFragment(
                         answerMessage = Pair(message.id, currentUser.username)
                     }
                     else {
-                        composeAnswer(message.id)
+                        composeAnswer(message)
                     }
                     if(message.images != null) {
                         binding.answerImageView.visibility = View.VISIBLE

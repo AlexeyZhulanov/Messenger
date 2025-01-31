@@ -24,6 +24,8 @@ interface MessengerRepository {
 
     suspend fun getPreviousMessage(idDialog: Int, lastMessageId: Int): Message?
 
+    suspend fun getPreviousMessageGroup(groupId: Int, lastMessageId: Int): Message?
+
     suspend fun saveLastReadMessage(lastMessageId: Int, idDialog: Int?, idGroup: Int?)
 
     suspend fun getLastReadMessage(idDialog: Int): Int?
@@ -48,7 +50,7 @@ interface MessengerRepository {
 
     suspend fun deleteUnsentMessage(messageId: Int)
 
-    suspend fun getGroupMembers(groupId: Int) : List<Pair<String, String?>>
+    suspend fun getGroupMembers(groupId: Int) : List<User>
 
-    suspend fun replaceGroupMembers(groupId: Int, groupMembers: List<GroupMember>)
+    suspend fun replaceGroupMembers(groupId: Int, groupMembers: List<User>)
 }

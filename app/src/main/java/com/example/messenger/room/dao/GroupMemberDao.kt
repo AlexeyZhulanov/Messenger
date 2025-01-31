@@ -1,11 +1,13 @@
 package com.example.messenger.room.dao
 
+import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.example.messenger.room.entities.GroupMemberDbEntity
 
+@Dao
 interface GroupMemberDao {
     @Transaction
     @Query("SELECT * FROM group_members WHERE group_id = :groupId ORDER BY username ASC")

@@ -20,6 +20,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -28,6 +29,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentDialogInfoBinding
 import com.example.messenger.model.MediaItem
+import com.example.messenger.model.User
 import com.example.messenger.picker.CustomPreviewFragment
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
@@ -36,27 +38,36 @@ import com.luck.picture.lib.basic.PictureSelector
 import com.luck.picture.lib.config.InjectResourceSource
 import com.luck.picture.lib.entity.LocalMedia
 import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
+@AndroidEntryPoint
 abstract class BaseInfoFragment : Fragment() {
     protected lateinit var binding: FragmentDialogInfoBinding
     private lateinit var preferences: SharedPreferences
     private lateinit var adapter: DialogInfoAdapter
-    private var selectedType: Int = 0
-    private var currentPage: Int = 0
-    private var isCanDoPagination: Boolean = true
+    protected lateinit var filePickerManager: FilePickerManager
+    protected var selectedType: Int = 0
+    protected var currentPage: Int = 0
+    protected var isCanDoPagination: Boolean = true
     private var isPaginationAllowed: Boolean = true
+    protected var colorAccent: Int = 0
+    protected var colorPrimary: Int = 0
+    protected var fileUpdate: File? = null
 
-    abstract val viewModel: BaseInfoViewModel
+    protected val viewModel: BaseInfoViewModel by viewModels()
 
     abstract fun getAvatarString(): String
     abstract fun getUpperName(): String
-    abstract fun getSessionName(): String
     abstract fun getCanDelete(): Boolean
     abstract fun getInterval(): Int
+    abstract fun getMembers(): List<User>
+    abstract fun getCurrentUserId(): Int
+    abstract fun getGroupOwnerId(): Int
+    abstract fun deleteUserFromGroup(user: User)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -82,14 +93,14 @@ abstract class BaseInfoFragment : Fragment() {
             if(resId != 0)
                 binding.dialogInfoLayout.background = ContextCompat.getDrawable(requireContext(), resId)
         }
-        val filePickerManager = FilePickerManager(null, null, this)
+        filePickerManager = FilePickerManager(null, null, this)
         val typedValue = TypedValue()
         context?.theme?.resolveAttribute(android.R.attr.colorAccent, typedValue, true)
-        val colorAccent = typedValue.data
+        colorAccent = typedValue.data
         context?.theme?.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
-        val colorPrimary = typedValue.data
+        colorPrimary = typedValue.data
         lifecycleScope.launch {
-            val avatar = getAvatarString() // todo dialog.otherUser.avatar ?: ""
+            val avatar = getAvatarString()
             if (avatar != "") {
                 binding.progressBar.visibility = View.VISIBLE
                 val filePathTemp = async {
@@ -107,6 +118,7 @@ abstract class BaseInfoFragment : Fragment() {
                 if (first != null) {
                     val file = File(first)
                     if (file.exists()) {
+                        fileUpdate = file
                         if (!second) viewModel.fManagerSaveAvatar(avatar, file.readBytes())
                         val uri = Uri.fromFile(file)
                         binding.photoImageView.imageTintList = null
@@ -127,18 +139,11 @@ abstract class BaseInfoFragment : Fragment() {
                 }
             }
         }
-        binding.userNameTextView.text = getUpperName() // todo dialog.otherUser.username
-        binding.lastSessionTextView.text = getSessionName() // todo lastSessionString
-        //binding.nickTextView.text = dialog.otherUser.name // todo только в Dialog
+        binding.userNameTextView.text = getUpperName()
         lifecycleScope.launch {
             binding.switchNotifications.isChecked = viewModel.isNotificationsEnabled()
         }
-        binding.switchDelete.isChecked = getCanDelete() // todo dialog.canDelete
-//        binding.copyImageView.setOnClickListener {
-//            val clipboard = context?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-//            val clip = ClipData.newPlainText("label", dialog.otherUser.name)
-//            clipboard.setPrimaryClip(clip)
-//        } // todo только Dialog
+        binding.switchDelete.isChecked = getCanDelete()
         binding.switchNotifications.setOnClickListener {
             binding.switchNotifications.isEnabled = false
             lifecycleScope.launch {
@@ -165,6 +170,7 @@ abstract class BaseInfoFragment : Fragment() {
                         binding.buttonMedia.setTextColor(colorPrimary)
                         binding.buttonFiles.setTextColor(colorAccent)
                         binding.buttonAudio.setTextColor(colorAccent)
+                        binding.buttonMembers.setTextColor(colorAccent)
                         selectedType = 0
                         currentPage = 1
                         isCanDoPagination = true
@@ -173,12 +179,13 @@ abstract class BaseInfoFragment : Fragment() {
             }
         }
         binding.buttonFiles.setOnClickListener {
-            if(selectedType != MediaItem.TYPE_FILE) {
-                loadMoreMediaItems(1, 0) { success ->
-                    if(success) {
+            loadMoreMediaItems(1, 0) { success ->
+                if(success) {
+                    if(selectedType != MediaItem.TYPE_FILE) {
                         binding.buttonMedia.setTextColor(colorAccent)
                         binding.buttonFiles.setTextColor(colorPrimary)
                         binding.buttonAudio.setTextColor(colorAccent)
+                        binding.buttonMembers.setTextColor(colorAccent)
                         selectedType = 1
                         currentPage = 1
                         isCanDoPagination = true
@@ -193,6 +200,7 @@ abstract class BaseInfoFragment : Fragment() {
                         binding.buttonMedia.setTextColor(colorAccent)
                         binding.buttonFiles.setTextColor(colorAccent)
                         binding.buttonAudio.setTextColor(colorPrimary)
+                        binding.buttonMembers.setTextColor(colorAccent)
                         selectedType = 2
                         currentPage = 1
                         isCanDoPagination = true
@@ -200,11 +208,16 @@ abstract class BaseInfoFragment : Fragment() {
                 }
             }
         }
+        binding.photoImageView.setOnClickListener {
+            val fileTemp = fileUpdate
+            if(fileTemp != null)
+                openPictureSelector(filePickerManager, viewModel.fileToLocalMedia(fileTemp))
+        }
         val displayMetrics = context?.resources?.displayMetrics
         val imageSize: Int
         val spacing = 3
         imageSize = if(displayMetrics != null) (displayMetrics.widthPixels - spacing * 4) / 3 else 100
-        adapter = DialogInfoAdapter(requireContext(), imageSize, viewModel, object: DialogActionListener {
+        adapter = DialogInfoAdapter(requireContext(), imageSize, viewModel, getCurrentUserId(), getGroupOwnerId(), object: DialogActionListener {
             override fun onItemClicked(position: Int, localMedias: ArrayList<LocalMedia>) {
                 PictureSelector.create(requireActivity())
                     .openPreview()
@@ -228,6 +241,10 @@ abstract class BaseInfoFragment : Fragment() {
                     }
                     .startActivityPreview(position, false, localMedias)
             }
+
+            override fun onUserDeleteClicked(user: User) {
+                deleteUserFromGroup(user)
+            }
         })
         binding.recyclerview.adapter = adapter
         binding.recyclerview.addItemDecoration(GridSpacingItemDecoration(3, spacing, true))
@@ -237,7 +254,7 @@ abstract class BaseInfoFragment : Fragment() {
                 override fun getSpanSize(position: Int): Int {
                     return when (adapter.getItemViewType(position)) {
                         MediaItem.TYPE_MEDIA -> 1 // Медиа по одному элементу
-                        MediaItem.TYPE_FILE, MediaItem.TYPE_AUDIO -> 3 // Файлы и аудио занимают всю строку
+                        MediaItem.TYPE_FILE, MediaItem.TYPE_AUDIO, MediaItem.TYPE_USER -> 3 // Файлы и аудио занимают всю строку
                         else -> 1
                     }
                 }
@@ -265,7 +282,7 @@ abstract class BaseInfoFragment : Fragment() {
         return binding.root
     }
 
-    private fun loadMoreMediaItems(type: Int, page: Int, callback: (Boolean) -> Unit) {
+    protected fun loadMoreMediaItems(type: Int, page: Int, callback: (Boolean) -> Unit) {
         val context = requireContext()
         when(type) {
             MediaItem.TYPE_MEDIA -> {
@@ -315,6 +332,16 @@ abstract class BaseInfoFragment : Fragment() {
                         if(currentPage == 0) callback(false) else isCanDoPagination = false
                     }
                     binding.loadButton.visibility = View.GONE
+                }
+            }
+            MediaItem.TYPE_USER -> {
+                val members = getMembers()
+                if(members.isNotEmpty()) {
+                    adapter.addMediaItems(MediaItem.TYPE_USER, members.map { MediaItem(type, "", it)})
+                    callback(true)
+                } else {
+                    callback(false)
+                    isCanDoPagination = false
                 }
             }
         }
@@ -390,7 +417,7 @@ abstract class BaseInfoFragment : Fragment() {
         numberPicker.minValue = 0
         numberPicker.maxValue = values.size - 1
         numberPicker.displayedValues = values
-        val numb = when(getInterval()) { // todo dialog.autoDeleteInterval
+        val numb = when(getInterval()) {
             0 -> 0
             30 -> 1
             60 -> 2
@@ -423,6 +450,27 @@ abstract class BaseInfoFragment : Fragment() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun openPictureSelector(filePickerManager: FilePickerManager, localMedia: LocalMedia) {
+        PictureSelector.create(requireActivity())
+            .openPreview()
+            .setImageEngine(GlideEngine.createGlideEngine())
+            .setVideoPlayerEngine(ExoPlayerEngine())
+            .isAutoVideoPlay(false)
+            .isLoopAutoVideoPlay(false)
+            .isVideoPauseResumePlay(true)
+            .setSelectorUIStyle(filePickerManager.selectorStyle)
+            .isPreviewFullScreenMode(true)
+            .setInjectLayoutResourceListener(object: OnInjectLayoutResourceListener {
+                override fun getLayoutResourceId(context: Context?, resourceSource: Int): Int {
+                    @Suppress("DEPRECATED_IDENTITY_EQUALS")
+                    return if (resourceSource === InjectResourceSource.PREVIEW_LAYOUT_RESOURCE
+                    ) R.layout.ps_custom_fragment_preview
+                    else InjectResourceSource.DEFAULT_LAYOUT_RESOURCE
+                }
+            })
+            .startActivityPreview(0, false, arrayListOf(localMedia))
     }
 
     override fun onDestroy() {

@@ -11,23 +11,37 @@ import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.WebSocketService
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
-abstract class BaseInfoViewModel(
-    protected val messengerService: MessengerService,
-    protected val retrofitService: RetrofitService,
-    protected val fileManager: FileManager,
-    protected val webSocketService: WebSocketService,
-    @IoDispatcher protected val ioDispatcher: CoroutineDispatcher
+@HiltViewModel
+class BaseInfoViewModel @Inject constructor(
+    private val messengerService: MessengerService,
+    private val retrofitService: RetrofitService,
+    private val fileManager: FileManager,
+    private val webSocketService: WebSocketService,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
-    protected var convId: Int = -1
+    private var convId: Int = -1
     private var isGroup: Int = 0
     private val tempFiles = mutableSetOf<String>()
+
+    fun setConvInfo(convId: Int, isGroup: Int) {
+        this.convId = convId
+        this.isGroup = isGroup
+    }
+
+    suspend fun addMember(name: String) : Boolean {
+        return if(name != "") retrofitService.addUserToGroup(convId, name) else false
+    }
 
     fun fManagerIsExistAvatar(fileName: String): Boolean {
         return fileManager.isExistAvatar(fileName)
@@ -81,7 +95,6 @@ abstract class BaseInfoViewModel(
     suspend fun deleteAllMessages() {
         if(isGroup == 0) retrofitService.deleteDialogMessages(convId)
         else retrofitService.deleteGroupMessagesAll(convId)
-        //_deleteState.value = 1 // todo подумать над этим
     }
 
     suspend fun deleteConv() {
@@ -122,16 +135,24 @@ abstract class BaseInfoViewModel(
         }
     }
 
-    fun fManagerIsExistJava(filename: String): Boolean {
-        return fileManager.isExistMessage(filename)
-    }
-
-    fun fManagerGetFilePathJava(fileName: String): String {
-        return fileManager.getMessageFilePath(fileName)
-    }
-
     fun fManagerSaveFileJava(fileName: String, fileData: ByteArray) {
         fileManager.saveMessageFile(fileName, fileData)
+    }
+
+    suspend fun deleteUserFromGroup(userId: Int): Boolean {
+        return retrofitService.deleteUserFromGroup(convId, userId)
+    }
+
+    suspend fun updateGroupAvatar(avatar: String): Boolean {
+        return retrofitService.updateGroupAvatar(convId, avatar)
+    }
+
+    suspend fun updateGroupName(name: String): Boolean {
+        return retrofitService.editGroupName(convId, name)
+    }
+
+    suspend fun uploadAvatar(avatar: File): String {
+        return retrofitService.uploadAvatar(avatar)
     }
 
     fun formatFileSize(size: Long): String {
@@ -224,6 +245,45 @@ abstract class BaseInfoViewModel(
             return 0
         } finally {
             retriever.release()
+        }
+    }
+
+    fun formatUserSessionDate(timestamp: Long?): String {
+        if (timestamp == null) return "Никогда не был в сети"
+
+        val greenwichSessionDate = Calendar.getInstance().apply {
+            timeInMillis = timestamp
+        }
+        val now = Calendar.getInstance()
+
+        val diffInMillis = now.timeInMillis - greenwichSessionDate.timeInMillis
+        val diffInMinutes = (diffInMillis / 60000).toInt()
+
+        val dateFormatTime = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val dateFormatDayMonth = SimpleDateFormat("d MMM", Locale.getDefault())
+        val dateFormatYear = SimpleDateFormat("d.MM.yyyy", Locale.getDefault())
+
+        return when {
+            diffInMinutes < 2 -> "в сети"
+            diffInMinutes < 5 -> "был в сети только что"
+            diffInMinutes in 5..20 -> "был в сети $diffInMinutes минут назад"
+            diffInMinutes % 10 == 1 && diffInMinutes in 21..59 -> "был в сети $diffInMinutes минуту назад"
+            diffInMinutes % 10 in 2..4 && diffInMinutes in 21..59 -> "был в сети $diffInMinutes минуты назад"
+            diffInMinutes < 60 -> "был в сети $diffInMinutes минут назад"
+            diffInMinutes < 120 -> "был в сети час назад"
+            diffInMinutes < 180 -> "был в сети два часа назад"
+            diffInMinutes < 240 -> "был в сети три часа назад"
+            diffInMinutes < 1440 -> "был в сети в ${dateFormatTime.format(greenwichSessionDate.time)}"
+            else -> {
+                // Проверка года
+                val currentYear = now.get(Calendar.YEAR)
+                val sessionYear = greenwichSessionDate.get(Calendar.YEAR)
+                if (currentYear == sessionYear) {
+                    "был в сети ${dateFormatDayMonth.format(greenwichSessionDate.time)}"
+                } else {
+                    "был в сети ${dateFormatYear.format(greenwichSessionDate.time)}"
+                }
+            }
         }
     }
 }

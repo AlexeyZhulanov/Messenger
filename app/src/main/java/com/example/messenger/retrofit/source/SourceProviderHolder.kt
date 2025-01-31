@@ -9,15 +9,18 @@ import com.example.messenger.retrofit.source.base.SourcesProvider
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Provider
 import javax.inject.Singleton
@@ -29,7 +32,13 @@ class SourceProviderHolder @Inject constructor(
     private val retrofitServiceProvider: Provider<RetrofitService>
 ) {
 
-    private val BASE_URL = "https://amessenger.ru" // ;)
+    // Global token sync
+    private val tokenMutex = Mutex()
+    private val lastTokenUpdate = AtomicLong(0)
+    companion object {
+        private const val TOKEN_UPDATE_INTERVAL_MS = 10_000 // 10 sec
+        private const val BASE_URL = "https://amessenger.ru"
+    }
 
     @Inject
     lateinit var retrofitService: RetrofitService
@@ -75,51 +84,64 @@ class SourceProviderHolder @Inject constructor(
             val originalRequest = chain.request()
             val newBuilder = originalRequest.newBuilder()
             val token = settings.getCurrentToken()
+
             if (token != null) {
                 newBuilder.addHeader("Authorization", token)
             }
-            val semaphore = Semaphore(1)
-            val response: Response
 
-            runBlocking {
-                val initialResponse = chain.proceed(newBuilder.build())
-                if (initialResponse.code == 401) { // Unauthorized
-                    semaphore.acquire()
-                    try {
+            val initialResponse = chain.proceed(newBuilder.build())
+
+            if (initialResponse.code == 401) { // If the token has expired
+                return@Interceptor runBlocking {
+                    tokenMutex.withLock {
+                        val now = System.currentTimeMillis()
+
+                        // If the update is already running, we are waiting for it to be completed.
+                        if (now - lastTokenUpdate.get() < TOKEN_UPDATE_INTERVAL_MS) {
+                            return@runBlocking retryWithNewToken(chain, originalRequest)
+                        }
+
+                        lastTokenUpdate.set(now) // Updating the time of the last token update
+
                         val retrofitService = retrofitServiceProvider.get()
-                        // Выполняем асинхронный запрос для обновления токена
-                        val job = async(Dispatchers.IO) {
+
+                        // Request a new token
+                        val newToken = withContext(Dispatchers.Main) { // Main because the func are wrapped in IO
                             val settingsResponse = messengerService.getSettings()
                             val success = retrofitService.login(settingsResponse.name!!, settingsResponse.password!!)
                             if (success) {
-                                settings.getCurrentToken() // Получаем новый токен
+                                    settings.getCurrentToken() // Getting a new token
                             } else {
                                 null
                             }
                         }
 
-                        val newToken = job.await()
                         if (newToken != null) {
-                            // Создаем новый запрос с обновленным токеном
-                            val newRequest = originalRequest.newBuilder()
-                                .header("Authorization", newToken)
-                                .build()
-                            // Повторно отправляем запрос
-                            response = chain.proceed(newRequest)
-                        } else {
-                            response = initialResponse
+                            return@runBlocking retryWithNewToken(chain, originalRequest)
                         }
-                    } finally {
-                        semaphore.release()
                     }
-                } else {
-                    response = initialResponse
+
+                    initialResponse // We return the original response if the token could not be updated.
                 }
             }
 
-            response
+            return@Interceptor initialResponse
         }
     }
+
+    /**
+     * Repeats the request with a new token only for 401 error.
+     */
+    private fun retryWithNewToken(chain: Interceptor.Chain, originalRequest: Request): Response {
+        val newToken = appSettings.getCurrentToken() ?: return chain.proceed(originalRequest)
+
+        val newRequest = originalRequest.newBuilder()
+            .header("Authorization", newToken)
+            .build()
+
+        return chain.proceed(newRequest)
+    }
+
     /**
      * Log requests and responses to LogCat.
      */

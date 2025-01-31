@@ -48,7 +48,7 @@ class MessageViewModel @Inject constructor(
                 flow {
                     val pageSize = 30
                     val messages = MessagePagingSource(retrofitService, messengerService, convId,
-                        searchQuery, isFirst, fileManager).loadPage(page, pageSize)
+                        searchQuery, isFirst, fileManager, true).loadPage(page, pageSize)
                     emit(messages)
                 }
             }
@@ -96,6 +96,7 @@ class MessageViewModel @Inject constructor(
         viewModelScope.launch {
             webSocketService.deleteAllMessageFlow.collect {
                 Log.d("testSocketsMessage", "All messages deleted")
+                _deleteState.value = 1
                 refresh()
             }
         }
@@ -134,8 +135,7 @@ class MessageViewModel @Inject constructor(
         }
     }
 
-    override fun setConvInfo(convId: Int, otherUserId: Int, isGroup: Int) {
-        super.setConvInfo(convId, otherUserId, isGroup)
+    fun setInfo(otherUserId: Int) {
         this.otherUserId = otherUserId
         joinDialog()
     }

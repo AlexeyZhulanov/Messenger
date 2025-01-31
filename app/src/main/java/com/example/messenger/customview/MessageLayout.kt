@@ -116,7 +116,7 @@ class MessageLayout @JvmOverloads constructor(
             if(isSender) {
                 when {
                     icCheck.visibility == View.VISIBLE -> icCheck.layout(timeLeft - 20 + timeTextView.measuredWidth, timeTop, timeLeft + timeTextView.measuredWidth + icCheck.measuredWidth, timeTop + timeTextView.measuredHeight)
-                    icCheck2.visibility == View.VISIBLE -> icCheck2.layout(timeLeft - 20 + timeTextView.measuredWidth, timeTop, timeLeft + timeTextView.measuredWidth + icCheck2.measuredWidth, timeTop + timeTextView.measuredHeight)
+                    icCheck2.visibility == View.VISIBLE -> icCheck2.layout(timeLeft - 10 + timeTextView.measuredWidth, timeTop, timeLeft + timeTextView.measuredWidth + icCheck2.measuredWidth, timeTop + timeTextView.measuredHeight)
                     icError.visibility == View.VISIBLE -> icError.layout(timeLeft - 20 + timeTextView.measuredWidth, timeTop, timeLeft + timeTextView.measuredWidth + icError.measuredWidth, timeTop + timeTextView.measuredHeight)
                 }
             }
@@ -133,7 +133,7 @@ class MessageLayout @JvmOverloads constructor(
             if(isSender) {
                 when {
                     icCheck.visibility == View.VISIBLE -> icCheck.layout(timeLeft - 20 + timeTextView.measuredWidth, timeTop, timeLeft + timeTextView.measuredWidth + icCheck.measuredWidth, timeTop + timeTextView.measuredHeight)
-                    icCheck2.visibility == View.VISIBLE -> icCheck2.layout(timeLeft - 20 + timeTextView.measuredWidth, timeTop, timeLeft + timeTextView.measuredWidth + icCheck2.measuredWidth, timeTop + timeTextView.measuredHeight)
+                    icCheck2.visibility == View.VISIBLE -> icCheck2.layout(timeLeft - 10 + timeTextView.measuredWidth, timeTop, timeLeft + timeTextView.measuredWidth + icCheck2.measuredWidth, timeTop + timeTextView.measuredHeight)
                     icError.visibility == View.VISIBLE -> icError.layout(timeLeft - 20 + timeTextView.measuredWidth, timeTop, timeLeft + timeTextView.measuredWidth + icError.measuredWidth, timeTop + timeTextView.measuredHeight)
                 }
             }

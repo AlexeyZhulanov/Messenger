@@ -13,6 +13,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.FileProvider
@@ -35,6 +36,7 @@ import com.example.messenger.databinding.ItemVoiceReceiverBinding
 import com.example.messenger.databinding.ItemVoiceSenderBinding
 import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.Message
+import com.example.messenger.model.User
 import com.example.messenger.picker.DateUtils
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.config.SelectMimeType
@@ -73,7 +75,8 @@ class MessageAdapter(
     private val actionListener: MessageActionListener,
     private val currentUserId: Int,
     private val context: Context,
-    private val messageViewModel: BaseChatViewModel
+    private val messageViewModel: BaseChatViewModel,
+    private val members: List<User>
 ) : ListAdapter<Pair<Message, String>, RecyclerView.ViewHolder>(MessageDiffCallback()) {
 
     var canLongClick: Boolean = true
@@ -82,6 +85,7 @@ class MessageAdapter(
     var dialogSettings: ConversationSettings = ConversationSettings()
     private var highlightedPosition: Int? = null
     private val uiScopeMain = CoroutineScope(Dispatchers.Main)
+    private val isGroup = members.isNotEmpty()
 
 
     fun addNewMessage(message: Pair<Message, String>) {
@@ -434,6 +438,14 @@ class MessageAdapter(
                 binding.dateTextView.visibility = View.GONE
             }
             binding.timeTextView.text = time
+            if(isGroup) {
+                val user = members.find { it.id == message.idSender } ?: User(0, "","Unknown", "")
+                binding.photoImageView.visibility = View.VISIBLE
+                binding.userNameTextView.visibility = View.VISIBLE
+                binding.userNameTextView.text = user.username
+                val avatar = user.avatar
+                if(avatar != null && avatar != "") messageViewModel.avatarSet(avatar, binding.photoImageView, context)
+            }
             if(!canLongClick && dialogSettings.canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
@@ -810,6 +822,14 @@ class MessageAdapter(
                 binding.dateTextView.visibility = View.GONE
             }
             binding.timeTextView.text = time
+            if(isGroup) {
+                val user = members.find { it.id == message.idSender } ?: User(0, "","Unknown", "")
+                binding.photoImageView.visibility = View.VISIBLE
+                binding.userNameTextView.visibility = View.VISIBLE
+                binding.userNameTextView.text = user.username
+                val avatar = user.avatar
+                if(avatar != null && avatar != "") messageViewModel.avatarSet(avatar, binding.photoImageView, context)
+            }
             if(!canLongClick) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
@@ -1064,6 +1084,14 @@ class MessageAdapter(
                 binding.dateTextView.visibility = View.GONE
             }
             binding.timeTextView.text = time
+            if(isGroup) {
+                val user = members.find { it.id == message.idSender } ?: User(0, "","Unknown", "")
+                binding.photoImageView.visibility = View.VISIBLE
+                binding.userNameTextView.visibility = View.VISIBLE
+                binding.userNameTextView.text = user.username
+                val avatar = user.avatar
+                if(avatar != null && avatar != "") messageViewModel.avatarSet(avatar, binding.photoImageView, context)
+            }
             if(!canLongClick) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
@@ -1305,6 +1333,14 @@ class MessageAdapter(
                 binding.dateTextView.visibility = View.GONE
             }
             timeTextView.text = time
+            if(isGroup) {
+                val user = members.find { it.id == message.idSender } ?: User(0, "","Unknown", "")
+                binding.photoImageView.visibility = View.VISIBLE
+                binding.userNameTextView.visibility = View.VISIBLE
+                binding.userNameTextView.text = user.username
+                val avatar = user.avatar
+                if(avatar != null && avatar != "") messageViewModel.avatarSet(avatar, binding.photoImageView, context)
+            }
             if(!canLongClick && dialogSettings.canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
@@ -1579,6 +1615,14 @@ class MessageAdapter(
                 binding.dateTextView.visibility = View.GONE
             }
             timeTextView.text = time
+            if(isGroup) {
+                val user = members.find { it.id == message.idSender } ?: User(0, "","Unknown", "")
+                binding.photoImageView.visibility = View.VISIBLE
+                binding.userNameTextView.visibility = View.VISIBLE
+                binding.userNameTextView.text = user.username
+                val avatar = user.avatar
+                if(avatar != null && avatar != "") messageViewModel.avatarSet(avatar, binding.photoImageView, context)
+            }
             if(!canLongClick) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions

@@ -272,6 +272,7 @@
                     android:src="@drawable/ic_check_two"
                     app:tint="@color/colorDayNightAttr"
                     android:visibility="invisible"
+                    android:paddingEnd="3dp"
                     />
 
                 <ImageView

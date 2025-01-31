@@ -133,8 +133,8 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
 
         executorService.execute(() -> {
             String path;
-            if(viewModel.fManagerIsExistJava(filename)) {
-                path = viewModel.fManagerGetFilePathJava(filename);
+            if(viewModel.fManagerIsExist(filename)) {
+                path = viewModel.fManagerGetFilePath(filename);
             } else {
                 try {
                     path = viewModel.downloadFileJava(itemView.getContext(), "photos", filename);
@@ -191,8 +191,8 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
 
         executorService.execute(() -> {
             String path;
-            if(viewModel.fManagerIsExistJava(filename)) {
-                path = viewModel.fManagerGetFilePathJava(filename);
+            if(viewModel.fManagerIsExist(filename)) {
+                path = viewModel.fManagerGetFilePath(filename);
             } else {
                 try {
                     path = viewModel.downloadFileJava(itemView.getContext(), "photos", filename);

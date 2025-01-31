@@ -1,5 +1,6 @@
 package com.example.messenger.model
 
+import android.util.Log
 import com.example.messenger.room.dao.ChatSettingsDao
 import com.example.messenger.room.dao.ConversationDao
 import com.example.messenger.room.dao.GroupMemberDao
@@ -120,6 +121,10 @@ class MessengerService(
         return@withContext messageDao.getPreviousMessage(idDialog, lastMessageId)?.toMessage()
     }
 
+    override suspend fun getPreviousMessageGroup(groupId: Int, lastMessageId: Int): Message? = withContext(ioDispatcher) {
+        return@withContext groupMessageDao.getPreviousMessage(groupId, lastMessageId)?.toMessage()
+    }
+
     override suspend fun saveLastReadMessage(lastMessageId: Int, idDialog: Int?, idGroup: Int?) = withContext(ioDispatcher) {
         lastReadMessageDao.saveLastReadMessage(LastReadMessageEntity.fromUserInput(lastMessageId, idDialog, idGroup))
     }
@@ -173,12 +178,12 @@ class MessengerService(
         unsentMessageDao.deleteUnsentMessage(messageId)
     }
 
-    override suspend fun getGroupMembers(groupId: Int): List<Pair<String, String?>> = withContext(ioDispatcher) {
-        return@withContext groupMemberDao.getMembers(groupId).map { it.toMember() }
+    override suspend fun getGroupMembers(groupId: Int): List<User> = withContext(ioDispatcher) {
+        return@withContext groupMemberDao.getMembers(groupId).map { it.toUser() }
     }
 
-    override suspend fun replaceGroupMembers(groupId: Int, groupMembers: List<GroupMember>) {
-        val groupMemberDbEntities = groupMembers.map { GroupMemberDbEntity.fromUserInput(groupId, it.username, it.avatar) }
+    override suspend fun replaceGroupMembers(groupId: Int, groupMembers: List<User>) {
+        val groupMemberDbEntities = groupMembers.map { GroupMemberDbEntity.fromUserInput(groupId, it) }
         groupMemberDao.replaceMembers(groupId, groupMemberDbEntities)
     }
 }

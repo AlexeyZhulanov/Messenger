@@ -559,9 +559,9 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun addUserToGroup(groupId: Int, userId: Int): Boolean = withContext(ioDispatcher) {
+    override suspend fun addUserToGroup(groupId: Int, name: String): Boolean = withContext(ioDispatcher) {
         val message = try {
-            groupsSource.addUserToGroup(groupId, userId)
+            groupsSource.addUserToGroup(groupId, name)
         } catch (e: BackendException) {
             when (e.code) {
                 403 -> throw NoPermissionException(e)

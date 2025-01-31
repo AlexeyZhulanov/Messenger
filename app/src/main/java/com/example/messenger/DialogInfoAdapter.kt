@@ -7,6 +7,7 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.text.Html
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,10 +15,13 @@ import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.ItemFileBinding
 import com.example.messenger.databinding.ItemMediaBinding
+import com.example.messenger.databinding.ItemMemberBinding
 import com.example.messenger.databinding.ItemVoiceBinding
 import com.example.messenger.model.MediaItem
+import com.example.messenger.model.User
 import com.luck.picture.lib.entity.LocalMedia
 import com.masoudss.lib.SeekBarOnProgressChanged
 import com.masoudss.lib.WaveformSeekBar
@@ -29,12 +33,15 @@ import java.io.File
 
 interface DialogActionListener {
     fun onItemClicked(position: Int, localMedias: ArrayList<LocalMedia>)
+    fun onUserDeleteClicked(user: User)
 }
 
 class DialogInfoAdapter(
     private val context: Context,
     private val imageSize: Int,
     private val viewModel: BaseInfoViewModel,
+    private val currentUserId: Int,
+    private val groupOwnerId: Int,
     private val actionListener: DialogActionListener
 ): RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private val mediaItems = mutableListOf<MediaItem>()
@@ -94,6 +101,9 @@ class DialogInfoAdapter(
             MediaItem.TYPE_AUDIO -> AudioViewHolder(
                 ItemVoiceBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             )
+            MediaItem.TYPE_USER -> UserViewHolder(
+                ItemMemberBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            )
             else -> throw IllegalArgumentException("Invalid view type")
         }
     }
@@ -104,6 +114,7 @@ class DialogInfoAdapter(
             is MediaViewHolder -> holder.bind(item.content, position)
             is FileViewHolder -> holder.bind(item.content)
             is AudioViewHolder -> holder.bind(item.content)
+            is UserViewHolder -> holder.bind(item.user)
         }
     }
     override fun getItemCount(): Int = mediaItems.size
@@ -263,6 +274,60 @@ class DialogInfoAdapter(
                 } else {
                     binding.errorImageView.visibility = View.VISIBLE
                     binding.playButton.visibility = View.GONE
+                }
+            }
+        }
+    }
+
+    inner class UserViewHolder(private val binding: ItemMemberBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(user: User?) {
+            if(user != null) {
+                uiScope.launch {
+                    binding.userNameTextView.text = user.username
+                    binding.lastSessionTextView.text = viewModel.formatUserSessionDate(user.lastSession)
+                    val avatar = user.avatar ?: ""
+                    if (avatar != "") {
+                        val filePathTemp = async {
+                            if (viewModel.fManagerIsExistAvatar(avatar)) {
+                                return@async Pair(viewModel.fManagerGetAvatarPath(avatar), true)
+                            } else {
+                                try {
+                                    return@async Pair(viewModel.downloadAvatar(context, avatar), false)
+                                } catch (e: Exception) {
+                                    return@async Pair(null, true)
+                                }
+                            }
+                        }
+                        val (first, second) = filePathTemp.await()
+                        if (first != null) {
+                            val file = File(first)
+                            if (file.exists()) {
+                                if (!second) viewModel.fManagerSaveAvatar(avatar, file.readBytes())
+                                val uri = Uri.fromFile(file)
+                                binding.photoImageView.imageTintList = null
+                                Glide.with(context)
+                                    .load(uri)
+                                    .apply(RequestOptions.circleCropTransform())
+                                    .placeholder(R.color.app_color_f6)
+                                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                    .into(binding.photoImageView)
+                            }
+                        }
+                    }
+                    if(user.id == currentUserId) {
+                        val txt = binding.lastSessionTextView.text.toString() + " <b>(Вы)</b>"
+                        binding.lastSessionTextView.text = Html.fromHtml(txt, Html.FROM_HTML_MODE_LEGACY)
+                    }
+                    if(user.id == groupOwnerId) {
+                        val txt = binding.lastSessionTextView.text.toString() + " <b>(Владелец)</b>"
+                        binding.lastSessionTextView.text = Html.fromHtml(txt, Html.FROM_HTML_MODE_LEGACY)
+                    }
+                    if(currentUserId == groupOwnerId && user.id != currentUserId) {
+                        binding.icDeleteImageView.visibility = View.VISIBLE
+                        binding.icDeleteImageView.setOnClickListener {
+                            actionListener.onUserDeleteClicked(user)
+                        }
+                    }
                 }
             }
         }

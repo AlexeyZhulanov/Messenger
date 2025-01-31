@@ -32,7 +32,7 @@ interface GroupsSource {
 
     suspend fun editGroupName(groupId: Int, name: String) : String
 
-    suspend fun addUserToGroup(groupId: Int, userId: Int) : String
+    suspend fun addUserToGroup(groupId: Int, name: String) : String
 
     suspend fun deleteUserFromGroup(groupId: Int, userId: Int) : String
 

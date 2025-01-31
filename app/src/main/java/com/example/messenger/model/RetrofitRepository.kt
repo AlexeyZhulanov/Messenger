@@ -79,7 +79,7 @@ interface RetrofitRepository {
 
     suspend fun editGroupName(groupId: Int, name: String) : Boolean
 
-    suspend fun addUserToGroup(groupId: Int, userId: Int) : Boolean
+    suspend fun addUserToGroup(groupId: Int, name: String) : Boolean
 
     suspend fun deleteUserFromGroup(groupId: Int, userId: Int) : Boolean
 

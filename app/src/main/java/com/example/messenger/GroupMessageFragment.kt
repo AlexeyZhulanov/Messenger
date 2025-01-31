@@ -10,7 +10,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.messenger.model.Dialog
+import com.example.messenger.model.Group
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
 import dagger.hilt.android.AndroidEntryPoint
@@ -18,16 +18,20 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class MessageFragment(
-    private val dialog: Dialog,
+class GroupMessageFragment(
+    private val group: Group,
     currentUser: User
 ) : BaseChatFragment(currentUser) {
-    private var lastSessionString: String = ""
-    override val viewModel: MessageViewModel by viewModels()
+
+    override val viewModel: GroupMessageViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        viewModel.setInfo(dialog.otherUser.id)
-        Log.d("testCurrentUser", currentUser.toString())
+        val list = viewModel.fetchMembersList()
+        setupAdapter(list)
+        lifecycleScope.launch {
+            viewModel.fetchMembersList2()
+            viewModel.joinGroup()
+        }
         super.onViewCreated(view, savedInstanceState)
         lifecycleScope.launch {
             viewModel.pagingDataFlow.collectLatest { pagingData ->
@@ -65,44 +69,67 @@ class MessageFragment(
                 }
             }
         }
-        viewModel.setMarkScrollListener(binding.recyclerview, adapter)
-        viewModel.fetchLastSession()
+        viewModel.setMarkScrollListener(binding.recyclerview, adapter, currentUser.id)
         val lastSession: TextView = view.findViewById(R.id.lastSessionTextView)
-        viewModel.lastSessionString.observe(viewLifecycleOwner) { sessionString ->
-            lastSession.text = sessionString
-            lastSessionString = sessionString
+        lifecycleScope.launch {
+            viewModel.membersCount.collectLatest {
+                lastSession.text = when(it) {
+                    0 -> "" // если не удалось получить, то не отображаем
+                    1 -> "1 участник"
+                    in 2..4 -> "$it участника"
+                    else -> "$it участников"
+                }
+            }
         }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        viewModel.setConvInfo(dialog.id, 0)
+        viewModel.setConvInfo(group.id, 1)
         return super.onCreateView(inflater, container, savedInstanceState)
     }
 
+    override fun composeAnswer(message: Message) {
+        val username = viewModel.currentMemberList.find { it.id == message.idSender }?.username
+        binding.answerUsername.text = username ?: ""
+        answerMessage = Pair(message.id, username ?: "")
+    }
+
+    override fun getAvatarString(): String = group.avatar ?: ""
+
+    override fun getUpperName(): String = group.name
+
+    override fun getUserName(): String = "" // func only for dialog
+
+    override fun getMembers(): List<User> {
+        val list = viewModel.currentMemberList
+        Log.d("testMemberList", list.toString())
+        return list
+    }
+
+    override fun setupAdapterDialog() {}
+
     override fun sendTypingEvent(isSend: Boolean) = viewModel.sendTypingEvent(isSend)
+
+    //override fun getConvId(): Int = group.id
+
+    //override fun getIsGroup(): Int = 1
 
     override fun replaceToInfoFragment() {
         parentFragmentManager.beginTransaction()
             .replace(
                 R.id.fragmentContainer,
-                DialogInfoFragment(dialog, lastSessionString),
-                "DIALOG_INFO_FRAGMENT_TAG"
+                GroupInfoFragment(group, viewModel.currentMemberList, currentUser),
+                "GROUP_INFO_FRAGMENT_TAG"
             )
             .addToBackStack(null)
             .commit()
     }
 
-    override fun getAvatarString(): String = dialog.otherUser.avatar ?: ""
-
-    override fun getUpperName(): String = dialog.otherUser.username
-
-    // Дублируется здесь, но в GroupFragment дублирования не будет
-    override fun getUserName(): String = dialog.otherUser.username
+    override fun replaceCurrentFragment() = replaceFragment(GroupMessageFragment(group, currentUser))
 
     override fun rememberLastMessage() {
         if (adapter.itemCount == 0) return
 
-        // Получаем последнее видимое сообщение
         val layoutManager = binding.recyclerview.layoutManager as LinearLayoutManager
         val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
         val firstMessageId = if (firstVisibleItemPosition != RecyclerView.NO_POSITION && firstVisibleItemPosition < 25) {
@@ -118,19 +145,4 @@ class MessageFragment(
         viewModel.saveLastMessage(firstMessageId)
     }
 
-    override fun replaceCurrentFragment() = replaceFragment(MessageFragment(dialog, currentUser))
-
-    override fun composeAnswer(message: Message) {
-        binding.answerUsername.text = dialog.otherUser.username
-        answerMessage = Pair(message.id, dialog.otherUser.username)
-    }
-
-    override fun getMembers(): List<User> = emptyList()
-    override fun setupAdapterDialog() {
-        setupAdapter(emptyList())
-    }
-
-    //override fun getConvId(): Int = dialog.id
-
-    //override fun getIsGroup(): Int = 0
 }
