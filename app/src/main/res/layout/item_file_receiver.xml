@@ -54,13 +54,23 @@
 
         <ImageView
             android:id="@+id/photoImageView"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
             android:src="@drawable/ic_user_avatar"
             android:visibility="gone"
             tools:visibility="visible"
             android:layout_gravity="bottom"
+            android:layout_marginEnd="5dp"
             app:tint="?attr/colorPrimary" />
+
+        <Space
+            android:id="@+id/spaceAvatar"
+            android:layout_width="45dp"
+            android:layout_height="1dp"
+            android:visibility="gone"
+            android:layout_gravity="bottom"
+            android:layout_marginEnd="5dp"
+            />
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="wrap_content"

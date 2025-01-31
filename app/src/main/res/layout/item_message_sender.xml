@@ -131,6 +131,7 @@
                     android:layout_height="wrap_content"
                     android:src="@drawable/ic_check_two"
                     app:tint="@color/colorDayNightAttr"
+                    android:paddingEnd="3dp"
                     android:visibility="invisible"
                     />
 

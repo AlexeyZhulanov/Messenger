@@ -96,6 +96,23 @@
         app:layout_constraintGuide_percent="0.35"
         />
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/floatingActionButtonOptions"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/info_layout"
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="15dp"
+        android:src="@drawable/ic_edit"
+        app:tint="?attr/colorPrimaryDark"
+        android:backgroundTint="?attr/colorPrimary"
+        app:borderWidth="0dp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        />
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/info_layout"
         android:layout_width="0dp"
@@ -170,6 +187,7 @@
             android:padding="2dp"
             android:visibility="gone"
             tools:visibility="visible"
+            android:gravity="bottom"
             android:textStyle="bold|italic"/>
 
         <ImageView
@@ -198,7 +216,7 @@
             app:layout_constraintStart_toStartOf="parent"
             android:layout_marginStart="10dp"
             android:text="Уведомления"
-            android:layout_marginTop="15dp"
+            android:layout_marginTop="12dp"
             android:textColor="?attr/colorAccent"
             android:fontFamily="casual"
             android:autoSizeTextType="uniform"
@@ -211,11 +229,12 @@
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/switch_notifications"
             android:layout_width="wrap_content"
+            android:layout_height="match_parent"
             app:layout_constraintStart_toEndOf="@id/midGuideLine"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/notificationsTextView"
             app:layout_constraintBottom_toBottomOf="@id/notificationsTextView"
-            android:layout_height="match_parent"
+            android:layout_marginTop="3dp"
             app:thumbTint="@color/switch_thumb_tint" />
 
         <TextView
@@ -226,7 +245,7 @@
             app:layout_constraintStart_toStartOf="parent"
             android:layout_marginStart="10dp"
             android:text="Удаление чужих сообщений"
-            android:layout_marginTop="15dp"
+            android:layout_marginTop="18dp"
             android:textColor="?attr/colorAccent"
             android:fontFamily="casual"
             android:autoSizeTextType="uniform"
@@ -239,11 +258,12 @@
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/switch_delete"
             android:layout_width="wrap_content"
+            android:layout_height="match_parent"
             app:layout_constraintStart_toEndOf="@id/midGuideLine"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/deleteTextView"
             app:layout_constraintBottom_toBottomOf="@id/deleteTextView"
-            android:layout_height="match_parent"
+            android:layout_marginTop="-3dp"
             app:thumbTint="@color/switch_thumb_tint" />
 
         <androidx.constraintlayout.widget.Guideline
@@ -279,7 +299,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:textAllCaps="false"
-            android:text="Участники"
+            android:text="Участни\nки"
             android:autoSizeTextType="uniform"
             android:autoSizeMinTextSize="10sp"
             android:autoSizeMaxTextSize="22sp"
@@ -337,7 +357,6 @@
             android:autoSizeMinTextSize="6sp"
             android:autoSizeMaxTextSize="22sp"
             android:autoSizeStepGranularity="2sp"
-            android:maxLines="1"
             style="?android:attr/buttonBarButtonStyle"
             app:layout_constraintHorizontal_bias="1"
             app:layout_constraintEnd_toEndOf="parent"
@@ -345,7 +364,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@+id/button_files"
             android:textColor="?attr/colorAccent"
-            android:text="Голосовые" />
+            tools:text="Голосо\nвые" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

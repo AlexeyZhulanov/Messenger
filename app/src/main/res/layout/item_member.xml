@@ -4,12 +4,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="70dp"
+    android:layout_height="60dp"
     android:background="@drawable/messenger_item_background">
 
     <ImageView
         android:id="@+id/photoImageView"
-        android:layout_width="70dp"
+        android:layout_width="60dp"
         android:layout_height="match_parent"
         android:src="@drawable/ic_user_avatar"
         android:padding="6dp"
@@ -21,11 +21,11 @@
         android:id="@+id/userNameTextView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textSize="20sp"
+        android:textSize="18sp"
         android:lines="1"
         android:ellipsize="end"
         tools:text="John Smith"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="5dp"
         android:textColor="?attr/colorPrimaryDark"
         app:layout_constraintTop_toTopOf="@id/photoImageView"
         app:layout_constraintStart_toEndOf="@id/photoImageView" />
@@ -36,13 +36,23 @@
         android:layout_height="wrap_content"
         android:lines="1"
         android:ellipsize="end"
-        android:textSize="16sp"
-        android:layout_marginTop="4dp"
+        android:textSize="15sp"
         tools:text="Google Inc."
+        android:layout_marginTop="1dp"
         android:textColor="?attr/colorAccent"
         app:layout_constraintTop_toBottomOf="@id/userNameTextView"
         app:layout_constraintStart_toStartOf="@id/userNameTextView"
         app:layout_constraintEnd_toEndOf="parent"/>
+
+    <ImageView
+        android:id="@+id/icDeleteImageView"
+        android:layout_width="40dp"
+        android:layout_height="match_parent"
+        android:src="@drawable/ic_trash"
+        android:padding="7dp"
+        app:tint="?attr/colorPrimary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.constraintlayout.widget.Barrier
         android:id="@+id/barrier"
