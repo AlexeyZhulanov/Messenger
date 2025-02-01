@@ -43,14 +43,19 @@ class GroupMessageFragment(
                             val pair = mes.map { Pair(it, "") }
                             pair + pagingData
                         } else pagingData
+                        adapter.membersFull = viewModel.currentMemberList
+                        adapter.members = viewModel.separateMessages(summaryPagingData, currentUser.id)
                         adapter.submitList(summaryPagingData)
                         val firstItem = pagingData.firstOrNull()?.first
                         if(firstItem != null) viewModel.updateLastDate(firstItem.timestamp)
                     }
                     else {
                         val updatedList = adapter.currentList.toMutableList()
+                        val count = adapter.itemCount
                         updatedList.addAll(pagingData)
+                        adapter.members = viewModel.separateMessages(updatedList, currentUser.id)
                         adapter.submitList(updatedList)
+                        adapter.notifyItemChanged(count-1)
                     }
                 } else {
                     isStopPagination = true
@@ -110,9 +115,7 @@ class GroupMessageFragment(
 
     override fun sendTypingEvent(isSend: Boolean) = viewModel.sendTypingEvent(isSend)
 
-    //override fun getConvId(): Int = group.id
-
-    //override fun getIsGroup(): Int = 1
+    override fun isGroup(): Boolean = true
 
     override fun replaceToInfoFragment() {
         parentFragmentManager.beginTransaction()

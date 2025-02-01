@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.FileManager
+import com.example.messenger.model.Message
 import com.example.messenger.model.MessagePagingSource
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
@@ -184,6 +185,49 @@ class GroupMessageViewModel @Inject constructor(
 
         suspend fun getPreviousMessageId(id: Int): Int {
             return messengerService.getPreviousMessageGroup(convId, id)?.id ?: -1
+        }
+
+        fun separateMessages(messages: List<Pair<Message, String>>, currentUserId: Int): Map<Int, Pair<String?, String?>?> {
+            // Optimizing access to users using the Map
+            val userMap = currentMemberList.associate { it.id to (it.username to it.avatar) }
+
+            val groupedMessages = mutableListOf<List<Message>>()
+            val tempList = mutableListOf<Message>()
+
+            for ((message, date) in messages) {
+                if (message.idSender == currentUserId) continue // Skipping the current user
+
+                if(tempList.isNotEmpty()) {
+                    if ((tempList.last().idSender != message.idSender) || (date != "")) {
+                        groupedMessages.add(ArrayList(tempList))
+                        tempList.clear()
+                    }
+                }
+                tempList.add(message)
+            }
+            if (tempList.isNotEmpty()) {
+                groupedMessages.add(tempList)
+            }
+
+            // Filling in the final Map with username and avatar
+            val messageDisplayMap = mutableMapOf<Int, Pair<String?, String?>?>()
+
+            for (mes in groupedMessages) {
+                val first = mes.first()
+                val last = mes.last()
+                val userInfo = userMap[first.idSender]
+
+                // If there is one element in the group, both fields are used.
+                if (first == last) {
+                    messageDisplayMap[first.id] = userInfo
+                } else {
+                    // The first element gets a username (the adapter is reversed)
+                    messageDisplayMap[last.id] = userInfo?.first to null
+                    // The last element gets an avatar (adapter is reversed)
+                    messageDisplayMap[first.id] = null to userInfo?.second
+                }
+            }
+            return messageDisplayMap
         }
 
         fun joinGroup() {
