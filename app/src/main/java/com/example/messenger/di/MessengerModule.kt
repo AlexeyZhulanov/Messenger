@@ -136,12 +136,14 @@ object MessengerModule {
         val messagesSource = sourcesProvider.getMessagesSource()
         val groupsSource = sourcesProvider.getGroupsSource()
         val uploadsSource = sourcesProvider.getUploadsSource()
+        val newsSource = sourcesProvider.getNewsSource()
 
         return RetrofitService(
             usersSource = usersSource,
             messagesSource = messagesSource,
             groupsSource = groupsSource,
             uploadSource = uploadsSource,
+            newsSource = newsSource,
             appSettings = appSettings,
             messengerRepository = messengerService,
             ioDispatcher = ioDispatcher

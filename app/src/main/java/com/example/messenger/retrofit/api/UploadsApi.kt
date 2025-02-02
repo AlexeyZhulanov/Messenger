@@ -1,6 +1,5 @@
 package com.example.messenger.retrofit.api
 
-import com.example.messenger.retrofit.entities.ResponseEntityMessageAnswer
 import com.example.messenger.retrofit.entities.uploads.UploadPreviewResponseEntity
 import com.example.messenger.retrofit.entities.uploads.UploadResponseEntity
 import retrofit2.http.Multipart
@@ -8,7 +7,6 @@ import retrofit2.http.POST
 import retrofit2.http.Part
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
-import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Path
 
@@ -38,6 +36,10 @@ interface UploadsApi {
     @POST("upload/avatar")
     suspend fun uploadAvatar(@Part avatar: MultipartBody.Part): UploadResponseEntity
 
+    @Multipart
+    @POST("upload/news")
+    suspend fun uploadNews(@Part news: MultipartBody.Part): UploadResponseEntity
+
     @GET("files/{folder}/{dialog_id}/{filename}/{is_group}")
     suspend fun downloadFile(
         @Path("folder") folder: String,
@@ -48,11 +50,8 @@ interface UploadsApi {
     @GET("avatars/{filename}")
     suspend fun downloadAvatar(@Path("filename") filename: String) : ResponseBody
 
-    @DELETE("files/{folder}/{dialog_id}/{filename}")
-    suspend fun deleteFile(
-        @Path("folder") folder: String,
-        @Path("dialog_id") dialogId: Int,
-        @Path("filename") filename: String): ResponseEntityMessageAnswer
+    @GET("news/{filename}")
+    suspend fun downloadNews(@Path("filename") filename: String) : ResponseBody
 
     @GET("files/{is_group}/{dialog_id}/media/{page}")
     suspend fun getMediaPreviews(

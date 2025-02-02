@@ -9,6 +9,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
+import java.net.URLConnection
 
 class RetrofitUploadsSource(
     config: RetrofitConfig
@@ -49,6 +50,17 @@ class RetrofitUploadsSource(
             avatar.asRequestBody("image/*".toMediaTypeOrNull())
         )
         uploadsApi.uploadAvatar(requestBody).filename
+    }
+
+    override suspend fun uploadNews(news: File): String = wrapRetrofitExceptions {
+        val mimeType = URLConnection.guessContentTypeFromName(news.name) ?: "application/octet-stream"
+
+        val requestBody = MultipartBody.Part.createFormData(
+            "file",
+            news.name,
+            news.asRequestBody(mimeType.toMediaTypeOrNull())
+        )
+        uploadsApi.uploadNews(requestBody).filename
     }
 
     override suspend fun downloadFile(context: Context, folder: String, dialogId: Int,
@@ -109,8 +121,26 @@ class RetrofitUploadsSource(
         }
     }
 
-    override suspend fun deleteFile(folder: String, dialogId: Int, filename: String): String = wrapRetrofitExceptions {
-        uploadsApi.deleteFile(folder, dialogId, filename).message
+    override suspend fun downloadNews(context: Context, filename: String): String = wrapRetrofitExceptions {
+        try {
+            val responseBody = uploadsApi.downloadNews(filename)
+            val directory = File(context.filesDir, "news")
+            if (!directory.exists()) {
+                directory.mkdirs()
+            }
+            val file = File(directory, filename)
+            // Запись файла на диск
+            file.outputStream().use { outputStream ->
+                responseBody.byteStream().use { inputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+            Log.d("testDownloadNews","File downloaded to ${file.absolutePath}")
+            return@wrapRetrofitExceptions file.absolutePath
+        } catch (e: Exception) {
+            Log.d("testDownloadNews","Error downloading file: ${e.message}")
+            return@wrapRetrofitExceptions "Error: ${e.message}"
+        }
     }
 
     override suspend fun getMediaPreviews(isGroup: Int, dialogId: Int, page: Int): List<String>? = wrapRetrofitExceptions {

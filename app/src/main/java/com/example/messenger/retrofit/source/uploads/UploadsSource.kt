@@ -13,12 +13,14 @@ interface UploadsSource {
 
     suspend fun uploadAvatar(avatar: File) : String
 
+    suspend fun uploadNews(news: File) : String
+
     suspend fun downloadFile(context: Context, folder: String, dialogId: Int, filename: String,
                              isGroup: Int) : String
 
     suspend fun downloadAvatar(context: Context, filename: String) : String
 
-    suspend fun deleteFile(folder: String, dialogId: Int, filename: String) : String
+    suspend fun downloadNews(context: Context, filename: String) : String
 
     suspend fun getMediaPreviews(isGroup: Int, dialogId: Int, page: Int) : List<String>?
 
