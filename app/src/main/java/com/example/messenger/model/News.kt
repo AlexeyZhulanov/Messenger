@@ -11,3 +11,9 @@ data class News(
     var files: List<String>? = null,
     var timestamp: Long
     )
+
+data class NewsItem(
+    val photos: List<String>,
+    val files: List<String>,
+    val voices: List<String>
+)

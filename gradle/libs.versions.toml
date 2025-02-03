@@ -6,6 +6,7 @@ comGoogleDevtoolsKspGradlePlugin = "1.8.10-1.0.9"
 composeBom = "2024.06.00"
 constraintlayout = "2.1.4"
 converterMoshi = "2.9"
+flexbox = "1.1.0"
 fragmentKtx = "1.8.1"
 gradle = "8.7.3"
 hiltAndroidGradlePlugin = "2.48"
@@ -49,6 +50,7 @@ androidx-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workRuntimeKtx" }
 com-google-devtools-ksp-gradle-plugin = { module = "com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin", version.ref = "comGoogleDevtoolsKspGradlePlugin" }
 converter-moshi = { module = "com.squareup.retrofit2:converter-moshi", version.ref = "converterMoshi" }
+flexbox = { module = "com.google.android:flexbox", version.ref = "flexbox" }
 gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltVersion" }
 hilt-android-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hiltVersion" }
