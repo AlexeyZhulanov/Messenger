@@ -57,30 +57,6 @@
         android:background="@color/colorDayNightAttr"
         />
 
-    <!--
-    <androidx.cardview.widget.CardView
-        android:id="@+id/cardview"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
-        app:layout_goneMarginTop="5dp"
-        app:cardBackgroundColor="@color/colorMessageReceiverBack"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/photoImageView"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="4dp">
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerview"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:padding="8dp" />
-
-    </androidx.cardview.widget.CardView>
--->
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/nestedLayout"
         android:layout_width="0dp"
@@ -90,23 +66,16 @@
         app:layout_constraintTop_toBottomOf="@id/photoImageView"
         android:padding="8dp">
 
-        <!-- FlexboxLayout для фото -->
-        <com.google.android.flexbox.FlexboxLayout
-            android:id="@+id/photosFlexbox"
+        <!-- ViewStub для фото -->
+        <ViewStub
+            android:id="@+id/photosStub"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout="@layout/viewstub_photos"
             android:visibility="gone"
-            app:flexWrap="wrap"
-            app:justifyContent="flex_start"
-            app:alignItems="center"
-            app:flexDirection="row"
-            app:alignContent="flex_start"
-            app:showDividers="middle"
-            app:flexGrow="0"
-            android:padding="4dp"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent"/>
 
         <!-- ViewStub для файлов -->
         <ViewStub
@@ -115,7 +84,7 @@
             android:layout_height="wrap_content"
             android:layout="@layout/viewstub_files"
             android:visibility="gone"
-            app:layout_constraintTop_toBottomOf="@id/photosFlexbox"
+            app:layout_constraintTop_toBottomOf="@id/photosStub"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
 
@@ -167,6 +136,22 @@
         tools:text="5"
         android:textColor="?attr/colorAccent"
         android:layout_marginEnd="10dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        app:layout_constraintTop_toTopOf="@id/dateText"
+        app:layout_constraintBottom_toBottomOf="@id/dateText"
+        app:layout_constraintEnd_toStartOf="@id/editedText"/>
+
+    <TextView
+        android:id="@+id/editedText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:text="изменено"
+        android:textColor="?attr/colorAccent"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="5dp"
+        android:layout_marginTop="3dp"
+        android:visibility="gone"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="@id/dateText"
         app:layout_constraintBottom_toBottomOf="@id/dateText"

@@ -12,10 +12,10 @@ class RetrofitNewsSource(
 
     private val newsApi = retrofit.create(NewsApi::class.java)
 
-    override suspend fun sendNews(text: String?, images: List<String>?, voices: List<String>?,
-                                  files: List<String>?): String = wrapRetrofitExceptions {
-        val sendNewsRequestEntity = SendNewsRequestEntity(text = text, images = images,
-            voices = voices, files = files)
+    override suspend fun sendNews(headerText: String, text: String?, images: List<String>?,
+                                  voices: List<String>?, files: List<String>?): String = wrapRetrofitExceptions {
+        val sendNewsRequestEntity = SendNewsRequestEntity(headerText = headerText,
+            text = text, images = images, voices = voices, files = files)
         newsApi.sendNews(sendNewsRequestEntity).message
     }
 
@@ -24,10 +24,10 @@ class RetrofitNewsSource(
         response.map { it.toNews() }
     }
 
-    override suspend fun editNews(newsId: Int, text: String?, images: List<String>?,
+    override suspend fun editNews(newsId: Int, headerText: String, text: String?, images: List<String>?,
         voices: List<String>?, files: List<String>?): String = wrapRetrofitExceptions {
-        val sendNewsRequestEntity = SendNewsRequestEntity(text = text, images = images,
-            voices = voices, files = files)
+        val sendNewsRequestEntity = SendNewsRequestEntity(headerText = headerText, text = text,
+            images = images, voices = voices, files = files)
         newsApi.editNews(newsId, sendNewsRequestEntity).message
     }
 

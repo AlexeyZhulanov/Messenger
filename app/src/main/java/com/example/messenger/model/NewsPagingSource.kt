@@ -7,7 +7,8 @@ import androidx.paging.PagingState
 class NewsPagingSource(
     private val retrofitService: RetrofitService,
     private val messengerService: MessengerService,
-    isFirst: Boolean
+    isFirst: Boolean,
+    private val fileManager: FileManager
 ) : PagingSource<Int, News>() {
 
     private var flag = isFirst
@@ -20,12 +21,10 @@ class NewsPagingSource(
                 } catch (e: Exception) {
                     if(flag) {
                         flag = false
-                        listOf(News(0,0, timestamp = 0)) // temp
-                        // todo messengerService.getNews(dialogId)
+                        messengerService.getNews()
                     } else throw e
                 }
-            // if(pageIndex == 0)
-                // todo messengerService.replaceNe(dialogId, messages, fileManager)
+            if(pageIndex == 0 && flag) messengerService.replaceNews(news, fileManager)
 
             LoadResult.Page(
                 data = news,

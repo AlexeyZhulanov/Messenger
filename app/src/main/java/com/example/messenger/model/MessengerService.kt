@@ -1,12 +1,12 @@
 package com.example.messenger.model
 
-import android.util.Log
 import com.example.messenger.room.dao.ChatSettingsDao
 import com.example.messenger.room.dao.ConversationDao
 import com.example.messenger.room.dao.GroupMemberDao
 import com.example.messenger.room.dao.GroupMessageDao
 import com.example.messenger.room.dao.LastReadMessageDao
 import com.example.messenger.room.dao.MessageDao
+import com.example.messenger.room.dao.NewsDao
 import com.example.messenger.room.dao.SettingsDao
 import com.example.messenger.room.dao.UnsentMessageDao
 import com.example.messenger.room.dao.UserDao
@@ -16,6 +16,7 @@ import com.example.messenger.room.entities.GroupMemberDbEntity
 import com.example.messenger.room.entities.GroupMessageDbEntity
 import com.example.messenger.room.entities.LastReadMessageEntity
 import com.example.messenger.room.entities.MessageDbEntity
+import com.example.messenger.room.entities.NewsDbEntity
 import com.example.messenger.room.entities.SettingsDbEntity
 import com.example.messenger.room.entities.UnsentMessageEntity
 import com.example.messenger.room.entities.UserDbEntity
@@ -33,6 +34,7 @@ class MessengerService(
     private val chatSettingsDao: ChatSettingsDao,
     private val unsentMessageDao: UnsentMessageDao,
     private val groupMemberDao: GroupMemberDao,
+    private val newsDao: NewsDao,
     private val ioDispatcher: CoroutineDispatcher
 ) : MessengerRepository {
     private var settings = Settings(0)
@@ -182,8 +184,25 @@ class MessengerService(
         return@withContext groupMemberDao.getMembers(groupId).map { it.toUser() }
     }
 
-    override suspend fun replaceGroupMembers(groupId: Int, groupMembers: List<User>) {
+    override suspend fun replaceGroupMembers(groupId: Int, groupMembers: List<User>) = withContext(ioDispatcher) {
         val groupMemberDbEntities = groupMembers.map { GroupMemberDbEntity.fromUserInput(groupId, it) }
         groupMemberDao.replaceMembers(groupId, groupMemberDbEntities)
+    }
+
+    override suspend fun getNews(): List<News> = withContext(ioDispatcher) {
+        return@withContext newsDao.getNews().map { it.toNews() }
+    }
+
+    override suspend fun replaceNews(newNews: List<News>, fileManager: FileManager) = withContext(ioDispatcher) {
+        val newsDbEntity = newNews.map { NewsDbEntity.fromUserInput(it) }
+        newsDao.replaceNews(newsDbEntity)
+        val usedFiles = newNews.flatMap { news ->
+            mutableListOf<String>().apply {
+                news.images?.let { addAll(it) }
+                news.voices?.let { addAll(it) }
+                news.files?.let { addAll(it) }
+            }
+        }.toSet()
+        fileManager.cleanupUnusedMessageFiles(usedFiles)
     }
 }

@@ -857,10 +857,10 @@ class RetrofitService(
         return@withContext vacation
     }
 
-    override suspend fun sendNews(text: String?, images: List<String>?, voices: List<String>?,
-                                  files: List<String>?): Boolean = withContext(ioDispatcher) {
+    override suspend fun sendNews(headerText: String, text: String?, images: List<String>?,
+                         voices: List<String>?, files: List<String>?): Boolean = withContext(ioDispatcher) {
         return@withContext try {
-            newsSource.sendNews(text, images, voices, files)
+            newsSource.sendNews(headerText, text, images, voices, files)
             Log.d("testSendNews", "News post sent successfully")
             true
         } catch (e: BackendException) {
@@ -893,10 +893,10 @@ class RetrofitService(
         return@withContext news
     }
 
-    override suspend fun editNews(newsId: Int, text: String?, images: List<String>?,
+    override suspend fun editNews(newsId: Int, headerText: String, text: String?, images: List<String>?,
                      voices: List<String>?, files: List<String>?): Boolean = withContext(ioDispatcher) {
         val message = try {
-            newsSource.editNews(newsId, text, images, voices, files)
+            newsSource.editNews(newsId, headerText, text, images, voices, files)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw MessageNotFoundException(e)

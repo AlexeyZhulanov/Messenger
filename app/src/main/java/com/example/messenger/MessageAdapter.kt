@@ -1071,7 +1071,6 @@ class MessageAdapter(
                         } catch (e: Exception) {
                             return@async Pair(null, true)
                         }
-
                     }
                 }
                 val (first, second) = filePathTemp.await()
@@ -1605,7 +1604,7 @@ class MessageAdapter(
                 binding.timeLayout.visibility = View.VISIBLE
             }
             binding.progressBar.visibility = View.VISIBLE
-            val semaphore = Semaphore(4) // todo возможно 4 следует заменить на другое количество
+            val semaphore = Semaphore(4)
             uiScopeMain.launch {
                 val localMedias = async {
                     val medias = arrayListOf<LocalMedia>()
@@ -1751,7 +1750,7 @@ class MessageAdapter(
                 binding.timeLayout.visibility = View.VISIBLE
             }
             binding.errorImageView.visibility = View.GONE
-            val semaphore = Semaphore(4) // todo возможно 4 следует заменить на другое количество
+            val semaphore = Semaphore(4)
             uiScopeMain.launch {
                 val localMedias = async {
                     val medias = arrayListOf<LocalMedia>()

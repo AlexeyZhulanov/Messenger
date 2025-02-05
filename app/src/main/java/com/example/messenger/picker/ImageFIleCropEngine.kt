@@ -57,15 +57,11 @@ internal class ImageFileCropEngine(private val selectorStyle: PictureSelectorSty
                             resource: Bitmap,
                             @Nullable transition: Transition<in Bitmap?>?
                         ) {
-                            if (call != null) {
-                                call.onCall(resource)
-                            }
+                            call.onCall(resource)
                         }
 
                         override fun onLoadCleared(@Nullable placeholder: Drawable?) {
-                            if (call != null) {
-                                call.onCall(null)
-                            }
+                            call.onCall(null)
                         }
                     })
             }
@@ -177,15 +173,11 @@ private class MeOnMediaEditInterceptListener(
                             resource: Bitmap,
                             @Nullable transition: Transition<in Bitmap?>?
                         ) {
-                            if (call != null) {
-                                call.onCall(resource)
-                            }
+                            call.onCall(resource)
                         }
 
                         override fun onLoadCleared(@Nullable placeholder: Drawable?) {
-                            if (call != null) {
                                 call.onCall(null)
-                            }
                         }
                     })
             }
