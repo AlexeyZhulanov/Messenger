@@ -99,6 +99,7 @@ abstract class BaseChatFragment(
     abstract fun composeAnswer(message: Message)
     abstract fun getMembers(): List<User>
     abstract fun setupAdapterDialog()
+    abstract fun isGroup(): Boolean
 
     private val file: File by lazy {
         val f = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.pcm")
@@ -614,7 +615,7 @@ abstract class BaseChatFragment(
                     })
                     .startActivityPreview(position, false, images)
             }
-        }, currentUser.id, requireContext(), viewModel, members)
+        }, currentUser.id, requireContext(), viewModel, isGroup())
         lifecycleScope.launch {
             try {
                 adapter.dialogSettings = viewModel.getConvSettings()

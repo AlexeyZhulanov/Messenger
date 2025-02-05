@@ -109,11 +109,13 @@ interface RetrofitRepository {
 
     suspend fun uploadAvatar(avatar: File) : String
 
+    suspend fun uploadNews(news: File) : String
+
     suspend fun downloadFile(context: Context, folder: String, dialogId: Int, filename: String, isGroup: Int?) : String
 
     suspend fun downloadAvatar(context: Context, filename: String) : String
 
-    suspend fun deleteFile(folder: String, dialogId: Int, filename: String) : Boolean
+    suspend fun downloadNews(context: Context, filename: String) : String
 
     suspend fun getMedias(dialogId: Int, page: Int, isGroup: Int?) : List<String>?
 
@@ -126,4 +128,14 @@ interface RetrofitRepository {
     suspend fun getVacation() : Pair<String, String>?
 
     suspend fun getPermission() : Int
+
+    suspend fun sendNews(headerText: String, text: String?, images: List<String>?, voices: List<String>?,
+                         files: List<String>?) : Boolean
+
+    suspend fun getNews(pageIndex: Int, pageSize: Int) : List<News>
+
+    suspend fun editNews(newsId: Int, headerText: String, text: String?, images: List<String>?,
+                         voices: List<String>?, files: List<String>?) : Boolean
+
+    suspend fun deleteNews(newsId: Int) : Boolean
 }

@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_marginHorizontal="5dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+
+    <ImageView
+        android:id="@+id/cancel_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_clear"
+        app:tint="?attr/colorPrimary"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <TextView
+        android:id="@+id/header"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:text="Новый пост"
+        app:layout_constraintTop_toTopOf="@id/cancel_button"
+        app:layout_constraintStart_toEndOf="@id/cancel_button"
+        app:layout_constraintEnd_toStartOf="@id/confirm_button"
+        app:layout_constraintBottom_toBottomOf="@id/cancel_button"
+        android:fontFamily="casual"
+        android:gravity="center"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeMaxTextSize="100sp"
+        android:autoSizeStepGranularity="2sp"
+        android:textStyle="bold|italic" />
+
+    <ImageView
+        android:id="@+id/confirm_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_check"
+        app:tint="?attr/colorPrimary"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <TextView
+        android:id="@+id/headerTextView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:lines="1"
+        android:ellipsize="end"
+        android:text="Заголовок:"
+        android:layout_marginTop="10dp"
+        android:textColor="?attr/colorPrimaryDark"
+        app:layout_constraintTop_toBottomOf="@id/cancel_button"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <EditText
+        android:id="@+id/headerEditText"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:background="@drawable/custom_edittext"
+        android:hint="Заголовок"
+        android:textStyle="italic"
+        android:padding="8dp"
+        android:inputType="textPassword"
+        android:textColor="?attr/colorPrimaryDark"
+        android:textColorHint="?attr/colorAccent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/headerTextView"
+        android:textColorHighlight="@color/cardview_dark_background"
+        android:layout_marginTop="3dp"/>
+
+    <TextView
+        android:id="@+id/imageTextView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:lines="1"
+        android:ellipsize="end"
+        android:text="Изображения:"
+        android:layout_marginTop="5dp"
+        android:textColor="?attr/colorPrimaryDark"
+        app:layout_constraintTop_toBottomOf="@id/headerEditText"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/imageRecyclerView"
+        android:layout_width="0dp"
+        android:layout_height="100dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/imageTextView" />
+
+    <TextView
+        android:id="@+id/fileTextView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:lines="1"
+        android:ellipsize="end"
+        android:text="Файлы:"
+        android:layout_marginTop="5dp"
+        android:textColor="?attr/colorPrimaryDark"
+        app:layout_constraintTop_toBottomOf="@id/imageRecyclerView"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/fileRecyclerView"
+        android:layout_width="0dp"
+        android:layout_height="100dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/fileTextView" />
+
+    <TextView
+        android:id="@+id/voiceTextView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:lines="1"
+        android:ellipsize="end"
+        android:text="Голосовые:"
+        android:layout_marginEnd="5dp"
+        android:textColor="?attr/colorPrimaryDark"
+        app:layout_constraintTop_toTopOf="@id/fileTextView"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/voiceRecyclerView"
+        android:layout_width="0dp"
+        android:layout_height="100dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/voiceTextView" />
+
+    <TextView
+        android:id="@+id/textTextView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:lines="1"
+        android:ellipsize="end"
+        android:text="Текст:"
+        android:layout_marginTop="5dp"
+        android:textColor="?attr/colorPrimaryDark"
+        app:layout_constraintTop_toBottomOf="@id/voiceRecyclerView"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <EditText
+        android:id="@+id/textEditText"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:background="@drawable/custom_edittext"
+        android:hint="Текст"
+        android:textStyle="italic"
+        android:padding="8dp"
+        android:gravity="top|start"
+        android:inputType="textMultiLine"
+        android:scrollbars="vertical"
+        android:overScrollMode="always"
+        android:textColor="?attr/colorPrimaryDark"
+        android:textColorHint="?attr/colorAccent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textTextView"
+        android:textColorHighlight="@color/cardview_dark_background"
+        android:layout_marginTop="3dp"/>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layout_enter"
+        android:layout_width="0dp"
+        android:layout_height="50dp"
+        android:background="@color/colorBar"
+        android:layout_marginTop="10dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textEditText">
+
+        <ImageView
+            android:id="@+id/attach_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_attach"
+            app:tint="?attr/colorPrimary"
+            android:padding="3dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"/>
+
+
+        <ImageView
+            android:id="@+id/file_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_upload_file"
+            app:tint="?attr/colorPrimary"
+            android:padding="3dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toEndOf="@id/attach_button"/>
+
+        <ImageView
+            android:id="@+id/emoji_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_smile"
+            app:tint="?attr/colorPrimary"
+            android:padding="5dp"
+            android:layout_marginEnd="5dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/space"/>
+
+        <Space
+            android:id="@+id/space"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="3dp"
+            android:layout_marginEnd="5dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <com.tougee.recorderview.AudioRecordView
+            android:id="@+id/recordView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:mic_icon="@drawable/ic_mic_colored"
+            app:layout_constraintBottom_toTopOf="@id/emoji_picker"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:vibration_enable="true" />
+
+        <androidx.emoji2.emojipicker.EmojiPickerView
+            android:id="@+id/emoji_picker"
+            android:layout_width="0dp"
+            android:layout_height="250dp"
+            android:background="@color/colorBar"
+            app:layout_constraintBottom_toTopOf="@id/layout_enter"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:visibility="gone"
+            app:emojiGridColumns="9" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

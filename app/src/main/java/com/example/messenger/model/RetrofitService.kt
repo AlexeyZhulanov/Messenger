@@ -5,12 +5,12 @@ import android.util.Log
 import com.example.messenger.model.appsettings.AppSettings
 import com.example.messenger.retrofit.source.groups.GroupsSource
 import com.example.messenger.retrofit.source.messages.MessagesSource
+import com.example.messenger.retrofit.source.news.NewsSource
 import com.example.messenger.retrofit.source.uploads.UploadsSource
 import com.example.messenger.retrofit.source.users.UsersSource
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -23,6 +23,7 @@ class RetrofitService(
     private val messagesSource: MessagesSource,
     private val groupsSource: GroupsSource,
     private val uploadSource: UploadsSource,
+    private val newsSource: NewsSource,
     private val appSettings: AppSettings,
     private val messengerRepository: MessengerRepository,
     private val ioDispatcher: CoroutineDispatcher
@@ -30,6 +31,7 @@ class RetrofitService(
     private var conversations = listOf<Conversation>()
     private var messages = listOf<Message>()
     private var groupMessages = listOf<Message>()
+    private var news = listOf<News>()
     //private val listeners = mutableSetOf<ConversationsListener>()
 
     //private val _initCompleted = MutableLiveData<Boolean>()
@@ -285,6 +287,7 @@ class RetrofitService(
             when (e.code) {
                 404 -> throw MessageNotFoundException(e)
                 403 -> throw NoPermissionException(e)
+                400 -> throw NoChangedMadeException(e)
                 else -> throw e
             }
         }
@@ -777,20 +780,6 @@ class RetrofitService(
         return@withContext filePath
     }
 
-    override suspend fun deleteFile(folder: String, dialogId: Int, filename: String): Boolean = withContext(ioDispatcher) {
-        val message = try {
-            uploadSource.deleteFile(folder, dialogId, filename)
-        } catch (e: BackendException) {
-            when (e.code) {
-                404 -> throw FileNotFoundException(e)
-                400 -> throw InvalidCredentialsException(e)
-                else -> throw e
-            }
-        }
-        Log.d("testDeleteFile", message)
-        return@withContext true
-    }
-
     override suspend fun getMedias(dialogId: Int, page: Int, isGroup: Int?): List<String>? = withContext(ioDispatcher) {
         val files = try {
             uploadSource.getMediaPreviews(isGroup ?: 0, dialogId, page)
@@ -866,5 +855,93 @@ class RetrofitService(
             }
         }
         return@withContext vacation
+    }
+
+    override suspend fun sendNews(headerText: String, text: String?, images: List<String>?,
+                         voices: List<String>?, files: List<String>?): Boolean = withContext(ioDispatcher) {
+        return@withContext try {
+            newsSource.sendNews(headerText, text, images, voices, files)
+            Log.d("testSendNews", "News post sent successfully")
+            true
+        } catch (e: BackendException) {
+            when (e.code) {
+                403 -> throw NoPermissionException(e)
+                else -> {
+                    Log.e("testSendNews", "Error sending news post: ${e.message}")
+                    false
+                }
+            }
+        }
+    }
+
+    override suspend fun getNews(pageIndex: Int, pageSize: Int): List<News> = withContext(ioDispatcher) {
+        news = try {
+            newsSource.getNews(pageIndex, pageSize)
+        } catch (e: BackendException) {
+            when (e.code) {
+                400 -> throw InvalidStartEndValuesException(e)
+                else -> throw e
+            }
+        }
+        val largeMessage = news.toString()
+        val maxLogSize = 1000
+        for (i in 0..largeMessage.length / maxLogSize) {
+            val start = i * maxLogSize
+            val end = ((i + 1) * maxLogSize).coerceAtMost(largeMessage.length)
+            Log.d("testGetNews", largeMessage.substring(start, end))
+        }
+        return@withContext news
+    }
+
+    override suspend fun editNews(newsId: Int, headerText: String, text: String?, images: List<String>?,
+                     voices: List<String>?, files: List<String>?): Boolean = withContext(ioDispatcher) {
+        val message = try {
+            newsSource.editNews(newsId, headerText, text, images, voices, files)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw MessageNotFoundException(e)
+                403 -> throw NoPermissionException(e)
+                400 -> throw NoChangedMadeException(e)
+                else -> throw e
+            }
+        }
+        Log.d("testEditNews", message)
+        return@withContext true
+    }
+
+    override suspend fun deleteNews(newsId: Int): Boolean = withContext(ioDispatcher) {
+        val message = try {
+            newsSource.deleteNews(newsId)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw MessageNotFoundException(e)
+                403 -> throw NoPermissionException(e)
+                else -> throw e
+            }
+        }
+        Log.d("testDeleteNews", message)
+        return@withContext true
+    }
+
+    override suspend fun uploadNews(news: File): String = withContext(ioDispatcher) {
+        val file = try {
+            uploadSource.uploadNews(news)
+        } catch (e: BackendException) {
+            if(e.code == 400) throw InvalidCredentialsException(e)
+            else throw e
+        }
+        Log.d("testUploadNews", file)
+        return@withContext file
+    }
+
+    override suspend fun downloadNews(context: Context, filename: String): String = withContext(ioDispatcher) {
+        val filePath = try {
+            uploadSource.downloadNews(context, filename)
+        } catch (e: BackendException) {
+            if(e.code == 400) throw InvalidCredentialsException(e)
+            else throw e
+        }
+        Log.d("testDownloadNews", filePath)
+        return@withContext filePath
     }
 }

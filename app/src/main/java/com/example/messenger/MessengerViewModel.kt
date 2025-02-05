@@ -98,10 +98,6 @@ class MessengerViewModel @Inject constructor(
         }
     }
 
-    suspend fun getPermission() : Int {
-        return retrofitService.getPermission()
-    }
-
     fun createDialog(input: String) {
         viewModelScope.launch {
             if (retrofitService.createDialog(input)) {

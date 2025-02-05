@@ -130,7 +130,5 @@ class MessageFragment(
         setupAdapter(emptyList())
     }
 
-    //override fun getConvId(): Int = dialog.id
-
-    //override fun getIsGroup(): Int = 0
+    override fun isGroup(): Boolean = false
 }

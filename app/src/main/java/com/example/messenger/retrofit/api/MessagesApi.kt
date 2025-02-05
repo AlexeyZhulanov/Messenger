@@ -68,7 +68,7 @@ interface MessagesApi {
 
     @DELETE("dialogs/{dialog_id}")
     suspend fun deleteDialog(
-        @Path("dialog_id") dialogId: Int,
+        @Path("dialog_id") dialogId: Int
     ) : ResponseEntityMessageAnswer
 
     @GET("users")

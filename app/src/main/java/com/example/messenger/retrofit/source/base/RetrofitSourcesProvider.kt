@@ -4,6 +4,8 @@ import com.example.messenger.retrofit.source.groups.GroupsSource
 import com.example.messenger.retrofit.source.groups.RetrofitGroupsSource
 import com.example.messenger.retrofit.source.messages.MessagesSource
 import com.example.messenger.retrofit.source.messages.RetrofitMessagesSource
+import com.example.messenger.retrofit.source.news.NewsSource
+import com.example.messenger.retrofit.source.news.RetrofitNewsSource
 import com.example.messenger.retrofit.source.uploads.RetrofitUploadsSource
 import com.example.messenger.retrofit.source.uploads.UploadsSource
 import com.example.messenger.retrofit.source.users.RetrofitUsersSource
@@ -26,5 +28,9 @@ class RetrofitSourcesProvider(
 
     override fun getUploadsSource(): UploadsSource {
         return RetrofitUploadsSource(config)
+    }
+
+    override fun getNewsSource(): NewsSource {
+        return RetrofitNewsSource(config)
     }
 }

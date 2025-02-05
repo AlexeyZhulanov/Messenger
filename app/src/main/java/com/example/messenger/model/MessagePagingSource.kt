@@ -34,7 +34,7 @@ class MessagePagingSource(
                 if(isDialog) retrofitService.searchMessagesInDialog(convId, query)
                 else retrofitService.searchMessagesInGroup(convId, query)
             }
-            if(pageIndex == 0) {
+            if(pageIndex == 0 && flag) {
                 if(isDialog) messengerService.replaceMessages(convId, messages, fileManager)
                 else messengerService.replaceGroupMessages(convId, messages, fileManager)
             }

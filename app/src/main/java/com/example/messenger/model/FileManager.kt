@@ -19,6 +19,10 @@ class FileManager(private val context: Context) {
         return getOrCreateDirectory("avatars")
     }
 
+    private fun getNewsDirectory(): File {
+        return getOrCreateDirectory("news")
+    }
+
     // Вспомогательная функция для создания директории
     private fun getOrCreateDirectory(name: String): File {
         val dir = File(context.filesDir, name)
@@ -47,6 +51,10 @@ class FileManager(private val context: Context) {
         return saveFile(getAvatarsDirectory(), fileName, fileData)
     }
 
+    fun saveNewsFile(fileName: String, fileData: ByteArray): File {
+        return saveFile(getNewsDirectory(), fileName, fileData)
+    }
+
     // Проверка на существование файла
     fun isExistMessage(fileName: String): Boolean {
         val dir = getMessageDirectory()
@@ -62,6 +70,12 @@ class FileManager(private val context: Context) {
 
     fun isExistAvatar(fileName: String): Boolean {
         val dir = getAvatarsDirectory()
+        val file = File(dir, fileName)
+        return file.exists()
+    }
+
+    fun isExistNews(fileName: String): Boolean {
+        val dir = getNewsDirectory()
         val file = File(dir, fileName)
         return file.exists()
     }
@@ -106,6 +120,10 @@ class FileManager(private val context: Context) {
         cleanupDirectory(getAvatarsDirectory(), usedFiles)
     }
 
+    fun cleanupNewsFiles(usedFiles: Set<String>) {
+        cleanupDirectory(getNewsDirectory(), usedFiles)
+    }
+
     fun getMessageFilePath(fileName: String): String {
         return File(getMessageDirectory(), fileName).absolutePath
     }
@@ -116,6 +134,10 @@ class FileManager(private val context: Context) {
 
     fun getAvatarFilePath(fileName: String): String {
         return File(getAvatarsDirectory(), fileName).absolutePath
+    }
+
+    fun getNewsFilePath(fileName: String): String {
+        return File(getNewsDirectory(), fileName).absolutePath
     }
 
     // Получение файла по filePath

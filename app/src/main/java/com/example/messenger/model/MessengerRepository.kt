@@ -53,4 +53,8 @@ interface MessengerRepository {
     suspend fun getGroupMembers(groupId: Int) : List<User>
 
     suspend fun replaceGroupMembers(groupId: Int, groupMembers: List<User>)
+
+    suspend fun getNews() : List<News>
+
+    suspend fun replaceNews(newNews: List<News>, fileManager: FileManager)
 }
