@@ -10,12 +10,11 @@ class MessagePagingSource(
     private val messengerService: MessengerService,
     private val convId: Int,
     private val query: String,
-    isFirst: Boolean,
     private val fileManager: FileManager,
     private val isDialog: Boolean = true
 ) {
 
-    private var flag = isFirst
+    private var flag = true
 
     suspend fun loadPage(pageIndex: Int, pageSize: Int): List<Pair<Message, String>> {
         return try {

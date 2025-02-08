@@ -2,19 +2,26 @@ package com.example.messenger
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentNewsBinding
 import com.example.messenger.model.News
-import com.example.messenger.picker.CustomPreviewFragment
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
@@ -28,7 +35,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 @AndroidEntryPoint
-class NewsFragment : Fragment() {
+class NewsFragment(private val currentUserUri: Uri?) : Fragment() {
 
     private lateinit var binding: FragmentNewsBinding
     private lateinit var adapter: NewsAdapter
@@ -40,9 +47,20 @@ class NewsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         lifecycleScope.launch {
             viewModel.pagingFlow.collectLatest { pagingData ->
-                adapter.submitData(pagingData)
+                if(pagingData != null) adapter.submitData(pagingData)
             }
         }
+        val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
+        val defaultToolbar = LayoutInflater.from(context)
+            .inflate(R.layout.toolbar_news, toolbarContainer, false)
+        toolbarContainer.addView(defaultToolbar)
+        val avatarImageView: ImageView = view.findViewById(R.id.toolbar_avatar)
+        avatarImageView.imageTintList = null
+        Glide.with(requireContext())
+            .load(currentUserUri)
+            .apply(RequestOptions.circleCropTransform())
+            .diskCacheStrategy(DiskCacheStrategy.ALL)
+            .into(avatarImageView)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -52,7 +70,7 @@ class NewsFragment : Fragment() {
             if(permission == 1) {
                 binding.floatingActionButtonAdd.visibility = View.VISIBLE
                 binding.floatingActionButtonAdd.setOnClickListener {
-                    BottomSheetNewsFragment(viewModel, null, object : BottomSheetNewsListener {
+                    BottomSheetNewsFragment(viewModel, null, null, object : BottomSheetNewsListener {
                         override fun onPostSent() {
                             viewModel.refresh()
                         }
@@ -61,10 +79,13 @@ class NewsFragment : Fragment() {
                 adapter.setPermission(permission)
             }
         }
-        filePickerManager = FilePickerManager(null, null, null, this)
+        binding.button3.setOnClickListener {
+            requireActivity().onBackPressedDispatcher.onBackPressed()
+        }
+        filePickerManager = FilePickerManager(fragment4 = this)
         adapter = NewsAdapter(object: NewsActionListener {
-            override fun onEditItem(news: News) {
-                BottomSheetNewsFragment(viewModel, news, object : BottomSheetNewsListener {
+            override fun onEditItem(news: News, triple: Triple<ArrayList<LocalMedia>, List<File>, List<File>>) {
+                BottomSheetNewsFragment(viewModel, news, triple, object : BottomSheetNewsListener {
                     override fun onPostSent() {
                         viewModel.refresh()
                     }
@@ -117,6 +138,20 @@ class NewsFragment : Fragment() {
                 }
             }
         }, requireContext(), viewModel, permission)
+        binding.recyclerview.adapter = adapter
+        binding.recyclerview.layoutManager = LinearLayoutManager(requireContext())
+        binding.recyclerview.addItemDecoration(SpacingItemDecorator(20))
         return binding.root
+    }
+
+    class SpacingItemDecorator(private val space: Int) : RecyclerView.ItemDecoration() {
+        override fun getItemOffsets(
+            outRect: Rect,
+            view: View,
+            parent: RecyclerView,
+            state: RecyclerView.State
+        ) {
+            outRect.bottom = space
+        }
     }
 }

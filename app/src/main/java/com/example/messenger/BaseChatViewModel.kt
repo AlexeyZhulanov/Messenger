@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.provider.MediaStore
+import android.provider.OpenableColumns
 import android.util.Log
 import android.view.View
 import android.widget.ImageView
@@ -33,6 +35,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -48,7 +52,6 @@ abstract class BaseChatViewModel(
 ) : ViewModel() {
     protected var convId: Int = -1
     private var isGroup: Int = 0
-    protected var isFirst = true
     private var disableRefresh: Boolean = false
     private var pendingRefresh: Boolean = false
     @SuppressLint("StaticFieldLeak")
@@ -97,7 +100,6 @@ abstract class BaseChatViewModel(
             pendingRefresh = true
             return
         }
-        isFirst = false
         _newMessageFlow.value = null
         currentPage.value = 0
         _unsentMessageFlow.value = null
@@ -530,6 +532,59 @@ abstract class BaseChatViewModel(
         val minutes = TimeUnit.MILLISECONDS.toMinutes(milliseconds)
         val seconds = TimeUnit.MILLISECONDS.toSeconds(milliseconds) % 60
         return String.format(Locale.ROOT,"%02d:%02d", minutes, seconds)
+    }
+
+    fun uriToFile(uri: Uri, context: Context): File? {
+        val fileName = getFileName(uri, context)
+        // Создаем временный файл в кэше приложения
+        val tempFile = File(context.cacheDir, fileName)
+
+        try {
+            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
+            val outputStream = FileOutputStream(tempFile)
+            inputStream?.use { input ->
+                outputStream.use { output ->
+                    input.copyTo(output)
+                }
+            }
+            return tempFile
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
+    private fun getFileName(uri: Uri, context: Context): String {
+        var result: String? = null
+        if (uri.scheme == "content") {
+            val cursor = context.contentResolver.query(uri, null, null, null, null)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    result = it.getString(it.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME))
+                }
+            }
+        }
+        if (result == null) {
+            result = uri.path
+            val cut = result?.lastIndexOf('/')
+            if (cut != -1) {
+                result = result?.substring(cut!! + 1)
+            }
+        }
+        return result ?: "temp_file"
+    }
+
+    fun getFileFromContentUri(context: Context, contentUri: Uri): File? {
+        val projection = arrayOf(MediaStore.Video.Media.DATA)
+        val cursor = context.contentResolver.query(contentUri, projection, null, null, null)
+        cursor?.use {
+            if (it.moveToFirst()) {
+                val columnIndex = it.getColumnIndexOrThrow(MediaStore.Video.Media.DATA)
+                val filePath = it.getString(columnIndex)
+                return File(filePath)
+            }
+        }
+        return null
     }
 
     fun avatarSet(avatar: String, imageView: ImageView, context: Context) {
