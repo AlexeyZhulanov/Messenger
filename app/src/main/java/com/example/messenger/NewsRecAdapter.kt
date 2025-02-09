@@ -6,7 +6,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.databinding.ItemNewsRecBinding
 
 interface NewsRecActionListener {
-    fun onItemDeleteClicked(position: Int)
+    fun onItemDeleteClicked(actualPos: Int)
 }
 
 class NewsRecAdapter(
@@ -24,11 +24,6 @@ class NewsRecAdapter(
         notifyItemInserted(names.size - 1)
     }
 
-    fun removeItem(position: Int) {
-        names.removeAt(position)
-        notifyItemRemoved(position)
-    }
-
     override fun getItemCount(): Int = names.size
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NewsRecViewHolder {
@@ -42,7 +37,10 @@ class NewsRecAdapter(
         with(holder.binding) {
             nameTextView.text = name
             deleteButton.setOnClickListener {
-                actionListener.onItemDeleteClicked(position)
+                val actualPos = names.indexOf(name)
+                if(actualPos != -1) notifyItemRemoved(actualPos)
+                names.remove(name)
+                actionListener.onItemDeleteClicked(actualPos)
             }
         }
     }

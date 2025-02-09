@@ -5,16 +5,12 @@ import android.graphics.PorterDuff
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewOutlineProvider
-import android.view.WindowManager
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
@@ -30,9 +26,6 @@ import com.example.messenger.voicerecorder.AudioConverter
 import com.example.messenger.voicerecorder.AudioRecorder
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.google.android.material.shape.CornerFamily
-import com.google.android.material.shape.MaterialShapeDrawable
-import com.google.android.material.shape.ShapeAppearanceModel
 import com.luck.picture.lib.basic.PictureSelector
 import com.luck.picture.lib.config.InjectResourceSource
 import com.luck.picture.lib.entity.LocalMedia
@@ -65,6 +58,9 @@ class BottomSheetNewsFragment(
     private lateinit var pickFileLauncher: ActivityResultLauncher<Array<String>>
     private var filesList: MutableList<File> = mutableListOf()
     private var voicesList: MutableList<File> = mutableListOf()
+    private var canDrag: Boolean = true
+    private var isEmojiOffDrag: Boolean = false
+
 
     private val file: File by lazy {
         val f = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.pcm")
@@ -144,22 +140,29 @@ class BottomSheetNewsFragment(
 
             override fun onDeleteImage(position: Int) {
                 imageAdapter.delete(position)
+                if(imageAdapter.getData().isEmpty()) {
+                    if(filesList.isEmpty() && voicesList.isEmpty()) enableBottomSheetDrag()
+                }
             }
         })
         binding.imageRecyclerView.adapter = imageAdapter
         binding.imageRecyclerView.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
         recAdapterFiles = NewsRecAdapter(object : NewsRecActionListener {
-            override fun onItemDeleteClicked(position: Int) {
-                recAdapterFiles.removeItem(position)
-                filesList.removeAt(position)
+            override fun onItemDeleteClicked(actualPos: Int) {
+                filesList.removeAt(actualPos)
+                if(filesList.isEmpty()) {
+                    if(imageAdapter.getData().isEmpty() && voicesList.isEmpty()) enableBottomSheetDrag()
+                }
             }
         })
         binding.fileRecyclerView.adapter = recAdapterFiles
         binding.fileRecyclerView.layoutManager = LinearLayoutManager(requireContext())
         recAdapterVoices = NewsRecAdapter(object : NewsRecActionListener {
-            override fun onItemDeleteClicked(position: Int) {
-                recAdapterVoices.removeItem(position)
-                voicesList.removeAt(position)
+            override fun onItemDeleteClicked(actualPos: Int) {
+                voicesList.removeAt(actualPos)
+                if(voicesList.isEmpty()) {
+                    if(imageAdapter.getData().isEmpty() && filesList.isEmpty()) enableBottomSheetDrag()
+                }
             }
         })
         binding.voiceRecyclerView.adapter = recAdapterVoices
@@ -169,14 +172,19 @@ class BottomSheetNewsFragment(
             binding.header.text = "Редактирование поста"
             binding.headerEditText.setText(currentNews.headerText)
             binding.textEditText.setText(currentNews.text)
-            if(triple?.first != null) imageAdapter.images = triple.first
+            if(triple?.first != null) {
+                if(canDrag) disableBottomSheetDrag()
+                imageAdapter.images = triple.first
+            }
             if(triple?.second != null) {
+                if(canDrag) disableBottomSheetDrag()
                 filesList = triple.second.toMutableList()
                 triple.second.forEach {
                     recAdapterFiles.addItem(it.name)
                 }
             }
             if(triple?.third != null) {
+                if(canDrag) disableBottomSheetDrag()
                 voicesList = triple.third.toMutableList()
                 val retriever = MediaMetadataRetriever()
                 triple.third.forEach {
@@ -194,6 +202,9 @@ class BottomSheetNewsFragment(
                 try {
                     val res = async { filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = false, imageAdapter.getData()) }
                     imageAdapter.images = res.await()
+                    if(res.await().isNotEmpty()) {
+                        if(canDrag) disableBottomSheetDrag()
+                    }
                     Log.d("testImagesAdapterNewsCreate", imageAdapter.getData().toString())
                 } catch (e: CancellationException) {
                     Toast.makeText(requireContext(), "Выходим...", Toast.LENGTH_SHORT).show()
@@ -210,10 +221,16 @@ class BottomSheetNewsFragment(
             // Если текстовый контейнер пустой, то смайлы будут добавляться в заголовок
             if(binding.emojiPicker.visibility == View.VISIBLE) {
                 binding.emojiPicker.visibility = View.GONE
-                enableBottomSheetDrag()
+                if(isEmojiOffDrag) {
+                    enableBottomSheetDrag()
+                    isEmojiOffDrag = false
+                }
             }
             else {
-                disableBottomSheetDrag()
+                if(canDrag) {
+                    disableBottomSheetDrag()
+                    isEmojiOffDrag = true
+                }
                 var enterText: EditText = requireView().findViewById(R.id.textEditText)
                 if(enterText.text.isEmpty()) enterText = requireView().findViewById(R.id.headerEditText)
                 binding.emojiPicker.visibility = View.VISIBLE
@@ -270,7 +287,7 @@ class BottomSheetNewsFragment(
                 } else {
                     Toast.makeText(requireContext(), "Не удалось отправить новость", Toast.LENGTH_SHORT).show()
                     binding.confirmButton.isEnabled = true
-                    binding.confirmButton.clearColorFilter() // todo протестировать
+                    binding.confirmButton.clearColorFilter()
                 }
             }
         }
@@ -307,6 +324,7 @@ class BottomSheetNewsFragment(
                 val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
                 retriever.release()
                 val str = "Гс ${duration/1000} сек"
+                if(canDrag) disableBottomSheetDrag()
                 voicesList.add(fileOgg)
                 recAdapterVoices.addItem(str)
             }
@@ -320,6 +338,7 @@ class BottomSheetNewsFragment(
     private fun handleFileUri(uri: Uri) {
         val file = newsViewModel.uriToFile(uri, requireContext())
         if (file != null) {
+            if(canDrag) disableBottomSheetDrag()
             filesList.add(file)
             recAdapterFiles.addItem(file.name)
         }
@@ -338,6 +357,7 @@ class BottomSheetNewsFragment(
     }
 
     private fun disableBottomSheetDrag() {
+        canDrag = false
         val bottomSheet = dialog?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
         bottomSheet?.let {
             val behavior = BottomSheetBehavior.from(it)
@@ -346,6 +366,7 @@ class BottomSheetNewsFragment(
     }
 
     private fun enableBottomSheetDrag() {
+        canDrag = true
         val bottomSheet = dialog?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
         bottomSheet?.let {
             val behavior = BottomSheetBehavior.from(it)

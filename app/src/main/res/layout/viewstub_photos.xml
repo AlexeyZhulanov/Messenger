@@ -8,7 +8,6 @@
         android:layout_height="300dp"
         android:padding="8dp"
         android:clipToPadding="false"
-        android:visibility="gone"
         android:nestedScrollingEnabled="false"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

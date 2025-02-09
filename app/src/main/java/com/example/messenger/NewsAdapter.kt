@@ -2,7 +2,6 @@ package com.example.messenger
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -112,7 +111,6 @@ class NewsAdapter(
                 }
                 photosView?.visibility = View.VISIBLE
                 val photosRecyclerView = photosView?.findViewById<RecyclerView>(R.id.rvPhotos)
-                photosRecyclerView?.visibility = View.VISIBLE
                 photosRecyclerView?.layoutManager = CustomLayoutManager()
                 photosRecyclerView?.addItemDecoration(AdaptiveGridSpacingItemDecoration(2, true))
                 photosRecyclerView?.adapter = adapterImages
@@ -157,7 +155,6 @@ class NewsAdapter(
                 }
                 filesView?.visibility = View.VISIBLE
                 val filesRecyclerView = filesView?.findViewById<RecyclerView>(R.id.rvFiles)
-                filesRecyclerView?.visibility = View.VISIBLE
                 filesRecyclerView?.layoutManager = LinearLayoutManager(context)
                 filesRecyclerView?.adapter = adapterFiles
                 uiScopeMain.launch {
@@ -202,7 +199,6 @@ class NewsAdapter(
                 }
                 voiceView?.visibility = View.VISIBLE
                 val voiceRecyclerView = voiceView?.findViewById<RecyclerView>(R.id.rvVoices)
-                voiceRecyclerView?.visibility = View.VISIBLE
                 voiceRecyclerView?.layoutManager = LinearLayoutManager(context)
                 voiceRecyclerView?.adapter = adapterVoices
                 uiScopeMain.launch {

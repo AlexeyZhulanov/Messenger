@@ -6,7 +6,9 @@ import android.net.Uri
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.util.Log
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -17,26 +19,20 @@ import com.example.messenger.model.FileManager
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.NewsPagingSource
 import com.example.messenger.model.RetrofitService
-import com.example.messenger.model.WebSocketService
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -46,21 +42,26 @@ class NewsViewModel @Inject constructor(
     private val messengerService: MessengerService,
     private val retrofitService: RetrofitService,
     private val fileManager: FileManager,
-    private val webSocketService: WebSocketService,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     @MainDispatcher private val mainDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
-    private val refreshTrigger = MutableSharedFlow<Unit>(replay = 1)
+    private val refreshTrigger = MutableLiveData(Unit)
 
-    val pagingFlow = Pager(PagingConfig(pageSize = 10, initialLoadSize = 10, prefetchDistance = 3)) {
-        NewsPagingSource(retrofitService, messengerService, fileManager)
-    }.flow.cachedIn(viewModelScope)
+
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    val pagingFlow = refreshTrigger.asFlow()
+        .debounce(500)
+        .flatMapLatest {
+            Pager(PagingConfig(pageSize = 10, initialLoadSize = 10, prefetchDistance = 3)) {
+            NewsPagingSource(retrofitService, messengerService, fileManager)
+            }.flow.cachedIn(viewModelScope)
+        }
 
 
     fun refresh() {
         Log.d("testRefresh", "TRIGGERED")
-        // todo
+        this.refreshTrigger.postValue(this.refreshTrigger.value)
     }
 
     suspend fun getPermission() : Int {

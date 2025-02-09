@@ -43,11 +43,24 @@ class NewsFragment(private val currentUserUri: Uri?) : Fragment() {
     private var permission: Int = 0
     private val viewModel: NewsViewModel by viewModels()
 
+    private val adapterDataObserver = object : RecyclerView.AdapterDataObserver() {
+        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+            binding.recyclerview.scrollToPosition(0)
+            binding.recyclerview.adapter?.unregisterAdapterDataObserver(this)
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         lifecycleScope.launch {
             viewModel.pagingFlow.collectLatest { pagingData ->
-                if(pagingData != null) adapter.submitData(pagingData)
+                try {
+                    binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+                } catch (e: Exception) {
+                    binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterDataObserver)
+                    binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+                }
+                adapter.submitData(pagingData)
             }
         }
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
