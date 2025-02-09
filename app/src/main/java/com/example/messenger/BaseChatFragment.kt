@@ -9,8 +9,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
-import android.provider.MediaStore
-import android.provider.OpenableColumns
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
@@ -58,8 +56,6 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.FileOutputStream
-import java.io.InputStream
 import java.io.PrintWriter
 
 @AndroidEntryPoint
@@ -251,7 +247,7 @@ abstract class BaseChatFragment(
                 binding.messageLayout.background =
                     ContextCompat.getDrawable(requireContext(), resId)
         }
-        filePickerManager = FilePickerManager(this, null, null)
+        filePickerManager = FilePickerManager(this)
         setupAdapterDialog()
         imageAdapter = ImageAdapter(requireContext(), object: ImageActionListener {
             override fun onImageClicked(image: LocalMedia, position: Int) {
@@ -413,7 +409,7 @@ abstract class BaseChatFragment(
                         val localFilePaths = mutableListOf<String>()
                         for (item1 in items) {
                             if (item1.duration > 0) {
-                                val file = getFileFromContentUri(requireContext(), Uri.parse(item1.availablePath)) ?: continue
+                                val file = viewModel.getFileFromContentUri(requireContext(), Uri.parse(item1.availablePath)) ?: continue
                                 val tmp = async { viewModel.uploadPhoto(file) }
                                 val (path, f) = tmp.await()
                                 list += path
@@ -432,7 +428,7 @@ abstract class BaseChatFragment(
                             for (item1 in items) {
                                 try {
                                     val file = if (item1.duration > 0) {
-                                        getFileFromContentUri(requireContext(), Uri.parse(item1.availablePath)) ?: continue
+                                        viewModel.getFileFromContentUri(requireContext(), Uri.parse(item1.availablePath)) ?: continue
                                     } else {
                                         File(item1.availablePath)
                                     }
@@ -639,19 +635,6 @@ abstract class BaseChatFragment(
     override val defaultViewModelCreationExtras: CreationExtras
         get() = super.defaultViewModelCreationExtras
 
-    private fun getFileFromContentUri(context: Context, contentUri: Uri): File? {
-        val projection = arrayOf(MediaStore.Video.Media.DATA)
-        val cursor = context.contentResolver.query(contentUri, projection, null, null, null)
-        cursor?.use {
-            if (it.moveToFirst()) {
-                val columnIndex = it.getColumnIndexOrThrow(MediaStore.Video.Media.DATA)
-                val filePath = it.getString(columnIndex)
-                return File(filePath)
-            }
-        }
-        return null
-    }
-
     override fun isReady(): Boolean = true
 
     override fun onRecordCancel() {
@@ -703,7 +686,7 @@ abstract class BaseChatFragment(
         clearFile(tmpFile)
 
         audioRecord = AudioRecorder(ParcelFileDescriptor.open(tmpFile, ParcelFileDescriptor.MODE_READ_WRITE))
-        audioRecord?.start(this)
+        audioRecord?.start(this, null)
     }
 
     private fun clearFile(f: File) {
@@ -725,7 +708,7 @@ abstract class BaseChatFragment(
     }
 
     private fun handleFileUri(uri: Uri) {
-        val file = uriToFile(uri, requireContext())
+        val file = viewModel.uriToFile(uri, requireContext())
         if(file != null) {
             lifecycleScope.launch {
                 val response = async {
@@ -754,46 +737,6 @@ abstract class BaseChatFragment(
                 // viewModel.refresh()
             }
         } else Toast.makeText(requireContext(), "Что-то не так с файлом", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun uriToFile(uri: Uri, context: Context): File? {
-        val fileName = getFileName(uri, context)
-        // Создаем временный файл в кэше приложения
-        val tempFile = File(context.cacheDir, fileName)
-
-        try {
-            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-            val outputStream = FileOutputStream(tempFile)
-            inputStream?.use { input ->
-                outputStream.use { output ->
-                    input.copyTo(output)
-                }
-            }
-            return tempFile
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return null
-        }
-    }
-
-    private fun getFileName(uri: Uri, context: Context): String {
-        var result: String? = null
-        if (uri.scheme == "content") {
-            val cursor = context.contentResolver.query(uri, null, null, null, null)
-            cursor?.use {
-                if (it.moveToFirst()) {
-                    result = it.getString(it.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME))
-                }
-            }
-        }
-        if (result == null) {
-            result = uri.path
-            val cut = result?.lastIndexOf('/')
-            if (cut != -1) {
-                result = result?.substring(cut!! + 1)
-            }
-        }
-        return result ?: "temp_file"
     }
 
     private fun showPopupMenu(view: View, menuRes: Int) {
@@ -1018,7 +961,7 @@ abstract class BaseChatFragment(
                                             val list = mutableListOf<String>()
                                             for (uItem in itemsToUpload) {
                                                 if (uItem.duration > 0) {
-                                                    val file = getFileFromContentUri(requireContext(), Uri.parse(uItem.availablePath)) ?: continue
+                                                    val file = viewModel.getFileFromContentUri(requireContext(), Uri.parse(uItem.availablePath)) ?: continue
                                                     val tmp = async {
                                                         viewModel.uploadPhoto(file)
                                                     }

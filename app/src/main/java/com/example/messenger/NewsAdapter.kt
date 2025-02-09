@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import androidx.appcompat.widget.PopupMenu
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.MessageAdapter.AdaptiveGridSpacingItemDecoration
 import com.example.messenger.MessageAdapter.CustomLayoutManager
@@ -24,7 +25,7 @@ import java.io.File
 
 
 interface NewsActionListener {
-    fun onEditItem(news: News)
+    fun onEditItem(news: News, triple: Triple<ArrayList<LocalMedia>, List<File>, List<File>>)
     fun onDeleteItem(newsId: Int)
     fun onImagesClick(images: ArrayList<LocalMedia>, position: Int)
     fun onFileClick(file: File)
@@ -90,11 +91,13 @@ class NewsAdapter(
 
         private val adapterVoices = VoicesAdapter(newsViewModel)
 
+        private val listVoiceFiles: MutableList<File> = mutableListOf()
+
         fun bind(news: News, isInLast10: Boolean) {
-            if(news.text != null) {
+            if(news.text != null && news.text != "") {
                 binding.textContainer.visibility = View.VISIBLE
                 binding.textContainer.text = news.text
-            }
+            } else binding.textContainer.visibility = View.GONE
             binding.headerTextView.text = news.headerText
             binding.editedText.visibility = if(news.isEdited) View.VISIBLE else View.GONE
             binding.dateText.text = newsViewModel.formatMessageNews(news.timestamp)
@@ -102,7 +105,10 @@ class NewsAdapter(
             binding.viewCountTextView.text = strViewsCount
             // Обработка фото (ViewStub)
             if (news.images?.isNotEmpty() == true) {
-                if (photosView == null) photosView = binding.photosStub.inflate()
+                if (photosView == null) {
+                    photosView = LayoutInflater.from(context)
+                        .inflate(R.layout.viewstub_photos, binding.nestedLayout, true)
+                }
                 photosView?.visibility = View.VISIBLE
                 val photosRecyclerView = photosView?.findViewById<RecyclerView>(R.id.rvPhotos)
                 photosRecyclerView?.layoutManager = CustomLayoutManager()
@@ -143,9 +149,13 @@ class NewsAdapter(
 
             // Обработка файлов (ViewStub)
             if (news.files?.isNotEmpty() == true) {
-                if (filesView == null) filesView = binding.filesStub.inflate()
+                if (filesView == null) {
+                    filesView = LayoutInflater.from(context)
+                        .inflate(R.layout.viewstub_files, binding.nestedLayout, true)
+                }
                 filesView?.visibility = View.VISIBLE
                 val filesRecyclerView = filesView?.findViewById<RecyclerView>(R.id.rvFiles)
+                filesRecyclerView?.layoutManager = LinearLayoutManager(context)
                 filesRecyclerView?.adapter = adapterFiles
                 uiScopeMain.launch {
                     val semaphore = Semaphore(3) // 3 because files can be big
@@ -183,9 +193,13 @@ class NewsAdapter(
 
             // Обработка голосовых (ViewStub)
             if (news.voices?.isNotEmpty() == true) {
-                if (voiceView == null) voiceView = binding.voiceStub.inflate()
+                if (voiceView == null) {
+                    voiceView = LayoutInflater.from(context)
+                        .inflate(R.layout.viewstub_voice, binding.nestedLayout, true)
+                }
                 voiceView?.visibility = View.VISIBLE
                 val voiceRecyclerView = voiceView?.findViewById<RecyclerView>(R.id.rvVoices)
+                voiceRecyclerView?.layoutManager = LinearLayoutManager(context)
                 voiceRecyclerView?.adapter = adapterVoices
                 uiScopeMain.launch {
                     val semaphore = Semaphore(5) // 5 because all voices is light weight
@@ -211,6 +225,7 @@ class NewsAdapter(
                                 if (file.exists()) {
                                     if (!second && isInLast10) newsViewModel.fManagerSaveFileNews(it, file.readBytes())
                                     audiosTemp += first
+                                    listVoiceFiles.add(file)
                                 }
                             }
                         }
@@ -224,19 +239,20 @@ class NewsAdapter(
             if(permission == 1) {
                 binding.icOptions.visibility = View.VISIBLE
                 binding.icOptions.setOnClickListener {
-                    showPopupMenu(itemView, news)
+                    val triple = Triple(adapterImages.images, adapterFiles.files, listVoiceFiles.toList())
+                    showPopupMenu(itemView, news, triple)
                 }
             }
         }
     }
 
-    private fun showPopupMenu(itemView: View, news: News) {
+    private fun showPopupMenu(itemView: View, news: News, triple: Triple<ArrayList<LocalMedia>, List<File>, List<File>>) {
         val popupMenu = PopupMenu(context, itemView)
         popupMenu.menuInflater.inflate(R.menu.popup_menu_news, popupMenu.menu)
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.item_edit -> {
-                    actionListener.onEditItem(news)
+                    actionListener.onEditItem(news, triple)
                     true
                 }
                 R.id.item_delete -> {

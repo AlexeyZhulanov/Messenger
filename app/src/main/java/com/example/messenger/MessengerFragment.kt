@@ -48,6 +48,7 @@ class MessengerFragment : Fragment() {
     private var forwardMessages: List<Message>? = null
     private var forwardUsernames: List<String>? = null
     private var updateJob: Job? = null
+    private var uriGlobal: Uri? = null
     private val messengerViewModel: MessengerViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -105,6 +106,7 @@ class MessengerFragment : Fragment() {
                         if (file.exists()) {
                             if (!second) messengerViewModel.fManagerSaveAvatar(avatar, file.readBytes())
                             val uri = Uri.fromFile(file)
+                            uriGlobal = uri
                             avatarImageView.imageTintList = null
                             Glide.with(requireContext())
                                 .load(uri)
@@ -131,7 +133,7 @@ class MessengerFragment : Fragment() {
         }
         binding.button.setOnClickListener {
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, NewsFragment(messengerViewModel), "NEWS_FRAGMENT_TAG")
+                .replace(R.id.fragmentContainer, NewsFragment(uriGlobal), "NEWS_FRAGMENT_TAG")
                 .addToBackStack(null)
                 .commit()
         }

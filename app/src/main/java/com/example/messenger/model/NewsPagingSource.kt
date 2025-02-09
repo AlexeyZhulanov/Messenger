@@ -1,5 +1,6 @@
 package com.example.messenger.model
 
+import android.util.Log
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 
@@ -7,15 +8,15 @@ import androidx.paging.PagingState
 class NewsPagingSource(
     private val retrofitService: RetrofitService,
     private val messengerService: MessengerService,
-    isFirst: Boolean,
     private val fileManager: FileManager
 ) : PagingSource<Int, News>() {
 
-    private var flag = isFirst
+    private var flag = true
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, News> {
         return try {
-            val pageIndex = params.key ?: 0
+            Log.d("testLoadNews", "OK")
+            val pageIndex = params.key ?: 1
             val news = try {
                     retrofitService.getNews(pageIndex, params.loadSize)
                 } catch (e: Exception) {
@@ -24,11 +25,11 @@ class NewsPagingSource(
                         messengerService.getNews()
                     } else throw e
                 }
-            if(pageIndex == 0 && flag) messengerService.replaceNews(news, fileManager)
+            if(pageIndex == 1 && flag) messengerService.replaceNews(news, fileManager)
 
             LoadResult.Page(
                 data = news,
-                prevKey = if (pageIndex == 0) null else pageIndex - 1,
+                prevKey = if (pageIndex == 1) null else pageIndex - 1,
                 nextKey = if (news.size == params.loadSize) pageIndex + 1 else null
             )
         } catch (e: Exception) {

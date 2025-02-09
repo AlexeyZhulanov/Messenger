@@ -1,6 +1,7 @@
 package com.example.messenger.voicerecorder;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
@@ -18,6 +19,7 @@ import static android.os.Process.setThreadPriority;
 import androidx.core.app.ActivityCompat;
 
 import com.example.messenger.BaseChatFragment;
+import com.example.messenger.BottomSheetNewsFragment;
 
 
 public class AudioRecorder {
@@ -49,12 +51,19 @@ public class AudioRecorder {
     }
 
     /** Starts recording audio. */
-    public void start(BaseChatFragment fragment) {
+    public void start(BaseChatFragment fragment, BottomSheetNewsFragment fragment2) {
         if (isRecording()) {
             Log.w(TAG, "Already running");
             return;
         }
-
+        Context context;
+        if (fragment != null) {
+            context = fragment.requireContext();
+        } else if (fragment2 != null) {
+            context = fragment2.requireContext();
+        } else {
+            throw new IllegalArgumentException("Both fragments cannot be null");
+        }
         mAlive = true;
         mThread =
                 new Thread() {
@@ -63,7 +72,7 @@ public class AudioRecorder {
                         setThreadPriority(THREAD_PRIORITY_AUDIO);
 
                         Buffer buffer = new Buffer();
-                        if (ActivityCompat.checkSelfPermission(fragment.requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                             // TODO: Consider calling
                             //    ActivityCompat#requestPermissions
                             // here to request the missing permissions, and then overriding

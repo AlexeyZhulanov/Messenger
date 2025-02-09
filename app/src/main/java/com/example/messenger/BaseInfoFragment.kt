@@ -93,7 +93,7 @@ abstract class BaseInfoFragment : Fragment() {
             if(resId != 0)
                 binding.dialogInfoLayout.background = ContextCompat.getDrawable(requireContext(), resId)
         }
-        filePickerManager = FilePickerManager(null, null, this)
+        filePickerManager = FilePickerManager(fragment3 =  this)
         val typedValue = TypedValue()
         context?.theme?.resolveAttribute(android.R.attr.colorAccent, typedValue, true)
         colorAccent = typedValue.data

@@ -596,12 +596,14 @@ class MessageAdapter(
 
             // Определяем количество колонок
             val columns = when (itemCount) {
+                1 -> 1
                 in 2..5 -> 2
                 else -> 3
             }
 
             // Определяем количество строк
             val rows = when (itemCount) {
+                1 -> 1
                 in 2..3 -> 2
                 in 4..8 -> 3
                 else -> 4

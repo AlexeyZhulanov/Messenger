@@ -51,7 +51,7 @@ class GroupMessageViewModel @Inject constructor(
                     flow {
                         val pageSize = 30
                         val messages = MessagePagingSource(retrofitService, messengerService, convId,
-                            searchQuery, isFirst, fileManager, false).loadPage(page, pageSize)
+                            searchQuery, fileManager, false).loadPage(page, pageSize)
                         emit(messages)
                     }
                 }

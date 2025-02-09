@@ -34,7 +34,7 @@ class BottomSheetPasswordFragment(
         dialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentBottomSheetPasswordBinding.inflate(inflater, container, false)
         drawableStart = ContextCompat.getDrawable(requireContext(), R.drawable.ic_lock)!!
         drawableEnd = ContextCompat.getDrawable(requireContext(), R.drawable.ic_check_two)!!

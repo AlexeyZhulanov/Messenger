@@ -2,23 +2,35 @@ package com.example.messenger
 
 import android.content.Context
 import android.media.MediaMetadataRetriever
+import android.net.Uri
+import android.provider.MediaStore
+import android.provider.OpenableColumns
+import android.util.Log
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import com.example.messenger.di.IoDispatcher
+import com.example.messenger.di.MainDispatcher
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.NewsPagingSource
 import com.example.messenger.model.RetrofitService
-import com.example.messenger.model.WebSocketService
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -30,20 +42,26 @@ class NewsViewModel @Inject constructor(
     private val messengerService: MessengerService,
     private val retrofitService: RetrofitService,
     private val fileManager: FileManager,
-    private val webSocketService: WebSocketService,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    @MainDispatcher private val mainDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
-    private var isFirst = true
+    private val refreshTrigger = MutableLiveData(Unit)
 
 
-    val pagingFlow = Pager(PagingConfig(pageSize = 10, initialLoadSize = 10, prefetchDistance = 3)) {
-        NewsPagingSource(retrofitService, messengerService, isFirst, fileManager)
-    }.flow.cachedIn(viewModelScope)
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    val pagingFlow = refreshTrigger.asFlow()
+        .debounce(500)
+        .flatMapLatest {
+            Pager(PagingConfig(pageSize = 10, initialLoadSize = 10, prefetchDistance = 3)) {
+            NewsPagingSource(retrofitService, messengerService, fileManager)
+            }.flow.cachedIn(viewModelScope)
+        }
 
 
     fun refresh() {
-        isFirst = false
+        Log.d("testRefresh", "TRIGGERED")
+        this.refreshTrigger.postValue(this.refreshTrigger.value)
     }
 
     suspend fun getPermission() : Int {
@@ -60,12 +78,13 @@ class NewsViewModel @Inject constructor(
         val greenwichMessageDate = Calendar.getInstance().apply {
             timeInMillis = timestamp
         }
+        val dateFormatToday = SimpleDateFormat("HH:mm", Locale.getDefault())
         val dateFormatMonthDay = SimpleDateFormat("d MMMM", Locale.getDefault())
         val dateFormatYear = SimpleDateFormat("d MMMM yyyy", Locale.getDefault())
         val localNow = Calendar.getInstance()
 
         return when {
-            isToday(localNow, greenwichMessageDate) -> dateFormatMonthDay.format(greenwichMessageDate.time)
+            isToday(localNow, greenwichMessageDate) -> dateFormatToday.format(greenwichMessageDate.time)
             isThisYear(localNow, greenwichMessageDate) -> dateFormatMonthDay.format(greenwichMessageDate.time)
             else -> dateFormatYear.format(greenwichMessageDate.time)
         }
@@ -158,9 +177,99 @@ class NewsViewModel @Inject constructor(
         return retrofitService.downloadNews(context, filename)
     }
 
+    suspend fun uploadNews(file: File): Pair<String, Boolean> {
+        val path = try {
+            retrofitService.uploadNews(file)
+        } catch (e: Exception) {
+            return Pair("", false)
+        }
+        return Pair(path, true)
+    }
+
+    suspend fun sendNews(headerText: String, text: String?, images: List<String>?,
+                         voices: List<String>?, files: List<String>?): Boolean {
+        return try {
+            retrofitService.sendNews(headerText, text, images, voices, files)
+        } catch (e: Exception) { false }
+    }
+
+    suspend fun editNews(newsId: Int, headerText: String, text: String?, images: List<String>?,
+                         voices: List<String>?, files: List<String>?): Boolean {
+        return try {
+            retrofitService.editNews(newsId, headerText, text, images, voices, files)
+        } catch (e: Exception) { false }
+    }
+
     suspend fun deleteNews(newsId: Int): Boolean {
         return try {
             retrofitService.deleteNews(newsId)
         } catch (e: Exception) { false }
     }
+
+    private fun getFileName(uri: Uri, context: Context): String {
+        var result: String? = null
+        if (uri.scheme == "content") {
+            val cursor = context.contentResolver.query(uri, null, null, null, null)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    result = it.getString(it.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME))
+                }
+            }
+        }
+        if (result == null) {
+            result = uri.path
+            val cut = result?.lastIndexOf('/')
+            if (cut != -1) {
+                result = result?.substring(cut!! + 1)
+            }
+        }
+        return result ?: "temp_file"
+    }
+
+    fun getFileFromContentUri(context: Context, contentUri: Uri): File? {
+        val projection = arrayOf(MediaStore.Video.Media.DATA)
+        val cursor = context.contentResolver.query(contentUri, projection, null, null, null)
+        cursor?.use {
+            if (it.moveToFirst()) {
+                val columnIndex = it.getColumnIndexOrThrow(MediaStore.Video.Media.DATA)
+                val filePath = it.getString(columnIndex)
+                return File(filePath)
+            }
+        }
+        return null
+    }
+
+    fun uriToFile(uri: Uri, context: Context): File? {
+        val fileName = getFileName(uri, context)
+        // Создаем временный файл в кэше приложения
+        val tempFile = File(context.cacheDir, fileName)
+
+        try {
+            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
+            val outputStream = FileOutputStream(tempFile)
+            inputStream?.use { input ->
+                outputStream.use { output ->
+                    input.copyTo(output)
+                }
+            }
+            return tempFile
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
+    suspend fun uploadFiles(list: List<File>): List<String>? = withContext(mainDispatcher) {
+        if (list.isNotEmpty()) {
+            val listTemp = mutableListOf<String>()
+            for (item in list) {
+                val (path, f) = uploadNews(item)
+                listTemp += path
+                if (!f) break
+            }
+            return@withContext if (listTemp.size == list.size) listTemp else null
+        }
+        return@withContext null
+    }
+
 }

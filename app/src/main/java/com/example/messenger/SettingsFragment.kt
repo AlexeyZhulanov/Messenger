@@ -51,7 +51,7 @@ class SettingsFragment(
     @SuppressLint("DiscouragedApi")
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentSettingsBinding.inflate(inflater, container, false)
-        val filePickerManager = FilePickerManager(null, this, null)
+        val filePickerManager = FilePickerManager(fragment2 = this)
         viewModel.wallpaper.observe(viewLifecycleOwner) { wallpaper ->
             if (wallpaper != "") {
                 binding.wallpaperName.text = wallpaper

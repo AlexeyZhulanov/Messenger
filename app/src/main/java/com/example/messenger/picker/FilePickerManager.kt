@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.example.messenger.BaseChatFragment
 import com.example.messenger.BaseInfoFragment
+import com.example.messenger.BottomSheetNewsFragment
 import com.example.messenger.NewsFragment
 import com.example.messenger.R
 import com.example.messenger.SettingsFragment
@@ -26,10 +27,12 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 
-class FilePickerManager(private val fragment1: BaseChatFragment?, private val fragment2: SettingsFragment?, private val fragment3: BaseInfoFragment?, private val fragment4: NewsFragment?) {
+class FilePickerManager(private val fragment1: BaseChatFragment? = null, private val fragment2: SettingsFragment? = null,
+                        private val fragment3: BaseInfoFragment? = null, private val fragment4: NewsFragment? = null,
+                        private val fragment5: BottomSheetNewsFragment? = null) {
 
     val selectorStyle = PictureSelectorStyle()
-    val context: Context = fragment1?.requireContext() ?: fragment2?.requireContext() ?: fragment3?.requireContext() ?: fragment4!!.requireContext()
+    val context: Context = fragment1?.requireContext() ?: fragment2?.requireContext() ?: fragment3?.requireContext() ?: fragment4?.requireContext() ?: fragment5!!.requireContext()
 
     init {
         val numberSelectMainStyle = SelectMainStyle()
@@ -83,12 +86,12 @@ class FilePickerManager(private val fragment1: BaseChatFragment?, private val fr
     }
 
     suspend fun openFilePicker(isCircle: Boolean, isFreeStyleCrop: Boolean, data: ArrayList<LocalMedia>) : ArrayList<LocalMedia> = suspendCancellableCoroutine { continuation ->
-        val selector = PictureSelector.create(fragment1 ?: fragment2 ?: fragment3 ?: fragment4!!)
+        val selector = PictureSelector.create(fragment1 ?: fragment2 ?: fragment3 ?: fragment4 ?: fragment5!!)
             .openGallery(SelectMimeType.ofAll())
             .setImageEngine(GlideEngine.createGlideEngine())
             .setVideoPlayerEngine(ExoPlayerEngine())
             .setCompressEngine(ImageFileCompressEngine())
-            .setEditMediaInterceptListener(getMediaEditInterceptListener(fragment1 ?: fragment2 ?: fragment3 ?: fragment4!!, selectorStyle, isCircle, isFreeStyleCrop))
+            .setEditMediaInterceptListener(getMediaEditInterceptListener(fragment1 ?: fragment2 ?: fragment3 ?: fragment4 ?: fragment5!!, selectorStyle, isCircle, isFreeStyleCrop))
             .isAutoVideoPlay(false)
             .isLoopAutoVideoPlay(false)
             .isVideoPauseResumePlay(true)
