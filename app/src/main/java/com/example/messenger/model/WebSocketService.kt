@@ -10,6 +10,7 @@ import io.socket.emitter.Emitter
 import io.socket.engineio.client.transports.WebSocket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -26,7 +27,7 @@ class WebSocketService @Inject constructor(
     private lateinit var socket: Socket
     private var lastEvent: String? = null
     private var lastData: JSONObject? = null
-    private val uiScope = CoroutineScope(Dispatchers.Main)
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _newMessageFlow = MutableSharedFlow<Message>(extraBufferCapacity = 1)
     val newMessageFlow: SharedFlow<Message> get() = _newMessageFlow
@@ -42,10 +43,6 @@ class WebSocketService @Inject constructor(
 
     private val _deleteAllMessageFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val deleteAllMessageFlow: SharedFlow<Unit> get() = _deleteAllMessageFlow
-
-    // Пока что не знаю это нужно ли вообще будет
-    private val _dialogCreatedFlow = MutableSharedFlow<DialogCreatedEvent>(extraBufferCapacity = 1)
-    val dialogCreatedFlow: SharedFlow<DialogCreatedEvent> get() = _dialogCreatedFlow
 
     private val _dialogDeletedFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val dialogDeletedFlow: SharedFlow<Unit> get() = _dialogDeletedFlow
@@ -64,10 +61,14 @@ class WebSocketService @Inject constructor(
         .build()
 
     fun connect() {
-        val options = IO.Options()
-        options.transports = arrayOf(WebSocket.NAME)
-        options.extraHeaders = mapOf("Authorization" to listOf(appSettings.getCurrentToken() ?: ""))
-
+        val options = IO.Options().apply {
+            transports = arrayOf(WebSocket.NAME)
+            extraHeaders = mapOf("Authorization" to listOf(appSettings.getCurrentToken() ?: ""))
+            reconnection = true
+            reconnectionAttempts = Int.MAX_VALUE
+            reconnectionDelay = 5000
+            reconnectionDelayMax = 10000
+        }
 
         try {
             socket = IO.socket("https://amessenger.ru", options)
@@ -75,13 +76,15 @@ class WebSocketService @Inject constructor(
                 Log.d("testSocketIO", "Connected successfully")
             }.on(Socket.EVENT_CONNECT_ERROR) { args ->
                 Log.d("testSocketIO", "Connection error: ${args[0]}")
+            }.on(Socket.EVENT_DISCONNECT) {
+                Log.d("testSocketIO", "Disconnected")
             }
             // Register additional event listeners here
             registerEventListeners()
 
             socket.connect()
         } catch (e: URISyntaxException) {
-            e.printStackTrace()
+            Log.e("WebSocket", "URI Syntax Error", e)
         }
     }
 
@@ -96,7 +99,6 @@ class WebSocketService @Inject constructor(
         socket.on("messages_deleted", onMessagesDeleted)
 
         // Register more events
-        socket.on("dialog_created", onDialogCreated)
         socket.on("dialog_deleted", onDialogDeleted)
         socket.on("user_session_updated", onUserSessionUpdated)
         socket.on("typing", onStartTyping)
@@ -110,7 +112,7 @@ class WebSocketService @Inject constructor(
 
     private val onTokenExpired = Emitter.Listener {
         Log.d("testSocketIO", "Token has expired, refreshing token")
-        uiScope.launch {
+        serviceScope.launch {
             val settingsResponse = messengerService.getSettings()
             val success = retrofitService.login(settingsResponse.name!!, settingsResponse.password!!)
             if(success) {
@@ -150,10 +152,6 @@ class WebSocketService @Inject constructor(
         _joinLeaveDialogFlow.tryEmit(Triple(dialogId, userId, false))
     }
 
-    fun disconnect() {
-        socket.disconnect()
-    }
-
     fun send(event: String, data: JSONObject) {
         lastEvent = event
         lastData = data
@@ -179,13 +177,6 @@ class WebSocketService @Inject constructor(
         val messageData = args[0] as JSONObject
         val deletedEvent = deletedAdapter.fromJson(messageData.toString())
         _deleteMessageFlow.tryEmit(deletedEvent!!)
-    }
-
-    private val onDialogCreated = Emitter.Listener { args ->
-        val dialogAdapter = moshi.adapter(DialogCreatedEvent::class.java)
-        val messageData = args[0] as JSONObject
-        val dialogCreatedEvent = dialogAdapter.fromJson(messageData.toString())
-        _dialogCreatedFlow.tryEmit(dialogCreatedEvent!!)
     }
 
     private val onDialogDeleted = Emitter.Listener {

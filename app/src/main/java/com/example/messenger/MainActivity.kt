@@ -1,12 +1,17 @@
 package com.example.messenger
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.messenger.databinding.ActivityMainBinding
 import com.example.messenger.model.MessengerService
+import com.example.messenger.model.WebSocketNotificationsService
+import com.example.messenger.model.WebSocketService
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -24,6 +29,8 @@ class MainActivity : AppCompatActivity() {
     lateinit var messengerService: MessengerService
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val serviceIntent = Intent(this, WebSocketNotificationsService::class.java)
+        ContextCompat.startForegroundService(this, serviceIntent)
         val preferences = getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
         val themeNumber = preferences.getInt(PREF_THEME, 0)
         when(themeNumber) {
@@ -40,6 +47,11 @@ class MainActivity : AppCompatActivity() {
         }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val chatId = intent?.getIntExtra("chat_id", -1) ?: -1
+        if (chatId != -1) {
+            Toast.makeText(this, "Уведомление было нажато", Toast.LENGTH_SHORT).show()
+            // todo openChat(chatId)
+        }
         binding = ActivityMainBinding.inflate(layoutInflater).also { setContentView(it.root) }
         setContentView(binding.root)
         lifecycleScope.launch {

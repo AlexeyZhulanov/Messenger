@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "613551131817",
+    "project_id": "amessenger-e3e7c",
+    "storage_bucket": "amessenger-e3e7c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:613551131817:android:cd2e39826fbf74ddceadb8",
+        "android_client_info": {
+          "package_name": "com.example.messenger"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA0Nz9mjiHfzYrSJubjggGYxzjvvGEbhuE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

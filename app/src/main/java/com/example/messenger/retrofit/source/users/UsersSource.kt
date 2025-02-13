@@ -20,4 +20,6 @@ interface UsersSource {
     suspend fun getVacation() : Pair<String, String>?
 
     suspend fun getPermission() : Int
+
+    suspend fun saveFCMToken(token: String) : String
 }

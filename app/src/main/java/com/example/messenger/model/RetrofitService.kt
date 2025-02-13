@@ -944,4 +944,18 @@ class RetrofitService(
         Log.d("testDownloadNews", filePath)
         return@withContext filePath
     }
+
+    override suspend fun saveFCMToken(token: String): Boolean = withContext(ioDispatcher) {
+        val message = try {
+            usersSource.saveFCMToken(token)
+        } catch (e: BackendException) {
+            when (e.code) {
+                404 -> throw UserNotFoundException(e)
+                400 -> throw InvalidCredentialsException(e)
+                else -> throw e
+            }
+        }
+        Log.d("testSaveFCMToken", message)
+        return@withContext true
+    }
 }

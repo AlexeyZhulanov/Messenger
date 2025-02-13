@@ -138,4 +138,6 @@ interface RetrofitRepository {
                          voices: List<String>?, files: List<String>?) : Boolean
 
     suspend fun deleteNews(newsId: Int) : Boolean
+
+    suspend fun saveFCMToken(token: String) : Boolean
 }

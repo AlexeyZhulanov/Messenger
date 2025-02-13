@@ -27,7 +27,6 @@ class BaseInfoViewModel @Inject constructor(
     private val messengerService: MessengerService,
     private val retrofitService: RetrofitService,
     private val fileManager: FileManager,
-    private val webSocketService: WebSocketService,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
     private var convId: Int = -1
