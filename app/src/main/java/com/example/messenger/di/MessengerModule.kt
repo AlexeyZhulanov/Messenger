@@ -25,6 +25,7 @@ import com.example.messenger.room.dao.UnsentMessageDao
 import com.example.messenger.room.dao.UserDao
 import dagger.Module
 import dagger.Provides
+import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
@@ -207,4 +208,16 @@ object MessengerModule {
     @Provides
     @MainDispatcher
     fun provideMainDispatcher(): CoroutineDispatcher = Dispatchers.Main
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface MarkAsReadReceiverEntryPoint {
+        fun retrofitService(): RetrofitService
+    }
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface ReplyReceiverEntryPoint {
+        fun retrofitService(): RetrofitService
+    }
 }

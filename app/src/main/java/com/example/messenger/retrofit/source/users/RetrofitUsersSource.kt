@@ -60,4 +60,8 @@ class RetrofitUsersSource(
         val updateTokenRequestEntity = UpdateTokenRequestEntity(token = token)
         usersApi.saveFCMToken(updateTokenRequestEntity).message
     }
+
+    override suspend fun deleteFCMToken(): String = wrapRetrofitExceptions {
+        usersApi.deleteFCMToken().message
+    }
 }

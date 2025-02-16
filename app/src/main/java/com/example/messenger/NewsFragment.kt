@@ -50,6 +50,15 @@ class NewsFragment(private val currentUserUri: Uri?) : Fragment() {
         }
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (requireActivity().intent.getBooleanExtra("isFromNotification", false)) {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, MessengerFragment(), "CHAT_LIST_NEWS")
+                .commitNow() // commitNow гарантирует, что фрагмент сразу добавлен в back stack
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         lifecycleScope.launch {
@@ -67,13 +76,15 @@ class NewsFragment(private val currentUserUri: Uri?) : Fragment() {
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.toolbar_news, toolbarContainer, false)
         toolbarContainer.addView(defaultToolbar)
-        val avatarImageView: ImageView = view.findViewById(R.id.toolbar_avatar)
-        avatarImageView.imageTintList = null
-        Glide.with(requireContext())
-            .load(currentUserUri)
-            .apply(RequestOptions.circleCropTransform())
-            .diskCacheStrategy(DiskCacheStrategy.ALL)
-            .into(avatarImageView)
+        if(currentUserUri != null) {
+            val avatarImageView: ImageView = view.findViewById(R.id.toolbar_avatar)
+            avatarImageView.imageTintList = null
+            Glide.with(requireContext())
+                .load(currentUserUri)
+                .apply(RequestOptions.circleCropTransform())
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .into(avatarImageView)
+        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -158,12 +169,7 @@ class NewsFragment(private val currentUserUri: Uri?) : Fragment() {
     }
 
     class SpacingItemDecorator(private val space: Int) : RecyclerView.ItemDecoration() {
-        override fun getItemOffsets(
-            outRect: Rect,
-            view: View,
-            parent: RecyclerView,
-            state: RecyclerView.State
-        ) {
+        override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
             outRect.bottom = space
         }
     }

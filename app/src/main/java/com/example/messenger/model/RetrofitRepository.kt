@@ -140,4 +140,6 @@ interface RetrofitRepository {
     suspend fun deleteNews(newsId: Int) : Boolean
 
     suspend fun saveFCMToken(token: String) : Boolean
+
+    suspend fun deleteFCMToken() : Boolean
 }

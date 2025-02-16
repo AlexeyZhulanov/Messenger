@@ -134,7 +134,7 @@ abstract class BaseChatFragment(
         super.onViewCreated(view, savedInstanceState)
         lifecycleScope.launch {
             launch {
-                viewModel.newMessageFlow.collectLatest { newMessage ->
+                viewModel.newMessageFlow.collect { newMessage ->
                     if (newMessage != null) {
                         viewModel.updateLastDate(newMessage.first.timestamp)
                         adapter.addNewMessage(newMessage)
@@ -142,7 +142,7 @@ abstract class BaseChatFragment(
                 }
             }
             launch {
-                viewModel.unsentMessageFlow.collectLatest { uMessage ->
+                viewModel.unsentMessageFlow.collect { uMessage ->
                     if(uMessage != null) {
                         Log.d("testUnsentFlow", "OK")
                         adapter.addNewMessage(Pair(uMessage, ""))
@@ -150,7 +150,7 @@ abstract class BaseChatFragment(
                 }
             }
             launch {
-                viewModel.editMessageFlow.collectLatest { message ->
+                viewModel.editMessageFlow.collect { message ->
                     if(message != null) {
                         Log.d("testEditFlow", "OK")
                         val updatedList = adapter.currentList.toMutableList()

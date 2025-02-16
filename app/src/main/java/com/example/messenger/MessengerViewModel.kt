@@ -12,13 +12,16 @@ import com.example.messenger.model.FileManager
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.model.Settings
 import com.example.messenger.model.User
 import com.example.messenger.model.WebSocketService
+import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import java.net.UnknownHostException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -41,13 +44,7 @@ class MessengerViewModel @Inject constructor(
         fetchVacation()
         fetchCurrentUser()
         fetchConversations()
-        //webSocketService.connect() временное отключение
         // todo подписаться на нужные flow WebSocketService
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        //webSocketService.disconnect() // todo надо тестировать, не факт что здесь
     }
 
     private fun fetchVacation() {
@@ -72,8 +69,8 @@ class MessengerViewModel @Inject constructor(
                         _currentUser.postValue(initUser ?: null)
                         initialUser = initUser
                     }
-                } catch (e: Exception) {Log.e("Can't take user in db", e.toString())}
-                val user = retrofitService.getUser(0)
+                } catch (e: Exception) {Log.e("testInitUser", "Can't take user in db ${e.message}")}
+                val user = retrofitService.getUser(0) // 0 - currentUser
                 _currentUser.postValue(user)
                 if(user.id != initialUser?.id || user.username != initialUser.username ||
                     user.avatar != initialUser.avatar) {
@@ -148,5 +145,23 @@ class MessengerViewModel @Inject constructor(
 
     suspend fun downloadAvatar(context: Context, filename: String): String {
         return retrofitService.downloadAvatar(context, filename)
+    }
+
+    suspend fun deleteFCMToken() : Boolean {
+        return try {
+            retrofitService.deleteFCMToken()
+        } catch (e: Exception) { false }
+    }
+
+    fun clearCurrentUser() {
+        viewModelScope.launch {
+            withContext(NonCancellable) {
+                webSocketService.disconnect()
+                FirebaseMessaging.getInstance().deleteToken().await()
+                messengerService.deleteCurrentUser()
+                val settings = messengerService.getSettings()
+                messengerService.updateSettings(Settings(0, remember = 0, settings.name, settings.password))
+            }
+        }
     }
 }

@@ -58,7 +58,6 @@ class GroupMessageViewModel @Inject constructor(
             }
 
         init {
-            webSocketService.connect()
             viewModelScope.launch {
                 webSocketService.newMessageFlow.collect { message ->
                     Log.d("testSocketsMessage", "New Message: $message")

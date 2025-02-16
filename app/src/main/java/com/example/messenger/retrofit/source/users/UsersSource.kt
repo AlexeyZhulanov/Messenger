@@ -22,4 +22,6 @@ interface UsersSource {
     suspend fun getPermission() : Int
 
     suspend fun saveFCMToken(token: String) : String
+
+    suspend fun deleteFCMToken() : String
 }

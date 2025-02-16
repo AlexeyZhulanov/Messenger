@@ -25,6 +25,15 @@ class MessageFragment(
     private var lastSessionString: String = ""
     override val viewModel: MessageViewModel by viewModels()
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (requireActivity().intent.getBooleanExtra("isFromNotification", false)) {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, MessengerFragment(), "CHAT_LIST_DIALOG")
+                .commitNow() // commitNow гарантирует, что фрагмент сразу добавлен в back stack
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         viewModel.setInfo(dialog.otherUser.id)
         Log.d("testCurrentUser", currentUser.toString())

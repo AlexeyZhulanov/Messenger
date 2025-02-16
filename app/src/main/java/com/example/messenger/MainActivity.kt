@@ -2,19 +2,27 @@ package com.example.messenger
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.Manifest
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.messenger.databinding.ActivityMainBinding
+import com.example.messenger.model.FileManager
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.WebSocketNotificationsService
-import com.example.messenger.model.WebSocketService
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import java.io.File
 import javax.inject.Inject
 
 const val APP_PREFERENCES = "APP_PREFERENCES"
@@ -25,8 +33,13 @@ const val PREF_THEME = "PREF_THEME"
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    @Inject
-    lateinit var messengerService: MessengerService
+
+    @Inject lateinit var messengerService: MessengerService
+    @Inject lateinit var fileManager: FileManager
+
+    companion object {
+        private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val serviceIntent = Intent(this, WebSocketNotificationsService::class.java)
@@ -47,30 +60,96 @@ class MainActivity : AppCompatActivity() {
         }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val chatId = intent?.getIntExtra("chat_id", -1) ?: -1
-        if (chatId != -1) {
-            Toast.makeText(this, "Уведомление было нажато", Toast.LENGTH_SHORT).show()
-            // todo openChat(chatId)
-        }
         binding = ActivityMainBinding.inflate(layoutInflater).also { setContentView(it.root) }
         setContentView(binding.root)
-        lifecycleScope.launch {
-            val s = async { messengerService.getSettings() }
-            val settings = s.await()
-            if (savedInstanceState == null) {
-                if (settings.remember == 1) {
-                    if (settings.name != "" && settings.password != "" && settings.name != "empty" && settings.password != "empty") {
-                        supportFragmentManager
-                            .beginTransaction()
-                            .add(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_TAG")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), NOTIFICATION_PERMISSION_REQUEST_CODE)
+            }
+        }
+        val chatId = intent?.getIntExtra("chat_id", -1) ?: -1
+        val openNews = intent?.getBooleanExtra("open_news", false) ?: false
+        when {
+            chatId != -1 -> {
+                val isGroup = intent?.getBooleanExtra("is_group", false) ?: false
+                if(isGroup) {
+                    val (conv, currentUser) = runBlocking { // ANR, but it's necessary
+                        val groupDeferred = async { messengerService.getConversationByTypeAndId("group", chatId) }
+                        val userDeferred = async { messengerService.getUser() }
+                        Pair(groupDeferred.await(), userDeferred.await())
+                    }
+                    if(conv != null && currentUser != null) {
+                        val chatFragment = GroupMessageFragment(conv.toGroup(), currentUser).apply {
+                            arguments = Bundle().apply {
+                                putBoolean("isFromNotification", true)
+                            }
+                        }
+                        supportFragmentManager.beginTransaction()
+                            .replace(R.id.fragmentContainer, chatFragment, "GROUP_FRAGMENT_TAG")
+                            .addToBackStack("CHAT_LIST_GROUP")
                             .commit()
+                    } else Toast.makeText(this, "Не удалось открыть групповой чат", Toast.LENGTH_SHORT).show()
+                } else {
+                    val (conv, currentUser) = runBlocking { // ANR
+                        val dialogDeferred = async { messengerService.getConversationByTypeAndId("dialog", chatId) }
+                        val userDeferred = async { messengerService.getUser() }
+                        Pair(dialogDeferred.await(), userDeferred.await())
+                    }
+                    Log.d("testClickNotify", "$conv and $currentUser")
+                    if(conv != null && currentUser != null) {
+                        val chatFragment = MessageFragment(conv.toDialog(), currentUser).apply {
+                            arguments = Bundle().apply {
+                                putBoolean("isFromNotification", true)
+                            }
+                        }
+                        Log.d("testClickNotify2", "Trying to open fragment message")
+                        supportFragmentManager.beginTransaction()
+                            .replace(R.id.fragmentContainer, chatFragment, "MESSAGE_FRAGMENT_TAG")
+                            .addToBackStack("CHAT_LIST_DIALOG")
+                            .commit()
+                    } else Toast.makeText(this, "Не удалось открыть диалог", Toast.LENGTH_SHORT).show()
+                }
+            }
+            openNews -> {
+                val currentUser = runBlocking { messengerService.getUser() }
+                val avatar = currentUser?.avatar
+                val uri = if(avatar != null) {
+                    if(fileManager.isExistAvatar(avatar)) {
+                        val path = fileManager.getAvatarFilePath(avatar)
+                        val file = File(path)
+                        Uri.fromFile(file)
+                    } else null
+                } else null
+                val newsFragment = NewsFragment(uri).apply {
+                    arguments = Bundle().apply {
+                        putBoolean("isFromNotification", true)
                     }
                 }
-                else {
-                    supportFragmentManager
-                        .beginTransaction()
-                        .add(R.id.fragmentContainer, LoginFragment(), "LOGIN_FRAGMENT_TAG")
-                        .commit()
+                supportFragmentManager.beginTransaction()
+                    .replace(R.id.fragmentContainer, newsFragment, "NEWS_FRAGMENT_TAG")
+                    .addToBackStack("CHAT_LIST_NEWS")
+                    .commit()
+            }
+            else -> {
+                lifecycleScope.launch {
+                    val s = async { messengerService.getSettings() }
+                    val settings = s.await()
+                    if (savedInstanceState == null) {
+                        if (settings.remember == 1) {
+                            if (settings.name != "" && settings.password != "" && settings.name != "empty" && settings.password != "empty") {
+                                supportFragmentManager
+                                    .beginTransaction()
+                                    .add(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_TAG")
+                                    .commit()
+                            }
+                        }
+                        else {
+                            supportFragmentManager
+                                .beginTransaction()
+                                .add(R.id.fragmentContainer, LoginFragment(), "LOGIN_FRAGMENT_TAG")
+                                .commit()
+                        }
+                    }
                 }
             }
         }

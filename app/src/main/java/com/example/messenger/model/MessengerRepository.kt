@@ -8,6 +8,8 @@ interface MessengerRepository {
 
     suspend fun getConversations(): List<Conversation>
 
+    suspend fun getConversationByTypeAndId(type: String, chatId: Int): Conversation?
+
     suspend fun replaceConversations(conversations: List<Conversation>)
 
     suspend fun getMessages(idDialog: Int): List<Message>
@@ -21,6 +23,8 @@ interface MessengerRepository {
     suspend fun getUser(): User?
 
     suspend fun updateUser(user: User)
+
+    suspend fun deleteCurrentUser()
 
     suspend fun getPreviousMessage(idDialog: Int, lastMessageId: Int): Message?
 

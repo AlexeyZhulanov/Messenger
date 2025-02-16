@@ -25,6 +25,15 @@ class GroupMessageFragment(
 
     override val viewModel: GroupMessageViewModel by viewModels()
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (requireActivity().intent.getBooleanExtra("isFromNotification", false)) {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, MessengerFragment(), "CHAT_LIST_GROUP")
+                .commitNow() // commitNow гарантирует, что фрагмент сразу добавлен в back stack
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val list = viewModel.fetchMembersList()
         setupAdapter(list)

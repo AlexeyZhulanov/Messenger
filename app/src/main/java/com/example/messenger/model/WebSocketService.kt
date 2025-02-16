@@ -1,5 +1,6 @@
 package com.example.messenger.model
 
+import android.content.Context
 import android.util.Log
 import com.example.messenger.model.appsettings.AppSettings
 import com.squareup.moshi.Moshi
@@ -18,7 +19,9 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.net.URISyntaxException
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class WebSocketService @Inject constructor(
     private val appSettings: AppSettings,
     private val retrofitService: RetrofitService,
@@ -27,6 +30,7 @@ class WebSocketService @Inject constructor(
     private lateinit var socket: Socket
     private var lastEvent: String? = null
     private var lastData: JSONObject? = null
+    private val notificationEnabledCache = mutableMapOf<Pair<Int, Boolean>, Boolean>()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _newMessageFlow = MutableSharedFlow<Message>(extraBufferCapacity = 1)
@@ -55,6 +59,12 @@ class WebSocketService @Inject constructor(
 
     private val _joinLeaveDialogFlow = MutableSharedFlow<Triple<Int, Int, Boolean>>(extraBufferCapacity = 1)
     val joinLeaveDialogFlow: SharedFlow<Triple<Int, Int, Boolean>> get() = _joinLeaveDialogFlow
+
+    private val _notificationMessageFlow = MutableSharedFlow<ChatMessageEvent>(extraBufferCapacity = 1)
+    val notificationMessageFlow: SharedFlow<ChatMessageEvent> get() = _notificationMessageFlow
+
+    private val _notificationNewsFlow = MutableSharedFlow<NewsEvent>(extraBufferCapacity = 1)
+    val notificationNewsFlow: SharedFlow<NewsEvent> get() = _notificationNewsFlow
 
     private val moshi: Moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory()) // support serializable kt class
@@ -88,10 +98,18 @@ class WebSocketService @Inject constructor(
         }
     }
 
+    fun disconnect() {
+        socket.disconnect()
+    }
+
     private fun registerEventListeners() {
         // Registering the "user_joined" event listener
         socket.on("user_joined", onUserJoined)
         socket.on("user_left", onUserLeft)
+
+        // Notifications
+        socket.on("new_message_notification", onMessageNotification)
+        socket.on("news_notification", onNewsNotification)
 
         // Registering message-related event listeners
         socket.on("new_message", onNewMessage)
@@ -114,7 +132,11 @@ class WebSocketService @Inject constructor(
         Log.d("testSocketIO", "Token has expired, refreshing token")
         serviceScope.launch {
             val settingsResponse = messengerService.getSettings()
-            val success = retrofitService.login(settingsResponse.name!!, settingsResponse.password!!)
+            val name = settingsResponse.name
+            val password = settingsResponse.password
+            val success = if(name != null && password != null)
+                retrofitService.login(name, password)
+            else false
             if(success) {
                 Log.d("testSocketIO", "Try to reconnect sockets")
                 // send last emit
@@ -162,21 +184,27 @@ class WebSocketService @Inject constructor(
         val messageAdapter = moshi.adapter(Message::class.java)
         val messageData = args[0] as JSONObject
         val newMessage = messageAdapter.fromJson(messageData.toString())
-        _newMessageFlow.tryEmit(newMessage!!)
+        newMessage?.let {
+            _newMessageFlow.tryEmit(it)
+        }
     }
 
     private val onEditedMessage = Emitter.Listener { args ->
         val messageAdapter = moshi.adapter(Message::class.java)
         val messageData = args[0] as JSONObject
         val editedMessage = messageAdapter.fromJson(messageData.toString())
-        _editMessageFlow.tryEmit(editedMessage!!)
+        editedMessage?.let {
+            _editMessageFlow.tryEmit(it)
+        }
     }
 
     private val onMessagesDeleted = Emitter.Listener { args ->
         val deletedAdapter = moshi.adapter(DeletedMessagesEvent::class.java)
         val messageData = args[0] as JSONObject
         val deletedEvent = deletedAdapter.fromJson(messageData.toString())
-        _deleteMessageFlow.tryEmit(deletedEvent!!)
+        deletedEvent?.let {
+            _deleteMessageFlow.tryEmit(it)
+        }
     }
 
     private val onDialogDeleted = Emitter.Listener {
@@ -187,7 +215,9 @@ class WebSocketService @Inject constructor(
         val userAdapter = moshi.adapter(UserSessionUpdatedEvent::class.java)
         val messageData = args[0] as JSONObject
         val lastSessionUpdatedEvent = userAdapter.fromJson(messageData.toString())
-        _userSessionFlow.tryEmit(lastSessionUpdatedEvent!!)
+        lastSessionUpdatedEvent?.let {
+            _userSessionFlow.tryEmit(it)
+        }
     }
 
     private val onStartTyping = Emitter.Listener { args ->
@@ -206,10 +236,42 @@ class WebSocketService @Inject constructor(
         val readAdapter = moshi.adapter(ReadMessagesEvent::class.java)
         val messageData = args[0] as JSONObject
         val readEvent = readAdapter.fromJson(messageData.toString())
-        _readMessageFlow.tryEmit(readEvent!!)
+        readEvent?.let {
+            _readMessageFlow.tryEmit(it)
+        }
     }
 
     private val onAllMessagesDeleted = Emitter.Listener {
         _deleteAllMessageFlow.tryEmit(Unit)
+    }
+
+    private val onMessageNotification = Emitter.Listener { args ->
+        val messageAdapter = moshi.adapter(ChatMessageEvent::class.java)
+        val messageData = args[0] as JSONObject
+        val newMessage = messageAdapter.fromJson(messageData.toString())
+        newMessage?.let {
+            Log.d("testNotificationMes", it.toString())
+            _notificationMessageFlow.tryEmit(it)
+        }
+    }
+
+    private val onNewsNotification = Emitter.Listener { args ->
+        Log.d("testNotificationNews", "OK")
+        val messageAdapter = moshi.adapter(NewsEvent::class.java)
+        val messageData = args[0] as JSONObject
+        val newNews = messageAdapter.fromJson(messageData.toString())
+        newNews?.let {
+            _notificationNewsFlow.tryEmit(it)
+        }
+    }
+
+    suspend fun downloadAvatar(context: Context, filename: String): String {
+        return retrofitService.downloadAvatar(context, filename)
+    }
+
+    suspend fun isNotificationsEnabled(chatId: Int, type: Boolean): Boolean {
+        return notificationEnabledCache.getOrPut(Pair(chatId, type)) {
+            messengerService.isNotificationsEnabled(chatId, type)
+        }
     }
 }

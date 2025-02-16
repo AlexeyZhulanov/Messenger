@@ -6,40 +6,31 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.RemoteInput
 import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.MainActivity
 import com.example.messenger.R
-import com.example.messenger.model.appsettings.AppSettings
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.hilt.android.AndroidEntryPoint
-import io.socket.client.IO
-import io.socket.client.Socket
-import io.socket.emitter.Emitter
-import io.socket.engineio.client.transports.WebSocket
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
-import org.json.JSONObject
-import java.net.URISyntaxException
+import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class WebSocketNotificationsService : LifecycleService() {
+class  WebSocketNotificationsService : LifecycleService() {
 
-    @Inject lateinit var appSettings: AppSettings
-    @Inject lateinit var retrofitService: RetrofitService
-    @Inject lateinit var messengerService: MessengerService
-
-    private lateinit var socket: Socket
+    @Inject lateinit var webSocketService: WebSocketService
+    @Inject lateinit var fileManager: FileManager
 
     companion object {
         private const val CHANNEL_ID = "chat_notifications"
@@ -49,26 +40,36 @@ class WebSocketNotificationsService : LifecycleService() {
     private val notificationManager by lazy { getSystemService(NotificationManager::class.java) }
     private val chatNotifications = mutableMapOf<Int, MutableList<ChatMessageEvent>>()
 
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var wakeLock: PowerManager.WakeLock
-
-    private val moshi: Moshi = Moshi.Builder()
-        .add(KotlinJsonAdapterFactory()) // support serializable kt class
-        .build()
 
     override fun onCreate() {
         super.onCreate()
         acquireWakeLock()
         startForegroundService()
         createNotificationChannel()
-        connect()
+        observeNotifications()
+    }
+
+    private fun observeNotifications() {
+        lifecycleScope.launch {
+            launch {
+                webSocketService.notificationMessageFlow
+                    .filter { webSocketService.isNotificationsEnabled(it.chatId, it.isGroup) }
+                    .collect {
+                        sendNotification(it)
+                    }
+            }
+            launch {
+                webSocketService.notificationNewsFlow.collect {
+                    sendNewsNotification(it)
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        socket.disconnect()
         wakeLock.release()
-        serviceScope.cancel()
     }
 
     private fun acquireWakeLock() {
@@ -93,79 +94,6 @@ class WebSocketNotificationsService : LifecycleService() {
         startForeground(1, notification)
     }
 
-    private fun connect() {
-        val options = IO.Options().apply {
-            transports = arrayOf(WebSocket.NAME)
-            extraHeaders = mapOf("Authorization" to listOf(appSettings.getCurrentToken() ?: ""))
-            reconnection = true
-            reconnectionAttempts = Int.MAX_VALUE
-            reconnectionDelay = 5000
-            reconnectionDelayMax = 10000
-        }
-
-        try {
-            socket = IO.socket("https://amessenger.ru", options)
-            socket.on(Socket.EVENT_CONNECT) {
-                Log.d("testSocketIO", "Connected successfully")
-            }.on(Socket.EVENT_CONNECT_ERROR) { args ->
-                Log.d("testSocketIO", "Connection error: ${args[0]}")
-            }.on(Socket.EVENT_DISCONNECT) {
-                Log.d("testSocketIO", "Disconnected")
-            }
-            // Register additional event listeners here
-            registerEventListeners()
-
-            socket.connect()
-        } catch (e: URISyntaxException) {
-            Log.e("WebSocket", "URI Syntax Error", e)
-        }
-    }
-
-    private fun registerEventListeners() {
-        // Notifications
-        socket.on("new_message_notification", onMessageNotification)
-        socket.on("news_notification", onNewsNotification)
-
-        // token expired
-        socket.on("token_expired", onTokenExpired)
-    }
-
-    private val onTokenExpired = Emitter.Listener {
-        Log.d("testSocketIO", "Token has expired, refreshing token")
-        serviceScope.launch {
-            val settingsResponse = messengerService.getSettings()
-            val success = retrofitService.login(settingsResponse.name!!, settingsResponse.password!!)
-            if(success) {
-                Log.d("testSocketIO", "Try to reconnect sockets")
-                socket.disconnect()
-                delay(200)
-                connect()
-            } else {
-                Log.d("testSocketIO", "Error Sockets Token")
-            }
-        }
-    }
-
-    private val onMessageNotification = Emitter.Listener { args ->
-        Log.d("testNotificationMes", "OK")
-        val messageAdapter = moshi.adapter(ChatMessageEvent::class.java)
-        val messageData = args[0] as JSONObject
-        val newMessage = messageAdapter.fromJson(messageData.toString())
-        newMessage?.let {
-            sendNotification(it)
-        }
-    }
-
-    private val onNewsNotification = Emitter.Listener { args ->
-        Log.d("testNotificationNews", "OK")
-        val messageAdapter = moshi.adapter(NewsEvent::class.java)
-        val messageData = args[0] as JSONObject
-        val newNews = messageAdapter.fromJson(messageData.toString())
-        newNews?.let {
-            sendNewsNotification(it)
-        }
-    }
-
     private fun createNotificationChannel() {
         val channelId = "chat_notifications"
         val channel = NotificationChannel(
@@ -185,6 +113,9 @@ class WebSocketNotificationsService : LifecycleService() {
         val chatId = event.chatId
         val sender = event.senderName
         val text = event.text ?: "[Вложение]"
+        val messageId = event.messageId
+        val isGroup = event.isGroup
+        val senderName = event.senderName
 
         val messages = chatNotifications.getOrPut(chatId) { mutableListOf() }
         messages.add(event)
@@ -196,6 +127,7 @@ class WebSocketNotificationsService : LifecycleService() {
             this, chatId,
             Intent(this, MainActivity::class.java)
                 .putExtra("chat_id", chatId)
+                .putExtra("is_group", isGroup)
                 .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -203,6 +135,9 @@ class WebSocketNotificationsService : LifecycleService() {
         // Кнопка "Ответить"
         val replyIntent = Intent(this, ReplyReceiver::class.java).apply {
             putExtra("chat_id", chatId)
+            putExtra("message_id", messageId)
+            putExtra("is_group", isGroup)
+            putExtra("sender_name", senderName)
         }
         val replyPendingIntent = PendingIntent.getBroadcast(
             this, chatId, replyIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
@@ -215,6 +150,8 @@ class WebSocketNotificationsService : LifecycleService() {
         // Кнопка "Прочитать"
         val readIntent = Intent(this, MarkAsReadReceiver::class.java).apply {
             putExtra("chat_id", chatId)
+            putExtra("message_id", messageId)
+            putExtra("is_group", isGroup)
         }
         val readPendingIntent = PendingIntent.getBroadcast(
             this, chatId, readIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -222,48 +159,82 @@ class WebSocketNotificationsService : LifecycleService() {
         val readAction = NotificationCompat.Action.Builder(R.drawable.ic_check, "Прочитать", readPendingIntent)
             .build()
 
-        val avatarBitmap = loadAvatar(event)
+        val context = applicationContext
+        lifecycleScope.launch {
+            val avatarBitmap = loadAvatar(event.avatar)
 
-        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setLargeIcon(avatarBitmap)
-            .setContentTitle(sender)
-            .setContentText(text)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-            .addAction(replyAction)
-            .addAction(readAction)
-            .setGroup(GROUP_KEY_CHAT + chatId)
-
-        notificationManager.notify(singleMessageId, builder.build())
-
-        if (messages.size > 1) {
-            val inboxStyle = NotificationCompat.InboxStyle()
-                .setBigContentTitle("Чат с $sender")
-            messages.forEach { msg ->
-                inboxStyle.addLine("${msg.senderName}: ${msg.text ?: "[Вложение]"}")
-            }
-
-            val groupNotification = NotificationCompat.Builder(this, CHANNEL_ID)
+            val builder = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setLargeIcon(avatarBitmap)
-                .setContentTitle("Сообщения в чате")
-                .setContentText("У вас ${messages.size} новых сообщений")
-                .setStyle(inboxStyle)
+                .setContentTitle(sender)
+                .setContentText(text)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setGroup(GROUP_KEY_CHAT + chatId)
-                .setGroupSummary(true)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
+                .addAction(replyAction)
+                .addAction(readAction)
+                .setGroup(GROUP_KEY_CHAT + chatId)
 
-            notificationManager.notify(summaryId, groupNotification.build())
+            notificationManager.notify(singleMessageId, builder.build())
+
+            if (messages.size > 1) {
+                val inboxStyle = NotificationCompat.InboxStyle()
+                    .setBigContentTitle("Чат с $sender")
+                messages.forEach { msg ->
+                    inboxStyle.addLine("${msg.senderName}: ${msg.text ?: "[Вложение]"}")
+                }
+
+                val groupNotification = NotificationCompat.Builder(context, CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_notification)
+                    .setLargeIcon(avatarBitmap)
+                    .setContentTitle("Сообщения в чате")
+                    .setContentText("У вас ${messages.size} новых сообщений")
+                    .setStyle(inboxStyle)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setGroup(GROUP_KEY_CHAT + chatId)
+                    .setGroupSummary(true)
+                    .setAutoCancel(true)
+                    .setContentIntent(pendingIntent)
+
+                notificationManager.notify(summaryId, groupNotification.build())
+            }
         }
     }
 
-    private fun loadAvatar(event: ChatMessageEvent): Bitmap {
-        // todo
-        return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+    private suspend fun loadAvatar(eventAvatar: String?): Bitmap = withContext(Dispatchers.IO) {
+        val context = applicationContext
+        val avatar = eventAvatar ?: ""
+        if (avatar != "") {
+            val filePathTemp = async {
+                if (fileManager.isExistAvatar(avatar)) {
+                    return@async Pair(fileManager.getAvatarFilePath(avatar), true)
+                } else {
+                    try {
+                        return@async Pair(webSocketService.downloadAvatar(context, avatar), false)
+                    } catch (e: Exception) {
+                        return@async Pair(null, true)
+                    }
+                }
+            }
+            val (first, second) = filePathTemp.await()
+            if (first != null) {
+                val file = File(first)
+                if (file.exists()) {
+                    if (!second) fileManager.saveAvatarFile(avatar, file.readBytes())
+                    val uri = Uri.fromFile(file)
+                    return@withContext try {
+                        Glide.with(context)
+                            .asBitmap()
+                            .load(uri)
+                            .apply(RequestOptions.circleCropTransform())
+                            .submit()
+                            .get()
+                    } catch (e: Exception) {
+                        Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+                    }
+                } else return@withContext Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+            } else return@withContext Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        } else return@withContext Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
     }
 
     private fun sendNewsNotification(event: NewsEvent) {

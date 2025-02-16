@@ -50,7 +50,11 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun sendTokenToServer(token: String) {
         firebaseScope.launch {
-            retrofitService.saveFCMToken(token)
+            try {
+                retrofitService.saveFCMToken(token)
+            } catch (e: Exception) {
+                Log.d("testFCM", "Не удалось отправить токен на сервер: ${e.message}")
+            }
         }
     }
 }

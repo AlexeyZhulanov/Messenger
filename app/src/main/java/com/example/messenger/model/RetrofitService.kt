@@ -17,7 +17,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 
-//typealias ConversationsListener = (conversations: List<Conversation>) -> Unit
 class RetrofitService(
     private val usersSource: UsersSource,
     private val messagesSource: MessagesSource,
@@ -32,19 +31,10 @@ class RetrofitService(
     private var messages = listOf<Message>()
     private var groupMessages = listOf<Message>()
     private var news = listOf<News>()
-    //private val listeners = mutableSetOf<ConversationsListener>()
-
-    //private val _initCompleted = MutableLiveData<Boolean>()
-    //val initCompleted: LiveData<Boolean> get() = _initCompleted
 
     private val messengerService: MessengerService
         get() = messengerRepository as MessengerService
 
-//    init {
-//        uiScope.launch {
-//            _initCompleted.postValue(true)
-//        }
-//    }
 
     override fun isSignedIn(): Boolean {
         // user is signed-in if auth token exists
@@ -956,6 +946,19 @@ class RetrofitService(
             }
         }
         Log.d("testSaveFCMToken", message)
+        return@withContext true
+    }
+
+    override suspend fun deleteFCMToken(): Boolean = withContext(ioDispatcher) {
+        val message = try {
+            usersSource.deleteFCMToken()
+        } catch (e: BackendException) {
+            when(e.code) {
+                404 -> throw UserNotFoundException(e)
+                else -> throw e
+            }
+        }
+        Log.d("testDeleteFCMToken", message)
         return@withContext true
     }
 }

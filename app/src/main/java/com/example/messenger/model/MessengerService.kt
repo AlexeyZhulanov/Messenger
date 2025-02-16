@@ -62,6 +62,17 @@ class MessengerService(
         return@withContext conversationDbEntities.map { it.toConversation() }
     }
 
+    override suspend fun getConversationByTypeAndId(type: String, chatId: Int): Conversation? = withContext(ioDispatcher) {
+        val conversationEntity = conversationDao.getConversationByTypeAndId(type, chatId) ?: return@withContext null
+        val conversationDbEntity = if(conversationEntity.type == "dialog") {
+            val userId = conversationEntity.otherUserId ?: return@withContext null
+            val userEntity = conversationDao.getUserById(userId)
+            ConversationDbEntity(conversationEntity, userEntity, null)
+        } else ConversationDbEntity(conversationEntity, null, null)
+
+        return@withContext conversationDbEntity.toConversation()
+    }
+
     override suspend fun replaceConversations(conversations: List<Conversation>) = withContext(ioDispatcher) {
         val conversationDbEntities = mutableListOf<ConversationDbEntity>()
         for((index, value) in conversations.withIndex()) {
@@ -117,6 +128,10 @@ class MessengerService(
         } else {
             userDao.insertUser(UserDbEntity.fromUserInput(user))
         }
+    }
+
+    override suspend fun deleteCurrentUser() = withContext(ioDispatcher) {
+        userDao.deleteAllUsers()
     }
 
     override suspend fun getPreviousMessage(idDialog: Int, lastMessageId: Int): Message? = withContext(ioDispatcher) {

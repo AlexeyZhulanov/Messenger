@@ -17,6 +17,7 @@ data class UserSessionUpdatedEvent(
 
 data class ChatMessageEvent(
     @Json(name = "chat_id") val chatId: Int,
+    @Json(name = "message_id") val messageId: Int,
     val text: String? = null,
     val images: List<String>? = null,
     val voice: String? = null,
