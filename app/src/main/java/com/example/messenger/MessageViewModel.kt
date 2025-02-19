@@ -55,7 +55,6 @@ class MessageViewModel @Inject constructor(
         }
 
     init {
-        webSocketService.connect()
         viewModelScope.launch {
             webSocketService.newMessageFlow.collect { message ->
                 Log.d("testSocketsMessage", "New Message: $message")
@@ -118,7 +117,7 @@ class MessageViewModel @Inject constructor(
         viewModelScope.launch {
             webSocketService.typingFlow.collect { (userId, isStart) ->
                 Log.d("testSocketsMessage", "User#$userId is typing: $isStart")
-                _typingState.value = isStart
+                _typingState.value = Pair(isStart, null)
             }
         }
         viewModelScope.launch {
@@ -153,7 +152,7 @@ class MessageViewModel @Inject constructor(
     }
 
     fun setMarkScrollListener(recyclerView: RecyclerView, adapter: MessageAdapter) {
-        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+        val scrollListener = object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
                 val layoutManager = recyclerView.layoutManager as LinearLayoutManager
@@ -165,11 +164,18 @@ class MessageViewModel @Inject constructor(
                     val visibleMessages = (lastVisibleItemPosition downTo firstVisibleItemPosition).mapNotNull { position ->
                         adapter.getItemNotProtected(position).first.takeIf { it.idSender == otherUserId && !it.isRead }
                     }
+
                     markMessagesAsRead(visibleMessages)
+
+                    if (firstVisibleItemPosition == 0) {
+                        recyclerView.removeOnScrollListener(this)
+                    }
                 }
             }
-        })
+        }
+        recyclerView.addOnScrollListener(scrollListener)
     }
+
 
     fun saveLastMessage(id: Int) {
         viewModelScope.launch {

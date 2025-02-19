@@ -53,7 +53,7 @@ class MessengerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        parentFragmentManager.setFragmentResultListener("forwardMessagesRequestKey", viewLifecycleOwner) { requestKey, bundle ->
+        parentFragmentManager.setFragmentResultListener("forwardMessagesRequestKey", viewLifecycleOwner) { _, bundle ->
             val messages: ArrayList<Message>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 bundle.getParcelableArrayList("forwardedMessages", Message::class.java)
             } else {
@@ -133,7 +133,7 @@ class MessengerFragment : Fragment() {
         }
         binding.button.setOnClickListener {
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, NewsFragment(uriGlobal), "NEWS_FRAGMENT_TAG")
+                .replace(R.id.fragmentContainer, NewsFragment(uriGlobal, true), "NEWS_FRAGMENT_TAG")
                 .addToBackStack(null)
                 .commit()
         }
@@ -171,7 +171,7 @@ class MessengerFragment : Fragment() {
                     "dialog" -> {
                         if (!forwardFlag) {
                             parentFragmentManager.beginTransaction()
-                                .replace(R.id.fragmentContainer, MessageFragment(conversation.toDialog(), currentUser ?: User(0, "", "")), "MESSAGE_FRAGMENT_TAG")
+                                .replace(R.id.fragmentContainer, MessageFragment(conversation.toDialog(), currentUser ?: User(0, "", ""), false), "MESSAGE_FRAGMENT_TAG")
                                 .addToBackStack(null)
                                 .commit()
                         } else {
@@ -186,15 +186,15 @@ class MessengerFragment : Fragment() {
                     "group" -> {
                         if (!forwardFlag) {
                             parentFragmentManager.beginTransaction()
-                                .replace(R.id.fragmentContainer, GroupMessageFragment(conversation.toGroup(), currentUser ?: User(0, "", "")), "GROUP_FRAGMENT_TAG")
+                                .replace(R.id.fragmentContainer, GroupMessageFragment(conversation.toGroup(), currentUser ?: User(0, "", ""), false), "GROUP_FRAGMENT_TAG")
                                 .addToBackStack(null)
                                 .commit()
                         } else {
                             forwardFlag = false
                             if(forwardMessages != null) {
                                 val list = forwardMessages
-                                //messengerViewModel.forwardMessages(list, conversation.toGroup().id)
-                                // todo forward Group Messages
+                                val list2 = forwardUsernames
+                                messengerViewModel.forwardGroupMessages(list, list2, conversation.toGroup().id)
                             }
                         }
                     }
@@ -221,9 +221,15 @@ class MessengerFragment : Fragment() {
                     true
                 }
                 R.id.menu_item2 -> {
-                    parentFragmentManager.beginTransaction()
-                        .replace(R.id.fragmentContainer, LoginFragment(), "LOGIN_FRAGMENT_TAG3")
-                        .commit()
+                    lifecycleScope.launch {
+                        val success = messengerViewModel.deleteFCMToken()
+                        if(success) {
+                            messengerViewModel.clearCurrentUser()
+                            parentFragmentManager.beginTransaction()
+                                .replace(R.id.fragmentContainer, LoginFragment(), "LOGIN_FRAGMENT_TAG3")
+                                .commit()
+                        } else Toast.makeText(requireContext(), "Не удалось выйти из аккаунта, нет сети", Toast.LENGTH_SHORT).show()
+                    }
                     true
                 }
                 R.id.menu_item3 -> {
@@ -240,7 +246,7 @@ class MessengerFragment : Fragment() {
         popupMenu.show()
     }
 
-    private fun applyMenuTextColor(menu: Menu, color: Int) {
+    private fun applyMenuTextColor(menu: Menu, color: Int) { // todo не используется
         for (i in 0 until menu.size()) {
             val menuItem = menu.getItem(i)
             val spannableTitle = SpannableString(menuItem.title)

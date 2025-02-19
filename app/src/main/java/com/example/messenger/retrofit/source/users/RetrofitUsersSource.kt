@@ -6,6 +6,7 @@ import com.example.messenger.retrofit.entities.users.LoginRequestEntity
 import com.example.messenger.retrofit.entities.users.RegisterRequestEntity
 import com.example.messenger.retrofit.entities.users.UpdatePasswordRequestEntity
 import com.example.messenger.retrofit.entities.users.UpdateProfileRequestEntity
+import com.example.messenger.retrofit.entities.users.UpdateTokenRequestEntity
 import com.example.messenger.retrofit.source.base.BaseRetrofitSource
 import com.example.messenger.retrofit.source.base.RetrofitConfig
 
@@ -53,5 +54,14 @@ class RetrofitUsersSource(
 
     override suspend fun getVacation(): Pair<String, String>? = wrapRetrofitExceptions {
         usersApi.getVacation().toPair()
+    }
+
+    override suspend fun saveFCMToken(token: String): String = wrapRetrofitExceptions {
+        val updateTokenRequestEntity = UpdateTokenRequestEntity(token = token)
+        usersApi.saveFCMToken(updateTokenRequestEntity).message
+    }
+
+    override suspend fun deleteFCMToken(): String = wrapRetrofitExceptions {
+        usersApi.deleteFCMToken().message
     }
 }

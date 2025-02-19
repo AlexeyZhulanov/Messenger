@@ -10,7 +10,9 @@ import com.example.messenger.retrofit.entities.users.GetUserResponseEntity
 import com.example.messenger.retrofit.entities.users.GetVacationResponseEntity
 import com.example.messenger.retrofit.entities.users.UpdatePasswordRequestEntity
 import com.example.messenger.retrofit.entities.users.UpdateProfileRequestEntity
+import com.example.messenger.retrofit.entities.users.UpdateTokenRequestEntity
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
@@ -51,4 +53,10 @@ interface UsersApi {
 
     @GET("get_permission")
     suspend fun getPermission() : GetPermissionResponseEntity
+
+    @POST("save_fcm_token")
+    suspend fun saveFCMToken(@Body updateTokenRequestEntity: UpdateTokenRequestEntity) : ResponseEntityMessageAnswer
+
+    @DELETE("fcm_token")
+    suspend fun deleteFCMToken() : ResponseEntityMessageAnswer
 }

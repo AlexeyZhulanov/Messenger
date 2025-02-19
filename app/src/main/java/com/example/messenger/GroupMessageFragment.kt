@@ -20,10 +20,12 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class GroupMessageFragment(
     private val group: Group,
-    currentUser: User
-) : BaseChatFragment(currentUser) {
+    currentUser: User,
+    isFromNotification: Boolean
+) : BaseChatFragment(currentUser, isFromNotification) {
 
     override val viewModel: GroupMessageViewModel by viewModels()
+
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val list = viewModel.fetchMembersList()
@@ -53,6 +55,7 @@ class GroupMessageFragment(
                         val updatedList = adapter.currentList.toMutableList()
                         val count = adapter.itemCount
                         updatedList.addAll(pagingData)
+                        viewModel.processDateDuplicates(updatedList)
                         adapter.members = viewModel.separateMessages(updatedList, currentUser.id)
                         adapter.submitList(updatedList)
                         adapter.notifyItemChanged(count-1)
@@ -128,7 +131,7 @@ class GroupMessageFragment(
             .commit()
     }
 
-    override fun replaceCurrentFragment() = replaceFragment(GroupMessageFragment(group, currentUser))
+    override fun replaceCurrentFragment() = replaceFragment(GroupMessageFragment(group, currentUser, isFromNotification))
 
     override fun rememberLastMessage() {
         if (adapter.itemCount == 0) return

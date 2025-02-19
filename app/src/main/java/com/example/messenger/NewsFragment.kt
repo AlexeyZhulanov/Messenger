@@ -1,5 +1,6 @@
 package com.example.messenger
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.graphics.Rect
@@ -11,6 +12,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -35,7 +37,10 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 @AndroidEntryPoint
-class NewsFragment(private val currentUserUri: Uri?) : Fragment() {
+class NewsFragment(
+    private val currentUserUri: Uri?,
+    private val isFromNotification: Boolean
+) : Fragment() {
 
     private lateinit var binding: FragmentNewsBinding
     private lateinit var adapter: NewsAdapter
@@ -47,6 +52,15 @@ class NewsFragment(private val currentUserUri: Uri?) : Fragment() {
         override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
             binding.recyclerview.scrollToPosition(0)
             binding.recyclerview.adapter?.unregisterAdapterDataObserver(this)
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (requireActivity().intent.getBooleanExtra("isFromNotification", false)) {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, MessengerFragment(), "CHAT_LIST_NEWS")
+                .commitNow() // commitNow гарантирует, что фрагмент сразу добавлен в back stack
         }
     }
 
@@ -67,13 +81,15 @@ class NewsFragment(private val currentUserUri: Uri?) : Fragment() {
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.toolbar_news, toolbarContainer, false)
         toolbarContainer.addView(defaultToolbar)
-        val avatarImageView: ImageView = view.findViewById(R.id.toolbar_avatar)
-        avatarImageView.imageTintList = null
-        Glide.with(requireContext())
-            .load(currentUserUri)
-            .apply(RequestOptions.circleCropTransform())
-            .diskCacheStrategy(DiskCacheStrategy.ALL)
-            .into(avatarImageView)
+        if(currentUserUri != null) {
+            val avatarImageView: ImageView = view.findViewById(R.id.toolbar_avatar)
+            avatarImageView.imageTintList = null
+            Glide.with(requireContext())
+                .load(currentUserUri)
+                .apply(RequestOptions.circleCropTransform())
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .into(avatarImageView)
+        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -92,8 +108,16 @@ class NewsFragment(private val currentUserUri: Uri?) : Fragment() {
                 adapter.setPermission(permission)
             }
         }
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    backPressed()
+                    remove()
+                }
+            })
         binding.button3.setOnClickListener {
-            requireActivity().onBackPressedDispatcher.onBackPressed()
+            backPressed()
         }
         filePickerManager = FilePickerManager(fragment4 = this)
         adapter = NewsAdapter(object: NewsActionListener {
@@ -157,13 +181,16 @@ class NewsFragment(private val currentUserUri: Uri?) : Fragment() {
         return binding.root
     }
 
+    private fun backPressed() {
+        if(isFromNotification) {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, MessengerFragment())
+                .commit()
+        } else requireActivity().onBackPressedDispatcher.onBackPressed()
+    }
+
     class SpacingItemDecorator(private val space: Int) : RecyclerView.ItemDecoration() {
-        override fun getItemOffsets(
-            outRect: Rect,
-            view: View,
-            parent: RecyclerView,
-            state: RecyclerView.State
-        ) {
+        override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
             outRect.bottom = space
         }
     }

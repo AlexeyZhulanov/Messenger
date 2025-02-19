@@ -37,6 +37,10 @@ interface ConversationDao {
     }
 
     @Transaction
+    @Query("SELECT * FROM conversations WHERE type = :type AND id = :chatId LIMIT 1")
+    suspend fun getConversationByTypeAndId(type: String, chatId: Int): ConversationEntity?
+
+    @Transaction
     suspend fun replaceConversations(conversations: List<ConversationDbEntity>) {
         deleteAllConversations()
         val conversationEntities = conversations.map { it.conversation }
@@ -49,6 +53,9 @@ interface ConversationDao {
 
     @Query("SELECT * FROM users WHERE id IN (:userIds)")
     suspend fun getUsersByIds(userIds: List<Int>): List<UserEntity>
+
+    @Query("SELECT * FROM users WHERE id = :userId LIMIT 1")
+    suspend fun getUserById(userId: Int): UserEntity
 
     @Query("SELECT * FROM last_messages WHERE id IN (:messageIds)")
     suspend fun getLastMessagesByIds(messageIds: List<Int>): List<LastMessageEntity>
