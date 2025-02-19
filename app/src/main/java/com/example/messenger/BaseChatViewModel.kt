@@ -58,6 +58,7 @@ abstract class BaseChatViewModel(
     protected lateinit var recyclerView: RecyclerView
     protected var lastMessageDate: String = ""
     private var debounceJob: Job? = null
+    private val readMessageIds = mutableSetOf<Int>()
 
     protected val searchBy = MutableLiveData("")
     protected val currentPage = MutableStateFlow(0)
@@ -65,8 +66,8 @@ abstract class BaseChatViewModel(
     protected val _newMessageFlow = MutableStateFlow<Pair<Message, String>?>(null)
     val newMessageFlow: StateFlow<Pair<Message, String>?> = _newMessageFlow
 
-    protected val _typingState = MutableStateFlow(false)
-    val typingState: StateFlow<Boolean> get() = _typingState
+    protected val _typingState = MutableStateFlow<Pair<Boolean, String?>>(Pair(false, null))
+    val typingState: StateFlow<Pair<Boolean, String?>> get() = _typingState
 
     protected val _deleteState = MutableStateFlow(0)
     val deleteState: StateFlow<Int> get() = _deleteState
@@ -147,15 +148,14 @@ abstract class BaseChatViewModel(
         }
     }
 
-    protected fun markMessagesAsRead(visibleMessages: List<Message>) {
-        debounceJob?.cancel() // Отменяем предыдущий запрос, если он был
-
+    fun markMessagesAsRead(visibleMessages: List<Message>) {
+        readMessageIds.addAll(visibleMessages.map { it.id })
+        debounceJob?.cancel()
         debounceJob = viewModelScope.launch {
-            delay(3000) // Задержка перед отправкой
-
-            val messageIds = visibleMessages.map { it.id }
-            if (messageIds.isNotEmpty()) {
-                sendReadMessagesToServer(messageIds)
+            delay(3000) // Wait 3 seconds (debounce server requests)
+            if (readMessageIds.isNotEmpty()) {
+                sendReadMessagesToServer(readMessageIds.toList())
+                readMessageIds.clear()
             }
         }
     }
@@ -585,6 +585,19 @@ abstract class BaseChatViewModel(
             }
         }
         return null
+    }
+
+    fun processDateDuplicates(list: MutableList<Pair<Message, String>>): MutableList<Pair<Message, String>> {
+        val seenDates = mutableSetOf<String>()
+        for (i in list.indices.reversed()) {
+            val pair = list[i]
+            if (pair.second.isNotEmpty() && pair.second in seenDates) {
+                list[i] = pair.copy(second = "")
+            } else {
+                seenDates.add(pair.second)
+            }
+        }
+        return list
     }
 
     fun avatarSet(avatar: String, imageView: ImageView, context: Context) {

@@ -1,5 +1,6 @@
 package com.example.messenger
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.graphics.Rect
@@ -11,6 +12,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -35,7 +37,10 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 @AndroidEntryPoint
-class NewsFragment(private val currentUserUri: Uri?) : Fragment() {
+class NewsFragment(
+    private val currentUserUri: Uri?,
+    private val isFromNotification: Boolean
+) : Fragment() {
 
     private lateinit var binding: FragmentNewsBinding
     private lateinit var adapter: NewsAdapter
@@ -103,8 +108,16 @@ class NewsFragment(private val currentUserUri: Uri?) : Fragment() {
                 adapter.setPermission(permission)
             }
         }
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    backPressed()
+                    remove()
+                }
+            })
         binding.button3.setOnClickListener {
-            requireActivity().onBackPressedDispatcher.onBackPressed()
+            backPressed()
         }
         filePickerManager = FilePickerManager(fragment4 = this)
         adapter = NewsAdapter(object: NewsActionListener {
@@ -166,6 +179,14 @@ class NewsFragment(private val currentUserUri: Uri?) : Fragment() {
         binding.recyclerview.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerview.addItemDecoration(SpacingItemDecorator(20))
         return binding.root
+    }
+
+    private fun backPressed() {
+        if(isFromNotification) {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, MessengerFragment())
+                .commit()
+        } else requireActivity().onBackPressedDispatcher.onBackPressed()
     }
 
     class SpacingItemDecorator(private val space: Int) : RecyclerView.ItemDecoration() {

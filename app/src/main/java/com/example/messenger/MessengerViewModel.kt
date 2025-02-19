@@ -131,6 +131,26 @@ class MessengerViewModel @Inject constructor(
         retrofitService.sendMessage(idDialog, text, images, voice, file, referenceToMessageId, true, usernameAuthorOriginal)
     }
 
+    fun forwardGroupMessages(list: List<Message>?, usernames: List<String>?, id: Int) {
+        viewModelScope.launch {
+            list?.forEachIndexed { index, message ->
+                if(message.usernameAuthorOriginal == null) {
+                    forwardGroupMessage(id, message.text, message.images, message.voice, message.file,
+                        message.referenceToMessageId, usernames?.get(index))
+                } else {
+                    forwardGroupMessage(id, message.text, message.images, message.voice, message.file,
+                        message.referenceToMessageId, message.usernameAuthorOriginal)
+                }
+            }
+        }
+    }
+
+    private suspend fun forwardGroupMessage(idGroup: Int, text: String?, images: List<String>?,
+                                            voice: String?, file: String?, referenceToMessageId: Int?,
+                                            usernameAuthorOriginal: String?) {
+        retrofitService.sendGroupMessage(idGroup, text, images, voice, file, referenceToMessageId, true, usernameAuthorOriginal)
+    }
+
     fun fManagerIsExistAvatar(fileName: String): Boolean {
         return fileManager.isExistAvatar(fileName)
     }
@@ -159,8 +179,7 @@ class MessengerViewModel @Inject constructor(
                 webSocketService.disconnect()
                 FirebaseMessaging.getInstance().deleteToken().await()
                 messengerService.deleteCurrentUser()
-                val settings = messengerService.getSettings()
-                messengerService.updateSettings(Settings(0, remember = 0, settings.name, settings.password))
+                messengerService.updateSettings(Settings(0, remember = 0, "", ""))
             }
         }
     }

@@ -121,7 +121,7 @@ class  WebSocketNotificationsService : LifecycleService() {
         messages.add(event)
 
         val summaryId = chatId * 10
-        val singleMessageId = chatId * 100 + messages.size
+        val singleMessageId = chatId * 100
 
         val pendingIntent = PendingIntent.getActivity(
             this, chatId,

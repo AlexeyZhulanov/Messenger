@@ -20,19 +20,12 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class MessageFragment(
     private val dialog: Dialog,
-    currentUser: User
-) : BaseChatFragment(currentUser) {
+    currentUser: User,
+    isFromNotification: Boolean
+) : BaseChatFragment(currentUser, isFromNotification) {
     private var lastSessionString: String = ""
     override val viewModel: MessageViewModel by viewModels()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        if (requireActivity().intent.getBooleanExtra("isFromNotification", false)) {
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, MessengerFragment(), "CHAT_LIST_DIALOG")
-                .commitNow() // commitNow гарантирует, что фрагмент сразу добавлен в back stack
-        }
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         viewModel.setInfo(dialog.otherUser.id)
@@ -55,6 +48,7 @@ class MessageFragment(
                     else {
                         val updatedList = adapter.currentList.toMutableList()
                         updatedList.addAll(pagingData)
+                        viewModel.processDateDuplicates(updatedList)
                         adapter.submitList(updatedList)
                     }
                 } else {
@@ -127,7 +121,7 @@ class MessageFragment(
         viewModel.saveLastMessage(firstMessageId)
     }
 
-    override fun replaceCurrentFragment() = replaceFragment(MessageFragment(dialog, currentUser))
+    override fun replaceCurrentFragment() = replaceFragment(MessageFragment(dialog, currentUser, isFromNotification))
 
     override fun composeAnswer(message: Message) {
         binding.answerUsername.text = dialog.otherUser.username

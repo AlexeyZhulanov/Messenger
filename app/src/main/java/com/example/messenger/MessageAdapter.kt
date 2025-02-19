@@ -13,7 +13,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.FileProvider
@@ -147,20 +146,14 @@ class MessageAdapter(
     fun updateMessagesAsRead(listIds: List<Int>) {
         if(listIds.isNotEmpty()) {
             val currentPagingData = currentList
-            var startPosition = -1
-            val updatedPagingData = currentPagingData.mapIndexed { index, pair ->
+            val updatedPagingData = currentPagingData.map { pair ->
                 if (pair.first.id in listIds) {
-                    pair.first.isRead = true
-                    if (startPosition == -1) startPosition = index
+                    pair.copy(first = pair.first.copy(isRead = true)) //pair.first.isRead = true
+                } else {
+                    pair
                 }
-                pair
             }
-            uiScopeMain.launch {
-                submitList(updatedPagingData)
-                //messageList = updatedPagingData.toMutableList()
-                //notifyItemRangeChanged(startPosition, listIds.size)
-                Log.d("testMarkReadMessages", "startpos: $startPosition, size: ${listIds.size}")
-            }
+            submitList(updatedPagingData)
         }
     }
 

@@ -133,7 +133,7 @@ class MessengerFragment : Fragment() {
         }
         binding.button.setOnClickListener {
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, NewsFragment(uriGlobal), "NEWS_FRAGMENT_TAG")
+                .replace(R.id.fragmentContainer, NewsFragment(uriGlobal, true), "NEWS_FRAGMENT_TAG")
                 .addToBackStack(null)
                 .commit()
         }
@@ -171,7 +171,7 @@ class MessengerFragment : Fragment() {
                     "dialog" -> {
                         if (!forwardFlag) {
                             parentFragmentManager.beginTransaction()
-                                .replace(R.id.fragmentContainer, MessageFragment(conversation.toDialog(), currentUser ?: User(0, "", "")), "MESSAGE_FRAGMENT_TAG")
+                                .replace(R.id.fragmentContainer, MessageFragment(conversation.toDialog(), currentUser ?: User(0, "", ""), false), "MESSAGE_FRAGMENT_TAG")
                                 .addToBackStack(null)
                                 .commit()
                         } else {
@@ -186,15 +186,15 @@ class MessengerFragment : Fragment() {
                     "group" -> {
                         if (!forwardFlag) {
                             parentFragmentManager.beginTransaction()
-                                .replace(R.id.fragmentContainer, GroupMessageFragment(conversation.toGroup(), currentUser ?: User(0, "", "")), "GROUP_FRAGMENT_TAG")
+                                .replace(R.id.fragmentContainer, GroupMessageFragment(conversation.toGroup(), currentUser ?: User(0, "", ""), false), "GROUP_FRAGMENT_TAG")
                                 .addToBackStack(null)
                                 .commit()
                         } else {
                             forwardFlag = false
                             if(forwardMessages != null) {
                                 val list = forwardMessages
-                                //messengerViewModel.forwardMessages(list, conversation.toGroup().id)
-                                // todo forward Group Messages
+                                val list2 = forwardUsernames
+                                messengerViewModel.forwardGroupMessages(list, list2, conversation.toGroup().id)
                             }
                         }
                     }

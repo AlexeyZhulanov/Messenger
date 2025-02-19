@@ -79,14 +79,8 @@ class MainActivity : AppCompatActivity() {
                         Pair(groupDeferred.await(), userDeferred.await())
                     }
                     if(conv != null && currentUser != null) {
-                        val chatFragment = GroupMessageFragment(conv.toGroup(), currentUser).apply {
-                            arguments = Bundle().apply {
-                                putBoolean("isFromNotification", true)
-                            }
-                        }
                         supportFragmentManager.beginTransaction()
-                            .replace(R.id.fragmentContainer, chatFragment, "GROUP_FRAGMENT_TAG")
-                            .addToBackStack("CHAT_LIST_GROUP")
+                            .replace(R.id.fragmentContainer, GroupMessageFragment(conv.toGroup(), currentUser, true), "GROUP_FRAGMENT_TAG")
                             .commit()
                     } else Toast.makeText(this, "Не удалось открыть групповой чат", Toast.LENGTH_SHORT).show()
                 } else {
@@ -97,15 +91,9 @@ class MainActivity : AppCompatActivity() {
                     }
                     Log.d("testClickNotify", "$conv and $currentUser")
                     if(conv != null && currentUser != null) {
-                        val chatFragment = MessageFragment(conv.toDialog(), currentUser).apply {
-                            arguments = Bundle().apply {
-                                putBoolean("isFromNotification", true)
-                            }
-                        }
                         Log.d("testClickNotify2", "Trying to open fragment message")
                         supportFragmentManager.beginTransaction()
-                            .replace(R.id.fragmentContainer, chatFragment, "MESSAGE_FRAGMENT_TAG")
-                            .addToBackStack("CHAT_LIST_DIALOG")
+                            .replace(R.id.fragmentContainer, MessageFragment(conv.toDialog(), currentUser, true), "MESSAGE_FRAGMENT_TAG")
                             .commit()
                     } else Toast.makeText(this, "Не удалось открыть диалог", Toast.LENGTH_SHORT).show()
                 }
@@ -120,14 +108,8 @@ class MainActivity : AppCompatActivity() {
                         Uri.fromFile(file)
                     } else null
                 } else null
-                val newsFragment = NewsFragment(uri).apply {
-                    arguments = Bundle().apply {
-                        putBoolean("isFromNotification", true)
-                    }
-                }
                 supportFragmentManager.beginTransaction()
-                    .replace(R.id.fragmentContainer, newsFragment, "NEWS_FRAGMENT_TAG")
-                    .addToBackStack("CHAT_LIST_NEWS")
+                    .replace(R.id.fragmentContainer, NewsFragment(uri, true), "NEWS_FRAGMENT_TAG")
                     .commit()
             }
             else -> {

@@ -60,7 +60,8 @@ import java.io.PrintWriter
 
 @AndroidEntryPoint
 abstract class BaseChatFragment(
-    protected val currentUser: User
+    protected val currentUser: User,
+    protected val isFromNotification: Boolean
 ) : Fragment(), AudioRecordView.Callback {
 
     protected lateinit var binding: FragmentMessageBinding
@@ -136,14 +137,19 @@ abstract class BaseChatFragment(
             launch {
                 viewModel.newMessageFlow.collect { newMessage ->
                     if (newMessage != null) {
+                        registerScrollObserver()
                         viewModel.updateLastDate(newMessage.first.timestamp)
                         adapter.addNewMessage(newMessage)
+                        if((currentUser.id != newMessage.first.idSender) && !newMessage.first.isRead) {
+                            viewModel.markMessagesAsRead(listOf(newMessage.first))
+                        }
                     }
                 }
             }
             launch {
                 viewModel.unsentMessageFlow.collect { uMessage ->
                     if(uMessage != null) {
+                        registerScrollObserver()
                         Log.d("testUnsentFlow", "OK")
                         adapter.addNewMessage(Pair(uMessage, ""))
                     }
@@ -163,6 +169,22 @@ abstract class BaseChatFragment(
                     }
                 }
             }
+            launch {
+                viewModel.readMessagesFlow.collect { readMessagesIds ->
+                    adapter.updateMessagesAsRead(readMessagesIds)
+                }
+            }
+            launch {
+                viewModel.deleteState.collectLatest {
+                    if(it == 1) {
+                        Toast.makeText(requireContext(), "Все сообщения были удалены", Toast.LENGTH_SHORT).show()
+                    }
+                    if(it == 2) {
+                        Toast.makeText(requireContext(), "Диалог был удален", Toast.LENGTH_SHORT).show()
+                        backPressed()
+                    }
+                }
+            }
         }
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
@@ -170,7 +192,7 @@ abstract class BaseChatFragment(
         toolbarContainer.addView(defaultToolbar)
         val backArrow: ImageView = view.findViewById(R.id.back_arrow)
         backArrow.setOnClickListener {
-            requireActivity().onBackPressedDispatcher.onBackPressed()
+            backPressed()
         }
         val profilePhoto: ImageView = view.findViewById(R.id.photoImageView)
         profilePhoto.setOnClickListener {
@@ -197,9 +219,10 @@ abstract class BaseChatFragment(
             viewModel.typingState
                 .debounce(2000)
                 .distinctUntilChanged()
-                .collect { isTyping ->
+                .collect { (isTyping, username) ->
                     if (isTyping) {
                         lastSession.visibility = View.INVISIBLE
+                        typingTextView.text = if(username != null) "$username печатает" else "печатает"
                         typingTextView.visibility = View.VISIBLE
                         dot1.visibility = View.VISIBLE
                         dot2.visibility = View.VISIBLE
@@ -215,25 +238,9 @@ abstract class BaseChatFragment(
                     }
                 }
         }
-        lifecycleScope.launch {
-            viewModel.readMessagesFlow.collect { readMessagesIds ->
-                adapter.updateMessagesAsRead(readMessagesIds)
-            }
-        }
         val options: ImageView = view.findViewById(R.id.ic_options)
         options.setOnClickListener {
             showPopupMenu(it, R.menu.popup_menu_dialog)
-        }
-        lifecycleScope.launch {
-            viewModel.deleteState.collectLatest {
-                if(it == 1) {
-                    Toast.makeText(requireContext(), "Все сообщения были удалены", Toast.LENGTH_SHORT).show()
-                }
-                if(it == 2) {
-                    Toast.makeText(requireContext(), "Диалог был удален", Toast.LENGTH_SHORT).show()
-                    requireActivity().onBackPressedDispatcher.onBackPressed()
-                }
-            }
         }
     }
 
@@ -249,6 +256,16 @@ abstract class BaseChatFragment(
         }
         filePickerManager = FilePickerManager(this)
         setupAdapterDialog()
+        if(isFromNotification) {
+            requireActivity().onBackPressedDispatcher.addCallback(
+                viewLifecycleOwner,
+                object : OnBackPressedCallback(true) {
+                    override fun handleOnBackPressed() {
+                        backPressed()
+                        remove()
+                    }
+                })
+        }
         imageAdapter = ImageAdapter(requireContext(), object: ImageActionListener {
             override fun onImageClicked(image: LocalMedia, position: Int) {
                 Log.d("testClick", "Image clicked: $image")
@@ -477,19 +494,29 @@ abstract class BaseChatFragment(
                         }
                     }
                 }
-                try {
-                    binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
-                } catch (e: Exception) {
-                    binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterDataObserver)
-                    binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
-                }
 
                 val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 enterText.setText("")
-                // viewModel.refresh()
             }
         }
         return binding.root
+    }
+
+    private fun registerScrollObserver() {
+        try {
+            binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+        } catch (e: Exception) {
+            binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterDataObserver)
+            binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
+        }
+    }
+
+    private fun backPressed() {
+        if(isFromNotification) {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, MessengerFragment())
+                .commit()
+        } else requireActivity().onBackPressedDispatcher.onBackPressed()
     }
 
     protected fun setupAdapter(members: List<User>) {
@@ -531,7 +558,7 @@ abstract class BaseChatFragment(
                                 } else {
                                     //Removing this callback
                                     remove()
-                                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                                    backPressed()
                                 }
                                 viewModel.startRefresh()
                             }
@@ -585,7 +612,7 @@ abstract class BaseChatFragment(
                                 putStringArrayList("forwardedUsernames", ArrayList(strings))
                             }
                             parentFragmentManager.setFragmentResult("forwardMessagesRequestKey", bundle)
-                            requireActivity().onBackPressedDispatcher.onBackPressed()
+                            backPressed()
                         }
                     }
                 }
@@ -668,13 +695,7 @@ abstract class BaseChatFragment(
                         viewModel.sendMessage(null, null, first, null, answerMessage?.first, false, answerMessage?.second, second)
                         disableAnswer()
                     }
-                    try {
-                        binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
-                    } catch (e: Exception) {
-                        binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterDataObserver)
-                        binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
-                    }
-                    //viewModel.refresh()
+                    registerScrollObserver()
                 }
             } else {
                 Log.d("testConvert", "Not OK")
@@ -728,13 +749,7 @@ abstract class BaseChatFragment(
                     viewModel.sendMessage(null, null, file.name, first, answerMessage?.first, false, answerMessage?.second, second)
                     disableAnswer()
                 }
-                try {
-                    binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
-                } catch (e: Exception) {
-                    binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterDataObserver)
-                    binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
-                }
-                // viewModel.refresh()
+                registerScrollObserver()
             }
         } else Toast.makeText(requireContext(), "Что-то не так с файлом", Toast.LENGTH_SHORT).show()
     }
@@ -910,7 +925,7 @@ abstract class BaseChatFragment(
                                     } else {
                                         //Removing this callback
                                         remove()
-                                        requireActivity().onBackPressedDispatcher.onBackPressed()
+                                        backPressed()
                                     }
                                     viewModel.startRefresh()
                                 }
