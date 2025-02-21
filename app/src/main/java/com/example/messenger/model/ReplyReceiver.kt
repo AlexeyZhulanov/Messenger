@@ -1,6 +1,7 @@
 package com.example.messenger.model
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -68,14 +69,10 @@ class ReplyReceiver : BroadcastReceiver() {
      * Обновляет уведомление для чата с chatId.
      * Если success = true – уведомление показывает галочку, иначе – крестик.
      */
+    @SuppressLint("LaunchActivityFromNotification")
     private fun updateNotification(context: Context, chatId: Int, isGroup: Boolean, success: Boolean) {
-        val pendingIntent = PendingIntent.getActivity(
-            context, chatId,
-            Intent(context, MainActivity::class.java)
-                .putExtra("chat_id", chatId)
-                .putExtra("is_group", isGroup)
-                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        val emptyIntent = PendingIntent.getBroadcast(
+            context, 0, Intent(), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         // Выбираем иконку в зависимости от статуса
@@ -91,7 +88,7 @@ class ReplyReceiver : BroadcastReceiver() {
                     "Ошибка при отправке ответа"
             )
             .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
+            .setContentIntent(emptyIntent)
 
         val notificationManager = NotificationManagerCompat.from(context)
         // Обновляем уведомление с тем же id (chatId * 100)

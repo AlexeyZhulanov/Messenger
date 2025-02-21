@@ -82,7 +82,7 @@ class  WebSocketNotificationsService : LifecycleService() {
         val channelId = "websocket_channel"
         val channel = NotificationChannel(
             channelId, "WebSocket Service",
-            NotificationManager.IMPORTANCE_LOW
+            NotificationManager.IMPORTANCE_MIN
         )
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
 

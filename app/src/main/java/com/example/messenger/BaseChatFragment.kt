@@ -49,11 +49,18 @@ import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
 import com.tougee.recorderview.AudioRecordView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.PrintWriter
@@ -123,9 +130,13 @@ abstract class BaseChatFragment(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        pickFileLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-            uri?.let {
-                handleFileUri(uri) // обработка выбранного файла
+        pickFileLauncher = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri>? ->
+            if (uris != null) {
+                if (uris.size > 5) {
+                    Toast.makeText(requireContext(), "Можно выбрать не более 5 файлов", Toast.LENGTH_SHORT).show()
+                } else {
+                    uris.forEach { handleFileUri(it) }
+                }
             }
         }
     }
@@ -135,16 +146,22 @@ abstract class BaseChatFragment(
         super.onViewCreated(view, savedInstanceState)
         lifecycleScope.launch {
             launch {
-                viewModel.newMessageFlow.collect { newMessage ->
-                    if (newMessage != null) {
-                        registerScrollObserver()
-                        viewModel.updateLastDate(newMessage.first.timestamp)
-                        adapter.addNewMessage(newMessage)
-                        if((currentUser.id != newMessage.first.idSender) && !newMessage.first.isRead) {
-                            viewModel.markMessagesAsRead(listOf(newMessage.first))
+                viewModel.newMessageFlow
+                    .buffer()
+                    .chunkedFlowLast(200) // custom func
+                    .collect { newMessages ->
+                        if(newMessages.isNotEmpty()) {
+                            registerScrollObserver()
+                            val clearMessages = newMessages.filterNotNull()
+                            adapter.addNewMessages(clearMessages)
+                            val unreadMessages = clearMessages.filter {
+                                currentUser.id != it.first.idSender && !it.first.isRead
+                            }
+                            if (unreadMessages.isNotEmpty()) {
+                                viewModel.markMessagesAsRead(unreadMessages.map { it.first })
+                            }
                         }
                     }
-                }
             }
             launch {
                 viewModel.unsentMessageFlow.collect { uMessage ->
@@ -1127,4 +1144,31 @@ abstract class BaseChatFragment(
             return false
         }
     }
+
+    private fun <T> Flow<T>.chunkedFlowLast(timeout: Long): Flow<List<T>> = channelFlow {
+        val buffer = mutableListOf<T>()
+        var emitJob: Job? = null
+
+        try {
+            collect { message ->
+                buffer.add(message)
+                emitJob?.cancel()
+                emitJob = coroutineScope {
+                    launch {
+                        delay(timeout)
+                        if(buffer.isNotEmpty()) {
+                            send(buffer.toList())
+                            buffer.clear()
+                        }
+                    }
+                }
+            }
+        } finally {
+            emitJob?.cancel()
+            if (buffer.isNotEmpty()) {
+                send(buffer.toList())
+            }
+        }
+    }
+
 }

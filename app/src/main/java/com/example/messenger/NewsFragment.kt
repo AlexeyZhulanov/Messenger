@@ -1,6 +1,5 @@
 package com.example.messenger
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.graphics.Rect
@@ -52,15 +51,6 @@ class NewsFragment(
         override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
             binding.recyclerview.scrollToPosition(0)
             binding.recyclerview.adapter?.unregisterAdapterDataObserver(this)
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        if (requireActivity().intent.getBooleanExtra("isFromNotification", false)) {
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, MessengerFragment(), "CHAT_LIST_NEWS")
-                .commitNow() // commitNow гарантирует, что фрагмент сразу добавлен в back stack
         }
     }
 

@@ -87,6 +87,34 @@ class MessageAdapter(
     private val uiScopeMain = CoroutineScope(Dispatchers.Main)
 
 
+    fun addNewMessages(messages: List<Pair<Message, String>>) {
+        val updatedList = currentList.toMutableList()
+        var needNotify = false
+        if(isGroup) {
+            var firstItemId = updatedList.first().first.id
+            messages.forEachIndexed { index, message ->
+                val messageIdSender = message.first.idSender
+                val messageId = message.first.id
+                val info = members[firstItemId]
+                if(info != null && messageIdSender != currentUserId) {
+                    if(messageIdSender == firstItemId && message.second == "") {
+                        members += messageId to (null to info.second)
+                        members += firstItemId to (info.first to null)
+                        if(index == 0) needNotify = true
+                    } else {
+                        val member = membersFull.find { it.id == messageIdSender }
+                        members += messageId to (member?.username to member?.avatar)
+                    }
+                }
+                firstItemId = message.first.id
+            }
+        }
+        updatedList.addAll(0, messages)
+        submitList(updatedList) {
+            if(needNotify) notifyItemChanged(messages.size)
+        }
+    }
+
     fun addNewMessage(message: Pair<Message, String>) {
         val updatedList = currentList.toMutableList()
         var needNotify = false
@@ -107,8 +135,9 @@ class MessageAdapter(
             }
         }
         updatedList.add(0, message)
-        submitList(updatedList)
-        if(needNotify) notifyItemChanged(1)
+        submitList(updatedList) {
+            if(needNotify) notifyItemChanged(1)
+        }
     }
 
     fun deleteUnsentMessage(message: Message) {
@@ -148,7 +177,7 @@ class MessageAdapter(
             val currentPagingData = currentList
             val updatedPagingData = currentPagingData.map { pair ->
                 if (pair.first.id in listIds) {
-                    pair.copy(first = pair.first.copy(isRead = true)) //pair.first.isRead = true
+                    pair.copy(first = pair.first.copy(isRead = true))
                 } else {
                     pair
                 }

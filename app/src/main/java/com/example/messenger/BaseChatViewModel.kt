@@ -30,7 +30,9 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -63,8 +65,8 @@ abstract class BaseChatViewModel(
     protected val searchBy = MutableLiveData("")
     protected val currentPage = MutableStateFlow(0)
 
-    protected val _newMessageFlow = MutableStateFlow<Pair<Message, String>?>(null)
-    val newMessageFlow: StateFlow<Pair<Message, String>?> = _newMessageFlow
+    protected val _newMessageFlow = MutableSharedFlow<Pair<Message, String>?>(extraBufferCapacity = 5)
+    val newMessageFlow: SharedFlow<Pair<Message, String>?> = _newMessageFlow
 
     protected val _typingState = MutableStateFlow<Pair<Boolean, String?>>(Pair(false, null))
     val typingState: StateFlow<Pair<Boolean, String?>> get() = _typingState
@@ -72,8 +74,8 @@ abstract class BaseChatViewModel(
     protected val _deleteState = MutableStateFlow(0)
     val deleteState: StateFlow<Int> get() = _deleteState
 
-    protected val _readMessagesFlow = MutableStateFlow<List<Int>>(emptyList())
-    val readMessagesFlow: StateFlow<List<Int>> get() = _readMessagesFlow
+    protected val _readMessagesFlow = MutableSharedFlow<List<Int>>(extraBufferCapacity = 5)
+    val readMessagesFlow: SharedFlow<List<Int>> get() = _readMessagesFlow
 
     private val _unsentMessageFlow = MutableStateFlow<Message?>(null)
     val unsentMessageFlow: StateFlow<Message?> get() = _unsentMessageFlow
@@ -101,10 +103,7 @@ abstract class BaseChatViewModel(
             pendingRefresh = true
             return
         }
-        _newMessageFlow.value = null
         currentPage.value = 0
-        _unsentMessageFlow.value = null
-        _editMessageFlow.value = null
         this.searchBy.postValue(this.searchBy.value)
     }
 
