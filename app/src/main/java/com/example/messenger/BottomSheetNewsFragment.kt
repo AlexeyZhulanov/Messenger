@@ -97,9 +97,11 @@ class BottomSheetNewsFragment(
         super.onCreate(savedInstanceState)
 
         pickFileLauncher = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri>? ->
-            uris?.takeIf { it.size <= 5 }?.let { selectedUris ->
-                for (uri in selectedUris) {
-                    handleFileUri(uri) // обработка каждого выбранного файла
+            if (uris != null) {
+                if (uris.size > 5) {
+                    Toast.makeText(requireContext(), "Можно выбрать не более 5 файлов", Toast.LENGTH_SHORT).show()
+                } else {
+                    uris.forEach { handleFileUri(it) }
                 }
             }
         }

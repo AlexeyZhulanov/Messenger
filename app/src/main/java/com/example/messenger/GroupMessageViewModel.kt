@@ -62,7 +62,8 @@ class GroupMessageViewModel @Inject constructor(
                 webSocketService.newMessageFlow.collect { message ->
                     Log.d("testSocketsMessage", "New Message: $message")
                     val newMessagePair = if(lastMessageDate == "") message to "" else message to formatMessageDate(message.timestamp)
-                    _newMessageFlow.value = newMessagePair
+                    _newMessageFlow.tryEmit(newMessagePair)
+                    updateLastDate(message.timestamp)
                 }
             }
             viewModelScope.launch {
@@ -92,7 +93,7 @@ class GroupMessageViewModel @Inject constructor(
             viewModelScope.launch {
                 webSocketService.readMessageFlow.collect {
                     Log.d("testSocketsMessage", "Messages read: ${it.messagesReadIds}")
-                    _readMessagesFlow.value = it.messagesReadIds
+                    _readMessagesFlow.tryEmit(it.messagesReadIds)
                 }
             }
             viewModelScope.launch {
