@@ -12,9 +12,9 @@ import com.example.messenger.model.FileManager
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
-import com.example.messenger.model.Settings
 import com.example.messenger.model.User
 import com.example.messenger.model.WebSocketService
+import com.example.messenger.model.appsettings.AppSettings
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -30,6 +30,7 @@ class MessengerViewModel @Inject constructor(
     private val retrofitService: RetrofitService,
     private val fileManager: FileManager,
     private val webSocketService: WebSocketService,
+    private val appSettings: AppSettings,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
@@ -95,17 +96,17 @@ class MessengerViewModel @Inject constructor(
         }
     }
 
-    fun createDialog(input: String) {
+    fun createDialog(input: String, key: String) {
         viewModelScope.launch {
-            if (retrofitService.createDialog(input)) {
+            if (retrofitService.createDialog(input, key)) {
                 _conversations.postValue(retrofitService.getConversations())
             }
         }
     }
 
-    fun createGroup(input: String) {
+    fun createGroup(input: String, key: String) {
         viewModelScope.launch {
-            if (retrofitService.createGroup(input)) {
+            if (retrofitService.createGroup(input, key)) {
                 _conversations.postValue(retrofitService.getConversations())
             }
         }
@@ -179,7 +180,9 @@ class MessengerViewModel @Inject constructor(
                 webSocketService.disconnect()
                 FirebaseMessaging.getInstance().deleteToken().await()
                 messengerService.deleteCurrentUser()
-                messengerService.updateSettings(Settings(0, remember = 0, "", ""))
+                appSettings.setCurrentAccessToken(null)
+                appSettings.setCurrentRefreshToken(null)
+                appSettings.setRemember(false)
             }
         }
     }

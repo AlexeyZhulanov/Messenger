@@ -11,6 +11,7 @@ import com.example.messenger.model.appsettings.AppSettings
 import com.example.messenger.model.appsettings.SharedPreferencesAppSettings
 import com.example.messenger.retrofit.source.SourceProviderHolder
 import com.example.messenger.model.WebSocketService
+import com.example.messenger.retrofit.source.Navigator
 import com.example.messenger.retrofit.source.base.SourcesProvider
 import com.example.messenger.room.AppDatabase
 import com.example.messenger.room.dao.ChatSettingsDao
@@ -20,7 +21,6 @@ import com.example.messenger.room.dao.GroupMessageDao
 import com.example.messenger.room.dao.LastReadMessageDao
 import com.example.messenger.room.dao.MessageDao
 import com.example.messenger.room.dao.NewsDao
-import com.example.messenger.room.dao.SettingsDao
 import com.example.messenger.room.dao.UnsentMessageDao
 import com.example.messenger.room.dao.UserDao
 import dagger.Module
@@ -46,12 +46,6 @@ object MessengerModule {
             AppDatabase::class.java,
             "database.db"
         ).createFromAsset("init_db.db").build()
-    }
-
-    @Provides
-    @Singleton
-    fun provideSettingsDao(appDatabase: AppDatabase): SettingsDao {
-        return appDatabase.getSettingsDao()
     }
 
     @Provides
@@ -111,7 +105,6 @@ object MessengerModule {
     @Provides
     @Singleton
     fun provideMessengerService(
-        settingsDao: SettingsDao,
         conversationDao: ConversationDao,
         messageDao: MessageDao,
         groupMessageDao: GroupMessageDao,
@@ -123,7 +116,7 @@ object MessengerModule {
         newsDao: NewsDao,
         @IoDispatcher ioDispatcher: CoroutineDispatcher
     ): MessengerService {
-        return MessengerService(settingsDao, conversationDao, messageDao, groupMessageDao, userDao,
+        return MessengerService(conversationDao, messageDao, groupMessageDao, userDao,
             lastReadMessageDao, chatSettingsDao, unsentMessageDao, groupMemberDao, newsDao, ioDispatcher)
     }
 
@@ -138,7 +131,6 @@ object MessengerModule {
     fun provideRetrofitService(
         sourcesProvider: SourcesProvider,
         appSettings: AppSettings,
-        messengerService: MessengerService,
         @IoDispatcher ioDispatcher: CoroutineDispatcher
     ): RetrofitService {
         val usersSource = sourcesProvider.getUsersSource()
@@ -154,7 +146,6 @@ object MessengerModule {
             uploadSource = uploadsSource,
             newsSource = newsSource,
             appSettings = appSettings,
-            messengerRepository = messengerService,
             ioDispatcher = ioDispatcher
         )
     }
@@ -163,10 +154,10 @@ object MessengerModule {
     @Singleton
     fun provideSourceProviderHolder(
         appSettings: AppSettings,
-        messengerService: MessengerService,
-        retrofitServiceProvider: Provider<RetrofitService> // если передать просто retrofitService то будет цикл
+        retrofitServiceProvider: Provider<RetrofitService>, // если передать просто retrofitService то будет цикл
+        navigator: Navigator
     ): SourceProviderHolder {
-        return SourceProviderHolder(appSettings, messengerService, retrofitServiceProvider)
+        return SourceProviderHolder(appSettings, retrofitServiceProvider, navigator)
     }
 
     @Provides

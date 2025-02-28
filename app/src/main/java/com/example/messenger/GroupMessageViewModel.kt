@@ -43,6 +43,9 @@ class GroupMessageViewModel @Inject constructor(
         private val _membersCount = MutableStateFlow(0)
         val membersCount: StateFlow<Int> get() = _membersCount
 
+        private val pagingSource: MessagePagingSource =
+            MessagePagingSource(retrofitService, messengerService, convId, fileManager, false)
+
         @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
         val pagingDataFlow = searchBy.asFlow()
             .debounce(500)
@@ -50,8 +53,7 @@ class GroupMessageViewModel @Inject constructor(
                 currentPage.flatMapLatest { page ->
                     flow {
                         val pageSize = 30
-                        val messages = MessagePagingSource(retrofitService, messengerService, convId,
-                            searchQuery, fileManager, false).loadPage(page, pageSize)
+                        val messages = pagingSource.loadPage(page, pageSize, searchQuery)
                         emit(messages)
                     }
                 }

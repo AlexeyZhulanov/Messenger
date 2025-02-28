@@ -17,7 +17,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -40,6 +39,9 @@ class MessageViewModel @Inject constructor(
     private var otherUserId: Int = -1
     private var isOtherUserInChat: Boolean = false
 
+    private val pagingSource: MessagePagingSource =
+        MessagePagingSource(retrofitService, messengerService, convId, fileManager, true)
+
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     val pagingDataFlow = searchBy.asFlow()
         .debounce(500)
@@ -47,8 +49,7 @@ class MessageViewModel @Inject constructor(
             currentPage.flatMapLatest { page ->
                 flow {
                     val pageSize = 30
-                    val messages = MessagePagingSource(retrofitService, messengerService, convId,
-                        searchQuery, fileManager, true).loadPage(page, pageSize)
+                    val messages = pagingSource.loadPage(page, pageSize, searchQuery)
                     emit(messages)
                 }
             }

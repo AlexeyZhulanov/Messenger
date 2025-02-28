@@ -6,8 +6,13 @@ import com.example.messenger.retrofit.entities.users.RegisterRequestEntity
 import com.example.messenger.retrofit.entities.ResponseEntityMessageAnswer
 import com.example.messenger.retrofit.entities.users.GetLastSessionResponseEntity
 import com.example.messenger.retrofit.entities.users.GetPermissionResponseEntity
+import com.example.messenger.retrofit.entities.users.GetPrivateKeyResponseEntity
+import com.example.messenger.retrofit.entities.users.GetPublicKeyResponseEntity
 import com.example.messenger.retrofit.entities.users.GetUserResponseEntity
 import com.example.messenger.retrofit.entities.users.GetVacationResponseEntity
+import com.example.messenger.retrofit.entities.users.KeyRequestEntity
+import com.example.messenger.retrofit.entities.users.KeysRequestEntity
+import com.example.messenger.retrofit.entities.users.TokenResponseEntity
 import com.example.messenger.retrofit.entities.users.UpdatePasswordRequestEntity
 import com.example.messenger.retrofit.entities.users.UpdateProfileRequestEntity
 import com.example.messenger.retrofit.entities.users.UpdateTokenRequestEntity
@@ -18,7 +23,6 @@ import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
-import retrofit2.http.Query
 
 interface UsersApi {
     @POST("register")
@@ -26,6 +30,9 @@ interface UsersApi {
 
     @POST("login")
     suspend fun login(@Body loginRequestEntity: LoginRequestEntity) : LoginResponseEntity
+
+    @POST("/refresh")
+    suspend fun refreshToken(@Header("Authorization") refreshToken: String): TokenResponseEntity
 
     @PUT("update_profile")
     suspend fun updateProfile(
@@ -59,4 +66,13 @@ interface UsersApi {
 
     @DELETE("fcm_token")
     suspend fun deleteFCMToken() : ResponseEntityMessageAnswer
+
+    @GET("user/key")
+    suspend fun getUserKey(@Body keyRequestEntity: KeyRequestEntity) : GetPublicKeyResponseEntity
+
+    @GET("user/private_key")
+    suspend fun getPrivateKey() : GetPrivateKeyResponseEntity
+
+    @POST("user/key")
+    suspend fun saveUserKeys(@Body keysRequestEntity: KeysRequestEntity) : ResponseEntityMessageAnswer
 }

@@ -9,16 +9,25 @@ class MessagePagingSource(
     private val retrofitService: RetrofitService,
     private val messengerService: MessengerService,
     private val convId: Int,
-    private val query: String,
     private val fileManager: FileManager,
     private val isDialog: Boolean = true
 ) {
 
     private var flag = true
+    private var invertedIndex: InvertedIndex? = null
+    private val searchCache = object : LinkedHashMap<String, List<Message>>(MAX_CACHE_SIZE, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<Message>>): Boolean {
+            return size > MAX_CACHE_SIZE
+        }
+    }
 
-    suspend fun loadPage(pageIndex: Int, pageSize: Int): List<Pair<Message, String>> {
+    companion object {
+        private const val MAX_CACHE_SIZE = 50 // 50 queries
+    }
+
+    suspend fun loadPage(pageIndex: Int, pageSize: Int, currentQuery: String): List<Pair<Message, String>> {
         return try {
-            val messages = if (query.isEmpty()) {
+            val messages = if (currentQuery.isEmpty()) {
                 try {
                     if(isDialog) retrofitService.getMessages(convId, pageIndex, pageSize)
                     else retrofitService.getGroupMessages(convId, pageIndex, pageSize)
@@ -30,8 +39,16 @@ class MessagePagingSource(
                     } else throw e
                 }
             } else {
-                if(isDialog) retrofitService.searchMessagesInDialog(convId, query)
-                else retrofitService.searchMessagesInGroup(convId, query)
+                searchCache[currentQuery] ?: run {
+                    if (invertedIndex == null) {
+                        val allMessages = if (isDialog) retrofitService.searchMessagesInDialog(convId)
+                        else retrofitService.searchMessagesInGroup(convId)
+                        invertedIndex = InvertedIndex(allMessages)
+                    }
+                    val result = invertedIndex!!.searchMessages(currentQuery)
+                    searchCache[currentQuery] = result
+                    result
+                }
             }
             if(pageIndex == 0 && flag) {
                 if(isDialog) messengerService.replaceMessages(convId, messages, fileManager)

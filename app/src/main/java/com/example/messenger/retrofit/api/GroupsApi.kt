@@ -12,6 +12,7 @@ import com.example.messenger.retrofit.entities.messages.Message
 import com.example.messenger.retrofit.entities.messages.SendMessageRequestEntity
 import com.example.messenger.retrofit.entities.messages.UpdateAutoDeleteIntervalRequestEntity
 import com.example.messenger.retrofit.entities.messages.UserEntity
+import com.example.messenger.retrofit.entities.users.KeyRequestEntity
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -77,7 +78,7 @@ interface GroupsApi {
     @PUT("groups/{group_id}")
     suspend fun editGroupName(
         @Path("group_id") groupId: Int,
-        @Body createGroupRequestEntity: DialogCreateRequestEntity
+        @Body keyRequestEntity: KeyRequestEntity
     ) : ResponseEntityMessageAnswer
 
     @POST("groups/{group_id}/members")
@@ -137,8 +138,7 @@ interface GroupsApi {
 
     @GET("groups/{group_id}/messages/search")
     suspend fun searchMessagesInGroup(
-        @Path("group_id") groupId: Int,
-        @Query("q") word: String
+        @Path("group_id") groupId: Int
     ) : List<Message>
 
 }

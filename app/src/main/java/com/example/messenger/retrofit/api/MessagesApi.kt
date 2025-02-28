@@ -82,8 +82,7 @@ interface MessagesApi {
 
     @GET("dialogs/{dialog_id}/messages/search")
     suspend fun searchMessagesInDialog(
-        @Path("dialog_id") dialogId: Int,
-        @Query("q") word: String
+        @Path("dialog_id") dialogId: Int
     ) : List<Message>
 
     @GET("conversations")

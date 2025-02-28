@@ -5,8 +5,6 @@ import java.io.File
 
 interface RetrofitRepository {
 
-    fun isSignedIn(): Boolean
-
     suspend fun register(name: String, username: String, password: String) : Boolean
 
     suspend fun login(name: String, password: String) : Boolean
@@ -23,7 +21,7 @@ interface RetrofitRepository {
 
     suspend fun getLastSession(userId: Int): Long
 
-    suspend fun createDialog(name: String) : Boolean
+    suspend fun createDialog(name: String, key: String) : Boolean
 
     suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?, voice: String?,
      file: String?, referenceToMessageId: Int?, isForwarded: Boolean, usernameAuthorOriginal: String?) : Boolean
@@ -47,7 +45,7 @@ interface RetrofitRepository {
 
     suspend fun markMessagesAsRead(idDialog: Int, ids: List<Int>) : Boolean
 
-    suspend fun searchMessagesInDialog(dialogId: Int, word: String): List<Message>
+    suspend fun searchMessagesInDialog(dialogId: Int): List<Message>
 
     suspend fun toggleDialogCanDelete(dialogId: Int) : Boolean
 
@@ -57,7 +55,7 @@ interface RetrofitRepository {
 
     suspend fun getDialogSettings(dialogId: Int): ConversationSettings
 
-    suspend fun createGroup(name: String) : Boolean
+    suspend fun createGroup(name: String, key: String) : Boolean
 
     suspend fun sendGroupMessage(groupId: Int, text: String?, images: List<String>?, voice: String?,
      file: String?, referenceToMessageId: Int?, isForwarded: Boolean, usernameAuthorOriginal: String?) : Boolean
@@ -79,7 +77,7 @@ interface RetrofitRepository {
 
     suspend fun editGroupName(groupId: Int, name: String) : Boolean
 
-    suspend fun addUserToGroup(groupId: Int, name: String) : Boolean
+    suspend fun addUserToGroup(groupId: Int, name: String, key: String) : Boolean
 
     suspend fun deleteUserFromGroup(groupId: Int, userId: Int) : Boolean
 
@@ -99,7 +97,7 @@ interface RetrofitRepository {
 
     suspend fun getGroupSettings(groupId: Int): ConversationSettings
 
-    suspend fun searchMessagesInGroup(groupId: Int, word: String) : List<Message>
+    suspend fun searchMessagesInGroup(groupId: Int) : List<Message>
 
     suspend fun uploadPhoto(dialogId: Int, photo: File, isGroup: Int?) : String
 
@@ -142,4 +140,12 @@ interface RetrofitRepository {
     suspend fun saveFCMToken(token: String) : Boolean
 
     suspend fun deleteFCMToken() : Boolean
+
+    suspend fun refreshToken(token: String) : String
+
+    suspend fun getUserKey(name: String) : String?
+
+    suspend fun getPrivateKey() : String?
+
+    suspend fun saveUserKeys(publicKey: String, privateKey: String) : Boolean
 }

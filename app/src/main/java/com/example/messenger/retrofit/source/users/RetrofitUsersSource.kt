@@ -2,6 +2,8 @@ package com.example.messenger.retrofit.source.users
 
 import com.example.messenger.model.User
 import com.example.messenger.retrofit.api.UsersApi
+import com.example.messenger.retrofit.entities.users.KeyRequestEntity
+import com.example.messenger.retrofit.entities.users.KeysRequestEntity
 import com.example.messenger.retrofit.entities.users.LoginRequestEntity
 import com.example.messenger.retrofit.entities.users.RegisterRequestEntity
 import com.example.messenger.retrofit.entities.users.UpdatePasswordRequestEntity
@@ -21,9 +23,10 @@ class RetrofitUsersSource(
         usersApi.register(registerRequestEntity).message
     }
 
-    override suspend fun login(name: String, password: String): String = wrapRetrofitExceptions {
+    override suspend fun login(name: String, password: String): Pair<String, String> = wrapRetrofitExceptions {
         val loginRequestEntity = LoginRequestEntity(name = name, password = password)
-        usersApi.login(loginRequestEntity).accessToken
+        val response = usersApi.login(loginRequestEntity)
+        Pair(response.accessToken, response.refreshToken)
     }
 
     override suspend fun updateProfile(username: String?, avatar: String?): String = wrapRetrofitExceptions {
@@ -63,5 +66,23 @@ class RetrofitUsersSource(
 
     override suspend fun deleteFCMToken(): String = wrapRetrofitExceptions {
         usersApi.deleteFCMToken().message
+    }
+
+    override suspend fun refreshToken(token: String): String = wrapRetrofitExceptions {
+        usersApi.refreshToken(token).accessToken
+    }
+
+    override suspend fun getUserKey(name: String): String? = wrapRetrofitExceptions {
+        val keyRequestEntity = KeyRequestEntity(name = name)
+        usersApi.getUserKey(keyRequestEntity).publicKey
+    }
+
+    override suspend fun getPrivateKey(): String? = wrapRetrofitExceptions {
+        usersApi.getPrivateKey().privateKey
+    }
+
+    override suspend fun saveUserKeys(publicKey: String, privateKey: String): String = wrapRetrofitExceptions {
+        val keysRequestEntity = KeysRequestEntity(publicKey = publicKey, privateKey = privateKey)
+        usersApi.saveUserKeys(keysRequestEntity).message
     }
 }

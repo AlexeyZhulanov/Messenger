@@ -7,7 +7,6 @@ import com.example.messenger.room.dao.GroupMessageDao
 import com.example.messenger.room.dao.LastReadMessageDao
 import com.example.messenger.room.dao.MessageDao
 import com.example.messenger.room.dao.NewsDao
-import com.example.messenger.room.dao.SettingsDao
 import com.example.messenger.room.dao.UnsentMessageDao
 import com.example.messenger.room.dao.UserDao
 import com.example.messenger.room.entities.ChatSettingsDbEntity
@@ -17,7 +16,6 @@ import com.example.messenger.room.entities.GroupMessageDbEntity
 import com.example.messenger.room.entities.LastReadMessageEntity
 import com.example.messenger.room.entities.MessageDbEntity
 import com.example.messenger.room.entities.NewsDbEntity
-import com.example.messenger.room.entities.SettingsDbEntity
 import com.example.messenger.room.entities.UnsentMessageEntity
 import com.example.messenger.room.entities.UserDbEntity
 import kotlinx.coroutines.CoroutineDispatcher
@@ -25,7 +23,6 @@ import kotlinx.coroutines.withContext
 
 
 class MessengerService(
-    private val settingsDao: SettingsDao,
     private val conversationDao: ConversationDao,
     private val messageDao: MessageDao,
     private val groupMessageDao: GroupMessageDao,
@@ -37,16 +34,6 @@ class MessengerService(
     private val newsDao: NewsDao,
     private val ioDispatcher: CoroutineDispatcher
 ) : MessengerRepository {
-    private var settings = Settings(0)
-    override suspend fun getSettings(): Settings = withContext(ioDispatcher) {
-        val settingsEntity = settingsDao.getSettings()
-            settings = settingsEntity.toSettings()
-        return@withContext settings
-    }
-
-    override suspend fun updateSettings(settings: Settings) = withContext(ioDispatcher) {
-        settingsDao.updateSettings(SettingsDbEntity.fromUserInput(settings))
-    }
 
     override suspend fun getConversations(): List<Conversation> = withContext(ioDispatcher) {
         val conversationEntities = conversationDao.getConversations()

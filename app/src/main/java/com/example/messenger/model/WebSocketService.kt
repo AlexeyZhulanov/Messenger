@@ -73,7 +73,7 @@ class WebSocketService @Inject constructor(
     fun connect() {
         val options = IO.Options().apply {
             transports = arrayOf(WebSocket.NAME)
-            extraHeaders = mapOf("Authorization" to listOf(appSettings.getCurrentToken() ?: ""))
+            extraHeaders = mapOf("Authorization" to listOf(appSettings.getCurrentAccessToken() ?: ""))
             reconnection = true
             reconnectionAttempts = Int.MAX_VALUE
             reconnectionDelay = 5000
@@ -131,31 +131,34 @@ class WebSocketService @Inject constructor(
     private val onTokenExpired = Emitter.Listener {
         Log.d("testSocketIO", "Token has expired, refreshing token")
         serviceScope.launch {
-            val settingsResponse = messengerService.getSettings()
-            val name = settingsResponse.name
-            val password = settingsResponse.password
-            val success = if(name != null && password != null)
-                retrofitService.login(name, password)
-            else false
-            if(success) {
-                Log.d("testSocketIO", "Try to reconnect sockets")
-                // send last emit
-                if(lastData != null && lastEvent != null) {
-                    socket.disconnect()
-                    delay(200)
-                    connect()
-                    socket.emit(lastEvent, lastData)
-                    lastData = null
-                    lastEvent = null
-                } else {
-                    socket.disconnect()
-                    delay(200)
-                    connect()
-                    lastData = null
-                    lastEvent = null
-                }
+            val refreshToken = appSettings.getCurrentRefreshToken()
+            if(refreshToken.isNullOrEmpty()) {
+                Log.d("testSocketIO", "Error: Empty refresh token")
+                return@launch
+            }
+            val newAccessToken = try {
+                retrofitService.refreshToken(refreshToken)
+            } catch (e: Exception) {
+                Log.d("testSocketIO", "Error: Couldn't update the token")
+                return@launch
+            }
+            appSettings.setCurrentAccessToken(newAccessToken)
+
+            Log.d("testSocketIO", "Try to reconnect sockets")
+            // send last emit
+            if(lastData != null && lastEvent != null) {
+                socket.disconnect()
+                delay(200)
+                connect()
+                socket.emit(lastEvent, lastData)
+                lastData = null
+                lastEvent = null
             } else {
-                Log.d("testSocketIO", "Error Sockets Token")
+                socket.disconnect()
+                delay(200)
+                connect()
+                lastData = null
+                lastEvent = null
             }
         }
     }

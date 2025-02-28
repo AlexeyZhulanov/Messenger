@@ -18,6 +18,8 @@ import com.example.messenger.databinding.ActivityMainBinding
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.WebSocketNotificationsService
+import com.example.messenger.model.appsettings.AppSettings
+import com.example.messenger.retrofit.source.Navigator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -30,15 +32,20 @@ const val PREF_WALLPAPER = "PREF_WALLPAPER"
 const val PREF_THEME = "PREF_THEME"
 
 @AndroidEntryPoint
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), Navigator {
 
     private lateinit var binding: ActivityMainBinding
 
     @Inject lateinit var messengerService: MessengerService
     @Inject lateinit var fileManager: FileManager
+    @Inject lateinit var appSettings: AppSettings
 
     companion object {
         private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1
+    }
+
+    override fun navigateToAuthScreen() {
+        goToAuthScreen()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -114,26 +121,26 @@ class MainActivity : AppCompatActivity() {
             }
             else -> {
                 lifecycleScope.launch {
-                    val s = async { messengerService.getSettings() }
-                    val settings = s.await()
+                    val isRemember = appSettings.getRemember()
                     if (savedInstanceState == null) {
-                        if (settings.remember == 1) {
-                            if (settings.name != "" && settings.password != "" && settings.name != "empty" && settings.password != "empty") {
-                                supportFragmentManager
-                                    .beginTransaction()
-                                    .add(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_TAG")
-                                    .commit()
-                            }
-                        }
-                        else {
+                        if (isRemember) {
                             supportFragmentManager
                                 .beginTransaction()
-                                .add(R.id.fragmentContainer, LoginFragment(), "LOGIN_FRAGMENT_TAG")
+                                .add(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_TAG")
                                 .commit()
+                        } else {
+                            goToAuthScreen()
                         }
                     }
                 }
             }
         }
+    }
+
+    private fun goToAuthScreen() {
+        supportFragmentManager
+            .beginTransaction()
+            .add(R.id.fragmentContainer, LoginFragment(), "LOGIN_FRAGMENT_TAG")
+            .commit()
     }
 }

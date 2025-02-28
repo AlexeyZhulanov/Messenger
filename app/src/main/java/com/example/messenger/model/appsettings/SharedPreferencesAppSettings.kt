@@ -8,20 +8,40 @@ class SharedPreferencesAppSettings(
 
     private val sharedPreferences = appContext.getSharedPreferences("settings", Context.MODE_PRIVATE)
 
-    override fun setCurrentToken(token: String?) {
+    override fun setCurrentAccessToken(token: String?) {
         val editor = sharedPreferences.edit()
         if (token == null)
-            editor.remove(PREF_CURRENT_ACCOUNT_TOKEN)
+            editor.remove(PREF_CURRENT_ACCESS_TOKEN)
         else
-            editor.putString(PREF_CURRENT_ACCOUNT_TOKEN, "Bearer $token")
+            editor.putString(PREF_CURRENT_ACCESS_TOKEN, "Bearer $token")
         editor.apply()
     }
 
-    override fun getCurrentToken(): String? =
-        sharedPreferences.getString(PREF_CURRENT_ACCOUNT_TOKEN, null)
+    override fun getCurrentAccessToken(): String? =
+        sharedPreferences.getString(PREF_CURRENT_ACCESS_TOKEN, null)
 
-    companion object {
-        private const val PREF_CURRENT_ACCOUNT_TOKEN = "currentToken"
+    override fun setCurrentRefreshToken(token: String?) {
+        val editor = sharedPreferences.edit()
+        if(token == null)
+            editor.remove(PREF_CURRENT_REFRESH_TOKEN)
+        else
+            editor.putString(PREF_CURRENT_REFRESH_TOKEN, "Bearer $token")
+        editor.apply()
     }
 
+    override fun getCurrentRefreshToken(): String? =
+        sharedPreferences.getString(PREF_CURRENT_REFRESH_TOKEN, null)
+
+    override fun setRemember(bool: Boolean) {
+        sharedPreferences.edit().putBoolean(PREF_IS_REMEMBER, bool).apply()
+    }
+
+    override fun getRemember(): Boolean =
+        sharedPreferences.getBoolean(PREF_IS_REMEMBER, false)
+
+    companion object {
+        private const val PREF_CURRENT_ACCESS_TOKEN = "accessToken"
+        private const val PREF_CURRENT_REFRESH_TOKEN = "refreshToken"
+        private const val PREF_IS_REMEMBER = "rememberUser"
+    }
 }

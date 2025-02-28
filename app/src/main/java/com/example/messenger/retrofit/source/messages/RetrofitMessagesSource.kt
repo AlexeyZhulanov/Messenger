@@ -19,8 +19,8 @@ class RetrofitMessagesSource(
 
     private val messagesApi = retrofit.create(MessagesApi::class.java)
 
-    override suspend fun createDialog(name: String): String = wrapRetrofitExceptions {
-        val dialogCreateRequestEntity = DialogCreateRequestEntity(name = name)
+    override suspend fun createDialog(name: String, key: String): String = wrapRetrofitExceptions {
+        val dialogCreateRequestEntity = DialogCreateRequestEntity(name = name, key = key)
         messagesApi.createDialog(dialogCreateRequestEntity).message
     }
 
@@ -78,9 +78,8 @@ class RetrofitMessagesSource(
         messagesApi.markMessagesAsRead(idDialog, deleteMessagesRequestEntity).message
     }
 
-    override suspend fun searchMessagesInDialog(dialogId: Int,
-                                                word: String): List<Message> = wrapRetrofitExceptions {
-        val response = messagesApi.searchMessagesInDialog(dialogId, word)
+    override suspend fun searchMessagesInDialog(dialogId: Int): List<Message> = wrapRetrofitExceptions {
+        val response = messagesApi.searchMessagesInDialog(dialogId)
         response.map { it.toMessage() }
     }
 

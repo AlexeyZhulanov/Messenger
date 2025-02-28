@@ -101,7 +101,7 @@ class ChatKeyManager {
      * Возвращает приватный ключ для заданного [userId].
      * Этот метод предназначен для внутреннего использования.
      */
-    private fun getPrivateKey(userId: Int): PrivateKey? {
+    fun getPrivateKey(userId: Int): PrivateKey? {
         val alias = "user_${userId}_key_pair"
 
         return if (keyStore.containsAlias(alias)) {

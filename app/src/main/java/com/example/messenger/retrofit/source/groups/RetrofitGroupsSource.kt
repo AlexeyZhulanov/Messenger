@@ -12,6 +12,7 @@ import com.example.messenger.retrofit.entities.messages.DeleteMessagesRequestEnt
 import com.example.messenger.retrofit.entities.messages.DialogCreateRequestEntity
 import com.example.messenger.retrofit.entities.messages.SendMessageRequestEntity
 import com.example.messenger.retrofit.entities.messages.UpdateAutoDeleteIntervalRequestEntity
+import com.example.messenger.retrofit.entities.users.KeyRequestEntity
 import com.example.messenger.retrofit.source.base.BaseRetrofitSource
 import com.example.messenger.retrofit.source.base.RetrofitConfig
 
@@ -21,8 +22,8 @@ class RetrofitGroupsSource(
 
     private val groupsApi = retrofit.create(GroupsApi::class.java)
 
-    override suspend fun createGroup(name: String): String = wrapRetrofitExceptions {
-        val createGroupRequestEntity = DialogCreateRequestEntity(name = name)
+    override suspend fun createGroup(name: String, key: String): String = wrapRetrofitExceptions {
+        val createGroupRequestEntity = DialogCreateRequestEntity(name = name, key = key)
         groupsApi.createGroup(createGroupRequestEntity).message
     }
 
@@ -71,12 +72,12 @@ class RetrofitGroupsSource(
     }
 
     override suspend fun editGroupName(groupId: Int, name: String): String = wrapRetrofitExceptions {
-        val createGroupRequestEntity = DialogCreateRequestEntity(name = name)
-        groupsApi.editGroupName(groupId, createGroupRequestEntity).message
+        val editGroupRequestEntity = KeyRequestEntity(name = name)
+        groupsApi.editGroupName(groupId, editGroupRequestEntity).message
     }
 
-    override suspend fun addUserToGroup(groupId: Int, name: String): String = wrapRetrofitExceptions  {
-        val addUserToGroupRequestEntity = AddUserToGroupRequestEntity(name = name)
+    override suspend fun addUserToGroup(groupId: Int, name: String, key: String): String = wrapRetrofitExceptions  {
+        val addUserToGroupRequestEntity = AddUserToGroupRequestEntity(name = name, key = key)
         groupsApi.addUserToGroup(groupId, addUserToGroupRequestEntity).message
     }
 
@@ -121,8 +122,8 @@ class RetrofitGroupsSource(
         groupsApi.getGroupSettings(groupId).toConversationSettings()
     }
 
-    override suspend fun searchMessagesInGroup(groupId: Int, word: String): List<Message> = wrapRetrofitExceptions {
-        val response = groupsApi.searchMessagesInGroup(groupId, word)
+    override suspend fun searchMessagesInGroup(groupId: Int): List<Message> = wrapRetrofitExceptions {
+        val response = groupsApi.searchMessagesInGroup(groupId)
         response.map { it.toMessage() }
     }
 }

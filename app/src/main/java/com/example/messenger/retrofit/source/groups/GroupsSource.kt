@@ -7,7 +7,7 @@ import com.example.messenger.model.UserShort
 
 interface GroupsSource {
 
-    suspend fun createGroup(name: String) : String
+    suspend fun createGroup(name: String, key: String) : String
 
     suspend fun sendGroupMessage(groupId: Int, text: String? = null,
                            images: List<String>? = null, voice: String? = null,
@@ -32,7 +32,7 @@ interface GroupsSource {
 
     suspend fun editGroupName(groupId: Int, name: String) : String
 
-    suspend fun addUserToGroup(groupId: Int, name: String) : String
+    suspend fun addUserToGroup(groupId: Int, name: String, key: String) : String
 
     suspend fun deleteUserFromGroup(groupId: Int, userId: Int) : String
 
@@ -52,6 +52,6 @@ interface GroupsSource {
 
     suspend fun getGroupSettings(groupId: Int) : ConversationSettings
 
-    suspend fun searchMessagesInGroup(groupId: Int, word: String) : List<Message>
+    suspend fun searchMessagesInGroup(groupId: Int) : List<Message>
 
 }
