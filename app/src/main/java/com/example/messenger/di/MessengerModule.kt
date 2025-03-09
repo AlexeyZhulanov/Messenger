@@ -11,7 +11,6 @@ import com.example.messenger.model.appsettings.AppSettings
 import com.example.messenger.model.appsettings.SharedPreferencesAppSettings
 import com.example.messenger.retrofit.source.SourceProviderHolder
 import com.example.messenger.model.WebSocketService
-import com.example.messenger.retrofit.source.Navigator
 import com.example.messenger.retrofit.source.base.SourcesProvider
 import com.example.messenger.room.AppDatabase
 import com.example.messenger.room.dao.ChatSettingsDao
@@ -155,9 +154,9 @@ object MessengerModule {
     fun provideSourceProviderHolder(
         appSettings: AppSettings,
         retrofitServiceProvider: Provider<RetrofitService>, // если передать просто retrofitService то будет цикл
-        navigator: Navigator
-    ): SourceProviderHolder {
-        return SourceProviderHolder(appSettings, retrofitServiceProvider, navigator)
+        @ApplicationContext context: Context
+        ): SourceProviderHolder {
+        return SourceProviderHolder(appSettings, retrofitServiceProvider, context)
     }
 
     @Provides

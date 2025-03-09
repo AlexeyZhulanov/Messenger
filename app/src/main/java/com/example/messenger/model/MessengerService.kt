@@ -13,6 +13,7 @@ import com.example.messenger.room.entities.ChatSettingsDbEntity
 import com.example.messenger.room.entities.ConversationDbEntity
 import com.example.messenger.room.entities.GroupMemberDbEntity
 import com.example.messenger.room.entities.GroupMessageDbEntity
+import com.example.messenger.room.entities.LastMessageEntity
 import com.example.messenger.room.entities.LastReadMessageEntity
 import com.example.messenger.room.entities.MessageDbEntity
 import com.example.messenger.room.entities.NewsDbEntity
@@ -54,8 +55,8 @@ class MessengerService(
         val conversationDbEntity = if(conversationEntity.type == "dialog") {
             val userId = conversationEntity.otherUserId ?: return@withContext null
             val userEntity = conversationDao.getUserById(userId)
-            ConversationDbEntity(conversationEntity, userEntity, null)
-        } else ConversationDbEntity(conversationEntity, null, null)
+            ConversationDbEntity(conversationEntity, userEntity, LastMessageEntity(-1))
+        } else ConversationDbEntity(conversationEntity, null, LastMessageEntity(-1))
 
         return@withContext conversationDbEntity.toConversation()
     }

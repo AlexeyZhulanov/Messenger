@@ -73,12 +73,12 @@ class RetrofitUsersSource(
     }
 
     override suspend fun getUserKey(name: String): String? = wrapRetrofitExceptions {
-        val keyRequestEntity = KeyRequestEntity(name = name)
-        usersApi.getUserKey(keyRequestEntity).publicKey
+        usersApi.getUserKey(name).publicKey
     }
 
-    override suspend fun getPrivateKey(): String? = wrapRetrofitExceptions {
-        usersApi.getPrivateKey().privateKey
+    override suspend fun getKeys(): Pair<String?, String?> = wrapRetrofitExceptions {
+        val keyPair = usersApi.getKeys()
+        keyPair.publicKey to keyPair.privateKey
     }
 
     override suspend fun saveUserKeys(publicKey: String, privateKey: String): String = wrapRetrofitExceptions {

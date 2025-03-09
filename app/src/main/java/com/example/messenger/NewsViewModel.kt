@@ -5,6 +5,7 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.MediaStore
 import android.provider.OpenableColumns
+import android.util.Base64
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -19,6 +20,8 @@ import com.example.messenger.model.FileManager
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.NewsPagingSource
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.security.ChatKeyManager
+import com.example.messenger.security.TinkAesGcmHelper
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,6 +30,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -46,6 +50,9 @@ class NewsViewModel @Inject constructor(
     @MainDispatcher private val mainDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
+    private var tinkAesGcmHelper: TinkAesGcmHelper? = null
+    private val chatKeyManager = ChatKeyManager()
+
     private val refreshTrigger = MutableLiveData(Unit)
 
 
@@ -54,7 +61,7 @@ class NewsViewModel @Inject constructor(
         .debounce(500)
         .flatMapLatest {
             Pager(PagingConfig(pageSize = 10, initialLoadSize = 10, prefetchDistance = 3)) {
-            NewsPagingSource(retrofitService, messengerService, fileManager)
+            NewsPagingSource(retrofitService, messengerService, fileManager, tinkAesGcmHelper)
             }.flow.cachedIn(viewModelScope)
         }
 
@@ -62,6 +69,33 @@ class NewsViewModel @Inject constructor(
     fun refresh() {
         Log.d("testRefresh", "TRIGGERED")
         this.refreshTrigger.postValue(this.refreshTrigger.value)
+    }
+
+    fun setEncryptHelper(userId: Int?) {
+        viewModelScope.launch {
+            chatKeyManager.getAead(0, "news")?.let { aead ->
+                tinkAesGcmHelper = TinkAesGcmHelper(aead)
+                return@launch
+            }
+            val wrappedKeyString = retrofitService.getNewsKey() ?: run {
+                Log.d("testErrorTinkInit", "News key is null")
+                return@launch
+            }
+            val wrappedKey = Base64.decode(wrappedKeyString, Base64.NO_WRAP)
+
+            val id = userId ?: messengerService.getUser()?.id ?: run {
+                try {
+                    retrofitService.getUser(0).id
+                } catch (e: Exception) {
+                    Log.d("testErrorTinkInit", "Failed to fetch user ID: ${e.message}")
+                    return@launch
+                }
+            }
+            chatKeyManager.unwrapNewsKey(wrappedKey, 0, "news", id)
+            chatKeyManager.getAead(0, "news")?.also { newAead ->
+                tinkAesGcmHelper = TinkAesGcmHelper(newAead)
+            } ?: Log.d("testErrorTinkInit", "newAead is null")
+        }
     }
 
     suspend fun getPermission() : Int {
@@ -174,21 +208,39 @@ class NewsViewModel @Inject constructor(
     }
 
     suspend fun downloadNews(context: Context, filename: String): String {
-        return retrofitService.downloadNews(context, filename)
+        val downloadedFilePath = retrofitService.downloadNews(context, filename)
+        val downloadedFile = File(downloadedFilePath)
+        return tinkAesGcmHelper?.let {
+            it.decryptFile(downloadedFile, downloadedFile)
+            downloadedFile.absolutePath
+        } ?: ""
     }
 
-    suspend fun uploadNews(file: File): Pair<String, Boolean> {
+    suspend fun uploadNews(file: File, context: Context): Pair<String, Boolean> {
         val path = try {
-            retrofitService.uploadNews(file)
+            val tempDir = context.cacheDir
+            val tempFile = File(tempDir, file.name)
+            tinkAesGcmHelper?.let {
+                it.encryptFile(file, tempFile)
+                val pt = retrofitService.uploadNews(file)
+                tempFile.delete()
+                pt
+            } ?: return Pair("", false)
         } catch (e: Exception) {
             return Pair("", false)
         }
         return Pair(path, true)
     }
 
+    private fun encryptText(text: String?) : String? {
+        return text?.let { tinkAesGcmHelper?.encryptText(it) }
+    }
+
     suspend fun sendNews(headerText: String, text: String?, images: List<String>?,
                          voices: List<String>?, files: List<String>?): Boolean {
         return try {
+            encryptText(text)
+            encryptText(headerText)
             retrofitService.sendNews(headerText, text, images, voices, files)
         } catch (e: Exception) { false }
     }
@@ -196,6 +248,8 @@ class NewsViewModel @Inject constructor(
     suspend fun editNews(newsId: Int, headerText: String, text: String?, images: List<String>?,
                          voices: List<String>?, files: List<String>?): Boolean {
         return try {
+            encryptText(text)
+            encryptText(headerText)
             retrofitService.editNews(newsId, headerText, text, images, voices, files)
         } catch (e: Exception) { false }
     }
@@ -259,11 +313,11 @@ class NewsViewModel @Inject constructor(
         }
     }
 
-    suspend fun uploadFiles(list: List<File>): List<String>? = withContext(mainDispatcher) {
+    suspend fun uploadFiles(list: List<File>, context: Context): List<String>? = withContext(mainDispatcher) {
         if (list.isNotEmpty()) {
             val listTemp = mutableListOf<String>()
             for (item in list) {
-                val (path, f) = uploadNews(item)
+                val (path, f) = uploadNews(item, context)
                 listTemp += path
                 if (!f) break
             }

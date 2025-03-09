@@ -22,10 +22,20 @@ class LoginFragment : Fragment() {
                 val name = binding.username.text.toString()
                 val password = binding.password.text.toString()
                 val remember = binding.rememberSwitch.isChecked
-                viewModel.login(name, password, remember, {
-                    parentFragmentManager.beginTransaction()
-                        .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_TAG2")
-                        .commit()
+                viewModel.login(name, password, remember, { (containsPrivateKey, isNeedGenerate, userId) ->
+                    if(containsPrivateKey) {
+                        parentFragmentManager.beginTransaction()
+                            .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_TAG2")
+                            .commit()
+                    } else if(isNeedGenerate) {
+                        parentFragmentManager.beginTransaction()
+                            .replace(R.id.fragmentContainer, MasterKeyFragment(userId), "MASTER_KEY_FRAGMENT_TAG")
+                            .commit()
+                    } else {
+                        parentFragmentManager.beginTransaction()
+                            .replace(R.id.fragmentContainer, MasterKeyEnterFragment(userId), "MASTER_KEY_ENTER_FRAGMENT_TAG")
+                            .commit()
+                    }
                 }, { errorMessage ->
                     binding.errorTextView.text = errorMessage
                     binding.errorTextView.visibility = View.VISIBLE

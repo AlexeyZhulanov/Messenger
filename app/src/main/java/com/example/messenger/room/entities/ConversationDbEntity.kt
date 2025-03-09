@@ -21,13 +21,13 @@ data class ConversationDbEntity(
         parentColumn = "last_message_id",
         entityColumn = "id"
     )
-    val lastMessage: LastMessageEntity?
+    val lastMessage: LastMessageEntity
 ) {
     fun toConversation(): Conversation = Conversation(
         id = conversation.id, type = conversation.type, key = conversation.key,
         otherUser = otherUser?.toUser(), name = conversation.name,
         createdBy = conversation.createdBy, avatar = conversation.avatar,
-        lastMessage = lastMessage?.toLastMessage(), countMsg = conversation.countMsg,
+        lastMessage = lastMessage.toLastMessage(), countMsg = conversation.countMsg,
         canDelete = conversation.canDelete, autoDeleteInterval = conversation.autoDeleteInterval
     )
     companion object {
@@ -42,9 +42,9 @@ data class ConversationDbEntity(
                 )
             }
 
-            val lastMessageEntity = conversation.lastMessage?.let {
+            val lastMessageEntity = conversation.lastMessage.let {
                 LastMessageEntity(
-                    id = conversation.id, // todo убедиться, что это не ломает логику
+                    id = conversation.id,
                     text = it.text,
                     timestamp = it.timestamp,
                     isRead = it.isRead
@@ -59,7 +59,7 @@ data class ConversationDbEntity(
                 name = conversation.name,
                 createdBy = conversation.createdBy,
                 avatar = conversation.avatar,
-                lastMessageId = lastMessageEntity?.id,
+                lastMessageId = lastMessageEntity.id,
                 countMsg = conversation.countMsg,
                 canDelete = conversation.canDelete,
                 autoDeleteInterval = conversation.autoDeleteInterval,
@@ -112,9 +112,9 @@ data class UserEntity(
 @Entity(tableName = "last_messages")
 data class LastMessageEntity(
     @PrimaryKey(autoGenerate = true) val id: Int,
-    var text: String?,
-    var timestamp: Long,
-    @ColumnInfo(name = "is_read") var isRead: Boolean
+    var text: String? = null,
+    var timestamp: Long? = null,
+    @ColumnInfo(name = "is_read") var isRead: Boolean? = null
 ) {
     fun toLastMessage(): LastMessage = LastMessage(
         text = text, timestamp = timestamp, isRead = isRead

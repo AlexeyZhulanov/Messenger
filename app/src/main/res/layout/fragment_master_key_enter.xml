@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:padding="16dp">
+    android:layout_margin="10dp">
 
     <TextView
         android:id="@+id/titleTextView"
@@ -26,8 +27,7 @@
         app:layout_constraintTop_toBottomOf="@id/titleTextView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:paddingHorizontal="8dp"
-        android:paddingVertical="4dp">
+        android:layout_margin="4dp">
 
         <TextView
             android:layout_width="wrap_content"
@@ -45,29 +45,13 @@
             android:textSize="14sp"
             android:layout_marginBottom="10dp"/>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="• Если вы заходите с того же самого телефона и у вас была привязана биометрия, то войдите с её помощью"
-            android:textColor="?attr/colorError"
-            android:textSize="14sp"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="• Если вы заходите с другого телефона, то введите текстовый ключ, биометрия у вас не сработает"
-            android:textSize="14sp"
-            android:textColor="?attr/colorPrimary"
-            android:layout_marginBottom="12dp"/>
-
     </LinearLayout>
 
     <EditText
         android:id="@+id/masterKeyEditText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="XXXX - XXXX - XXXX - XXXX"
+        tools:text="XXXX - XXXX - XXXX - XXXX"
         android:textSize="22sp"
         android:gravity="center"
         android:padding="10dp"
@@ -93,7 +77,8 @@
         android:id="@+id/statusText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Введен неверный ключ"
+        android:gravity="center"
+        tools:text="Введен неверный ключ"
         app:layout_constraintStart_toStartOf="@id/doneButton"
         app:layout_constraintEnd_toEndOf="@id/doneButton"
         app:layout_constraintTop_toBottomOf="@id/doneButton"

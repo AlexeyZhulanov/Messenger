@@ -21,7 +21,7 @@ interface RetrofitRepository {
 
     suspend fun getLastSession(userId: Int): Long
 
-    suspend fun createDialog(name: String, key: String) : Boolean
+    suspend fun createDialog(name: String, keyUser1: String, keyUser2: String) : Int
 
     suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?, voice: String?,
      file: String?, referenceToMessageId: Int?, isForwarded: Boolean, usernameAuthorOriginal: String?) : Boolean
@@ -29,10 +29,6 @@ interface RetrofitRepository {
     suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int) : List<Message>
 
     suspend fun findMessage(idMessage: Int, idDialog: Int) : Pair<Message, Int>
-
-    suspend fun addKeyToDialog(dialogId: Int, key: String) : Boolean
-
-    suspend fun removeKeyFromDialog(dialogId: Int) : Boolean
 
     suspend fun editMessage(idDialog: Int, messageId: Int, text: String?,
                             images: List<String>?, voice: String?, file: String?) : Boolean
@@ -55,7 +51,7 @@ interface RetrofitRepository {
 
     suspend fun getDialogSettings(dialogId: Int): ConversationSettings
 
-    suspend fun createGroup(name: String, key: String) : Boolean
+    suspend fun createGroup(name: String, key: String) : Int
 
     suspend fun sendGroupMessage(groupId: Int, text: String?, images: List<String>?, voice: String?,
      file: String?, referenceToMessageId: Int?, isForwarded: Boolean, usernameAuthorOriginal: String?) : Boolean
@@ -63,10 +59,6 @@ interface RetrofitRepository {
     suspend fun getGroupMessages(groupId: Int, start: Int, end: Int): List<Message>
 
     suspend fun findGroupMessage(idMessage: Int, groupId: Int) : Pair<Message, Int>
-
-    suspend fun addKeyToGroup(groupId: Int, key: String) : Boolean
-
-    suspend fun removeKeyFromGroup(groupId: Int) : Boolean
 
     suspend fun editGroupMessage(groupId: Int, messageId: Int, text: String?,
                                  images: List<String>?, voice: String?, file: String?) : Boolean
@@ -100,6 +92,8 @@ interface RetrofitRepository {
     suspend fun searchMessagesInGroup(groupId: Int) : List<Message>
 
     suspend fun uploadPhoto(dialogId: Int, photo: File, isGroup: Int?) : String
+
+    suspend fun uploadPhotoPreview(dialogId: Int, photoPreview: File, isGroup: Int?) : Boolean
 
     suspend fun uploadFile(dialogId: Int, file: File, isGroup: Int?) : String
 
@@ -145,7 +139,9 @@ interface RetrofitRepository {
 
     suspend fun getUserKey(name: String) : String?
 
-    suspend fun getPrivateKey() : String?
+    suspend fun getKeys() : Pair<String?, String?>
 
     suspend fun saveUserKeys(publicKey: String, privateKey: String) : Boolean
+
+    suspend fun getNewsKey() : String?
 }

@@ -4,9 +4,9 @@ import com.example.messenger.retrofit.entities.users.LoginRequestEntity
 import com.example.messenger.retrofit.entities.users.LoginResponseEntity
 import com.example.messenger.retrofit.entities.users.RegisterRequestEntity
 import com.example.messenger.retrofit.entities.ResponseEntityMessageAnswer
+import com.example.messenger.retrofit.entities.users.GetKeysResponseEntity
 import com.example.messenger.retrofit.entities.users.GetLastSessionResponseEntity
 import com.example.messenger.retrofit.entities.users.GetPermissionResponseEntity
-import com.example.messenger.retrofit.entities.users.GetPrivateKeyResponseEntity
 import com.example.messenger.retrofit.entities.users.GetPublicKeyResponseEntity
 import com.example.messenger.retrofit.entities.users.GetUserResponseEntity
 import com.example.messenger.retrofit.entities.users.GetVacationResponseEntity
@@ -67,11 +67,13 @@ interface UsersApi {
     @DELETE("fcm_token")
     suspend fun deleteFCMToken() : ResponseEntityMessageAnswer
 
-    @GET("user/key")
-    suspend fun getUserKey(@Body keyRequestEntity: KeyRequestEntity) : GetPublicKeyResponseEntity
+    @GET("user/{name}/key")
+    suspend fun getUserKey(
+        @Path("name") name: String
+    ) : GetPublicKeyResponseEntity
 
-    @GET("user/private_key")
-    suspend fun getPrivateKey() : GetPrivateKeyResponseEntity
+    @GET("user/keys")
+    suspend fun getKeys() : GetKeysResponseEntity
 
     @POST("user/key")
     suspend fun saveUserKeys(@Body keysRequestEntity: KeysRequestEntity) : ResponseEntityMessageAnswer

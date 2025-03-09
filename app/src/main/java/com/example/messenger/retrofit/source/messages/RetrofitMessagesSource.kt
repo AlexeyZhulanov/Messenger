@@ -5,11 +5,11 @@ import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.Message
 import com.example.messenger.model.UserShort
 import com.example.messenger.retrofit.api.MessagesApi
-import com.example.messenger.retrofit.entities.messages.AddKeyToDialogRequestEntity
 import com.example.messenger.retrofit.entities.messages.DeleteMessagesRequestEntity
 import com.example.messenger.retrofit.entities.messages.DialogCreateRequestEntity
 import com.example.messenger.retrofit.entities.messages.SendMessageRequestEntity
 import com.example.messenger.retrofit.entities.messages.UpdateAutoDeleteIntervalRequestEntity
+import com.example.messenger.retrofit.entities.users.KeyRequestEntity
 import com.example.messenger.retrofit.source.base.BaseRetrofitSource
 import com.example.messenger.retrofit.source.base.RetrofitConfig
 
@@ -19,14 +19,14 @@ class RetrofitMessagesSource(
 
     private val messagesApi = retrofit.create(MessagesApi::class.java)
 
-    override suspend fun createDialog(name: String, key: String): String = wrapRetrofitExceptions {
-        val dialogCreateRequestEntity = DialogCreateRequestEntity(name = name, key = key)
-        messagesApi.createDialog(dialogCreateRequestEntity).message
+    override suspend fun createDialog(name: String, keyUser1: String, keyUser2: String): Int = wrapRetrofitExceptions {
+        val dialogCreateRequestEntity = DialogCreateRequestEntity(name = name, keyUser1 = keyUser1, keyUser2 = keyUser2)
+        messagesApi.createDialog(dialogCreateRequestEntity).idDialog
     }
 
     override suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?,
-        voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-              usernameAuthorOriginal: String?): String = wrapRetrofitExceptions {
+                                     voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
+                                     usernameAuthorOriginal: String?): String = wrapRetrofitExceptions {
         val sendMessageRequestEntity = SendMessageRequestEntity(text = text, images = images,
             file = file, voice = voice, referenceToMessageId = referenceToMessageId,
             isForwarded = isForwarded, usernameAuthorOriginal = usernameAuthorOriginal)
@@ -41,15 +41,6 @@ class RetrofitMessagesSource(
     override suspend fun findMessage(idMessage: Int, idDialog: Int): Pair<Message, Int> = wrapRetrofitExceptions {
         val response = messagesApi.findMessage(idMessage, idDialog)
         Pair(response.toMessage(), response.position ?: -1)
-    }
-
-    override suspend fun addKeyToDialog(dialogId: Int, key: String): String = wrapRetrofitExceptions {
-        val addKeyToDialogRequestEntity = AddKeyToDialogRequestEntity(key = key)
-        messagesApi.addKeyToDialog(dialogId, addKeyToDialogRequestEntity).message
-    }
-
-    override suspend fun removeKeyFromDialog(dialogId: Int): String = wrapRetrofitExceptions {
-        messagesApi.removeKeyFromDialog(dialogId).message
     }
 
     override suspend fun editMessage(idDialog: Int, messageId: Int, text: String?,

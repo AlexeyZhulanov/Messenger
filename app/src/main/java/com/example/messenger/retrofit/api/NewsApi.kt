@@ -1,6 +1,7 @@
 package com.example.messenger.retrofit.api
 
 import com.example.messenger.retrofit.entities.ResponseEntityMessageAnswer
+import com.example.messenger.retrofit.entities.news.GetNewsKeyResponseEntity
 import com.example.messenger.retrofit.entities.news.News
 import com.example.messenger.retrofit.entities.news.SendNewsRequestEntity
 import retrofit2.http.Body
@@ -33,4 +34,7 @@ interface NewsApi {
     suspend fun deleteNews(
         @Path("news_id") newsId: Int
     ) : ResponseEntityMessageAnswer
+
+    @GET("news/key")
+    suspend fun getNewsKey() : GetNewsKeyResponseEntity
 }

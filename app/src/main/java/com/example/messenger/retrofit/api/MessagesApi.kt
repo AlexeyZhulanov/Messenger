@@ -1,15 +1,16 @@
 package com.example.messenger.retrofit.api
 
 import com.example.messenger.retrofit.entities.ResponseEntityMessageAnswer
-import com.example.messenger.retrofit.entities.messages.AddKeyToDialogRequestEntity
 import com.example.messenger.retrofit.entities.messages.ConversationEntity
 import com.example.messenger.retrofit.entities.messages.DeleteMessagesRequestEntity
 import com.example.messenger.retrofit.entities.messages.DialogCreateRequestEntity
+import com.example.messenger.retrofit.entities.messages.DialogCreateResponseEntity
 import com.example.messenger.retrofit.entities.messages.GetDialogSettingsResponseEntity
 import com.example.messenger.retrofit.entities.messages.GetUsersResponseEntity
 import com.example.messenger.retrofit.entities.messages.Message
 import com.example.messenger.retrofit.entities.messages.SendMessageRequestEntity
 import com.example.messenger.retrofit.entities.messages.UpdateAutoDeleteIntervalRequestEntity
+import com.example.messenger.retrofit.entities.users.KeyRequestEntity
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -22,7 +23,7 @@ import retrofit2.http.Query
 interface MessagesApi {
     @POST("dialogs")
     suspend fun createDialog(
-        @Body dialogCreateRequestEntity: DialogCreateRequestEntity) : ResponseEntityMessageAnswer
+        @Body dialogCreateRequestEntity: DialogCreateRequestEntity) : DialogCreateResponseEntity
 
     @POST("messages/{id_dialog}")
     suspend fun sendMessage(
@@ -41,17 +42,6 @@ interface MessagesApi {
         @Path("message_id") messageId: Int,
         @Query("id_dialog") idDialog: Int
     ) : Message
-
-    @PUT("dialogs/{dialog_id}/key")
-    suspend fun addKeyToDialog(
-        @Path("dialog_id") dialogId: Int,
-        @Body addKeyToDialogRequestEntity: AddKeyToDialogRequestEntity
-    ) : ResponseEntityMessageAnswer
-
-    @DELETE("dialogs/{dialog_id}/key")
-    suspend fun removeKeyFromDialog(
-        @Path("dialog_id") dialogId: Int
-    ) : ResponseEntityMessageAnswer
 
     @PUT("messages/{message_id}")
     suspend fun editMessage(

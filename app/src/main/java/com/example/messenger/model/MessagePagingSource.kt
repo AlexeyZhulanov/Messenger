@@ -1,6 +1,7 @@
 package com.example.messenger.model
 
 import android.util.Log
+import com.example.messenger.security.TinkAesGcmHelper
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -10,6 +11,7 @@ class MessagePagingSource(
     private val messengerService: MessengerService,
     private val convId: Int,
     private val fileManager: FileManager,
+    private val tinkAesGcmHelper: TinkAesGcmHelper?,
     private val isDialog: Boolean = true
 ) {
 
@@ -50,15 +52,12 @@ class MessagePagingSource(
                     result
                 }
             }
-            if(pageIndex == 0 && flag) {
-                if(isDialog) messengerService.replaceMessages(convId, messages, fileManager)
-                else messengerService.replaceGroupMessages(convId, messages, fileManager)
-            }
 
             // Формирование дат для адаптера
             val dates = mutableSetOf<String>()
             val messageDatePairs = mutableListOf<Pair<Message, String>>()
             messages.forEach {
+                it.text = it.text?.let { text -> tinkAesGcmHelper?.decryptText(text) }
                 val tTime = formatMessageDate(it.timestamp)
                 if (tTime !in dates) {
                     messageDatePairs.add(it to tTime)
@@ -66,6 +65,11 @@ class MessagePagingSource(
                 } else {
                     messageDatePairs.add(it to "")
                 }
+            }
+
+            if(pageIndex == 0 && flag) {
+                if(isDialog) messengerService.replaceMessages(convId, messages, fileManager)
+                else messengerService.replaceGroupMessages(convId, messages, fileManager)
             }
             messageDatePairs.reversed()
         } catch (e: Exception) {

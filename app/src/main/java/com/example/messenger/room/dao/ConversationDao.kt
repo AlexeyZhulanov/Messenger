@@ -31,7 +31,7 @@ interface ConversationDao {
             ConversationDbEntity(
                 conversation = conversationEntity,
                 otherUser = otherUser,
-                lastMessage = lastMessage
+                lastMessage = lastMessage ?: LastMessageEntity(-1)
             )
         }
     }
@@ -47,7 +47,7 @@ interface ConversationDao {
         insertConversations(conversationEntities)
         val usersEntities = conversations.mapNotNull { it.otherUser }
         insertUsers(usersEntities)
-        val lastMessageEntities = conversations.mapNotNull { it.lastMessage }
+        val lastMessageEntities = conversations.map { it.lastMessage }
         insertLastMessages(lastMessageEntities)
     }
 

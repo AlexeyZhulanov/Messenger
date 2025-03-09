@@ -7,6 +7,8 @@ interface UploadsSource {
 
     suspend fun uploadPhoto(dialogId: Int, isGroup: Int, photo: File) : String
 
+    suspend fun uploadPhotoPreview(dialogId: Int, isGroup: Int, photo: File) : String
+
     suspend fun uploadFile(dialogId: Int, isGroup: Int, file: File) : String
 
     suspend fun uploadAudio(dialogId: Int, isGroup: Int, audio: File) : String

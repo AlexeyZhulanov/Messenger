@@ -1,9 +1,10 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
+    android:fitsSystemWindows="true"
     xmlns:tools="http://schemas.android.com/tools"
-    android:padding="16dp">
+    android:layout_margin="16dp">
 
     <TextView
         android:id="@+id/titleTextView"
@@ -25,8 +26,7 @@
         app:layout_constraintTop_toBottomOf="@id/titleTextView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:paddingHorizontal="8dp"
-        android:paddingVertical="4dp">
+        android:layout_margin="4dp">
 
         <TextView
             android:layout_width="wrap_content"
@@ -43,21 +43,6 @@
             android:text="Для обеспечения безопасности ваших данных вам необходимо создать Master Key. Этот ключ будет использоваться для шифрования ваших сообщений и диалогов."
             android:textSize="14sp"
             android:layout_marginBottom="10dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="• Вы можете использовать биометрию (например, отпечаток пальца или Face ID) для удобного доступа к приложению без необходимости ввода ключа."
-            android:textSize="14sp"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="• Однако, если вы войдете в приложение с другого устройства, вам потребуется ввести этот ключ вручную."
-            android:textSize="14sp"
-            android:textColor="?attr/colorPrimary"
-            android:layout_marginBottom="12dp"/>
 
         <TextView
             android:layout_width="wrap_content"
@@ -87,7 +72,7 @@
         android:id="@+id/masterKeyEditText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="XXXX - XXXX - XXXX - XXXX"
+        tools:text="XXXX - XXXX - XXXX - XXXX"
         android:textSize="22sp"
         android:gravity="center"
         android:padding="10dp"
@@ -99,36 +84,25 @@
 
     <Button
         android:id="@+id/generateButton"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="Сгенерировать"
         android:textColor="?attr/colorPrimaryDark"
         app:layout_constraintTop_toBottomOf="@id/masterKeyEditText"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/copyButton"
+        app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="16dp"/>
 
     <Button
         android:id="@+id/copyButton"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="Скопировать"
         android:textColor="?attr/colorPrimaryDark"
-        app:layout_constraintTop_toBottomOf="@id/masterKeyEditText"
-        app:layout_constraintStart_toEndOf="@id/generateButton"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="16dp"/>
-
-    <Button
-        android:id="@+id/biometryButton"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="Использовать биометрию"
-        android:textColor="?attr/colorPrimaryDark"
-        app:layout_constraintTop_toBottomOf="@id/copyButton"
+        app:layout_constraintTop_toBottomOf="@id/generateButton"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="10dp"/>
+        android:layout_marginTop="16dp"/>
 
     <Button
         android:id="@+id/doneButton"
@@ -136,7 +110,7 @@
         android:layout_height="wrap_content"
         android:text="Готово"
         android:textColor="?attr/colorPrimaryDark"
-        app:layout_constraintTop_toBottomOf="@id/biometryButton"
+        app:layout_constraintTop_toBottomOf="@id/copyButton"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="10dp" />
@@ -145,7 +119,8 @@
         android:id="@+id/statusText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Не удалось создать ключ"
+        tools:text="Не удалось создать ключ"
+        android:gravity="center"
         app:layout_constraintStart_toStartOf="@id/doneButton"
         app:layout_constraintEnd_toEndOf="@id/doneButton"
         app:layout_constraintTop_toBottomOf="@id/doneButton"

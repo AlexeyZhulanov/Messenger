@@ -1,5 +1,8 @@
 package com.example.messenger.retrofit.source
 
+import android.content.Context
+import android.content.Intent
+import android.util.Log
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.appsettings.AppSettings
 import com.example.messenger.retrofit.source.base.RetrofitConfig
@@ -22,15 +25,11 @@ import javax.inject.Inject
 import javax.inject.Provider
 import javax.inject.Singleton
 
-interface Navigator {
-    fun navigateToAuthScreen()
-}
-
 @Singleton
 class SourceProviderHolder @Inject constructor(
     private val appSettings: AppSettings,
     private val retrofitServiceProvider: Provider<RetrofitService>,
-    private val navigator: Navigator
+    private val context: Context
 ) {
 
     // Global token sync
@@ -99,7 +98,7 @@ class SourceProviderHolder @Inject constructor(
 
                         // If the update is already running, we are waiting for it to be completed.
                         if (now - lastTokenUpdate.get() < TOKEN_UPDATE_INTERVAL_MS) {
-                            return@runBlocking retryWithNewToken(chain, originalRequest)
+                            return@runBlocking retryWithNewToken(chain, originalRequest, settings)
                         }
 
                         lastTokenUpdate.set(now) // Updating the time of the last token update
@@ -108,8 +107,12 @@ class SourceProviderHolder @Inject constructor(
                         if (refreshToken == null) {
                             // if refresh token does not exist we are going to auth fragment
                             logout()
+                            Log.d("testRefreshError", "refresh token is null, assess=null")
                             return@runBlocking initialResponse
                         }
+
+                        // We reset the access Token before sending the request to /refresh
+                        settings.setCurrentAccessToken(null) // todo тщательно проверить, может руинить запросы
 
                         val retrofitService = retrofitServiceProvider.get()
 
@@ -118,11 +121,12 @@ class SourceProviderHolder @Inject constructor(
                             retrofitService.refreshToken(refreshToken)
                         } catch (e: Exception) {
                             logout()
+                            Log.d("testRefreshError", "new access token is null")
                             return@runBlocking initialResponse
                         }
 
                         settings.setCurrentAccessToken(newAccessToken)
-                        return@runBlocking retryWithNewToken(chain, originalRequest)
+                        return@runBlocking retryWithNewToken(chain, originalRequest, settings)
                     }
                 }
             }
@@ -133,11 +137,12 @@ class SourceProviderHolder @Inject constructor(
     /**
      * Repeats the request with a new token only for 401 error.
      */
-    private fun retryWithNewToken(chain: Interceptor.Chain, originalRequest: Request): Response {
-        val newToken = appSettings.getCurrentAccessToken() ?: return chain.proceed(originalRequest)
+    private fun retryWithNewToken(chain: Interceptor.Chain, originalRequest: Request, settings: AppSettings): Response {
+        val newToken = settings.getCurrentAccessToken() ?: return chain.proceed(originalRequest)
 
         val newRequest = originalRequest.newBuilder()
             .header("Authorization", newToken)
+            .header("Cache-Control", "no-cache") // Отключаем кеширование
             .build()
 
         return chain.proceed(newRequest)
@@ -155,6 +160,6 @@ class SourceProviderHolder @Inject constructor(
         appSettings.setCurrentAccessToken(null)
         appSettings.setCurrentRefreshToken(null)
         appSettings.setRemember(false)
-        navigator.navigateToAuthScreen()
+        context.sendBroadcast(Intent("com.example.messenger.LOGOUT"))
     }
 }

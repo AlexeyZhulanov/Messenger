@@ -25,6 +25,15 @@ class RetrofitUploadsSource(
         uploadsApi.uploadPhoto(dialogId, isGroup, requestBody).filename
     }
 
+    override suspend fun uploadPhotoPreview(dialogId: Int, isGroup: Int, photo: File): String = wrapRetrofitExceptions {
+        val requestBody = MultipartBody.Part.createFormData(
+            "file",
+            photo.name,
+            photo.asRequestBody("image/*".toMediaTypeOrNull())
+        )
+        uploadsApi.uploadPhotoPreview(dialogId, isGroup, requestBody).message
+    }
+
     override suspend fun uploadFile(dialogId: Int, isGroup: Int, file: File): String = wrapRetrofitExceptions {
         val requestBody = MultipartBody.Part.createFormData(
             "file",

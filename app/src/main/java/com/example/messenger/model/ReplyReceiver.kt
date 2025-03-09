@@ -53,12 +53,12 @@ class ReplyReceiver : BroadcastReceiver() {
                             null, messageId, false, senderName)
                     }
                     withContext(Dispatchers.Main) {
-                        updateNotification(context, chatId, isGroup, success = true)
+                        updateNotification(context, chatId, success = true)
                     }
                 } catch (e: Exception) {
                     Log.d("testReplyReceiver", "Error sending reply: ${e.message}")
                     withContext(Dispatchers.Main) {
-                        updateNotification(context, chatId, isGroup, success = false)
+                        updateNotification(context, chatId, success = false)
                     }
                 }
             }
@@ -70,7 +70,7 @@ class ReplyReceiver : BroadcastReceiver() {
      * Если success = true – уведомление показывает галочку, иначе – крестик.
      */
     @SuppressLint("LaunchActivityFromNotification")
-    private fun updateNotification(context: Context, chatId: Int, isGroup: Boolean, success: Boolean) {
+    private fun updateNotification(context: Context, chatId: Int, success: Boolean) {
         val emptyIntent = PendingIntent.getBroadcast(
             context, 0, Intent(), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

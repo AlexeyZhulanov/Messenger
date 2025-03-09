@@ -92,7 +92,7 @@ class GroupMessageFragment(
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        viewModel.setConvInfo(group.id, 1)
+        viewModel.setConvInfo(group.id, 1, group.key ?: "", currentUser.id)
         return super.onCreateView(inflater, container, savedInstanceState)
     }
 

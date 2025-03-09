@@ -2,10 +2,10 @@ package com.example.messenger.retrofit.api
 
 import com.example.messenger.retrofit.entities.ResponseEntityMessageAnswer
 import com.example.messenger.retrofit.entities.groups.AddUserToGroupRequestEntity
+import com.example.messenger.retrofit.entities.groups.GroupCreateRequestEntity
+import com.example.messenger.retrofit.entities.groups.GroupCreateResponseEntity
 import com.example.messenger.retrofit.entities.groups.UpdateGroupAvatarRequestEntity
-import com.example.messenger.retrofit.entities.messages.AddKeyToDialogRequestEntity
 import com.example.messenger.retrofit.entities.messages.DeleteMessagesRequestEntity
-import com.example.messenger.retrofit.entities.messages.DialogCreateRequestEntity
 import com.example.messenger.retrofit.entities.messages.GetDialogSettingsResponseEntity
 import com.example.messenger.retrofit.entities.messages.GetUsersResponseEntity
 import com.example.messenger.retrofit.entities.messages.Message
@@ -25,7 +25,7 @@ import retrofit2.http.Query
 interface GroupsApi {
     @POST("groups")
     suspend fun createGroup(
-        @Body createGroupRequestEntity: DialogCreateRequestEntity) : ResponseEntityMessageAnswer
+        @Body createGroupRequestEntity: GroupCreateRequestEntity) : GroupCreateResponseEntity
 
     @POST("group/{group_id}/messages")
     suspend fun sendGroupMessage(
@@ -45,17 +45,6 @@ interface GroupsApi {
         @Path("message_id") messageId: Int,
         @Query("group_id") groupId: Int
     ) : Message
-
-    @PUT("group/{group_id}/key")
-    suspend fun addKeyToGroup(
-        @Path("group_id") groupId: Int,
-        @Body addKeyToDialogRequestEntity: AddKeyToDialogRequestEntity
-    ) : ResponseEntityMessageAnswer
-
-    @DELETE("group/{group_id}/key")
-    suspend fun removeKeyFromGroup(
-        @Path("group_id") groupId: Int
-    ) : ResponseEntityMessageAnswer
 
     @PUT("group_messages/{message_id}")
     suspend fun editGroupMessage(

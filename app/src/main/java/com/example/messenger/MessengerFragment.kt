@@ -85,6 +85,10 @@ class MessengerFragment : Fragment() {
             showPopupMenu(it, R.menu.popup_menu_add)
         }
         messengerViewModel.currentUser.observe(viewLifecycleOwner) { user ->
+            if(user.publicKey == null) {
+                // Если при создании ключей пользователь не отправил их на сервер, то отправляем его на релогин
+                logout()
+            }
             currentUser = user
             lifecycleScope.launch {
                 val avatar = user?.avatar ?: ""
@@ -133,7 +137,7 @@ class MessengerFragment : Fragment() {
         }
         binding.button.setOnClickListener {
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, NewsFragment(uriGlobal, true), "NEWS_FRAGMENT_TAG")
+                .replace(R.id.fragmentContainer, NewsFragment(uriGlobal, currentUser?.id), "NEWS_FRAGMENT_TAG")
                 .addToBackStack(null)
                 .commit()
         }
@@ -221,15 +225,7 @@ class MessengerFragment : Fragment() {
                     true
                 }
                 R.id.menu_item2 -> {
-                    lifecycleScope.launch {
-                        val success = messengerViewModel.deleteFCMToken()
-                        if(success) {
-                            messengerViewModel.clearCurrentUser()
-                            parentFragmentManager.beginTransaction()
-                                .replace(R.id.fragmentContainer, LoginFragment(), "LOGIN_FRAGMENT_TAG3")
-                                .commit()
-                        } else Toast.makeText(requireContext(), "Не удалось выйти из аккаунта, нет сети", Toast.LENGTH_SHORT).show()
-                    }
+                    logout()
                     true
                 }
                 R.id.menu_item3 -> {
@@ -244,6 +240,18 @@ class MessengerFragment : Fragment() {
             }
         }
         popupMenu.show()
+    }
+
+    private fun logout() {
+        lifecycleScope.launch {
+            val success = messengerViewModel.deleteFCMToken()
+            if(success) {
+                messengerViewModel.clearCurrentUser()
+                parentFragmentManager.beginTransaction()
+                    .replace(R.id.fragmentContainer, LoginFragment(), "LOGIN_FRAGMENT_TAG3")
+                    .commit()
+            } else Toast.makeText(requireContext(), "Не удалось выйти из аккаунта, нет сети", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun applyMenuTextColor(menu: Menu, color: Int) { // todo не используется
@@ -264,7 +272,9 @@ class MessengerFragment : Fragment() {
             .setView(dialogView)
             .setPositiveButton("Добавить") { dialogInterface, _ ->
                 val input = dialogView.findViewById<EditText>(R.id.dialog_input).text.toString()
-                messengerViewModel.createDialog(input)
+                messengerViewModel.createDialog(input, currentUser?.publicKey) { message ->
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                }
                 dialogInterface.dismiss()
             }
             .setNegativeButton("Назад") { dialogInterface, _ ->
@@ -284,7 +294,9 @@ class MessengerFragment : Fragment() {
             .setView(dialogView)
             .setPositiveButton("Создать") { dialogInterface, _ ->
                 val input = dialogView.findViewById<EditText>(R.id.group_input).text.toString()
-                messengerViewModel.createGroup(input)
+                messengerViewModel.createGroup(input, currentUser?.publicKey) { message ->
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                }
                 dialogInterface.dismiss()
             }
             .setNegativeButton("Назад") { dialogInterface, _ ->

@@ -29,7 +29,7 @@ interface UsersSource {
 
     suspend fun getUserKey(name: String) : String?
 
-    suspend fun getPrivateKey() : String?
+    suspend fun getKeys() : Pair<String?, String?>
 
     suspend fun saveUserKeys(publicKey: String, privateKey: String) : String
 }

@@ -13,4 +13,6 @@ interface NewsSource {
                          voices: List<String>? = null, files: List<String>? = null) : String
 
     suspend fun deleteNews(newsId: Int) : String
+
+    suspend fun getNewsKey() : String?
 }

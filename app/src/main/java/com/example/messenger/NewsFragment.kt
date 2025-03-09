@@ -38,7 +38,7 @@ import java.io.File
 @AndroidEntryPoint
 class NewsFragment(
     private val currentUserUri: Uri?,
-    private val isFromNotification: Boolean
+    private val currentUserId: Int?
 ) : Fragment() {
 
     private lateinit var binding: FragmentNewsBinding
@@ -84,6 +84,7 @@ class NewsFragment(
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentNewsBinding.inflate(inflater, container, false)
+        viewModel.setEncryptHelper(currentUserId)
         lifecycleScope.launch {
             permission = viewModel.getPermission()
             if(permission == 1) {
@@ -172,11 +173,9 @@ class NewsFragment(
     }
 
     private fun backPressed() {
-        if(isFromNotification) {
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, MessengerFragment())
-                .commit()
-        } else requireActivity().onBackPressedDispatcher.onBackPressed()
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, MessengerFragment())
+            .commit()
     }
 
     class SpacingItemDecorator(private val space: Int) : RecyclerView.ItemDecoration() {

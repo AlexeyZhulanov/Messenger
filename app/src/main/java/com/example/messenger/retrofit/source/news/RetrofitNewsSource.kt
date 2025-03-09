@@ -34,4 +34,8 @@ class RetrofitNewsSource(
     override suspend fun deleteNews(newsId: Int): String = wrapRetrofitExceptions {
         newsApi.deleteNews(newsId).message
     }
+
+    override suspend fun getNewsKey(): String? = wrapRetrofitExceptions {
+        newsApi.getNewsKey().newsKey
+    }
 }

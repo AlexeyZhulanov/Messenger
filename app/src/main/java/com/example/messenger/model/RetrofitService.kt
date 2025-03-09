@@ -134,23 +134,24 @@ class RetrofitService(
         return@withContext user
     }
 
-    override suspend fun createDialog(name: String, key: String): Boolean = withContext(ioDispatcher) {
-        val message = try {
-            messagesSource.createDialog(name, key)
+    override suspend fun createDialog(name: String, keyUser1: String, keyUser2: String): Int = withContext(ioDispatcher) {
+        val dialogId = try {
+            messagesSource.createDialog(name, keyUser1, keyUser2)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw UserNotFoundException(e)
                 409 -> throw DialogAlreadyExistsException(e)
+                400 -> throw InvalidKeyException(e)
                 else -> throw e
             }
         }
-        Log.d("testCreateDialog", message)
-        return@withContext true
+        Log.d("testCreateDialog", "dialogId: $dialogId")
+        return@withContext dialogId
     }
 
     override suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?,
-        voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-         usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
+                                     voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
+                                     usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
         return@withContext try {
             messagesSource.sendMessage(idDialog, text, images, voice, file, referenceToMessageId,
                 isForwarded, usernameAuthorOriginal)
@@ -201,34 +202,6 @@ class RetrofitService(
         }
         Log.d("testFindMessage", message.toString())
         return@withContext message
-    }
-
-    override suspend fun addKeyToDialog(dialogId: Int, key: String): Boolean = withContext(ioDispatcher) {
-        val message = try {
-            messagesSource.addKeyToDialog(dialogId, key)
-        } catch (e: BackendException) {
-            when (e.code) {
-                404 -> throw DialogNotFoundException(e)
-                403 -> throw NoPermissionException(e)
-                else -> throw e
-            }
-        }
-        Log.d("testAddKeyToDialog", message)
-        return@withContext true
-    }
-
-    override suspend fun removeKeyFromDialog(dialogId: Int): Boolean = withContext(ioDispatcher) {
-        val message = try {
-            messagesSource.removeKeyFromDialog(dialogId)
-        } catch (e: BackendException) {
-            when (e.code) {
-                404 -> throw DialogNotFoundException(e)
-                403 -> throw NoPermissionException(e)
-                else -> throw e
-            }
-        }
-        Log.d("testRemoveKeyFromDialog", message)
-        return@withContext true
     }
 
     override suspend fun editMessage(idDialog: Int, messageId: Int, text: String?, images: List<String>?,
@@ -371,20 +344,19 @@ class RetrofitService(
         return@withContext settings
     }
 
-    override suspend fun createGroup(name: String, key: String): Boolean = withContext(ioDispatcher) {
-        val message = try {
+    override suspend fun createGroup(name: String, key: String): Int = withContext(ioDispatcher) {
+        val groupId = try {
             groupsSource.createGroup(name, key)
         } catch (e: BackendException) {
-            if(e.code == 500) throw InvalidCredentialsException(e)
-            else throw e
+            throw if(e.code == 400) InvalidKeyException(e) else e
         }
-        Log.d("testCreateGroup", message)
-        return@withContext true
+        Log.d("testCreateGroup", "groupId: $groupId")
+        return@withContext groupId
     }
 
     override suspend fun sendGroupMessage(groupId: Int, text: String?, images: List<String>?,
-        voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-        usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
+             voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
+             usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.sendGroupMessage(groupId, text, images, voice, file, referenceToMessageId,
                 isForwarded, usernameAuthorOriginal)
@@ -426,34 +398,6 @@ class RetrofitService(
         }
         Log.d("testFindGroupMessage", message.toString())
         return@withContext message
-    }
-
-    override suspend fun addKeyToGroup(groupId: Int, key: String): Boolean = withContext(ioDispatcher) {
-        val message = try {
-            groupsSource.addKeyToGroup(groupId, key)
-        } catch (e: BackendException) {
-            when (e.code) {
-                404 -> throw GroupNotFoundException(e)
-                403 -> throw NoPermissionException(e)
-                else -> throw e
-            }
-        }
-        Log.d("testAddKeyToGroup", message)
-        return@withContext true
-    }
-
-    override suspend fun removeKeyFromGroup(groupId: Int): Boolean = withContext(ioDispatcher) {
-        val message = try {
-            groupsSource.removeKeyFromGroup(groupId)
-        } catch (e: BackendException) {
-            when (e.code) {
-                404 -> throw GroupNotFoundException(e)
-                403 -> throw NoPermissionException(e)
-                else -> throw e
-            }
-        }
-        Log.d("testRemoveKeyFromGroup", message)
-        return@withContext true
     }
 
     override suspend fun editGroupMessage(groupId: Int, messageId: Int, text: String?,
@@ -676,6 +620,17 @@ class RetrofitService(
         }
         Log.d("testUploadPhoto", file)
         return@withContext file
+    }
+
+    override suspend fun uploadPhotoPreview(dialogId: Int, photoPreview: File, isGroup: Int?): Boolean = withContext(ioDispatcher) {
+        val message = try {
+            uploadSource.uploadPhotoPreview(dialogId, isGroup ?: 0, photoPreview)
+        } catch (e: BackendException) {
+            if(e.code == 400) throw InvalidCredentialsException(e)
+            else throw e
+        }
+        Log.d("testUploadPreview", message)
+        return@withContext true
     }
 
     override suspend fun uploadFile(dialogId: Int, file: File, isGroup: Int?): String = withContext(ioDispatcher) {
@@ -944,14 +899,14 @@ class RetrofitService(
         return@withContext publicKey
     }
 
-    override suspend fun getPrivateKey(): String? = withContext(ioDispatcher) {
-        val privateKey = try {
-            usersSource.getPrivateKey()
+    override suspend fun getKeys(): Pair<String?, String?> = withContext(ioDispatcher) {
+        val pair = try {
+            usersSource.getKeys()
         } catch (e: BackendException) {
             throw if(e.code == 404) UserNotFoundException(e) else e
         }
-        Log.d("testGetPrivateKey", "OK")
-        return@withContext privateKey
+        Log.d("testGetKeys", "OK")
+        return@withContext pair
     }
 
     override suspend fun saveUserKeys(publicKey: String, privateKey: String): Boolean = withContext(ioDispatcher) {
@@ -966,5 +921,16 @@ class RetrofitService(
         }
         Log.d("testSaveKeys", message)
         return@withContext true
+    }
+
+    override suspend fun getNewsKey(): String? = withContext(ioDispatcher) {
+        val key = try {
+            newsSource.getNewsKey()
+        } catch (e: BackendException) {
+            if(e.code == 404) throw InvalidKeyException(e)
+            else throw e
+        }
+        Log.d("testNewsKey", key.toString())
+        return@withContext key
     }
 }
