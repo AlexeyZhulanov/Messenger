@@ -68,11 +68,18 @@ class MessengerAdapter(
             else {
                 userNameTextView.text = conversation.name
             }
-            // todo с этим подумать как отобразить фото, файл, аудио
-            lastMessageTextView.text = conversation.lastMessage?.text ?: "Вложение"
-            dateText.text = formatMessageDate(conversation.lastMessage?.timestamp)
-            if(conversation.lastMessage?.isRead == true) icCheck2.visibility = View.VISIBLE
-            else icCheck.visibility = View.VISIBLE
+            if(conversation.lastMessage.isRead != null) {
+                lastMessageTextView.text = conversation.lastMessage.text ?: "Вложение"
+                dateText.visibility = View.VISIBLE
+                dateText.text = formatMessageDate(conversation.lastMessage.timestamp)
+                if(conversation.lastMessage.isRead == true) icCheck2.visibility = View.VISIBLE
+                else icCheck.visibility = View.VISIBLE
+            } else {
+                lastMessageTextView.text = "Сообщений пока нет"
+                icCheck.visibility = View.GONE
+                icCheck2.visibility = View.GONE
+                dateText.visibility = View.GONE
+            }
             uiScope.launch {
                 val avatar = conversation.otherUser?.avatar ?: conversation.avatar ?: ""
                 if (avatar != "") {

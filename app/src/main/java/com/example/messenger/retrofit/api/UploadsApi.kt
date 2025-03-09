@@ -1,5 +1,6 @@
 package com.example.messenger.retrofit.api
 
+import com.example.messenger.retrofit.entities.ResponseEntityMessageAnswer
 import com.example.messenger.retrofit.entities.uploads.UploadPreviewResponseEntity
 import com.example.messenger.retrofit.entities.uploads.UploadResponseEntity
 import retrofit2.http.Multipart
@@ -17,6 +18,13 @@ interface UploadsApi {
         @Path("dialog_id") dialogId: Int,
         @Path("is_group") isGroup: Int,
         @Part photo: MultipartBody.Part): UploadResponseEntity
+
+    @Multipart
+    @POST("upload/photo/preview/{dialog_id}/{is_group}")
+    suspend fun uploadPhotoPreview(
+        @Path("dialog_id") dialogId: Int,
+        @Path("is_group") isGroup: Int,
+        @Part photo: MultipartBody.Part): ResponseEntityMessageAnswer
 
     @Multipart
     @POST("upload/file/{dialog_id}/{is_group}")

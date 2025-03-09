@@ -109,6 +109,8 @@ dependencies {
     implementation ("com.davemorrissey.labs:subsampling-scale-image-view:3.10.0")
     implementation ("com.google.firebase:firebase-messaging:24.1.0")
     implementation("com.google.crypto.tink:tink-android:1.16.0")
+    implementation("org.bouncycastle:bcprov-jdk15on:1.70")
+    implementation("org.bouncycastle:bcpkix-jdk15on:1.70")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     debugImplementation(libs.androidx.ui.tooling)

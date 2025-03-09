@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.PowerManager
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.example.messenger.model.appsettings.AppSettings
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
@@ -20,12 +21,15 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     @Inject
     lateinit var retrofitService: RetrofitService
 
+    @Inject
+    lateinit var appSettings: AppSettings
+
     private val firebaseScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         Log.d("testFCM", "New token: $token")
-        sendTokenToServer(token)
+        if(appSettings.getRemember()) sendTokenToServer(token)
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {

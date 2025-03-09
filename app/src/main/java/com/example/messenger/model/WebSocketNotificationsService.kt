@@ -17,6 +17,8 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.MainActivity
 import com.example.messenger.R
+import com.example.messenger.security.ChatKeyManager
+import com.example.messenger.security.TinkAesGcmHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -31,6 +33,8 @@ class  WebSocketNotificationsService : LifecycleService() {
 
     @Inject lateinit var webSocketService: WebSocketService
     @Inject lateinit var fileManager: FileManager
+
+    private val chatKeyManager = ChatKeyManager()
 
     companion object {
         private const val CHANNEL_ID = "chat_notifications"
@@ -110,9 +114,14 @@ class  WebSocketNotificationsService : LifecycleService() {
     }
 
     private fun sendNotification(event: ChatMessageEvent) {
+
+        val typeStr = if(event.isGroup) "group" else "dialog"
+        val aead = chatKeyManager.getAead(event.chatId, typeStr)
+        val tinkAesGcmHelper = if(aead != null) TinkAesGcmHelper(aead) else return
+
         val chatId = event.chatId
         val sender = event.senderName
-        val text = event.text ?: "[Вложение]"
+        val text = event.text?.let { tinkAesGcmHelper.decryptText(it) } ?: "[Вложение]"
         val messageId = event.messageId
         val isGroup = event.isGroup
         val senderName = event.senderName
@@ -238,6 +247,13 @@ class  WebSocketNotificationsService : LifecycleService() {
     }
 
     private fun sendNewsNotification(event: NewsEvent) {
+
+        val aead = chatKeyManager.getAead(0, "news")
+        val tinkAesGcmHelper = if(aead != null) TinkAesGcmHelper(aead) else return
+
+        val text = event.text?.let { tinkAesGcmHelper.decryptText(it) } ?: "Новая новость!"
+        val headerText = tinkAesGcmHelper.decryptText(event.headerText)
+
         val newsId = event.hashCode() // Уникальный ID для новости
 
         val intent = Intent(this, MainActivity::class.java).apply {
@@ -247,8 +263,8 @@ class  WebSocketNotificationsService : LifecycleService() {
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(event.headerText)
-            .setContentText(event.text ?: "Новая новость!")
+            .setContentTitle(headerText)
+            .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)

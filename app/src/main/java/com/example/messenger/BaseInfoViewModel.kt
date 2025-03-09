@@ -2,13 +2,16 @@ package com.example.messenger
 
 import android.content.Context
 import android.media.MediaMetadataRetriever
+import android.util.Base64
 import androidx.lifecycle.ViewModel
 import com.example.messenger.di.IoDispatcher
+import com.example.messenger.model.BackendException
 import com.example.messenger.model.ChatSettings
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.WebSocketService
+import com.example.messenger.security.ChatKeyManager
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +19,11 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.security.KeyFactory
+import java.security.PublicKey
+import java.security.spec.X509EncodedKeySpec
 import java.text.SimpleDateFormat
+import java.util.Arrays
 import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -38,8 +45,39 @@ class BaseInfoViewModel @Inject constructor(
         this.isGroup = isGroup
     }
 
-    suspend fun addMember(name: String) : Boolean {
-        return if(name != "") retrofitService.addUserToGroup(convId, name) else false
+    suspend fun addMember(currentKeyString: String?, name: String, currentUserId: Int, callback: (String) -> Unit) {
+        if(currentKeyString == null) callback("Ошибка: у вас отсутствует ключ, вы не можете добавить нового пользователя")
+        if(name != "") {
+            try {
+                val keyString = retrofitService.getUserKey(name)
+                if(!keyString.isNullOrEmpty()) {
+                    val keyManager = ChatKeyManager()
+
+                    val publicKey = getPublicKey(keyString)
+
+                    val wrappedKey = Base64.decode(currentKeyString, Base64.NO_WRAP)
+                    val symmetricKey = keyManager.unwrapChatKeyForGet(wrappedKey, currentUserId)
+                    val userKeyByte = keyManager.wrapChatKeyForRecipient(symmetricKey, publicKey)
+                    Arrays.fill(symmetricKey.encoded, 0.toByte())
+
+                    val userKey = Base64.encodeToString(userKeyByte, Base64.NO_WRAP)
+                    val success = retrofitService.addUserToGroup(convId, name, userKey)
+
+                    if(success) callback("Пользователь успешно добавлен") else callback("Не удалось добавить пользователя")
+                } else callback("Ошибка: Пользователь ни разу не заходил в мессенджер, невозможно его добавить в группу!")
+            } catch (e: BackendException) {
+                callback("Ошибка: Пользователя не существует") // todo проверить работоспособность
+            } catch (e: Exception) {
+                callback("Ошибка: Нет сети!")
+            }
+        }
+        else callback("Вы не ввели никнейм пользователя")
+    }
+
+    private fun getPublicKey(key: String): PublicKey {
+        val publicKeyBytes = Base64.decode(key, Base64.NO_WRAP)
+        val keySpec = X509EncodedKeySpec(publicKeyBytes)
+        return KeyFactory.getInstance("RSA").generatePublic(keySpec)
     }
 
     fun fManagerIsExistAvatar(fileName: String): Boolean {

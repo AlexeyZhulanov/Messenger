@@ -2,56 +2,8 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "ecf3fe4a9300309b2f02922563b16636",
+    "identityHash": "43bcba8a04346e27e465263e0fe8ee52",
     "entities": [
-      {
-        "tableName": "settings",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `remember` INTEGER NOT NULL, `name` TEXT NOT NULL, `password` TEXT NOT NULL)",
-        "fields": [
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "remember",
-            "columnName": "remember",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "name",
-            "columnName": "name",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "password",
-            "columnName": "password",
-            "affinity": "TEXT",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": true,
-          "columnNames": [
-            "id"
-          ]
-        },
-        "indices": [
-          {
-            "name": "index_settings_name",
-            "unique": true,
-            "columnNames": [
-              "name"
-            ],
-            "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_settings_name` ON `${TABLE_NAME}` (`name`)"
-          }
-        ],
-        "foreignKeys": []
-      },
       {
         "tableName": "conversations",
         "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `type` TEXT NOT NULL, `key` TEXT, `other_user_id` INTEGER, `name` TEXT, `created_by` INTEGER, `avatar` TEXT, `last_message_id` INTEGER, `count_msg` INTEGER NOT NULL, `can_delete` INTEGER NOT NULL, `auto_delete_interval` INTEGER NOT NULL, `order_index` INTEGER NOT NULL, PRIMARY KEY(`id`))",
@@ -194,7 +146,7 @@
       },
       {
         "tableName": "last_messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `text` TEXT, `timestamp` INTEGER NOT NULL, `is_read` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `text` TEXT, `timestamp` INTEGER, `is_read` INTEGER)",
         "fields": [
           {
             "fieldPath": "id",
@@ -212,13 +164,13 @@
             "fieldPath": "timestamp",
             "columnName": "timestamp",
             "affinity": "INTEGER",
-            "notNull": true
+            "notNull": false
           },
           {
             "fieldPath": "isRead",
             "columnName": "is_read",
             "affinity": "INTEGER",
-            "notNull": true
+            "notNull": false
           }
         ],
         "primaryKey": {
@@ -416,7 +368,7 @@
       },
       {
         "tableName": "current_user",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_user` INTEGER NOT NULL, `name` TEXT NOT NULL, `username` TEXT NOT NULL, `avatar` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_user` INTEGER NOT NULL, `name` TEXT NOT NULL, `username` TEXT NOT NULL, `avatar` TEXT, `public_key` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -445,6 +397,12 @@
           {
             "fieldPath": "avatar",
             "columnName": "avatar",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "publicKey",
+            "columnName": "public_key",
             "affinity": "TEXT",
             "notNull": false
           }
@@ -801,7 +759,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ecf3fe4a9300309b2f02922563b16636')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '43bcba8a04346e27e465263e0fe8ee52')"
     ]
   }
 }

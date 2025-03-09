@@ -78,7 +78,7 @@ class MessageFragment(
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        viewModel.setConvInfo(dialog.id, 0)
+        viewModel.setConvInfo(dialog.id, 0, dialog.key ?: "", currentUser.id)
         return super.onCreateView(inflater, container, savedInstanceState)
     }
 

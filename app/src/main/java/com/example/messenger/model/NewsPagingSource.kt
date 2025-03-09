@@ -3,12 +3,14 @@ package com.example.messenger.model
 import android.util.Log
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
+import com.example.messenger.security.TinkAesGcmHelper
 
 
 class NewsPagingSource(
     private val retrofitService: RetrofitService,
     private val messengerService: MessengerService,
-    private val fileManager: FileManager
+    private val fileManager: FileManager,
+    private val tinkAesGcmHelper: TinkAesGcmHelper?
 ) : PagingSource<Int, News>() {
 
     private var flag = true
@@ -25,6 +27,12 @@ class NewsPagingSource(
                         messengerService.getNews()
                     } else throw e
                 }
+            if(flag) {
+                news.forEach {
+                    it.text = it.text?.let { text -> tinkAesGcmHelper?.decryptText(text) }
+                    it.headerText = tinkAesGcmHelper?.decryptText(it.headerText) ?: it.headerText
+                }
+            }
             if(pageIndex == 1 && flag) messengerService.replaceNews(news, fileManager)
 
             LoadResult.Page(

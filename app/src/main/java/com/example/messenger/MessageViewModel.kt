@@ -17,7 +17,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -40,6 +40,8 @@ class MessageViewModel @Inject constructor(
     private var otherUserId: Int = -1
     private var isOtherUserInChat: Boolean = false
 
+    private var pagingSource: MessagePagingSource? = null
+
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     val pagingDataFlow = searchBy.asFlow()
         .debounce(500)
@@ -47,16 +49,21 @@ class MessageViewModel @Inject constructor(
             currentPage.flatMapLatest { page ->
                 flow {
                     val pageSize = 30
-                    val messages = MessagePagingSource(retrofitService, messengerService, convId,
-                        searchQuery, fileManager, true).loadPage(page, pageSize)
-                    emit(messages)
+                    val messages = pagingSource?.loadPage(page, pageSize, searchQuery)
+                    if(messages != null) emit(messages)
                 }
             }
         }
 
     init {
         viewModelScope.launch {
+            initFlow.collect {
+                pagingSource = MessagePagingSource(retrofitService, messengerService, convId, fileManager, tinkAesGcmHelper, true)
+            }
+        }
+        viewModelScope.launch {
             webSocketService.newMessageFlow.collect { message ->
+                message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
                 Log.d("testSocketsMessage", "New Message: $message")
                 val newMessagePair = if(lastMessageDate == "") message to "" else message to formatMessageDate(message.timestamp)
                 _newMessageFlow.tryEmit(newMessagePair)
@@ -65,6 +72,7 @@ class MessageViewModel @Inject constructor(
         }
         viewModelScope.launch {
             webSocketService.editMessageFlow.collect { message ->
+                message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
                 Log.d("testSocketsMessage", "Edited Message: $message")
                 _editMessageFlow.value = message
                 recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {

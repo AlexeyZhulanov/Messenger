@@ -266,7 +266,7 @@ class BottomSheetNewsFragment(
                                 File(item1.availablePath)
                             } ?: continue
 
-                            val (path, f) = async { newsViewModel.uploadNews(file) }.await()
+                            val (path, f) = async { newsViewModel.uploadNews(file, requireContext()) }.await()
                             list += path
                             if (!f) break
                         }
@@ -274,8 +274,8 @@ class BottomSheetNewsFragment(
                     }
                     return@async null
                 }
-                val filesJob = async { newsViewModel.uploadFiles(filesList)?.toMutableList() }
-                val voicesJob = async { newsViewModel.uploadFiles(voicesList)?.toMutableList() }
+                val filesJob = async { newsViewModel.uploadFiles(filesList, requireContext())?.toMutableList() }
+                val voicesJob = async { newsViewModel.uploadFiles(voicesList, requireContext())?.toMutableList() }
 
                 val photosFinal = photosJob.await()
                 val filesFinal = filesJob.await()

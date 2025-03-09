@@ -93,19 +93,16 @@ class SettingsViewModel @Inject constructor(
 
     fun updatePassword(oldPassword: String, newPassword: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
-            val settings = messengerService.getSettings()
-            val savedPassword = settings.password
-            if(savedPassword == oldPassword) {
-                val result = async(Dispatchers.IO) { retrofitService.updatePassword(newPassword) }
-                if (result.await()) {
-                    settings.password = newPassword
-                    messengerService.updateSettings(settings)
+            // todo здесь нужно сделать нормальный запрос со старым и новым паролем обязательно
+            if(newPassword != oldPassword) {
+                val result = retrofitService.updatePassword(newPassword)
+                if (result) {
                     onSuccess()
                 } else {
                     onError("Ошибка: Имя пользователя уже занято")
                 }
             } else {
-                onError("Ошибка: Неверный старый пароль")
+                onError("Ошибка: Старый и новый пароли совпадают")
             }
         }
     }

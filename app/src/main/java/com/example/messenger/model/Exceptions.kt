@@ -49,6 +49,8 @@ class FileNotFoundException(cause: Throwable) : AppException(cause = cause)
 
 class NoChangedMadeException(cause: Throwable) : AppException(cause = cause)
 
+class InvalidKeyException(cause: Throwable) : AppException(cause = cause)
+
 open class BackendException(
     val code: Int,
     message: String

@@ -6,7 +6,7 @@ import com.example.messenger.model.Message
 import com.example.messenger.model.UserShort
 
 interface MessagesSource {
-    suspend fun createDialog(name: String) : String
+    suspend fun createDialog(name: String, keyUser1: String, keyUser2: String) : Int
 
     suspend fun sendMessage(idDialog: Int, text: String? = null, images: List<String>? = null,
                             voice: String? = null, file: String? = null, referenceToMessageId: Int? = null,
@@ -15,10 +15,6 @@ interface MessagesSource {
     suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int) : List<Message>
 
     suspend fun findMessage(idMessage: Int, idDialog: Int) : Pair<Message, Int>
-
-    suspend fun addKeyToDialog(dialogId: Int, key: String) : String
-
-    suspend fun removeKeyFromDialog(dialogId: Int) : String
 
     suspend fun editMessage(idDialog: Int, messageId: Int, text: String? = null,
                             images: List<String>? = null, voice: String? = null,
@@ -32,7 +28,7 @@ interface MessagesSource {
 
     suspend fun markMessagesAsRead(idDialog: Int, ids: List<Int>) : String
 
-    suspend fun searchMessagesInDialog(dialogId: Int, word: String) : List<Message>
+    suspend fun searchMessagesInDialog(dialogId: Int) : List<Message>
 
     suspend fun getConversations() : List<Conversation>
 

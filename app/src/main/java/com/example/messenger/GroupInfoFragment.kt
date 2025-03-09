@@ -122,9 +122,9 @@ class GroupInfoFragment(
             .setPositiveButton("Добавить") { dialogInterface, _ ->
                 val input = dialogView.findViewById<EditText>(R.id.dialog_input).text.toString()
                 lifecycleScope.launch {
-                    val success = viewModel.addMember(input)
-                    val str = if(success) "Пользователь успешно добавлен" else "Не удалось добавить"
-                    Toast.makeText(requireContext(), str, Toast.LENGTH_SHORT).show()
+                    viewModel.addMember(group.key, input, currentUser.id) { message ->
+                        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                    }
                 }
                 dialogInterface.dismiss()
             }

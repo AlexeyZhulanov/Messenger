@@ -9,10 +9,6 @@ import com.example.messenger.retrofit.source.news.NewsSource
 import com.example.messenger.retrofit.source.uploads.UploadsSource
 import com.example.messenger.retrofit.source.users.UsersSource
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -24,22 +20,8 @@ class RetrofitService(
     private val uploadSource: UploadsSource,
     private val newsSource: NewsSource,
     private val appSettings: AppSettings,
-    private val messengerRepository: MessengerRepository,
     private val ioDispatcher: CoroutineDispatcher
 ) : RetrofitRepository {
-    private var conversations = listOf<Conversation>()
-    private var messages = listOf<Message>()
-    private var groupMessages = listOf<Message>()
-    private var news = listOf<News>()
-
-    private val messengerService: MessengerService
-        get() = messengerRepository as MessengerService
-
-
-    override fun isSignedIn(): Boolean {
-        // user is signed-in if auth token exists
-        return appSettings.getCurrentToken() != null
-    }
 
     override suspend fun register(name: String, username: String, password: String) : Boolean = withContext(ioDispatcher) {
         if (name.isBlank()) throw EmptyFieldException(Field.Name)
@@ -58,7 +40,7 @@ class RetrofitService(
     override suspend fun login(name: String, password: String) : Boolean = withContext(ioDispatcher) {
         if (name.isBlank()) throw EmptyFieldException(Field.Name)
         if (password.isBlank()) throw EmptyFieldException(Field.Password)
-        val token = try {
+        val tokens = try {
             usersSource.login(name, password)
         } catch (e: Exception) {
             if (e is BackendException && e.code == 401) {
@@ -68,36 +50,16 @@ class RetrofitService(
                 throw e
             }
         }
-        appSettings.setCurrentToken(token)
-        Log.d("testLoginToken", token)
+        appSettings.setCurrentAccessToken(tokens.first)
+        appSettings.setCurrentRefreshToken(tokens.second)
+        Log.d("testLogin", "OK")
         return@withContext true
     }
 
     override suspend fun getConversations(): List<Conversation> = withContext(ioDispatcher) {
-        if(isSignedIn()) {
-            conversations = try {
-                messagesSource.getConversations()
-            } catch (e: BackendException) {
-                if (e.code == 500) {
-                    throw InvalidCredentialsException(e)
-                } else {
-                    throw e
-                }
-        }
-    }
-        else {
-            val settings = messengerService.getSettings()
-            if(settings.name != "" && settings.password != "") {
-                val name = settings.name ?: ""
-                val password = settings.password ?: ""
-                CoroutineScope(Dispatchers.Main).launch {
-                    val correct = async {
-                        login(name, password)
-                    }
-                    if(correct.await()) conversations = messagesSource.getConversations()
-                }
-            }
-        }
+        val conversations = try {
+            messagesSource.getConversations()
+        } catch (e: BackendException) { throw e }
         Log.d("testConversations", conversations.toString())
         return@withContext conversations
     }
@@ -172,23 +134,24 @@ class RetrofitService(
         return@withContext user
     }
 
-    override suspend fun createDialog(name: String): Boolean = withContext(ioDispatcher) {
-        val message = try {
-            messagesSource.createDialog(name)
+    override suspend fun createDialog(name: String, keyUser1: String, keyUser2: String): Int = withContext(ioDispatcher) {
+        val dialogId = try {
+            messagesSource.createDialog(name, keyUser1, keyUser2)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw UserNotFoundException(e)
                 409 -> throw DialogAlreadyExistsException(e)
+                400 -> throw InvalidKeyException(e)
                 else -> throw e
             }
         }
-        Log.d("testCreateDialog", message)
-        return@withContext true
+        Log.d("testCreateDialog", "dialogId: $dialogId")
+        return@withContext dialogId
     }
 
     override suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?,
-        voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-         usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
+                                     voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
+                                     usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
         return@withContext try {
             messagesSource.sendMessage(idDialog, text, images, voice, file, referenceToMessageId,
                 isForwarded, usernameAuthorOriginal)
@@ -207,7 +170,7 @@ class RetrofitService(
     }
 
     override suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int): List<Message> = withContext(ioDispatcher) {
-        messages = try {
+        val messages = try {
             messagesSource.getMessages(idDialog, pageIndex, pageSize)
         } catch (e: BackendException) {
             when (e.code) {
@@ -239,34 +202,6 @@ class RetrofitService(
         }
         Log.d("testFindMessage", message.toString())
         return@withContext message
-    }
-
-    override suspend fun addKeyToDialog(dialogId: Int, key: String): Boolean = withContext(ioDispatcher) {
-        val message = try {
-            messagesSource.addKeyToDialog(dialogId, key)
-        } catch (e: BackendException) {
-            when (e.code) {
-                404 -> throw DialogNotFoundException(e)
-                403 -> throw NoPermissionException(e)
-                else -> throw e
-            }
-        }
-        Log.d("testAddKeyToDialog", message)
-        return@withContext true
-    }
-
-    override suspend fun removeKeyFromDialog(dialogId: Int): Boolean = withContext(ioDispatcher) {
-        val message = try {
-            messagesSource.removeKeyFromDialog(dialogId)
-        } catch (e: BackendException) {
-            when (e.code) {
-                404 -> throw DialogNotFoundException(e)
-                403 -> throw NoPermissionException(e)
-                else -> throw e
-            }
-        }
-        Log.d("testRemoveKeyFromDialog", message)
-        return@withContext true
     }
 
     override suspend fun editMessage(idDialog: Int, messageId: Int, text: String?, images: List<String>?,
@@ -340,9 +275,9 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun searchMessagesInDialog(dialogId: Int, word: String): List<Message> = withContext(ioDispatcher) {
+    override suspend fun searchMessagesInDialog(dialogId: Int): List<Message> = withContext(ioDispatcher) {
         val messagesSearch = try {
-            messagesSource.searchMessagesInDialog(dialogId, word)
+            messagesSource.searchMessagesInDialog(dialogId)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw DialogNotFoundException(e)
@@ -409,20 +344,19 @@ class RetrofitService(
         return@withContext settings
     }
 
-    override suspend fun createGroup(name: String): Boolean = withContext(ioDispatcher) {
-        val message = try {
-            groupsSource.createGroup(name)
+    override suspend fun createGroup(name: String, key: String): Int = withContext(ioDispatcher) {
+        val groupId = try {
+            groupsSource.createGroup(name, key)
         } catch (e: BackendException) {
-            if(e.code == 500) throw InvalidCredentialsException(e)
-            else throw e
+            throw if(e.code == 400) InvalidKeyException(e) else e
         }
-        Log.d("testCreateGroup", message)
-        return@withContext true
+        Log.d("testCreateGroup", "groupId: $groupId")
+        return@withContext groupId
     }
 
     override suspend fun sendGroupMessage(groupId: Int, text: String?, images: List<String>?,
-        voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-        usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
+             voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
+             usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.sendGroupMessage(groupId, text, images, voice, file, referenceToMessageId,
                 isForwarded, usernameAuthorOriginal)
@@ -438,7 +372,7 @@ class RetrofitService(
     }
 
     override suspend fun getGroupMessages(groupId: Int, start: Int, end: Int): List<Message> = withContext(ioDispatcher) {
-        groupMessages = try {
+        val groupMessages = try {
             groupsSource.getGroupMessages(groupId, start, end)
         } catch (e: BackendException) {
             when (e.code) {
@@ -464,34 +398,6 @@ class RetrofitService(
         }
         Log.d("testFindGroupMessage", message.toString())
         return@withContext message
-    }
-
-    override suspend fun addKeyToGroup(groupId: Int, key: String): Boolean = withContext(ioDispatcher) {
-        val message = try {
-            groupsSource.addKeyToGroup(groupId, key)
-        } catch (e: BackendException) {
-            when (e.code) {
-                404 -> throw GroupNotFoundException(e)
-                403 -> throw NoPermissionException(e)
-                else -> throw e
-            }
-        }
-        Log.d("testAddKeyToGroup", message)
-        return@withContext true
-    }
-
-    override suspend fun removeKeyFromGroup(groupId: Int): Boolean = withContext(ioDispatcher) {
-        val message = try {
-            groupsSource.removeKeyFromGroup(groupId)
-        } catch (e: BackendException) {
-            when (e.code) {
-                404 -> throw GroupNotFoundException(e)
-                403 -> throw NoPermissionException(e)
-                else -> throw e
-            }
-        }
-        Log.d("testRemoveKeyFromGroup", message)
-        return@withContext true
     }
 
     override suspend fun editGroupMessage(groupId: Int, messageId: Int, text: String?,
@@ -552,19 +458,21 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun addUserToGroup(groupId: Int, name: String): Boolean = withContext(ioDispatcher) {
+    override suspend fun addUserToGroup(groupId: Int, name: String, key: String): Boolean = withContext(ioDispatcher) {
         val message = try {
-            groupsSource.addUserToGroup(groupId, name)
+            groupsSource.addUserToGroup(groupId, name, key)
         } catch (e: BackendException) {
             when (e.code) {
                 403 -> throw NoPermissionException(e)
-                400 -> throw UserAlreadyInGroupException(e)
+                409 -> throw UserAlreadyInGroupException(e)
+                400 -> throw InvalidKeyException(e)
                 else -> throw e
             }
         }
         Log.d("testAddUserToGroup", message)
         return@withContext true
     }
+
 
     override suspend fun deleteUserFromGroup(groupId: Int, userId: Int): Boolean = withContext(ioDispatcher) {
         val message = try {
@@ -689,9 +597,9 @@ class RetrofitService(
         return@withContext settings
     }
 
-    override suspend fun searchMessagesInGroup(groupId: Int, word: String): List<Message> = withContext(ioDispatcher) {
+    override suspend fun searchMessagesInGroup(groupId: Int): List<Message> = withContext(ioDispatcher) {
         val messagesGroupSearch = try {
-            groupsSource.searchMessagesInGroup(groupId, word)
+            groupsSource.searchMessagesInGroup(groupId)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw GroupNotFoundException(e)
@@ -712,6 +620,17 @@ class RetrofitService(
         }
         Log.d("testUploadPhoto", file)
         return@withContext file
+    }
+
+    override suspend fun uploadPhotoPreview(dialogId: Int, photoPreview: File, isGroup: Int?): Boolean = withContext(ioDispatcher) {
+        val message = try {
+            uploadSource.uploadPhotoPreview(dialogId, isGroup ?: 0, photoPreview)
+        } catch (e: BackendException) {
+            if(e.code == 400) throw InvalidCredentialsException(e)
+            else throw e
+        }
+        Log.d("testUploadPreview", message)
+        return@withContext true
     }
 
     override suspend fun uploadFile(dialogId: Int, file: File, isGroup: Int?): String = withContext(ioDispatcher) {
@@ -865,7 +784,7 @@ class RetrofitService(
     }
 
     override suspend fun getNews(pageIndex: Int, pageSize: Int): List<News> = withContext(ioDispatcher) {
-        news = try {
+        val news = try {
             newsSource.getNews(pageIndex, pageSize)
         } catch (e: BackendException) {
             when (e.code) {
@@ -960,5 +879,58 @@ class RetrofitService(
         }
         Log.d("testDeleteFCMToken", message)
         return@withContext true
+    }
+
+    override suspend fun refreshToken(token: String): String = withContext(ioDispatcher) {
+        val newToken = try {
+            usersSource.refreshToken(token)
+        } catch (e: BackendException) { throw e }
+        Log.d("testRefreshToken", "OK")
+        return@withContext newToken
+    }
+
+    override suspend fun getUserKey(name: String): String? = withContext(ioDispatcher) {
+        val publicKey = try {
+            usersSource.getUserKey(name)
+        } catch (e: BackendException) {
+            throw if(e.code == 404) UserNotFoundException(e) else e
+        }
+        Log.d("testGetPublicKey", "user($name) token is OK")
+        return@withContext publicKey
+    }
+
+    override suspend fun getKeys(): Pair<String?, String?> = withContext(ioDispatcher) {
+        val pair = try {
+            usersSource.getKeys()
+        } catch (e: BackendException) {
+            throw if(e.code == 404) UserNotFoundException(e) else e
+        }
+        Log.d("testGetKeys", "OK")
+        return@withContext pair
+    }
+
+    override suspend fun saveUserKeys(publicKey: String, privateKey: String): Boolean = withContext(ioDispatcher) {
+        val message = try {
+            usersSource.saveUserKeys(publicKey, privateKey)
+        } catch (e: BackendException) {
+            when(e.code) {
+                404 -> throw UserNotFoundException(e)
+                400 -> throw InvalidKeyException(e)
+                else -> throw e
+            }
+        }
+        Log.d("testSaveKeys", message)
+        return@withContext true
+    }
+
+    override suspend fun getNewsKey(): String? = withContext(ioDispatcher) {
+        val key = try {
+            newsSource.getNewsKey()
+        } catch (e: BackendException) {
+            if(e.code == 404) throw InvalidKeyException(e)
+            else throw e
+        }
+        Log.d("testNewsKey", key.toString())
+        return@withContext key
     }
 }

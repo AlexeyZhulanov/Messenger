@@ -1,6 +1,7 @@
 package com.example.messenger
 
 import android.content.Context
+import android.util.Base64
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -12,9 +13,11 @@ import com.example.messenger.model.FileManager
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
-import com.example.messenger.model.Settings
 import com.example.messenger.model.User
 import com.example.messenger.model.WebSocketService
+import com.example.messenger.model.appsettings.AppSettings
+import com.example.messenger.security.BouncyCastleHelper
+import com.example.messenger.security.ChatKeyManager
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -22,6 +25,11 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.security.KeyFactory
+import java.security.KeyPair
+import java.security.PublicKey
+import java.security.spec.X509EncodedKeySpec
+import java.util.Arrays
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,6 +38,7 @@ class MessengerViewModel @Inject constructor(
     private val retrofitService: RetrofitService,
     private val fileManager: FileManager,
     private val webSocketService: WebSocketService,
+    private val appSettings: AppSettings,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
@@ -72,8 +81,7 @@ class MessengerViewModel @Inject constructor(
                 } catch (e: Exception) {Log.e("testInitUser", "Can't take user in db ${e.message}")}
                 val user = retrofitService.getUser(0) // 0 - currentUser
                 _currentUser.postValue(user)
-                if(user.id != initialUser?.id || user.username != initialUser.username ||
-                    user.avatar != initialUser.avatar) {
+                if(user != initialUser) {
                     Log.d("testUpdateCurUser", user.toString())
                     messengerService.updateUser(user)
                 }
@@ -95,20 +103,62 @@ class MessengerViewModel @Inject constructor(
         }
     }
 
-    fun createDialog(input: String) {
+    fun createDialog(name: String, keyCurrentUser: String?, onError: (String) -> Unit) {
         viewModelScope.launch {
-            if (retrofitService.createDialog(input)) {
-                _conversations.postValue(retrofitService.getConversations())
+            try {
+                val publicUserKeyString = retrofitService.getUserKey(name)
+
+                if (!publicUserKeyString.isNullOrEmpty() && !keyCurrentUser.isNullOrEmpty()) {
+                    val keyManager = ChatKeyManager()
+                    val symmetricKey = keyManager.generateChatKey()
+
+                    val publicKey1 = getPublicKey(keyCurrentUser)
+                    val publicKey2 = getPublicKey(publicUserKeyString)
+
+                    val userKeyByte1 = keyManager.wrapChatKeyForRecipient(symmetricKey, publicKey1)
+                    val userKeyByte2 = keyManager.wrapChatKeyForRecipient(symmetricKey, publicKey2)
+
+                    val userKey1 = Base64.encodeToString(userKeyByte1, Base64.NO_WRAP)
+                    val userKey2 = Base64.encodeToString(userKeyByte2, Base64.NO_WRAP)
+
+                    val newDialogId = retrofitService.createDialog(name, userKey1, userKey2)
+                    keyManager.storeChatKey(newDialogId, "dialog", symmetricKey)
+                    Arrays.fill(symmetricKey.encoded, 0.toByte())
+                    _conversations.postValue(retrofitService.getConversations())
+                } else onError("Ошибка: Пользователь ещё ни разу не заходил в мессенджер, создать диалог с ним нельзя!")
+            } catch (e: Exception) {
+                Log.d("testErrorCreateDialog", e.message.toString())
+                onError("Ошибка: Нет сети!")
             }
         }
     }
 
-    fun createGroup(input: String) {
+    fun createGroup(name: String, keyCurrentUser: String?, onError: (String) -> Unit) {
         viewModelScope.launch {
-            if (retrofitService.createGroup(input)) {
-                _conversations.postValue(retrofitService.getConversations())
+            try {
+                if(!keyCurrentUser.isNullOrEmpty()) {
+                    val keyManager = ChatKeyManager()
+                    val symmetricKey = keyManager.generateChatKey()
+
+                    val publicKey1 = getPublicKey(keyCurrentUser)
+                    val userKeyByte1 = keyManager.wrapChatKeyForRecipient(symmetricKey, publicKey1)
+                    val userKey1 = Base64.encodeToString(userKeyByte1, Base64.NO_WRAP)
+
+                    val newGroupId = retrofitService.createGroup(name, userKey1)
+                    keyManager.storeChatKey(newGroupId, "group", symmetricKey)
+                    Arrays.fill(symmetricKey.encoded, 0.toByte())
+                    _conversations.postValue(retrofitService.getConversations())
+                }
+            } catch (e: Exception) {
+                onError("Ошибка: Нет сети!")
             }
         }
+    }
+
+    private fun getPublicKey(key: String): PublicKey {
+        val publicKeyBytes = Base64.decode(key, Base64.NO_WRAP)
+        val keySpec = X509EncodedKeySpec(publicKeyBytes)
+        return KeyFactory.getInstance("RSA").generatePublic(keySpec)
     }
 
     fun forwardMessages(list: List<Message>?, usernames: List<String>?, id: Int) {
@@ -179,7 +229,9 @@ class MessengerViewModel @Inject constructor(
                 webSocketService.disconnect()
                 FirebaseMessaging.getInstance().deleteToken().await()
                 messengerService.deleteCurrentUser()
-                messengerService.updateSettings(Settings(0, remember = 0, "", ""))
+                appSettings.setCurrentAccessToken(null)
+                appSettings.setCurrentRefreshToken(null)
+                appSettings.setRemember(false)
             }
         }
     }

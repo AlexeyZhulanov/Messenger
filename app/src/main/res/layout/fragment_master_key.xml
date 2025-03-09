@@ -1,0 +1,132 @@
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fitsSystemWindows="true"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_margin="16dp">
+
+    <TextView
+        android:id="@+id/titleTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Создание Master Key"
+        android:textSize="28sp"
+        android:textColor="?attr/colorPrimaryDark"
+        android:textStyle="bold|italic"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/descriptionTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintTop_toBottomOf="@id/titleTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="4dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Info:"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:textColor="?attr/colorPrimaryDark"
+            android:layout_marginBottom="6dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Для обеспечения безопасности ваших данных вам необходимо создать Master Key. Этот ключ будет использоваться для шифрования ваших сообщений и диалогов."
+            android:textSize="14sp"
+            android:layout_marginBottom="10dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⚠️ ВАЖНО:"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:textColor="?attr/colorPrimaryDark"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="• Сохраните Master Key в надежном месте. Если вы потеряете ключ, доступ ко всем вашим диалогам и группам будет невозможен."
+            android:textSize="14sp"
+            android:textColor="?attr/colorError"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="• Вы можете ввести от 16 до 20 любых символов вручную, либо сгенерировать комбинацию автоматически (её можно редактировать) "
+            android:textSize="14sp"/>
+    </LinearLayout>
+
+    <EditText
+        android:id="@+id/masterKeyEditText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        tools:text="XXXX - XXXX - XXXX - XXXX"
+        android:textSize="22sp"
+        android:gravity="center"
+        android:padding="10dp"
+        android:background="@drawable/custom_edittext"
+        app:layout_constraintTop_toBottomOf="@id/descriptionTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="10dp"/>
+
+    <Button
+        android:id="@+id/generateButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Сгенерировать"
+        android:textColor="?attr/colorPrimaryDark"
+        app:layout_constraintTop_toBottomOf="@id/masterKeyEditText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp"/>
+
+    <Button
+        android:id="@+id/copyButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Скопировать"
+        android:textColor="?attr/colorPrimaryDark"
+        app:layout_constraintTop_toBottomOf="@id/generateButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp"/>
+
+    <Button
+        android:id="@+id/doneButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Готово"
+        android:textColor="?attr/colorPrimaryDark"
+        app:layout_constraintTop_toBottomOf="@id/copyButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="10dp" />
+
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:text="Не удалось создать ключ"
+        android:gravity="center"
+        app:layout_constraintStart_toStartOf="@id/doneButton"
+        app:layout_constraintEnd_toEndOf="@id/doneButton"
+        app:layout_constraintTop_toBottomOf="@id/doneButton"
+        android:textSize="16sp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        android:textColor="?attr/colorError" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

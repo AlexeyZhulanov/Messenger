@@ -10,7 +10,6 @@ import com.example.messenger.room.dao.GroupMessageDao
 import com.example.messenger.room.dao.LastReadMessageDao
 import com.example.messenger.room.dao.MessageDao
 import com.example.messenger.room.dao.NewsDao
-import com.example.messenger.room.dao.SettingsDao
 import com.example.messenger.room.dao.UnsentMessageDao
 import com.example.messenger.room.dao.UserDao
 import com.example.messenger.room.entities.ChatSettingsDbEntity
@@ -21,7 +20,6 @@ import com.example.messenger.room.entities.LastMessageEntity
 import com.example.messenger.room.entities.LastReadMessageEntity
 import com.example.messenger.room.entities.MessageDbEntity
 import com.example.messenger.room.entities.NewsDbEntity
-import com.example.messenger.room.entities.SettingsDbEntity
 import com.example.messenger.room.entities.UnsentMessageEntity
 import com.example.messenger.room.entities.UserDbEntity
 import com.example.messenger.room.entities.UserEntity
@@ -29,7 +27,6 @@ import com.example.messenger.room.entities.UserEntity
 @Database(
     version = 1,
     entities = [
-        SettingsDbEntity::class,
         ConversationEntity::class,
         UserEntity::class,
         LastMessageEntity::class,
@@ -46,7 +43,6 @@ import com.example.messenger.room.entities.UserEntity
 
 @TypeConverters(Converters::class)
 abstract class AppDatabase: RoomDatabase() {
-    abstract fun getSettingsDao(): SettingsDao
 
     abstract fun getConversationDao(): ConversationDao
 

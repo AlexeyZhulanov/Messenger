@@ -43,6 +43,8 @@ class GroupMessageViewModel @Inject constructor(
         private val _membersCount = MutableStateFlow(0)
         val membersCount: StateFlow<Int> get() = _membersCount
 
+        private var pagingSource: MessagePagingSource? = null
+
         @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
         val pagingDataFlow = searchBy.asFlow()
             .debounce(500)
@@ -50,16 +52,21 @@ class GroupMessageViewModel @Inject constructor(
                 currentPage.flatMapLatest { page ->
                     flow {
                         val pageSize = 30
-                        val messages = MessagePagingSource(retrofitService, messengerService, convId,
-                            searchQuery, fileManager, false).loadPage(page, pageSize)
-                        emit(messages)
+                        val messages = pagingSource?.loadPage(page, pageSize, searchQuery)
+                        if(messages != null) emit(messages)
                     }
                 }
             }
 
         init {
             viewModelScope.launch {
+                initFlow.collect {
+                    pagingSource = MessagePagingSource(retrofitService, messengerService, convId, fileManager, tinkAesGcmHelper, false)
+                }
+            }
+            viewModelScope.launch {
                 webSocketService.newMessageFlow.collect { message ->
+                    message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
                     Log.d("testSocketsMessage", "New Message: $message")
                     val newMessagePair = if(lastMessageDate == "") message to "" else message to formatMessageDate(message.timestamp)
                     _newMessageFlow.tryEmit(newMessagePair)
@@ -68,6 +75,7 @@ class GroupMessageViewModel @Inject constructor(
             }
             viewModelScope.launch {
                 webSocketService.editMessageFlow.collect { message ->
+                    message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
                     Log.d("testSocketsMessage", "Edited Message: $message")
                     _editMessageFlow.value = message
                     recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {

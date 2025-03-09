@@ -41,6 +41,11 @@ class TinkAesGcmHelper(private val aead: Aead) {
         val inputBytes = inputFile.readBytes()
         val cipherBytes = aead.encrypt(inputBytes, associatedData)
         FileOutputStream(outputFile).use { it.write(cipherBytes) }
+//        inputFile.inputStream().use { inputStream ->
+//            outputFile.outputStream().use { outputStream ->
+//                encryptStream(inputStream, outputStream, associatedData)
+//            }
+//        }
     }
 
     /**
@@ -51,5 +56,34 @@ class TinkAesGcmHelper(private val aead: Aead) {
         val cipherBytes = inputFile.readBytes()
         val plainBytes = aead.decrypt(cipherBytes, associatedData)
         FileOutputStream(outputFile).use { it.write(plainBytes) }
+//        inputFile.inputStream().use { inputStream ->
+//            outputFile.outputStream().use { outputStream ->
+//                decryptStream(inputStream, outputStream, associatedData)
+//            }
+//        }
     }
+
+//    /**
+//     * Шифрует данные из [inputStream] и записывает результат в [outputStream].
+//     */
+//    private fun encryptStream(inputStream: InputStream, outputStream: OutputStream, associatedData: ByteArray) {
+//        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+//        var bytesRead: Int
+//        while (inputStream.read(buffer).also { bytesRead = it } >= 0) {
+//            val cipherBytes = aead.encrypt(buffer.copyOf(bytesRead), associatedData)
+//            outputStream.write(cipherBytes)
+//        }
+//    }
+
+//    /**
+//     * Расшифровывает данные из [inputStream] и записывает результат в [outputStream].
+//     */
+//    private fun decryptStream(inputStream: InputStream, outputStream: OutputStream, associatedData: ByteArray) {
+//        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+//        var bytesRead: Int
+//        while (inputStream.read(buffer).also { bytesRead = it } >= 0) {
+//            val plainBytes = aead.decrypt(buffer.copyOf(bytesRead), associatedData)
+//            outputStream.write(plainBytes)
+//        }
+//    }
 }

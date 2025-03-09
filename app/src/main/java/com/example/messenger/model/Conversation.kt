@@ -8,7 +8,7 @@ data class Conversation(
     val name: String? = null,
     val createdBy: Int? = null,
     val avatar: String? = null,
-    val lastMessage: LastMessage? = null,
+    val lastMessage: LastMessage,
     val countMsg: Int,
     val canDelete: Boolean,
     val autoDeleteInterval: Int
@@ -18,14 +18,14 @@ data class Conversation(
         canDelete = canDelete, autoDeleteInterval = autoDeleteInterval)
 
     fun toGroup() : Group = Group(
-        id = id, name = name!!, createdBy = createdBy!!, avatar = avatar, lastMessage = lastMessage,
+        id = id, key = key, name = name!!, createdBy = createdBy!!, avatar = avatar, lastMessage = lastMessage,
         countMsg = countMsg, canDelete = canDelete, autoDeleteInterval = autoDeleteInterval)
 }
 data class Dialog(
     val id: Int,
     val key: String? = null,
     val otherUser: User,
-    val lastMessage: LastMessage? = null,
+    val lastMessage: LastMessage,
     val countMsg: Int,
     val canDelete: Boolean,
     val autoDeleteInterval: Int
@@ -33,10 +33,11 @@ data class Dialog(
 
 data class Group(
     val id: Int,
+    val key: String? = null,
     val name: String,
     val createdBy: Int,
     val avatar: String? = null,
-    val lastMessage: LastMessage? = null,
+    val lastMessage: LastMessage,
     val countMsg: Int,
     val canDelete: Boolean,
     val autoDeleteInterval: Int

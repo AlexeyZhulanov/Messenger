@@ -17,14 +17,15 @@ data class UserDbEntity(
     @ColumnInfo(name = "id_user") val idUser: Int,
     val name: String,
     val username: String,
-    val avatar: String? = null
+    val avatar: String? = null,
+    @ColumnInfo(name = "public_key") val publicKey: String? = null
 ) {
     fun toUser() : User = User(
-        id = idUser, name = name, username = username, avatar = avatar
+        id = idUser, name = name, username = username, avatar = avatar, publicKey = publicKey
     )
 
     companion object {
         fun fromUserInput(user: User) : UserDbEntity = UserDbEntity(
-            idUser = user.id, name = user.name, username = user.username, avatar = user.avatar)
+            idUser = user.id, name = user.name, username = user.username, avatar = user.avatar, publicKey = user.publicKey)
     }
 }
