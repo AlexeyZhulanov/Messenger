@@ -135,7 +135,6 @@ abstract class BaseChatViewModel(
         val aead = chatKeyManager.getAead(convId, chatTypeString)
         if(aead != null) {
             tinkAesGcmHelper = TinkAesGcmHelper(aead)
-            Log.d("testAeadGet", aead.toString())
         } else {
             if(chatKey != "") {
                 val wrappedKey = Base64.decode(chatKey, Base64.NO_WRAP)

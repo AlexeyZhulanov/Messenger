@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.net.URISyntaxException
+import java.util.Base64
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -71,9 +72,13 @@ class WebSocketService @Inject constructor(
         .build()
 
     fun connect() {
+        val token = appSettings.getCurrentAccessToken()
+
+        val flagExpiredInit = if(token != null) isTokenExpired(token) else false
+
         val options = IO.Options().apply {
             transports = arrayOf(WebSocket.NAME)
-            extraHeaders = mapOf("Authorization" to listOf(appSettings.getCurrentAccessToken() ?: ""))
+            extraHeaders = mapOf("Authorization" to listOf(token ?: ""))
             reconnection = true
             reconnectionAttempts = Int.MAX_VALUE
             reconnectionDelay = 5000
@@ -88,6 +93,9 @@ class WebSocketService @Inject constructor(
                 Log.d("testSocketIO", "Connection error: ${args[0]}")
             }.on(Socket.EVENT_DISCONNECT) {
                 Log.d("testSocketIO", "Disconnected")
+                if(flagExpiredInit) {
+                    refresh()
+                }
             }
             // Register additional event listeners here
             registerEventListeners()
@@ -129,37 +137,61 @@ class WebSocketService @Inject constructor(
     }
 
     private val onTokenExpired = Emitter.Listener {
+        refresh()
+    }
+
+    private fun refresh() {
         Log.d("testSocketIO", "Token has expired, refreshing token")
         serviceScope.launch {
+
+            if (appSettings.isTokenRefreshing() || appSettings.isTokenRecentlyRefreshed()) {
+                Log.d("testSocketIO", "Token is already being refreshed or was recently refreshed")
+                delay(1000) // Небольшая задержка перед реконнектом
+                reconnect()
+                return@launch
+            }
+
+            appSettings.setTokenRefreshing(true)
+
             val refreshToken = appSettings.getCurrentRefreshToken()
             if(refreshToken.isNullOrEmpty()) {
                 Log.d("testSocketIO", "Error: Empty refresh token")
+                appSettings.setTokenRefreshing(false)
                 return@launch
             }
+
+            appSettings.setCurrentAccessToken(null)
+
             val newAccessToken = try {
                 retrofitService.refreshToken(refreshToken)
             } catch (e: Exception) {
                 Log.d("testSocketIO", "Error: Couldn't update the token")
+                appSettings.setTokenRefreshing(false)
                 return@launch
             }
             appSettings.setCurrentAccessToken(newAccessToken)
+            appSettings.setTokenRefreshing(false)
 
             Log.d("testSocketIO", "Try to reconnect sockets")
-            // send last emit
-            if(lastData != null && lastEvent != null) {
-                socket.disconnect()
-                delay(200)
-                connect()
-                socket.emit(lastEvent, lastData)
-                lastData = null
-                lastEvent = null
-            } else {
-                socket.disconnect()
-                delay(200)
-                connect()
-                lastData = null
-                lastEvent = null
-            }
+            reconnect()
+        }
+    }
+
+    private suspend fun reconnect() {
+        // send last emit
+        if(lastData != null && lastEvent != null) {
+            socket.disconnect()
+            delay(200)
+            connect()
+            socket.emit(lastEvent, lastData)
+            lastData = null
+            lastEvent = null
+        } else {
+            socket.disconnect()
+            delay(200)
+            connect()
+            lastData = null
+            lastEvent = null
         }
     }
 
@@ -275,6 +307,26 @@ class WebSocketService @Inject constructor(
     suspend fun isNotificationsEnabled(chatId: Int, type: Boolean): Boolean {
         return notificationEnabledCache.getOrPut(Pair(chatId, type)) {
             messengerService.isNotificationsEnabled(chatId, type)
+        }
+    }
+
+    private fun isTokenExpired(token: String): Boolean {
+        return try {
+            val parts = token.split(".")
+            if (parts.size != 3) {
+                throw IllegalArgumentException("Invalid JWT token")
+            }
+
+            val payload = String(Base64.getUrlDecoder().decode(parts[1]))
+            val jsonObject = JSONObject(payload)
+
+            val exp = jsonObject.getLong("exp")
+            val currentTime = System.currentTimeMillis() / 1000
+
+            currentTime >= exp
+        } catch (e: Exception) {
+            Log.e("WebSocketService", "Error decoding token", e)
+            true // В случае ошибки считаем токен невалидным
         }
     }
 }

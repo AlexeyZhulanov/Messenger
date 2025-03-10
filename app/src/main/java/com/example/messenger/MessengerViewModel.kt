@@ -226,6 +226,7 @@ class MessengerViewModel @Inject constructor(
     fun clearCurrentUser() {
         viewModelScope.launch {
             withContext(NonCancellable) {
+                Log.d("testClearUser", "OK")
                 webSocketService.disconnect()
                 FirebaseMessaging.getInstance().deleteToken().await()
                 messengerService.deleteCurrentUser()
