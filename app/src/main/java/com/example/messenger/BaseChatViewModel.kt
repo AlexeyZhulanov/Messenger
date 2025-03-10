@@ -334,11 +334,12 @@ abstract class BaseChatViewModel(
             val name = path.substringBeforeLast(".")
 
             val previewFile = if(isVideo) {
-                imageUtils.createVideoPreview(photo, name, 300, 300)
+                imageUtils.createVideoPreview(context, photo, name, 300, 300)
             } else imageUtils.createImagePreview(context, photo, name, 300, 300)
 
             retrofitService.uploadPhotoPreview(convId, previewFile, isGroup)
 
+            previewFile.delete()
             tempFile.delete()
             Pair(path, true)
         } catch (e: Exception) {
