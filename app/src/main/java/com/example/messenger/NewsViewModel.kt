@@ -77,10 +77,12 @@ class NewsViewModel @Inject constructor(
                 tinkAesGcmHelper = TinkAesGcmHelper(aead)
                 return@launch
             }
-            val wrappedKeyString = retrofitService.getNewsKey() ?: run {
-                Log.d("testErrorTinkInit", "News key is null")
-                return@launch
-            }
+            val wrappedKeyString = try {
+                retrofitService.getNewsKey() ?: run {
+                    Log.d("testErrorTinkInit", "News key is null")
+                    return@launch
+                }
+            } catch (e: Exception) { return@launch }
             val wrappedKey = Base64.decode(wrappedKeyString, Base64.NO_WRAP)
 
             val id = userId ?: messengerService.getUser()?.id ?: run {
@@ -233,24 +235,26 @@ class NewsViewModel @Inject constructor(
     }
 
     private fun encryptText(text: String?) : String? {
-        return text?.let { tinkAesGcmHelper?.encryptText(it) }
+        val txt = text?.let { tinkAesGcmHelper?.encryptText(it) }
+        Log.d("testEnctyptNewsText", txt.toString())
+        return txt
     }
 
     suspend fun sendNews(headerText: String, text: String?, images: List<String>?,
                          voices: List<String>?, files: List<String>?): Boolean {
         return try {
-            encryptText(text)
-            encryptText(headerText)
-            retrofitService.sendNews(headerText, text, images, voices, files)
+            val bodyText = encryptText(text)
+            val headText = encryptText(headerText) ?: "Новая новость"
+            retrofitService.sendNews(headText, bodyText, images, voices, files)
         } catch (e: Exception) { false }
     }
 
     suspend fun editNews(newsId: Int, headerText: String, text: String?, images: List<String>?,
                          voices: List<String>?, files: List<String>?): Boolean {
         return try {
-            encryptText(text)
-            encryptText(headerText)
-            retrofitService.editNews(newsId, headerText, text, images, voices, files)
+            val bodyText = encryptText(text)
+            val headText = encryptText(headerText) ?: "Новая новость"
+            retrofitService.editNews(newsId, headText, bodyText, images, voices, files)
         } catch (e: Exception) { false }
     }
 

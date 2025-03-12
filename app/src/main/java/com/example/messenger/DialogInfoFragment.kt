@@ -39,6 +39,8 @@ class DialogInfoFragment(
 
     override fun getUpperName(): String = dialog.otherUser.username
 
+    override fun getIsOwner(): Boolean = dialog.isOwner
+
     override fun getCanDelete(): Boolean = dialog.canDelete
 
     override fun getInterval(): Int = dialog.autoDeleteInterval

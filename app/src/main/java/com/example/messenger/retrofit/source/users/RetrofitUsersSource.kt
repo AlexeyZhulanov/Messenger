@@ -2,7 +2,6 @@ package com.example.messenger.retrofit.source.users
 
 import com.example.messenger.model.User
 import com.example.messenger.retrofit.api.UsersApi
-import com.example.messenger.retrofit.entities.users.KeyRequestEntity
 import com.example.messenger.retrofit.entities.users.KeysRequestEntity
 import com.example.messenger.retrofit.entities.users.LoginRequestEntity
 import com.example.messenger.retrofit.entities.users.RegisterRequestEntity
@@ -34,8 +33,10 @@ class RetrofitUsersSource(
         usersApi.updateProfile(updateProfileRequestEntity).message
     }
 
-    override suspend fun updatePassword(password: String): String = wrapRetrofitExceptions {
-        val updatePasswordRequestEntity = UpdatePasswordRequestEntity(password = password)
+    override suspend fun updatePassword(oldPassword: String, newPassword: String): String = wrapRetrofitExceptions {
+        val updatePasswordRequestEntity = UpdatePasswordRequestEntity(
+            oldPassword = oldPassword, newPassword = newPassword
+        )
         usersApi.updatePassword(updatePasswordRequestEntity).message
     }
 

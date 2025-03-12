@@ -8,15 +8,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.FileManager
-import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.User
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -27,7 +24,6 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val prefs: SharedPreferences,
     private val retrofitService: RetrofitService,
-    private val messengerService: MessengerService,
     private val fileManager: FileManager,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
@@ -93,13 +89,12 @@ class SettingsViewModel @Inject constructor(
 
     fun updatePassword(oldPassword: String, newPassword: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
-            // todo здесь нужно сделать нормальный запрос со старым и новым паролем обязательно
             if(newPassword != oldPassword) {
-                val result = retrofitService.updatePassword(newPassword)
+                val result = retrofitService.updatePassword(oldPassword, newPassword)
                 if (result) {
                     onSuccess()
                 } else {
-                    onError("Ошибка: Имя пользователя уже занято")
+                    onError("Ошибка: Неверный старый пароль либо нет сети")
                 }
             } else {
                 onError("Ошибка: Старый и новый пароли совпадают")

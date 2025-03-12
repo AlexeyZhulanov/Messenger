@@ -33,7 +33,6 @@ import com.example.messenger.databinding.ItemTextImagesReceiverBinding
 import com.example.messenger.databinding.ItemTextImagesSenderBinding
 import com.example.messenger.databinding.ItemVoiceReceiverBinding
 import com.example.messenger.databinding.ItemVoiceSenderBinding
-import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
 import com.example.messenger.picker.DateUtils
@@ -75,14 +74,14 @@ class MessageAdapter(
     private val currentUserId: Int,
     private val context: Context,
     private val messageViewModel: BaseChatViewModel,
-    private val isGroup: Boolean
+    private val isGroup: Boolean,
+    private val canDelete: Boolean
 ) : ListAdapter<Pair<Message, String>, RecyclerView.ViewHolder>(MessageDiffCallback()) {
     var members: Map<Int, Pair<String?, String?>?> = mapOf()
     var membersFull: List<User> = listOf()
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
     private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
-    var dialogSettings: ConversationSettings = ConversationSettings()
     private var highlightedPosition: Int? = null
     private val uiScopeMain = CoroutineScope(Dispatchers.Main)
 
@@ -491,7 +490,7 @@ class MessageAdapter(
                     } else binding.spaceAvatar.visibility = View.VISIBLE
                 } else binding.spaceAvatar.visibility = View.VISIBLE
             } else binding.spaceAvatar.visibility = View.GONE
-            if(!canLongClick && dialogSettings.canDelete) {
+            if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
@@ -882,7 +881,7 @@ class MessageAdapter(
                     } else binding.spaceAvatar.visibility = View.VISIBLE
                 } else binding.spaceAvatar.visibility = View.VISIBLE
             } else binding.spaceAvatar.visibility = View.GONE
-            if(!canLongClick) {
+            if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
@@ -933,7 +932,7 @@ class MessageAdapter(
             uiScopeMain.launch {
                 val filePathTemp = async {
                     if(message.isUnsent == true) {
-                        return@async Pair(message.localFilePaths?.first(), true)
+                        return@async Pair(message.localFilePaths?.firstOrNull(), true)
                     } else {
                         val voice = message.voice ?: "nonWork"
                         if (messageViewModel.fManagerIsExist(voice)) {
@@ -1148,7 +1147,7 @@ class MessageAdapter(
                     } else binding.spaceAvatar.visibility = View.VISIBLE
                 } else binding.spaceAvatar.visibility = View.VISIBLE
             } else binding.spaceAvatar.visibility = View.GONE
-            if(!canLongClick) {
+            if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
@@ -1196,7 +1195,7 @@ class MessageAdapter(
             uiScopeMain.launch {
                 val filePathTemp = async {
                     if(message.isUnsent == true) {
-                        return@async Pair(message.localFilePaths?.first(), true)
+                        return@async Pair(message.localFilePaths?.firstOrNull(), true)
                     } else {
                         if (messageViewModel.fManagerIsExist(message.file!!)) {
                             return@async Pair(messageViewModel.fManagerGetFilePath(message.file!!), true)
@@ -1402,7 +1401,7 @@ class MessageAdapter(
                     } else binding.spaceAvatar.visibility = View.VISIBLE
                 } else binding.spaceAvatar.visibility = View.VISIBLE
             } else binding.spaceAvatar.visibility = View.GONE
-            if(!canLongClick && dialogSettings.canDelete) {
+            if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
@@ -1465,7 +1464,7 @@ class MessageAdapter(
                 binding.progressBar.visibility = View.VISIBLE
                 val filePathTemp = async {
                     if(message.isUnsent == true) {
-                        return@async Pair(message.localFilePaths?.first(), true)
+                        return@async Pair(message.localFilePaths?.firstOrNull(), true)
                     } else {
                         if (messageViewModel.fManagerIsExist(message.images?.first() ?: "nonWork")) {
                             return@async Pair(messageViewModel.fManagerGetFilePath(message.images!!.first()), true)
@@ -1689,7 +1688,7 @@ class MessageAdapter(
                     } else binding.spaceAvatar.visibility = View.VISIBLE
                 } else binding.spaceAvatar.visibility = View.VISIBLE
             } else binding.spaceAvatar.visibility = View.GONE
-            if(!canLongClick) {
+            if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {

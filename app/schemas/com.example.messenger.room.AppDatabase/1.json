@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "43bcba8a04346e27e465263e0fe8ee52",
+    "identityHash": "64c385a4bbf2e60b0661880d753f3762",
     "entities": [
       {
         "tableName": "conversations",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `type` TEXT NOT NULL, `key` TEXT, `other_user_id` INTEGER, `name` TEXT, `created_by` INTEGER, `avatar` TEXT, `last_message_id` INTEGER, `count_msg` INTEGER NOT NULL, `can_delete` INTEGER NOT NULL, `auto_delete_interval` INTEGER NOT NULL, `order_index` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `type` TEXT NOT NULL, `key` TEXT, `other_user_id` INTEGER, `name` TEXT, `created_by` INTEGER, `avatar` TEXT, `last_message_id` INTEGER, `count_msg` INTEGER NOT NULL, `is_owner` INTEGER NOT NULL, `can_delete` INTEGER NOT NULL, `auto_delete_interval` INTEGER NOT NULL, `order_index` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -59,6 +59,12 @@
           {
             "fieldPath": "countMsg",
             "columnName": "count_msg",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isOwner",
+            "columnName": "is_owner",
             "affinity": "INTEGER",
             "notNull": true
           },
@@ -759,7 +765,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '43bcba8a04346e27e465263e0fe8ee52')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '64c385a4bbf2e60b0661880d753f3762')"
     ]
   }
 }

@@ -31,8 +31,12 @@ class MessagePagingSource(
         return try {
             val messages = if (currentQuery.isEmpty()) {
                 try {
-                    if(isDialog) retrofitService.getMessages(convId, pageIndex, pageSize)
+                    val mes = if(isDialog) retrofitService.getMessages(convId, pageIndex, pageSize)
                     else retrofitService.getGroupMessages(convId, pageIndex, pageSize)
+                    mes.forEach {
+                        it.text = it.text?.let { text -> tinkAesGcmHelper?.decryptText(text) }
+                    }
+                    mes
                 } catch (e: Exception) {
                     if(flag) {
                         flag = false
@@ -45,10 +49,14 @@ class MessagePagingSource(
                     if (invertedIndex == null) {
                         val allMessages = if (isDialog) retrofitService.searchMessagesInDialog(convId)
                         else retrofitService.searchMessagesInGroup(convId)
+                        allMessages.forEach {
+                            it.text = it.text?.let { text -> tinkAesGcmHelper?.decryptText(text) } ?: ""
+                        }
                         invertedIndex = InvertedIndex(allMessages)
                     }
-                    val result = invertedIndex!!.searchMessages(currentQuery)
+                    val result = invertedIndex?.searchMessages(currentQuery) ?: throw Exception()
                     searchCache[currentQuery] = result
+                    Log.d("testResSearch", result.toString())
                     result
                 }
             }
@@ -57,7 +65,6 @@ class MessagePagingSource(
             val dates = mutableSetOf<String>()
             val messageDatePairs = mutableListOf<Pair<Message, String>>()
             messages.forEach {
-                it.text = it.text?.let { text -> tinkAesGcmHelper?.decryptText(text) }
                 val tTime = formatMessageDate(it.timestamp)
                 if (tTime !in dates) {
                     messageDatePairs.add(it to tTime)

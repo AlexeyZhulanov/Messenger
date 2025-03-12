@@ -1,6 +1,5 @@
 package com.example.messenger.retrofit.source.groups
 
-import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
 import com.example.messenger.model.UserShort
@@ -45,8 +44,6 @@ interface GroupsSource {
     suspend fun updateGroupAutoDeleteInterval(groupId: Int, autoDeleteInterval: Int) : String
 
     suspend fun deleteGroupMessagesAll(groupId: Int) : String
-
-    suspend fun getGroupSettings(groupId: Int) : ConversationSettings
 
     suspend fun searchMessagesInGroup(groupId: Int) : List<Message>
 

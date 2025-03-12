@@ -13,6 +13,7 @@ import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.User
 import com.example.messenger.model.WebSocketService
+import com.example.messenger.model.appsettings.AppSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -35,8 +36,9 @@ class GroupMessageViewModel @Inject constructor(
     retrofitService: RetrofitService,
     fileManager: FileManager,
     webSocketService: WebSocketService,
+    appSettings: AppSettings,
     @IoDispatcher ioDispatcher: CoroutineDispatcher
-) : BaseChatViewModel(messengerService, retrofitService, fileManager, webSocketService, ioDispatcher)
+) : BaseChatViewModel(messengerService, retrofitService, fileManager, webSocketService, appSettings, ioDispatcher)
     {
         var currentMemberList: List<User> = emptyList()
 

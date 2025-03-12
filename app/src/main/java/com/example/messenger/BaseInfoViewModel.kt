@@ -10,8 +10,8 @@ import com.example.messenger.model.ChatSettings
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
-import com.example.messenger.model.WebSocketService
 import com.example.messenger.security.ChatKeyManager
+import com.example.messenger.security.TinkAesGcmHelper
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,9 +40,15 @@ class BaseInfoViewModel @Inject constructor(
     private var isGroup: Int = 0
     private val tempFiles = mutableSetOf<String>()
 
+    private val chatKeyManager = ChatKeyManager()
+    private var tinkAesGcmHelper: TinkAesGcmHelper? = null
+
     fun setConvInfo(convId: Int, isGroup: Int) {
         this.convId = convId
         this.isGroup = isGroup
+        val chatTypeString = if(isGroup == 0) "dialog" else "group"
+        val aead = chatKeyManager.getAead(convId, chatTypeString)
+        aead?.let { tinkAesGcmHelper = TinkAesGcmHelper(it) }
     }
 
     suspend fun addMember(currentKeyString: String?, name: String, currentUserId: Int, callback: (String) -> Unit) {
@@ -126,7 +132,18 @@ class BaseInfoViewModel @Inject constructor(
     }
 
     suspend fun getPreview(context: Context, filename: String): String {
-        return retrofitService.getMediaPreview(context, convId, filename, isGroup)
+        val previewPath = retrofitService.getMediaPreview(context, convId, filename, isGroup)
+        return decryptPath(previewPath)
+    }
+
+    private fun decryptPath(path: String): String {
+        if(tinkAesGcmHelper == null) return ""
+
+        val downloadedFile = File(path)
+
+        tinkAesGcmHelper?.decryptFile(downloadedFile, downloadedFile)
+
+        return downloadedFile.absolutePath
     }
 
     suspend fun deleteAllMessages() {
@@ -163,12 +180,14 @@ class BaseInfoViewModel @Inject constructor(
     }
 
     suspend fun downloadFile(context: Context, folder: String, filename: String): String {
-        return retrofitService.downloadFile(context, folder, convId, filename, isGroup)
+        val downloadedFilePath = retrofitService.downloadFile(context, folder, convId, filename, isGroup)
+        return decryptPath(downloadedFilePath)
     }
 
     fun downloadFileJava(context: Context, folder: String, filename: String): String {
         return runBlocking {
-            retrofitService.downloadFile(context, folder, convId, filename, isGroup)
+            val downloadedFilePath = retrofitService.downloadFile(context, folder, convId, filename, isGroup)
+            decryptPath(downloadedFilePath)
         }
     }
 

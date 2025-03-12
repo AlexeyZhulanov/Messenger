@@ -78,14 +78,14 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun updatePassword(password: String): Boolean = withContext(ioDispatcher) {
+    override suspend fun updatePassword(oldPassword: String, newPassword: String): Boolean = withContext(ioDispatcher) {
         val message = try {
-            usersSource.updatePassword(password)
+            usersSource.updatePassword(oldPassword, newPassword)
         } catch (e: BackendException) {
-            if (e.code == 404) {
-                throw UserNotFoundException(e)
-            } else {
-                throw e
+            throw when(e.code) {
+                404 -> UserNotFoundException(e)
+                400 -> InvalidCredentialsException(e)
+                else -> e
             }
         }
         Log.d("testUpdatePassword", message)
@@ -331,19 +331,6 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun getDialogSettings(dialogId: Int): ConversationSettings = withContext(ioDispatcher) {
-        val settings = try {
-            messagesSource.getDialogSettings(dialogId)
-        } catch (e: BackendException) {
-            when (e.code) {
-                404 -> throw DialogNotFoundException(e)
-                else -> throw e
-            }
-        }
-        Log.d("testGetDialogSettings", settings.toString())
-        return@withContext settings
-    }
-
     override suspend fun createGroup(name: String, key: String): Int = withContext(ioDispatcher) {
         val groupId = try {
             groupsSource.createGroup(name, key)
@@ -582,19 +569,6 @@ class RetrofitService(
         }
         Log.d("testDeleteGroupMessagesAll", message)
         return@withContext true
-    }
-
-    override suspend fun getGroupSettings(groupId: Int): ConversationSettings = withContext(ioDispatcher) {
-        val settings = try {
-            groupsSource.getGroupSettings(groupId)
-            } catch (e: BackendException) {
-            when (e.code) {
-                404 -> throw GroupNotFoundException(e)
-                else -> throw e
-            }
-        }
-        Log.d("testGetGroupSettings", settings.toString())
-        return@withContext settings
     }
 
     override suspend fun searchMessagesInGroup(groupId: Int): List<Message> = withContext(ioDispatcher) {

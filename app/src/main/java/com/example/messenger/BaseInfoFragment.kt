@@ -62,6 +62,7 @@ abstract class BaseInfoFragment : Fragment() {
 
     abstract fun getAvatarString(): String
     abstract fun getUpperName(): String
+    abstract fun getIsOwner(): Boolean
     abstract fun getCanDelete(): Boolean
     abstract fun getInterval(): Int
     abstract fun getMembers(): List<User>
@@ -143,6 +144,16 @@ abstract class BaseInfoFragment : Fragment() {
         lifecycleScope.launch {
             binding.switchNotifications.isChecked = viewModel.isNotificationsEnabled()
         }
+        if(getIsOwner()) {
+            binding.switchDelete.setOnClickListener {
+                binding.switchDelete.isEnabled = false
+                lifecycleScope.launch {
+                    viewModel.toggleCanDeleteDialog()
+                    delay(5000)
+                    binding.switchDelete.isEnabled = true
+                }
+            }
+        } else binding.switchDelete.isEnabled = false
         binding.switchDelete.isChecked = getCanDelete()
         binding.switchNotifications.setOnClickListener {
             binding.switchNotifications.isEnabled = false
@@ -150,14 +161,6 @@ abstract class BaseInfoFragment : Fragment() {
                 viewModel.turnNotifications()
                 delay(5000)
                 binding.switchNotifications.isEnabled = true
-            }
-        }
-        binding.switchDelete.setOnClickListener {
-            binding.switchDelete.isEnabled = false
-            lifecycleScope.launch {
-                viewModel.toggleCanDeleteDialog()
-                delay(5000)
-                binding.switchDelete.isEnabled = true
             }
         }
         binding.loadButton.setOnClickListener {

@@ -1,6 +1,5 @@
 package com.example.messenger.retrofit.source.groups
 
-import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
 import com.example.messenger.model.UserShort
@@ -106,10 +105,6 @@ class RetrofitGroupsSource(
 
     override suspend fun deleteGroupMessagesAll(groupId: Int): String = wrapRetrofitExceptions {
         groupsApi.deleteGroupMessagesAll(groupId).message
-    }
-
-    override suspend fun getGroupSettings(groupId: Int): ConversationSettings = wrapRetrofitExceptions {
-        groupsApi.getGroupSettings(groupId).toConversationSettings()
     }
 
     override suspend fun searchMessagesInGroup(groupId: Int): List<Message> = wrapRetrofitExceptions {

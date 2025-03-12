@@ -5,12 +5,10 @@ import com.example.messenger.retrofit.entities.messages.ConversationEntity
 import com.example.messenger.retrofit.entities.messages.DeleteMessagesRequestEntity
 import com.example.messenger.retrofit.entities.messages.DialogCreateRequestEntity
 import com.example.messenger.retrofit.entities.messages.DialogCreateResponseEntity
-import com.example.messenger.retrofit.entities.messages.GetDialogSettingsResponseEntity
 import com.example.messenger.retrofit.entities.messages.GetUsersResponseEntity
 import com.example.messenger.retrofit.entities.messages.Message
 import com.example.messenger.retrofit.entities.messages.SendMessageRequestEntity
 import com.example.messenger.retrofit.entities.messages.UpdateAutoDeleteIntervalRequestEntity
-import com.example.messenger.retrofit.entities.users.KeyRequestEntity
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -93,8 +91,4 @@ interface MessagesApi {
         @Path("dialog_id") dialogId: Int,
     ) : ResponseEntityMessageAnswer
 
-    @GET("dialog/{dialog_id}/settings")
-    suspend fun getDialogSettings(
-        @Path("dialog_id") dialogId: Int,
-    ) : GetDialogSettingsResponseEntity
 }

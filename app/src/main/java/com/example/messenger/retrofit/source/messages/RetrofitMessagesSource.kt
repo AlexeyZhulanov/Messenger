@@ -1,7 +1,6 @@
 package com.example.messenger.retrofit.source.messages
 
 import com.example.messenger.model.Conversation
-import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.Message
 import com.example.messenger.model.UserShort
 import com.example.messenger.retrofit.api.MessagesApi
@@ -9,7 +8,6 @@ import com.example.messenger.retrofit.entities.messages.DeleteMessagesRequestEnt
 import com.example.messenger.retrofit.entities.messages.DialogCreateRequestEntity
 import com.example.messenger.retrofit.entities.messages.SendMessageRequestEntity
 import com.example.messenger.retrofit.entities.messages.UpdateAutoDeleteIntervalRequestEntity
-import com.example.messenger.retrofit.entities.users.KeyRequestEntity
 import com.example.messenger.retrofit.source.base.BaseRetrofitSource
 import com.example.messenger.retrofit.source.base.RetrofitConfig
 
@@ -91,9 +89,5 @@ class RetrofitMessagesSource(
 
     override suspend fun deleteDialogMessages(dialogId: Int): String = wrapRetrofitExceptions {
         messagesApi.deleteDialogMessages(dialogId).message
-    }
-
-    override suspend fun getDialogSettings(dialogId: Int): ConversationSettings = wrapRetrofitExceptions {
-        messagesApi.getDialogSettings(dialogId).toConversationSettings()
     }
 }

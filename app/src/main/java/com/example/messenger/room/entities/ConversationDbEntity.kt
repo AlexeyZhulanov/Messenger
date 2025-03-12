@@ -28,7 +28,8 @@ data class ConversationDbEntity(
         otherUser = otherUser?.toUser(), name = conversation.name,
         createdBy = conversation.createdBy, avatar = conversation.avatar,
         lastMessage = lastMessage.toLastMessage(), countMsg = conversation.countMsg,
-        canDelete = conversation.canDelete, autoDeleteInterval = conversation.autoDeleteInterval
+        isOwner = conversation.isOwner, canDelete = conversation.canDelete,
+        autoDeleteInterval = conversation.autoDeleteInterval
     )
     companion object {
         fun fromUserInput(conversation: Conversation, orderIndex: Int): ConversationDbEntity {
@@ -61,6 +62,7 @@ data class ConversationDbEntity(
                 avatar = conversation.avatar,
                 lastMessageId = lastMessageEntity.id,
                 countMsg = conversation.countMsg,
+                isOwner = conversation.isOwner,
                 canDelete = conversation.canDelete,
                 autoDeleteInterval = conversation.autoDeleteInterval,
                 orderIndex = orderIndex
@@ -86,6 +88,7 @@ data class ConversationEntity(
     var avatar: String? = null,
     @ColumnInfo(name = "last_message_id") var lastMessageId: Int? = null,
     @ColumnInfo(name = "count_msg") var countMsg: Int,
+    @ColumnInfo(name = "is_owner") var isOwner: Boolean,
     @ColumnInfo(name = "can_delete") var canDelete: Boolean,
     @ColumnInfo(name = "auto_delete_interval") var autoDeleteInterval: Int,
     @ColumnInfo(name = "order_index") var orderIndex: Int

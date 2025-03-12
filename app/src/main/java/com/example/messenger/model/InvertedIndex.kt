@@ -8,7 +8,7 @@ class InvertedIndex(private val messages: List<Message>) {
         for (message in messages) {
             val words = message.text!!.split(" ") // С сервера приходят только not null text-сообщения
             for (word in words) {
-                index.getOrPut(word) { mutableListOf() }.add(message)
+                index.getOrPut(word.lowercase()) { mutableListOf() }.add(message)
             }
         }
     }
@@ -16,7 +16,7 @@ class InvertedIndex(private val messages: List<Message>) {
     fun searchMessages(query: String): List<Message> {
         val matchingMessages = mutableSetOf<Message>()
         for ((word, messages) in index) {
-            if (word.startsWith(query)) {
+            if (word.startsWith(query.lowercase())) {
                 matchingMessages.addAll(messages)
             }
         }

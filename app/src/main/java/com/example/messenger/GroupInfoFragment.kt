@@ -84,6 +84,8 @@ class GroupInfoFragment(
 
     override fun getUpperName(): String = group.name
 
+    override fun getIsOwner(): Boolean = group.isOwner
+
     override fun getCanDelete(): Boolean = group.canDelete
 
     override fun getInterval(): Int = group.autoDeleteInterval
