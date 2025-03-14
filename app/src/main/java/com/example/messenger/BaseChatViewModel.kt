@@ -306,9 +306,11 @@ abstract class BaseChatViewModel(
         }
     }
 
-    suspend fun findMessage(idMessage: Int): Pair<Message, Int> {
-        return if(isGroup == 0) retrofitService.findMessage(idMessage, convId)
-        else retrofitService.findGroupMessage(idMessage, convId)
+    suspend fun findMessage(idMessage: Int): Pair<Message, Int>? {
+        return try {
+            if(isGroup == 0) retrofitService.findMessage(idMessage, convId)
+            else retrofitService.findGroupMessage(idMessage, convId)
+        } catch (e: Exception) { null }
     }
 
     suspend fun getUnsentMessages(): List<Message>? {
@@ -428,20 +430,16 @@ abstract class BaseChatViewModel(
         fileManager.saveMessageFile(fileName, fileData)
     }
 
-    fun fManagerIsExistAvatar(fileName: String): Boolean {
+    private fun fManagerIsExistAvatar(fileName: String): Boolean {
         return fileManager.isExistAvatar(fileName)
     }
 
-    fun fManagerGetAvatarPath(fileName: String): String {
+    private fun fManagerGetAvatarPath(fileName: String): String {
         return fileManager.getAvatarFilePath(fileName)
     }
 
-    suspend fun fManagerSaveAvatar(fileName: String, fileData: ByteArray) = withContext(ioDispatcher) {
+    private suspend fun fManagerSaveAvatar(fileName: String, fileData: ByteArray) = withContext(ioDispatcher) {
         fileManager.saveAvatarFile(fileName, fileData)
-    }
-
-    fun fManagerIsExistUnsent(fileName: String): Boolean {
-        return fileManager.isExistUnsentMessage(fileName)
     }
 
     suspend fun fManagerDeleteUnsent(files: List<String>) = withContext(ioDispatcher) {

@@ -5,11 +5,11 @@ import android.media.MediaMetadataRetriever
 import android.util.Base64
 import androidx.lifecycle.ViewModel
 import com.example.messenger.di.IoDispatcher
-import com.example.messenger.model.BackendException
 import com.example.messenger.model.ChatSettings
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.model.UserNotFoundException
 import com.example.messenger.security.ChatKeyManager
 import com.example.messenger.security.TinkAesGcmHelper
 import com.luck.picture.lib.config.PictureMimeType
@@ -71,8 +71,8 @@ class BaseInfoViewModel @Inject constructor(
 
                     if(success) callback("Пользователь успешно добавлен") else callback("Не удалось добавить пользователя")
                 } else callback("Ошибка: Пользователь ни разу не заходил в мессенджер, невозможно его добавить в группу!")
-            } catch (e: BackendException) {
-                callback("Ошибка: Пользователя не существует") // todo проверить работоспособность
+            } catch (e: UserNotFoundException) {
+                callback("Ошибка: Пользователя не существует")
             } catch (e: Exception) {
                 callback("Ошибка: Нет сети!")
             }
@@ -120,19 +120,29 @@ class BaseInfoViewModel @Inject constructor(
     }
 
     suspend fun getMediaPreviews(page: Int): List<String>? {
-        return retrofitService.getMedias(convId, page, isGroup)
+        return try {
+            retrofitService.getMedias(convId, page, isGroup)
+        } catch (e: Exception) { null }
     }
 
     suspend fun getFiles(page: Int): List<String>? {
-        return retrofitService.getFiles(convId, page, isGroup)
+        return try {
+            retrofitService.getFiles(convId, page, isGroup)
+        } catch (e: Exception) { null }
     }
 
     suspend fun getAudios(page: Int): List<String>? {
-        return retrofitService.getAudios(convId, page, isGroup)
+        return try {
+            retrofitService.getAudios(convId, page, isGroup)
+        } catch (e: Exception) { null }
     }
 
     suspend fun getPreview(context: Context, filename: String): String {
-        val previewPath = retrofitService.getMediaPreview(context, convId, filename, isGroup)
+        val previewPath = try {
+            retrofitService.getMediaPreview(context, convId, filename, isGroup)
+        } catch (e: Exception) {
+            return ""
+        }
         return decryptPath(previewPath)
     }
 
@@ -146,18 +156,24 @@ class BaseInfoViewModel @Inject constructor(
         return downloadedFile.absolutePath
     }
 
-    suspend fun deleteAllMessages() {
-        if(isGroup == 0) retrofitService.deleteDialogMessages(convId)
-        else retrofitService.deleteGroupMessagesAll(convId)
+    suspend fun deleteAllMessages(): Boolean {
+        return try {
+            if(isGroup == 0) retrofitService.deleteDialogMessages(convId)
+            else retrofitService.deleteGroupMessagesAll(convId)
+        } catch (e: Exception) { false }
     }
 
-    suspend fun deleteConv() {
-        if(isGroup == 0) retrofitService.deleteDialog(convId) else retrofitService.deleteGroup(convId)
+    suspend fun deleteConv(): Boolean {
+        return try {
+            if(isGroup == 0) retrofitService.deleteDialog(convId) else retrofitService.deleteGroup(convId)
+        } catch (e: Exception) { false }
     }
 
-    suspend fun updateAutoDeleteInterval(interval: Int) {
-        if(isGroup == 0) retrofitService.updateAutoDeleteInterval(convId, interval)
-        else retrofitService.updateGroupAutoDeleteInterval(convId, interval)
+    suspend fun updateAutoDeleteInterval(interval: Int): Boolean {
+        return try {
+            if(isGroup == 0) retrofitService.updateAutoDeleteInterval(convId, interval)
+            else retrofitService.updateGroupAutoDeleteInterval(convId, interval)
+        } catch (e: Exception) { false }
     }
 
     fun addTempFile(filename: String) = tempFiles.add(filename)
@@ -196,19 +212,27 @@ class BaseInfoViewModel @Inject constructor(
     }
 
     suspend fun deleteUserFromGroup(userId: Int): Boolean {
-        return retrofitService.deleteUserFromGroup(convId, userId)
+        return try {
+            retrofitService.deleteUserFromGroup(convId, userId)
+        } catch (e: Exception) { false }
     }
 
     suspend fun updateGroupAvatar(avatar: String): Boolean {
-        return retrofitService.updateGroupAvatar(convId, avatar)
+        return try {
+            retrofitService.updateGroupAvatar(convId, avatar)
+        } catch (e: Exception) { false }
     }
 
     suspend fun updateGroupName(name: String): Boolean {
-        return retrofitService.editGroupName(convId, name)
+        return try {
+            retrofitService.editGroupName(convId, name)
+        } catch (e: Exception) { false }
     }
 
     suspend fun uploadAvatar(avatar: File): String {
-        return retrofitService.uploadAvatar(avatar)
+        return try {
+            retrofitService.uploadAvatar(avatar)
+        } catch (e: Exception) { "" }
     }
 
     fun formatFileSize(size: Long): String {

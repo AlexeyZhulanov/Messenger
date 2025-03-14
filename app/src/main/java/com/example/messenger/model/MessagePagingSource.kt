@@ -47,16 +47,17 @@ class MessagePagingSource(
             } else {
                 searchCache[currentQuery] ?: run {
                     if (invertedIndex == null) {
-                        val allMessages = if (isDialog) retrofitService.searchMessagesInDialog(convId)
-                        else retrofitService.searchMessagesInGroup(convId)
+                        val allMessages = try {
+                            if (isDialog) retrofitService.searchMessagesInDialog(convId)
+                            else retrofitService.searchMessagesInGroup(convId)
+                        } catch (e: Exception) { emptyList() }
                         allMessages.forEach {
                             it.text = it.text?.let { text -> tinkAesGcmHelper?.decryptText(text) } ?: ""
                         }
-                        invertedIndex = InvertedIndex(allMessages)
+                        if(allMessages.isNotEmpty()) invertedIndex = InvertedIndex(allMessages)
                     }
-                    val result = invertedIndex?.searchMessages(currentQuery) ?: throw Exception()
-                    searchCache[currentQuery] = result
-                    Log.d("testResSearch", result.toString())
+                    val result = invertedIndex?.searchMessages(currentQuery) ?: emptyList()
+                    if(result.isNotEmpty()) searchCache[currentQuery] = result
                     result
                 }
             }

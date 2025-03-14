@@ -4,6 +4,7 @@ import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -24,8 +25,8 @@ class BottomSheetPasswordFragment(
     private val bottomSheetListener: BottomSheetListener
 ) : BottomSheetDialogFragment() {
     private lateinit var binding: FragmentBottomSheetPasswordBinding
-    private lateinit var drawableStart : Drawable
-    private lateinit var drawableEnd : Drawable
+    private var drawableStart : Drawable? = null
+    private var drawableEnd : Drawable? = null
     private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('!') + ('$')
 
     @Suppress("DEPRECATION")
@@ -36,8 +37,15 @@ class BottomSheetPasswordFragment(
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentBottomSheetPasswordBinding.inflate(inflater, container, false)
-        drawableStart = ContextCompat.getDrawable(requireContext(), R.drawable.ic_lock)!!
-        drawableEnd = ContextCompat.getDrawable(requireContext(), R.drawable.ic_check_two)!!
+        val typedValue = TypedValue()
+        context?.theme?.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
+        val colorPrimary = typedValue.data
+        drawableStart = ContextCompat.getDrawable(requireContext(), R.drawable.ic_lock)?.apply {
+            setTint(colorPrimary)
+        }
+        drawableEnd = ContextCompat.getDrawable(requireContext(), R.drawable.ic_check_two)?.apply {
+            setTint(colorPrimary)
+        }
         binding.oldPassword.addTextChangedListener(object: TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 

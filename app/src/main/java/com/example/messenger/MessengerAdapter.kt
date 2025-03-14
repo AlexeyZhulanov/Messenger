@@ -13,7 +13,6 @@ import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.ItemMessengerBinding
 import com.example.messenger.model.Conversation
 import com.example.messenger.security.ChatKeyManager
-import com.example.messenger.security.TinkAesGcmHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -41,7 +40,6 @@ class MessengerAdapter(
 
     private var index = 0
     private var uiScope = CoroutineScope(Dispatchers.Main)
-    private val chatKeyManager = ChatKeyManager()
 
     override fun onClick(v: View) {
         val conversation = v.tag as Conversation
@@ -65,30 +63,16 @@ class MessengerAdapter(
         val conversation = conversations[position]
         with(holder.binding) {
             holder.itemView.tag = conversation
-            if(conversation.type == "dialog") {
-                userNameTextView.text = conversation.otherUser?.username ?: "Имя не указано"
-            }
-            else {
-                userNameTextView.text = conversation.name
-            }
+            userNameTextView.text = if(conversation.type == "dialog")
+                conversation.otherUser?.username ?: "Имя не указано"
+            else conversation.name
+
             if(conversation.lastMessage.isRead != null) {
                 dateText.visibility = View.VISIBLE
                 dateText.text = formatMessageDate(conversation.lastMessage.timestamp)
-                if(conversation.lastMessage.isRead == true) icCheck2.visibility = View.VISIBLE
+                if (conversation.lastMessage.isRead == true) icCheck2.visibility = View.VISIBLE
                 else icCheck.visibility = View.VISIBLE
-                uiScope.launch {
-                    val lastMessageText = conversation.lastMessage.text
-                    if(lastMessageText == null) lastMessageTextView.text = "Вложение"
-                    else {
-                        lastMessageTextView.text = "[Зашифрованный текст]" // todo возможно лишнее
-                        val aead = chatKeyManager.getAead(conversation.id, conversation.type)
-                        if(aead != null) {
-                            val tinkAesGcmHelper = TinkAesGcmHelper(aead)
-                            val text = tinkAesGcmHelper.decryptText(lastMessageText)
-                            lastMessageTextView.text = text
-                        }
-                    }
-                }
+                lastMessageTextView.text = conversation.lastMessage.text ?: "[Вложение]"
             } else {
                 lastMessageTextView.text = "Сообщений пока нет"
                 icCheck.visibility = View.GONE

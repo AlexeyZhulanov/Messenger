@@ -62,11 +62,11 @@ class FileManager(private val context: Context) {
         return file.exists()
     }
 
-    fun isExistUnsentMessage(fileName: String): Boolean {
-        val dir = getUnsentMessageDirectory()
-        val file = File(dir, fileName)
-        return file.exists()
-    }
+//    fun isExistUnsentMessage(fileName: String): Boolean {
+//        val dir = getUnsentMessageDirectory()
+//        val file = File(dir, fileName)
+//        return file.exists()
+//    }
 
     fun isExistAvatar(fileName: String): Boolean {
         val dir = getAvatarsDirectory()

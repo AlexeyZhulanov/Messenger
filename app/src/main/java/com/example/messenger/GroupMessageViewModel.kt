@@ -16,7 +16,6 @@ import com.example.messenger.model.WebSocketService
 import com.example.messenger.model.appsettings.AppSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +25,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -241,7 +239,8 @@ class GroupMessageViewModel @Inject constructor(
                     // The first element gets a username (the adapter is reversed)
                     messageDisplayMap[last.id] = userInfo?.first to null
                     // The last element gets an avatar (adapter is reversed)
-                    messageDisplayMap[first.id] = null to userInfo?.second
+                    val avatar = userInfo?.second ?: "" // If user without avatar
+                    messageDisplayMap[first.id] = null to avatar
                 }
             }
             return messageDisplayMap

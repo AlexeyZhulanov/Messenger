@@ -9,7 +9,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.RetrofitService
-import com.example.messenger.model.User
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -55,10 +54,6 @@ class SettingsViewModel @Inject constructor(
         _themeNumber.value = themeNumber
     }
 
-    suspend fun getUser(): User {
-        return retrofitService.getUser(0) // 0 - current user from jwt
-    }
-
     fun fManagerIsExistAvatar(fileName: String): Boolean {
         return fileManager.isExistAvatar(fileName)
     }
@@ -72,7 +67,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     suspend fun uploadAvatar(avatar: File): String {
-        return retrofitService.uploadAvatar(avatar)
+        return try {
+            retrofitService.uploadAvatar(avatar)
+        } catch (e: Exception) { "" }
     }
 
     suspend fun downloadAvatar(context: Context, filename: String): String {
@@ -80,17 +77,23 @@ class SettingsViewModel @Inject constructor(
     }
 
     suspend fun updateAvatar(photo: String) : Boolean {
-        return retrofitService.updateProfile(null, photo)
+        return try {
+            retrofitService.updateProfile(null, photo)
+        } catch (e: Exception) { false }
     }
     
     suspend fun updateUserName(username: String) : Boolean {
-        return retrofitService.updateProfile(username, null)
+        return try {
+            retrofitService.updateProfile(username, null)
+        } catch (e: Exception) { false }
     }
 
     fun updatePassword(oldPassword: String, newPassword: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             if(newPassword != oldPassword) {
-                val result = retrofitService.updatePassword(oldPassword, newPassword)
+                val result = try {
+                    retrofitService.updatePassword(oldPassword, newPassword)
+                } catch (e: Exception) { false }
                 if (result) {
                     onSuccess()
                 } else {

@@ -210,7 +210,9 @@ class NewsViewModel @Inject constructor(
     }
 
     suspend fun downloadNews(context: Context, filename: String): String {
-        val downloadedFilePath = retrofitService.downloadNews(context, filename)
+        val downloadedFilePath = try {
+            retrofitService.downloadNews(context, filename)
+        } catch (e: Exception) { return "" }
         val downloadedFile = File(downloadedFilePath)
         return tinkAesGcmHelper?.let {
             it.decryptFile(downloadedFile, downloadedFile)

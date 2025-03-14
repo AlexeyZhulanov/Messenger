@@ -10,14 +10,15 @@ import androidx.lifecycle.viewModelScope
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.FileManager
+import com.example.messenger.model.LastMessage
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.User
 import com.example.messenger.model.WebSocketService
 import com.example.messenger.model.appsettings.AppSettings
-import com.example.messenger.security.BouncyCastleHelper
 import com.example.messenger.security.ChatKeyManager
+import com.example.messenger.security.TinkAesGcmHelper
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -26,7 +27,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.security.KeyFactory
-import java.security.KeyPair
 import java.security.PublicKey
 import java.security.spec.X509EncodedKeySpec
 import java.util.Arrays
@@ -48,6 +48,8 @@ class MessengerViewModel @Inject constructor(
     val currentUser: LiveData<User> = _currentUser
     private val _vacation = MutableLiveData<Pair<String, String>?>()
     val vacation: LiveData<Pair<String, String>?> = _vacation
+
+    private val chatKeyManager = ChatKeyManager()
 
     init {
         fetchVacation()
@@ -96,8 +98,29 @@ class MessengerViewModel @Inject constructor(
                 _conversations.postValue(initialConversations)
 
                 val updatedConversations = retrofitService.getConversations()
-                _conversations.postValue(updatedConversations)
-                messengerService.replaceConversations(updatedConversations)
+                val decryptedConversations = mutableListOf<Conversation>()
+
+                for(conv in updatedConversations) {
+                    val lastMessageText = conv.lastMessage.text
+                    if(lastMessageText != null) {
+                        val aead = chatKeyManager.getAead(conv.id, conv.type)
+                        if(aead != null) {
+                            val tinkAesGcmHelper = TinkAesGcmHelper(aead)
+                            val text = tinkAesGcmHelper.decryptText(lastMessageText)
+                            val lastMessage = conv.lastMessage.copy(text = text)
+                            decryptedConversations.add(conv.copy(lastMessage = lastMessage))
+                        } else {
+                            val lastMessage = conv.lastMessage.copy(text = "[Зашифрованное сообщение]")
+                            decryptedConversations.add(conv.copy(lastMessage = lastMessage))
+                        }
+                    } else {
+                        val lastMessage = conv.lastMessage.copy(text = "[Вложение]")
+                        decryptedConversations.add(conv.copy(lastMessage = lastMessage))
+                    }
+                }
+
+                _conversations.postValue(decryptedConversations)
+                messengerService.replaceConversations(decryptedConversations)
 
             } catch (e: Exception) { return@launch }
         }
@@ -178,7 +201,9 @@ class MessengerViewModel @Inject constructor(
     private suspend fun forwardMessage(idDialog: Int, text: String?, images: List<String>?,
                             voice: String?, file: String?, referenceToMessageId: Int?,
                             usernameAuthorOriginal: String?) {
-        retrofitService.sendMessage(idDialog, text, images, voice, file, referenceToMessageId, true, usernameAuthorOriginal)
+        try {
+            retrofitService.sendMessage(idDialog, text, images, voice, file, referenceToMessageId, true, usernameAuthorOriginal)
+        } catch (e: Exception) { return }
     }
 
     fun forwardGroupMessages(list: List<Message>?, usernames: List<String>?, id: Int) {
@@ -198,7 +223,9 @@ class MessengerViewModel @Inject constructor(
     private suspend fun forwardGroupMessage(idGroup: Int, text: String?, images: List<String>?,
                                             voice: String?, file: String?, referenceToMessageId: Int?,
                                             usernameAuthorOriginal: String?) {
-        retrofitService.sendGroupMessage(idGroup, text, images, voice, file, referenceToMessageId, true, usernameAuthorOriginal)
+        try {
+            retrofitService.sendGroupMessage(idGroup, text, images, voice, file, referenceToMessageId, true, usernameAuthorOriginal)
+        } catch (e: Exception) { return }
     }
 
     fun fManagerIsExistAvatar(fileName: String): Boolean {

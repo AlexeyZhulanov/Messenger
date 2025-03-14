@@ -5,7 +5,6 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
-import com.example.messenger.model.User
 import com.example.messenger.room.entities.ConversationDbEntity
 import com.example.messenger.room.entities.ConversationEntity
 import com.example.messenger.room.entities.LastMessageEntity
@@ -23,21 +22,27 @@ interface ConversationDao {
         lastMessages: List<LastMessageEntity>
     ): List<ConversationDbEntity> {
         val usersById = users.associateBy { it.id }
-        val messagesById = lastMessages.associateBy { it.id }
+        val messagesByChatIdAndType = lastMessages.associateBy { Pair(it.chatId, it.type) }
 
         return conversationEntities.map { conversationEntity ->
             val otherUser = usersById[conversationEntity.otherUserId]
-            val lastMessage = messagesById[conversationEntity.lastMessageId]
+            val lastMessage = messagesByChatIdAndType[Pair(conversationEntity.chatId, conversationEntity.type)]
             ConversationDbEntity(
                 conversation = conversationEntity,
                 otherUser = otherUser,
-                lastMessage = lastMessage ?: LastMessageEntity(-1)
+                lastMessage = lastMessage ?: LastMessageEntity(
+                    chatId = conversationEntity.chatId,
+                    type = conversationEntity.type,
+                    text = null,
+                    timestamp = null,
+                    isRead = null
+                )
             )
         }
     }
 
     @Transaction
-    @Query("SELECT * FROM conversations WHERE type = :type AND id = :chatId LIMIT 1")
+    @Query("SELECT * FROM conversations WHERE type = :type AND chat_id = :chatId LIMIT 1")
     suspend fun getConversationByTypeAndId(type: String, chatId: Int): ConversationEntity?
 
     @Transaction
@@ -57,8 +62,15 @@ interface ConversationDao {
     @Query("SELECT * FROM users WHERE id = :userId LIMIT 1")
     suspend fun getUserById(userId: Int): UserEntity
 
-    @Query("SELECT * FROM last_messages WHERE id IN (:messageIds)")
-    suspend fun getLastMessagesByIds(messageIds: List<Int>): List<LastMessageEntity>
+
+    @Query("SELECT * FROM last_messages WHERE chat_id = :chatId AND type = :type LIMIT 1")
+    suspend fun getLastMessageByChatIdAndType(chatId: Int, type: String): LastMessageEntity?
+
+    suspend fun getLastMessagesByPairs(pairs: List<Pair<Int, String>>): List<LastMessageEntity> {
+        return pairs.mapNotNull { (chatId, type) ->
+            getLastMessageByChatIdAndType(chatId, type)
+        }
+    }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertConversations(conversations: List<ConversationEntity>)
@@ -78,6 +90,6 @@ interface ConversationDao {
     @Query("DELETE FROM users WHERE id NOT IN (SELECT DISTINCT other_user_id FROM conversations WHERE other_user_id IS NOT NULL)")
     suspend fun cleanUpUsers()
 
-    @Query("DELETE FROM last_messages WHERE id NOT IN (SELECT DISTINCT last_message_id FROM conversations WHERE last_message_id IS NOT NULL)")
+    @Query("DELETE FROM last_messages WHERE (chat_id, type) NOT IN (SELECT DISTINCT chat_id, type FROM conversations)")
     suspend fun cleanUpLastMessages()
 }

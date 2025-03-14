@@ -1021,7 +1021,7 @@ abstract class BaseChatFragment(
                                     } else {
                                         if (text.isNotEmpty()) {
                                             val resp = async {
-                                                viewModel.editMessage(message.id, text, arrayListOf(), null, null)
+                                                viewModel.editMessage(message.id, text, null, null, null)
                                             }
                                             val f = resp.await()
                                             editFlag = false

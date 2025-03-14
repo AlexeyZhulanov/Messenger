@@ -451,6 +451,7 @@ class RetrofitService(
         } catch (e: BackendException) {
             when (e.code) {
                 403 -> throw NoPermissionException(e)
+                404 -> throw UserNotFoundException(e)
                 409 -> throw UserAlreadyInGroupException(e)
                 400 -> throw InvalidKeyException(e)
                 else -> throw e

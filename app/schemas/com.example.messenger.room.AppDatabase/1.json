@@ -2,15 +2,21 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "64c385a4bbf2e60b0661880d753f3762",
+    "identityHash": "a769adf0126d2d376f4c34d6430d203d",
     "entities": [
       {
         "tableName": "conversations",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `type` TEXT NOT NULL, `key` TEXT, `other_user_id` INTEGER, `name` TEXT, `created_by` INTEGER, `avatar` TEXT, `last_message_id` INTEGER, `count_msg` INTEGER NOT NULL, `is_owner` INTEGER NOT NULL, `can_delete` INTEGER NOT NULL, `auto_delete_interval` INTEGER NOT NULL, `order_index` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `chat_id` INTEGER NOT NULL, `type` TEXT NOT NULL, `key` TEXT, `other_user_id` INTEGER, `name` TEXT, `created_by` INTEGER, `avatar` TEXT, `count_msg` INTEGER NOT NULL, `is_owner` INTEGER NOT NULL, `can_delete` INTEGER NOT NULL, `auto_delete_interval` INTEGER NOT NULL, `order_index` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
             "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chatId",
+            "columnName": "chat_id",
             "affinity": "INTEGER",
             "notNull": true
           },
@@ -51,12 +57,6 @@
             "notNull": false
           },
           {
-            "fieldPath": "lastMessageId",
-            "columnName": "last_message_id",
-            "affinity": "INTEGER",
-            "notNull": false
-          },
-          {
             "fieldPath": "countMsg",
             "columnName": "count_msg",
             "affinity": "INTEGER",
@@ -88,7 +88,7 @@
           }
         ],
         "primaryKey": {
-          "autoGenerate": false,
+          "autoGenerate": true,
           "columnNames": [
             "id"
           ]
@@ -152,12 +152,18 @@
       },
       {
         "tableName": "last_messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `text` TEXT, `timestamp` INTEGER, `is_read` INTEGER)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`chat_id` INTEGER NOT NULL, `type` TEXT NOT NULL, `text` TEXT, `timestamp` INTEGER, `is_read` INTEGER, PRIMARY KEY(`chat_id`, `type`))",
         "fields": [
           {
-            "fieldPath": "id",
-            "columnName": "id",
+            "fieldPath": "chatId",
+            "columnName": "chat_id",
             "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -180,9 +186,10 @@
           }
         ],
         "primaryKey": {
-          "autoGenerate": true,
+          "autoGenerate": false,
           "columnNames": [
-            "id"
+            "chat_id",
+            "type"
           ]
         },
         "indices": [],
@@ -765,7 +772,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '64c385a4bbf2e60b0661880d753f3762')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a769adf0126d2d376f4c34d6430d203d')"
     ]
   }
 }

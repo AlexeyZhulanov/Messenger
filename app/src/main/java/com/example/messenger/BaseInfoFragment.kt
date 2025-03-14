@@ -304,7 +304,8 @@ abstract class BaseInfoFragment : Fragment() {
                         currentPage++
                         callback(true)
                     } else {
-                        Toast.makeText(requireContext(), "Медиа файлов нет", Toast.LENGTH_SHORT).show()
+                        if(list == null) Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
+                        else Toast.makeText(requireContext(), "Медиа файлов нет", Toast.LENGTH_SHORT).show()
                         if(currentPage == 0) callback(false) else isCanDoPagination = false
                     }
                 }
@@ -317,7 +318,8 @@ abstract class BaseInfoFragment : Fragment() {
                         currentPage++
                         callback(true)
                     } else {
-                        Toast.makeText(requireContext(), "Файлов нет", Toast.LENGTH_SHORT).show()
+                        if(list == null) Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
+                        else Toast.makeText(requireContext(), "Файлов нет", Toast.LENGTH_SHORT).show()
                         if(currentPage == 0) callback(false) else isCanDoPagination = false
                     }
                     binding.loadButton.visibility = View.GONE
@@ -331,7 +333,8 @@ abstract class BaseInfoFragment : Fragment() {
                         currentPage++
                         callback(true)
                     } else {
-                        Toast.makeText(requireContext(), "Голосовых нет", Toast.LENGTH_SHORT).show()
+                        if(list == null) Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
+                        else Toast.makeText(requireContext(), "Голосовых нет", Toast.LENGTH_SHORT).show()
                         if(currentPage == 0) callback(false) else isCanDoPagination = false
                     }
                     binding.loadButton.visibility = View.GONE
@@ -393,18 +396,21 @@ abstract class BaseInfoFragment : Fragment() {
             }
             R.id.delete_all_messages -> {
                 lifecycleScope.launch {
-                    viewModel.deleteAllMessages()
+                    val success = viewModel.deleteAllMessages()
+                    if(success) requireActivity().onBackPressedDispatcher.onBackPressed()
+                    else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                 }
-                requireActivity().onBackPressedDispatcher.onBackPressed()
                 true
             }
             R.id.delete_dialog -> {
                 lifecycleScope.launch {
-                    viewModel.deleteConv()
+                    val success = viewModel.deleteConv()
+                    if(success) {
+                        parentFragmentManager.beginTransaction()
+                            .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_FROM_DIALOG_TAG")
+                            .commit()
+                    } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                 }
-                parentFragmentManager.beginTransaction()
-                    .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_FROM_DIALOG_TAG")
-                    .commit()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -436,7 +442,6 @@ abstract class BaseInfoFragment : Fragment() {
             .setPositiveButton("OK") { _, _ ->
                 // Обработка выбранного значения
                 val selectedValue = values[numberPicker.value]
-                Toast.makeText(requireContext(), "Установлено автоудаление: $selectedValue", Toast.LENGTH_SHORT).show()
                 if(numberPicker.value != numb) {
                     val interval = when(numberPicker.value) {
                         0 -> 0
@@ -447,7 +452,9 @@ abstract class BaseInfoFragment : Fragment() {
                         else -> 0
                     }
                     lifecycleScope.launch {
-                        viewModel.updateAutoDeleteInterval(interval)
+                        val success = viewModel.updateAutoDeleteInterval(interval)
+                        if(success) Toast.makeText(requireContext(), "Установлено автоудаление: $selectedValue", Toast.LENGTH_SHORT).show()
+                        else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
