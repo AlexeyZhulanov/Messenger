@@ -6,7 +6,6 @@ import com.example.messenger.retrofit.entities.groups.GroupCreateRequestEntity
 import com.example.messenger.retrofit.entities.groups.GroupCreateResponseEntity
 import com.example.messenger.retrofit.entities.groups.UpdateGroupAvatarRequestEntity
 import com.example.messenger.retrofit.entities.messages.DeleteMessagesRequestEntity
-import com.example.messenger.retrofit.entities.messages.GetDialogSettingsResponseEntity
 import com.example.messenger.retrofit.entities.messages.GetUsersResponseEntity
 import com.example.messenger.retrofit.entities.messages.Message
 import com.example.messenger.retrofit.entities.messages.SendMessageRequestEntity
@@ -119,11 +118,6 @@ interface GroupsApi {
     suspend fun deleteGroupMessagesAll(
         @Path("group_id") groupId: Int
     ) : ResponseEntityMessageAnswer
-
-    @GET("group/{group_id}/settings")
-    suspend fun getGroupSettings(
-        @Path("group_id") groupId: Int
-    ) : GetDialogSettingsResponseEntity
 
     @GET("groups/{group_id}/messages/search")
     suspend fun searchMessagesInGroup(

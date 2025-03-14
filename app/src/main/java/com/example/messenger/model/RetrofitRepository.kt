@@ -13,7 +13,7 @@ interface RetrofitRepository {
 
     suspend fun updateProfile(username: String?, avatar: String?) : Boolean
 
-    suspend fun updatePassword(password: String) : Boolean
+    suspend fun updatePassword(oldPassword: String, newPassword: String) : Boolean
 
     suspend fun updateLastSession() : Boolean
 
@@ -48,8 +48,6 @@ interface RetrofitRepository {
     suspend fun updateAutoDeleteInterval(dialogId: Int, autoDeleteInterval: Int) : Boolean
 
     suspend fun deleteDialogMessages(dialogId: Int) : Boolean
-
-    suspend fun getDialogSettings(dialogId: Int): ConversationSettings
 
     suspend fun createGroup(name: String, key: String) : Int
 
@@ -86,8 +84,6 @@ interface RetrofitRepository {
     suspend fun updateGroupAutoDeleteInterval(groupId: Int, autoDeleteInterval: Int) : Boolean
 
     suspend fun deleteGroupMessagesAll(groupId: Int) : Boolean
-
-    suspend fun getGroupSettings(groupId: Int): ConversationSettings
 
     suspend fun searchMessagesInGroup(groupId: Int) : List<Message>
 

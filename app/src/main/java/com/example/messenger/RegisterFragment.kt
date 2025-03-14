@@ -4,6 +4,7 @@ import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,15 +18,22 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class RegisterFragment : Fragment() {
     private lateinit var binding: FragmentRegisterBinding
-    private lateinit var drawableStart : Drawable
-    private lateinit var drawableEnd : Drawable
+    private var drawableStart : Drawable? = null
+    private var drawableEnd : Drawable? = null
     private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('!') + ('$') + ('@') + ('.')
     private val viewModel: RegisterViewModel by viewModels()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentRegisterBinding.inflate(inflater, container, false)
-        drawableStart = ContextCompat.getDrawable(requireContext(), R.drawable.ic_lock)!!
-        drawableEnd = ContextCompat.getDrawable(requireContext(), R.drawable.ic_check_two)!!
+        val typedValue = TypedValue()
+        context?.theme?.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
+        val colorPrimary = typedValue.data
+        drawableStart = ContextCompat.getDrawable(requireContext(), R.drawable.ic_lock)?.apply {
+            setTint(colorPrimary)
+        }
+        drawableEnd = ContextCompat.getDrawable(requireContext(), R.drawable.ic_check_two)?.apply {
+            setTint(colorPrimary)
+        }
         binding.errorTextView.visibility = View.INVISIBLE
         binding.registerButton.setOnClickListener {
             if (validateInputs()) {

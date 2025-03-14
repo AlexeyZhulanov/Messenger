@@ -33,7 +33,6 @@ import com.example.messenger.databinding.ItemTextImagesReceiverBinding
 import com.example.messenger.databinding.ItemTextImagesSenderBinding
 import com.example.messenger.databinding.ItemVoiceReceiverBinding
 import com.example.messenger.databinding.ItemVoiceSenderBinding
-import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
 import com.example.messenger.picker.DateUtils
@@ -75,14 +74,14 @@ class MessageAdapter(
     private val currentUserId: Int,
     private val context: Context,
     private val messageViewModel: BaseChatViewModel,
-    private val isGroup: Boolean
+    private val isGroup: Boolean,
+    private val canDelete: Boolean
 ) : ListAdapter<Pair<Message, String>, RecyclerView.ViewHolder>(MessageDiffCallback()) {
     var members: Map<Int, Pair<String?, String?>?> = mapOf()
     var membersFull: List<User> = listOf()
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
     private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
-    var dialogSettings: ConversationSettings = ConversationSettings()
     private var highlightedPosition: Int? = null
     private val uiScopeMain = CoroutineScope(Dispatchers.Main)
 
@@ -91,20 +90,27 @@ class MessageAdapter(
         val updatedList = currentList.toMutableList()
         var needNotify = false
         if(isGroup) {
-            var firstItemId = updatedList.first().first.id
+            var firstItemId = updatedList.firstOrNull()?.first?.id ?: -10
             messages.forEachIndexed { index, message ->
                 val messageIdSender = message.first.idSender
                 val messageId = message.first.id
-                val info = members[firstItemId]
-                if(info != null && messageIdSender != currentUserId) {
-                    if(messageIdSender == firstItemId && message.second == "") {
-                        members += messageId to (null to info.second)
-                        members += firstItemId to (info.first to null)
-                        if(index == 0) needNotify = true
-                    } else {
-                        val member = membersFull.find { it.id == messageIdSender }
-                        members += messageId to (member?.username to member?.avatar)
+                if(firstItemId != -10) {
+                    val info = members[firstItemId]
+                    if(info != null && messageIdSender != currentUserId) {
+                        if(messageIdSender == firstItemId && message.second == "") {
+                            val second: String = info.second ?: ""
+                            members += messageId to (null to second)
+                            members += firstItemId to (info.first to null)
+                            if(index == 0) needNotify = true
+                        } else {
+                            val member = membersFull.find { it.id == messageIdSender }
+                            val avatar = member?.avatar ?: ""
+                            members += messageId to (member?.username to avatar)
+                        }
                     }
+                } else {
+                    val member = membersFull.find { it.id == messageIdSender }
+                    members += messageId to (member?.username to member?.avatar)
                 }
                 firstItemId = message.first.id
             }
@@ -402,15 +408,15 @@ class MessageAdapter(
             if(chk == -1) {
                 uiScopeMain.launch {
                     val mes = async { messageViewModel.findMessage(tmpId) }
-                    val (m, p) = mes.await()
-                    if(m.images != null) {
+                    val (m, p) = mes.await() ?: Pair(null, 0)
+                    if(m?.images != null) {
                         messageViewModel.imageSet(m.images!!.first(), binding.answerImageView, context)
                     }
                     binding.answerMessage.text = when {
-                        m.text != null -> m.text
-                        m.images != null -> "Фотография"
-                        m.file != null -> m.file
-                        m.voice != null -> "Голосовое сообщение"
+                        m?.text != null -> m.text
+                        m?.images != null -> "Фотография"
+                        m?.file != null -> m.file
+                        m?.voice != null -> "Голосовое сообщение"
                         else -> "?????????"
                     }
                     binding.root.setOnClickListener {
@@ -480,6 +486,7 @@ class MessageAdapter(
             binding.timeTextView.text = time
             if(isGroup) {
                 val user = members[message.id]
+                Log.d("testAVATAR", user.toString())
                 if(user != null) {
                     if(user.first != null) {
                         binding.userNameTextView.visibility = View.VISIBLE
@@ -491,7 +498,7 @@ class MessageAdapter(
                     } else binding.spaceAvatar.visibility = View.VISIBLE
                 } else binding.spaceAvatar.visibility = View.VISIBLE
             } else binding.spaceAvatar.visibility = View.GONE
-            if(!canLongClick && dialogSettings.canDelete) {
+            if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
@@ -882,7 +889,7 @@ class MessageAdapter(
                     } else binding.spaceAvatar.visibility = View.VISIBLE
                 } else binding.spaceAvatar.visibility = View.VISIBLE
             } else binding.spaceAvatar.visibility = View.GONE
-            if(!canLongClick) {
+            if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
@@ -933,7 +940,7 @@ class MessageAdapter(
             uiScopeMain.launch {
                 val filePathTemp = async {
                     if(message.isUnsent == true) {
-                        return@async Pair(message.localFilePaths?.first(), true)
+                        return@async Pair(message.localFilePaths?.firstOrNull(), true)
                     } else {
                         val voice = message.voice ?: "nonWork"
                         if (messageViewModel.fManagerIsExist(voice)) {
@@ -1148,7 +1155,7 @@ class MessageAdapter(
                     } else binding.spaceAvatar.visibility = View.VISIBLE
                 } else binding.spaceAvatar.visibility = View.VISIBLE
             } else binding.spaceAvatar.visibility = View.GONE
-            if(!canLongClick) {
+            if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
@@ -1196,7 +1203,7 @@ class MessageAdapter(
             uiScopeMain.launch {
                 val filePathTemp = async {
                     if(message.isUnsent == true) {
-                        return@async Pair(message.localFilePaths?.first(), true)
+                        return@async Pair(message.localFilePaths?.firstOrNull(), true)
                     } else {
                         if (messageViewModel.fManagerIsExist(message.file!!)) {
                             return@async Pair(messageViewModel.fManagerGetFilePath(message.file!!), true)
@@ -1402,7 +1409,7 @@ class MessageAdapter(
                     } else binding.spaceAvatar.visibility = View.VISIBLE
                 } else binding.spaceAvatar.visibility = View.VISIBLE
             } else binding.spaceAvatar.visibility = View.GONE
-            if(!canLongClick && dialogSettings.canDelete) {
+            if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {
@@ -1465,7 +1472,7 @@ class MessageAdapter(
                 binding.progressBar.visibility = View.VISIBLE
                 val filePathTemp = async {
                     if(message.isUnsent == true) {
-                        return@async Pair(message.localFilePaths?.first(), true)
+                        return@async Pair(message.localFilePaths?.firstOrNull(), true)
                     } else {
                         if (messageViewModel.fManagerIsExist(message.images?.first() ?: "nonWork")) {
                             return@async Pair(messageViewModel.fManagerGetFilePath(message.images!!.first()), true)
@@ -1689,7 +1696,7 @@ class MessageAdapter(
                     } else binding.spaceAvatar.visibility = View.VISIBLE
                 } else binding.spaceAvatar.visibility = View.VISIBLE
             } else binding.spaceAvatar.visibility = View.GONE
-            if(!canLongClick) {
+            if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
                 binding.checkbox.setOnClickListener {

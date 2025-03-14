@@ -10,6 +10,11 @@ import com.example.messenger.retrofit.source.base.RetrofitSourcesProvider
 import com.example.messenger.retrofit.source.base.SourcesProvider
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -35,6 +40,14 @@ class SourceProviderHolder @Inject constructor(
     // Global token sync
     private val tokenMutex = Mutex()
     private val lastTokenUpdate = AtomicLong(0)
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val allowedPathsWithoutToken = setOf(
+        "refresh",
+        "login",
+        "register"
+    )
+
     companion object {
         private const val TOKEN_UPDATE_INTERVAL_MS = 10_000 // 10 sec
         private const val BASE_URL = "https://amessenger.ru"
@@ -87,8 +100,17 @@ class SourceProviderHolder @Inject constructor(
 
             if (accessToken != null) {
                 newBuilder.addHeader("Authorization", accessToken)
+            } else {
+                val path = originalRequest.url.encodedPath
+                if (path !in allowedPathsWithoutToken) {
+                    return@Interceptor runBlocking {
+                        val deferred = serviceScope.async {
+                            handleRequestWithDelay(chain, originalRequest, settings)
+                        }
+                        deferred.await()
+                    }
+                }
             }
-
             val initialResponse = chain.proceed(newBuilder.build())
 
             if (initialResponse.code == 401) { // If the token has expired
@@ -101,18 +123,25 @@ class SourceProviderHolder @Inject constructor(
                             return@runBlocking retryWithNewToken(chain, originalRequest, settings)
                         }
 
+                        if (settings.isTokenRefreshing() || settings.isTokenRecentlyRefreshed()) {
+                            return@runBlocking retryWithNewToken(chain, originalRequest, settings)
+                        }
+
                         lastTokenUpdate.set(now) // Updating the time of the last token update
+
+                        settings.setTokenRefreshing(true)
 
                         val refreshToken = settings.getCurrentRefreshToken()
                         if (refreshToken == null) {
                             // if refresh token does not exist we are going to auth fragment
                             logout()
+                            settings.setTokenRefreshing(false)
                             Log.d("testRefreshError", "refresh token is null, assess=null")
                             return@runBlocking initialResponse
                         }
 
                         // We reset the access Token before sending the request to /refresh
-                        settings.setCurrentAccessToken(null) // todo тщательно проверить, может руинить запросы
+                        settings.setCurrentAccessToken(null)
 
                         val retrofitService = retrofitServiceProvider.get()
 
@@ -121,11 +150,13 @@ class SourceProviderHolder @Inject constructor(
                             retrofitService.refreshToken(refreshToken)
                         } catch (e: Exception) {
                             logout()
+                            settings.setTokenRefreshing(false)
                             Log.d("testRefreshError", "new access token is null")
                             return@runBlocking initialResponse
                         }
 
                         settings.setCurrentAccessToken(newAccessToken)
+                        settings.setTokenRefreshing(false)
                         return@runBlocking retryWithNewToken(chain, originalRequest, settings)
                     }
                 }
@@ -146,6 +177,12 @@ class SourceProviderHolder @Inject constructor(
             .build()
 
         return chain.proceed(newRequest)
+    }
+
+    private suspend fun handleRequestWithDelay(chain: Interceptor.Chain,
+                        originalRequest: Request, settings: AppSettings): Response {
+        delay(1000) // Задержка в 1 секунду
+        return retryWithNewToken(chain, originalRequest, settings)
     }
 
     /**

@@ -33,11 +33,11 @@
         android:layout_margin="30dp"
         app:cardCornerRadius="30dp"
         app:cardElevation="20dp"
+        app:cardBackgroundColor="@color/app_color_f6"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:background="@drawable/custom_edittext">
+        app:layout_constraintEnd_toEndOf="parent">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -81,7 +81,7 @@
                 android:hint="Логин"
                 android:textStyle="italic"
                 android:padding="8dp"
-                android:textColor="?attr/colorPrimaryDark"
+                android:textColor="#000000"
                 android:textColorHint="?attr/colorAccent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -100,7 +100,7 @@
                 android:textStyle="italic"
                 android:padding="8dp"
                 android:inputType="textPassword"
-                android:textColor="?attr/colorPrimaryDark"
+                android:textColor="#000000"
                 android:textColorHint="?attr/colorAccent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"

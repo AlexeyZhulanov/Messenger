@@ -78,7 +78,7 @@ class MessageFragment(
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        viewModel.setConvInfo(dialog.id, 0, dialog.key ?: "", currentUser.id)
+        viewModel.setConvInfo(dialog.id, 0, dialog.key ?: "", currentUser.id, requireContext())
         return super.onCreateView(inflater, container, savedInstanceState)
     }
 
@@ -134,4 +134,6 @@ class MessageFragment(
     }
 
     override fun isGroup(): Boolean = false
+
+    override fun canDelete(): Boolean = dialog.canDelete
 }

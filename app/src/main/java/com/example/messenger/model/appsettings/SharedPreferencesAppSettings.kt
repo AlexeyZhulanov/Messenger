@@ -6,7 +6,24 @@ class SharedPreferencesAppSettings(
     appContext: Context
 ) : AppSettings {
 
-    private val sharedPreferences = appContext.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    private val sharedPreferences = appContext.getSharedPreferences(PREF_SETTINGS, Context.MODE_PRIVATE)
+
+    private var lastTokenRefreshTime: Long = 0
+
+    override fun setTokenRefreshing(refreshing: Boolean) {
+        sharedPreferences.edit().putBoolean(PREF_IS_REFRESHING, refreshing).apply()
+        if (refreshing) {
+            lastTokenRefreshTime = System.currentTimeMillis()
+        }
+    }
+
+    override fun isTokenRefreshing(): Boolean {
+        return sharedPreferences.getBoolean(PREF_IS_REFRESHING, false)
+    }
+
+    override fun isTokenRecentlyRefreshed(): Boolean {
+        return System.currentTimeMillis() - lastTokenRefreshTime < 60000 // 60 секунд
+    }
 
     override fun setCurrentAccessToken(token: String?) {
         val editor = sharedPreferences.edit()
@@ -43,5 +60,7 @@ class SharedPreferencesAppSettings(
         private const val PREF_CURRENT_ACCESS_TOKEN = "accessToken"
         private const val PREF_CURRENT_REFRESH_TOKEN = "refreshToken"
         private const val PREF_IS_REMEMBER = "rememberUser"
+        private const val PREF_IS_REFRESHING = "isTokenRefreshing"
+        private const val PREF_SETTINGS = "settings"
     }
 }

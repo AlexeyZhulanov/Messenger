@@ -92,7 +92,7 @@ class GroupMessageFragment(
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        viewModel.setConvInfo(group.id, 1, group.key ?: "", currentUser.id)
+        viewModel.setConvInfo(group.id, 1, group.key ?: "", currentUser.id, requireContext())
         return super.onCreateView(inflater, container, savedInstanceState)
     }
 
@@ -119,6 +119,8 @@ class GroupMessageFragment(
     override fun sendTypingEvent(isSend: Boolean) = viewModel.sendTypingEvent(isSend)
 
     override fun isGroup(): Boolean = true
+
+    override fun canDelete(): Boolean = group.canDelete
 
     override fun replaceToInfoFragment() {
         parentFragmentManager.beginTransaction()

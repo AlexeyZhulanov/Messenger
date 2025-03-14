@@ -18,17 +18,19 @@ data class ConversationDbEntity(
     )
     val otherUser: UserEntity?,
     @Relation(
-        parentColumn = "last_message_id",
-        entityColumn = "id"
+        parentColumn = "chat_id", // Связь через chat_id
+        entityColumn = "chat_id",
+        entity = LastMessageEntity::class
     )
     val lastMessage: LastMessageEntity
 ) {
     fun toConversation(): Conversation = Conversation(
-        id = conversation.id, type = conversation.type, key = conversation.key,
+        id = conversation.chatId, type = conversation.type, key = conversation.key,
         otherUser = otherUser?.toUser(), name = conversation.name,
         createdBy = conversation.createdBy, avatar = conversation.avatar,
         lastMessage = lastMessage.toLastMessage(), countMsg = conversation.countMsg,
-        canDelete = conversation.canDelete, autoDeleteInterval = conversation.autoDeleteInterval
+        isOwner = conversation.isOwner, canDelete = conversation.canDelete,
+        autoDeleteInterval = conversation.autoDeleteInterval
     )
     companion object {
         fun fromUserInput(conversation: Conversation, orderIndex: Int): ConversationDbEntity {
@@ -44,7 +46,8 @@ data class ConversationDbEntity(
 
             val lastMessageEntity = conversation.lastMessage.let {
                 LastMessageEntity(
-                    id = conversation.id,
+                    chatId = conversation.id,
+                    type = conversation.type,
                     text = it.text,
                     timestamp = it.timestamp,
                     isRead = it.isRead
@@ -52,15 +55,15 @@ data class ConversationDbEntity(
             }
 
             val conversationEntity = ConversationEntity(
-                id = conversation.id,
+                chatId = conversation.id,
                 type = conversation.type,
                 key = conversation.key,
                 otherUserId = otherUserEntity?.id,
                 name = conversation.name,
                 createdBy = conversation.createdBy,
                 avatar = conversation.avatar,
-                lastMessageId = lastMessageEntity.id,
                 countMsg = conversation.countMsg,
+                isOwner = conversation.isOwner,
                 canDelete = conversation.canDelete,
                 autoDeleteInterval = conversation.autoDeleteInterval,
                 orderIndex = orderIndex
@@ -77,15 +80,16 @@ data class ConversationDbEntity(
 
 @Entity(tableName = "conversations")
 data class ConversationEntity(
-    @PrimaryKey val id: Int,
-    var type: String,
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @ColumnInfo(name = "chat_id") val chatId: Int,
+    val type: String,
     var key: String? = null,
     @ColumnInfo(name = "other_user_id") var otherUserId: Int? = null,
     var name: String? = null,
     @ColumnInfo(name = "created_by") var createdBy: Int? = null,
     var avatar: String? = null,
-    @ColumnInfo(name = "last_message_id") var lastMessageId: Int? = null,
     @ColumnInfo(name = "count_msg") var countMsg: Int,
+    @ColumnInfo(name = "is_owner") var isOwner: Boolean,
     @ColumnInfo(name = "can_delete") var canDelete: Boolean,
     @ColumnInfo(name = "auto_delete_interval") var autoDeleteInterval: Int,
     @ColumnInfo(name = "order_index") var orderIndex: Int
@@ -109,9 +113,13 @@ data class UserEntity(
     )
 }
 
-@Entity(tableName = "last_messages")
+@Entity(
+    tableName = "last_messages",
+    primaryKeys = ["chat_id", "type"] // Составной ключ
+)
 data class LastMessageEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int,
+    @ColumnInfo(name = "chat_id") val chatId: Int,
+    var type: String,
     var text: String? = null,
     var timestamp: Long? = null,
     @ColumnInfo(name = "is_read") var isRead: Boolean? = null

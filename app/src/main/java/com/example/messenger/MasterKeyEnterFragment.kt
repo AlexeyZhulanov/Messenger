@@ -40,7 +40,9 @@ class MasterKeyEnterFragment(private val userId: Int) : Fragment() {
         setupEditText()
 
         lifecycleScope.launch {
-            pair = retrofitService.getKeys()
+            pair = try {
+                retrofitService.getKeys()
+            } catch (e: Exception) { null to null }
         }
 
         binding.doneButton.setOnClickListener {
@@ -51,22 +53,34 @@ class MasterKeyEnterFragment(private val userId: Int) : Fragment() {
                 val publicKeyString = pair.first
                 val privateKeyEncryptedString = pair.second
                 if(publicKeyString != null && privateKeyEncryptedString != null) {
-                    val encryptor = PrivateKeyEncryptor(text)
-                    val keyManager = ChatKeyManager()
-                    val publicKey = getPublicKey(publicKeyString)
-                    val privateKey = encryptor.decryptPrivateKey(privateKeyEncryptedString)
-                    val certificate = BouncyCastleHelper().createSelfSignedCertificate(KeyPair(publicKey, privateKey))
-                    keyManager.savePrivateKey(userId, privateKey, certificate)
-                    Arrays.fill(privateKey.encoded, 0.toByte())
-                    goToMessengerFragment()
+                    try {
+                        val encryptor = PrivateKeyEncryptor(text)
+                        val keyManager = ChatKeyManager()
+                        val publicKey = getPublicKey(publicKeyString)
+                        val privateKey = encryptor.decryptPrivateKey(privateKeyEncryptedString)
+                        val certificate = BouncyCastleHelper().createSelfSignedCertificate(KeyPair(publicKey, privateKey))
+                        keyManager.savePrivateKey(userId, privateKey, certificate)
+                        Arrays.fill(privateKey.encoded, 0.toByte())
+                        goToMessengerFragment()
+                    } catch (e: Exception) {
+                        Log.d("testErrorMasterEnter", e.message.toString())
+                        showErrorTextView("Вы ввели неверный ключ")
+                        binding.doneButton.isEnabled = true
+                    }
+
                 } else {
                     showErrorTextView("Не удалось подгрузить ключи, Нет сети!")
                     lifecycleScope.launch {
-                        pair = retrofitService.getKeys()
+                        pair = try {
+                            retrofitService.getKeys()
+                        } catch (e: Exception) { null to null }
                     }
                     binding.doneButton.isEnabled = true
                 }
-            } else showErrorTextView("Ошибка, длина ключа должна быть от 16 до 20 символов")
+            } else {
+                showErrorTextView("Ошибка, длина ключа должна быть от 16 до 20 символов")
+                binding.doneButton.isEnabled = true
+            }
         }
 
         return binding.root

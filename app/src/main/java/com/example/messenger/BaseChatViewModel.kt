@@ -2,6 +2,7 @@ package com.example.messenger
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.MediaStore
@@ -19,13 +20,13 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.di.IoDispatcher
-import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.ImageUtils
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.WebSocketService
+import com.example.messenger.model.appsettings.AppSettings
 import com.example.messenger.security.ChatKeyManager
 import com.example.messenger.security.TinkAesGcmHelper
 import com.luck.picture.lib.config.PictureMimeType
@@ -55,6 +56,7 @@ abstract class BaseChatViewModel(
     protected val retrofitService: RetrofitService,
     protected val fileManager: FileManager,
     protected val webSocketService: WebSocketService,
+    private val appSettings: AppSettings,
     @IoDispatcher protected val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
     protected var convId: Int = -1
@@ -130,16 +132,20 @@ abstract class BaseChatViewModel(
         }
     }
 
-    fun setConvInfo(convId: Int, isGroup: Int, chatKey: String, userId: Int) {
+    fun setConvInfo(convId: Int, isGroup: Int, chatKey: String, userId: Int, context: Context) {
         val chatTypeString = if(isGroup == 0) "dialog" else "group"
         val aead = chatKeyManager.getAead(convId, chatTypeString)
         if(aead != null) {
             tinkAesGcmHelper = TinkAesGcmHelper(aead)
-            Log.d("testAeadGet", aead.toString())
         } else {
             if(chatKey != "") {
                 val wrappedKey = Base64.decode(chatKey, Base64.NO_WRAP)
-                chatKeyManager.unwrapChatKeyForSave(wrappedKey, convId, chatTypeString, userId)
+                try {
+                    chatKeyManager.unwrapChatKeyForSave(wrappedKey, convId, chatTypeString, userId)
+                } catch (e: Exception) {
+                    Log.d("testPrivateKeyMissed", e.message.toString())
+                    logout(context)
+                }
                 val newAead = chatKeyManager.getAead(convId, chatTypeString)
                 if(newAead != null) {
                     tinkAesGcmHelper = TinkAesGcmHelper(newAead)
@@ -154,6 +160,13 @@ abstract class BaseChatViewModel(
         }
 
         updateLastSession()
+    }
+
+    private fun logout(context: Context) {
+        appSettings.setCurrentAccessToken(null)
+        appSettings.setCurrentRefreshToken(null)
+        appSettings.setRemember(false)
+        context.sendBroadcast(Intent("com.example.messenger.LOGOUT"))
     }
 
     fun bindRecyclerView(recyclerView: RecyclerView) {
@@ -241,11 +254,6 @@ abstract class BaseChatViewModel(
         this.searchBy.value = query
     }
 
-    suspend fun getConvSettings(): ConversationSettings {
-        return if(isGroup == 0) retrofitService.getDialogSettings(convId)
-        else retrofitService.getGroupSettings(convId)
-    }
-
     suspend fun deleteMessages(ids: List<Int>): Boolean {
         val response = try {
             if(isGroup == 0) retrofitService.deleteMessages(convId, ids)
@@ -289,17 +297,20 @@ abstract class BaseChatViewModel(
 
     suspend fun editMessage(messageId: Int, text: String?, images: List<String>?, voice: String?, file: String?) : Boolean {
         try {
-            if(isGroup == 0) retrofitService.editMessage(convId, messageId, text, images, voice, file)
-            else retrofitService.editGroupMessage(convId, messageId, text, images, voice, file)
+            val encryptedText = encryptText(text)
+            if(isGroup == 0) retrofitService.editMessage(convId, messageId, encryptedText, images, voice, file)
+            else retrofitService.editGroupMessage(convId, messageId, encryptedText, images, voice, file)
             return true
         } catch (e: Exception) {
             return false
         }
     }
 
-    suspend fun findMessage(idMessage: Int): Pair<Message, Int> {
-        return if(isGroup == 0) retrofitService.findMessage(idMessage, convId)
-        else retrofitService.findGroupMessage(idMessage, convId)
+    suspend fun findMessage(idMessage: Int): Pair<Message, Int>? {
+        return try {
+            if(isGroup == 0) retrofitService.findMessage(idMessage, convId)
+            else retrofitService.findGroupMessage(idMessage, convId)
+        } catch (e: Exception) { null }
     }
 
     suspend fun getUnsentMessages(): List<Message>? {
@@ -331,16 +342,21 @@ abstract class BaseChatViewModel(
             tinkAesGcmHelper?.encryptFile(photo, tempFile)
 
             val path = retrofitService.uploadPhoto(convId, tempFile, isGroup)
+            tempFile.delete()
 
             val name = path.substringBeforeLast(".")
 
             val previewFile = if(isVideo) {
-                imageUtils.createVideoPreview(photo, name, 300, 300)
+                imageUtils.createVideoPreview(context, photo, name, 300, 300)
             } else imageUtils.createImagePreview(context, photo, name, 300, 300)
 
-            retrofitService.uploadPhotoPreview(convId, previewFile, isGroup)
+            val tempFilePreview = File(tempDir, previewFile.name)
+            tinkAesGcmHelper?.encryptFile(previewFile, tempFilePreview)
 
-            tempFile.delete()
+            retrofitService.uploadPhotoPreview(convId, tempFilePreview, isGroup)
+
+            previewFile.delete()
+            tempFilePreview.delete()
             Pair(path, true)
         } catch (e: Exception) {
             Log.d("testUploadError", e.message.toString())
@@ -397,15 +413,7 @@ abstract class BaseChatViewModel(
         val downloadedFilePath = retrofitService.downloadFile(context, folder, convId, filename, isGroup)
         val downloadedFile = File(downloadedFilePath)
 
-        // Создаем временный файл для расшифровки
-        val tempDir = context.cacheDir
-        val tempFile = File(tempDir, "decrypted_${downloadedFile.name}")
-
-        tinkAesGcmHelper?.decryptFile(downloadedFile, tempFile)
-
-        // Заменяем исходный файл на расшифрованный
-        downloadedFile.delete()
-        tempFile.renameTo(downloadedFile)
+        tinkAesGcmHelper?.decryptFile(downloadedFile, downloadedFile)
 
         return downloadedFile.absolutePath
     }
@@ -422,20 +430,16 @@ abstract class BaseChatViewModel(
         fileManager.saveMessageFile(fileName, fileData)
     }
 
-    fun fManagerIsExistAvatar(fileName: String): Boolean {
+    private fun fManagerIsExistAvatar(fileName: String): Boolean {
         return fileManager.isExistAvatar(fileName)
     }
 
-    fun fManagerGetAvatarPath(fileName: String): String {
+    private fun fManagerGetAvatarPath(fileName: String): String {
         return fileManager.getAvatarFilePath(fileName)
     }
 
-    suspend fun fManagerSaveAvatar(fileName: String, fileData: ByteArray) = withContext(ioDispatcher) {
+    private suspend fun fManagerSaveAvatar(fileName: String, fileData: ByteArray) = withContext(ioDispatcher) {
         fileManager.saveAvatarFile(fileName, fileData)
-    }
-
-    fun fManagerIsExistUnsent(fileName: String): Boolean {
-        return fileManager.isExistUnsentMessage(fileName)
     }
 
     suspend fun fManagerDeleteUnsent(files: List<String>) = withContext(ioDispatcher) {

@@ -90,7 +90,9 @@ class MasterKeyFragment(private val userId: Int) : Fragment(), OnSaveButtonClick
         val certificate = BouncyCastleHelper().createSelfSignedCertificate(KeyPair(publicKey, privateKey))
         lifecycleScope.launch {
             val success = withContext(NonCancellable) {
-                return@withContext retrofitService.saveUserKeys(publicKeyString, encryptedPrivateKey)
+                return@withContext try {
+                    retrofitService.saveUserKeys(publicKeyString, encryptedPrivateKey)
+                } catch (e: Exception) { false }
             }
             if(success) {
                 keyManager.savePrivateKey(userId, privateKey, certificate)

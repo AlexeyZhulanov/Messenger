@@ -31,8 +31,12 @@ class MessagePagingSource(
         return try {
             val messages = if (currentQuery.isEmpty()) {
                 try {
-                    if(isDialog) retrofitService.getMessages(convId, pageIndex, pageSize)
+                    val mes = if(isDialog) retrofitService.getMessages(convId, pageIndex, pageSize)
                     else retrofitService.getGroupMessages(convId, pageIndex, pageSize)
+                    mes.forEach {
+                        it.text = it.text?.let { text -> tinkAesGcmHelper?.decryptText(text) }
+                    }
+                    mes
                 } catch (e: Exception) {
                     if(flag) {
                         flag = false
@@ -43,12 +47,17 @@ class MessagePagingSource(
             } else {
                 searchCache[currentQuery] ?: run {
                     if (invertedIndex == null) {
-                        val allMessages = if (isDialog) retrofitService.searchMessagesInDialog(convId)
-                        else retrofitService.searchMessagesInGroup(convId)
-                        invertedIndex = InvertedIndex(allMessages)
+                        val allMessages = try {
+                            if (isDialog) retrofitService.searchMessagesInDialog(convId)
+                            else retrofitService.searchMessagesInGroup(convId)
+                        } catch (e: Exception) { emptyList() }
+                        allMessages.forEach {
+                            it.text = it.text?.let { text -> tinkAesGcmHelper?.decryptText(text) } ?: ""
+                        }
+                        if(allMessages.isNotEmpty()) invertedIndex = InvertedIndex(allMessages)
                     }
-                    val result = invertedIndex!!.searchMessages(currentQuery)
-                    searchCache[currentQuery] = result
+                    val result = invertedIndex?.searchMessages(currentQuery) ?: emptyList()
+                    if(result.isNotEmpty()) searchCache[currentQuery] = result
                     result
                 }
             }
@@ -57,7 +66,6 @@ class MessagePagingSource(
             val dates = mutableSetOf<String>()
             val messageDatePairs = mutableListOf<Pair<Message, String>>()
             messages.forEach {
-                it.text = it.text?.let { text -> tinkAesGcmHelper?.decryptText(text) }
                 val tTime = formatMessageDate(it.timestamp)
                 if (tTime !in dates) {
                     messageDatePairs.add(it to tTime)

@@ -253,10 +253,10 @@ class SettingsFragment(
                 R.id.item_delete -> {
                     if(currentUser.avatar != null) {
                         lifecycleScope.launch {
-                            val success = async { viewModel.updateAvatar("delete") }
-                            if(success.await()) {
+                            val success = viewModel.updateAvatar("delete")
+                            if(success) {
                                 requireActivity().recreate()
-                            }
+                            } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                         }
                     } else {
                         Toast.makeText(requireContext(), "Аватарки и так нет!", Toast.LENGTH_SHORT).show()
@@ -270,11 +270,13 @@ class SettingsFragment(
                         val res = async { filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf(viewModel.fileToLocalMedia(file))) }
                         val photo = res.await()
                         if(photo.isNotEmpty()) {
-                            val path = async { viewModel.uploadAvatar(File(photo[0].availablePath)) }
-                            val success = async { viewModel.updateAvatar(path.await()) }
-                            if(success.await()) {
-                                requireActivity().recreate()
-                            }
+                            val path = viewModel.uploadAvatar(File(photo[0].availablePath))
+                            if(path != "") {
+                                val success = viewModel.updateAvatar(path)
+                                if(success) {
+                                    requireActivity().recreate()
+                                } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
+                            } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                         }
                     }
                 } else {
@@ -288,11 +290,13 @@ class SettingsFragment(
                         val res = async { filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf()) }
                         val photo = res.await()
                         if(photo.isNotEmpty()) {
-                            val path = async { viewModel.uploadAvatar(File(photo[0].availablePath)) }
-                            val success = async { viewModel.updateAvatar(path.await()) }
-                            if(success.await()) {
-                                requireActivity().recreate()
-                            }
+                            val path = viewModel.uploadAvatar(File(photo[0].availablePath))
+                            if(path != "") {
+                                val success = viewModel.updateAvatar(path)
+                                if(success) {
+                                    requireActivity().recreate()
+                                } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
+                            } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                         }
                     }
                     true
@@ -321,8 +325,9 @@ class SettingsFragment(
                             return@launch
                         }
                     }
-                    val success = async { viewModel.updateUserName(input) }
-                    if(success.await()) requireActivity().recreate()
+                    val success = viewModel.updateUserName(input)
+                    if(success) requireActivity().recreate()
+                    else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Назад") { dialogInterface, _ ->

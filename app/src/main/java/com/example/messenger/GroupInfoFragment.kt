@@ -84,6 +84,8 @@ class GroupInfoFragment(
 
     override fun getUpperName(): String = group.name
 
+    override fun getIsOwner(): Boolean = group.isOwner
+
     override fun getCanDelete(): Boolean = group.canDelete
 
     override fun getInterval(): Int = group.autoDeleteInterval
@@ -98,7 +100,7 @@ class GroupInfoFragment(
         showDeleteUserDialog(user.username) {
             lifecycleScope.launch {
                 val success = viewModel.deleteUserFromGroup(user.id)
-                val txt = if(success) "Участник успешно удален" else "Не удалось удалить"
+                val txt = if(success) "Участник успешно удален" else "Не удалось удалить, нет сети"
                 Toast.makeText(requireContext(), txt, Toast.LENGTH_SHORT).show()
             }
         }
@@ -146,11 +148,13 @@ class GroupInfoFragment(
                         val res = async { filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf()) }
                         val photo = res.await()
                         if(photo.isNotEmpty()) {
-                            val path = async { viewModel.uploadAvatar(File(photo[0].availablePath)) }
-                            val success = async { viewModel.updateGroupAvatar(path.await()) }
-                            if(success.await()) {
-                                Toast.makeText(requireContext(), "Аватарка установлена, полностью перезайдите чтобы увидеть", Toast.LENGTH_SHORT).show()
-                            }
+                            val path = viewModel.uploadAvatar(File(photo[0].availablePath))
+                            if(path != "") {
+                                val success = viewModel.updateGroupAvatar(path)
+                                if(success) {
+                                    Toast.makeText(requireContext(), "Аватарка установлена, полностью перезайдите чтобы увидеть", Toast.LENGTH_SHORT).show()
+                                } else Toast.makeText(requireContext(), "Ошибка, нет сети!", Toast.LENGTH_SHORT).show()
+                            } else Toast.makeText(requireContext(), "Ошибка, нет сети!", Toast.LENGTH_SHORT).show()
                         }
                     }
                     true
@@ -162,11 +166,13 @@ class GroupInfoFragment(
                             val res = async { filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf(viewModel.fileToLocalMedia(fileTemp))) }
                             val photo = res.await()
                             if(photo.isNotEmpty()) {
-                                val path = async { viewModel.uploadAvatar(File(photo[0].availablePath)) }
-                                val success = async { viewModel.updateGroupAvatar(path.await()) }
-                                if(success.await()) {
-                                    Toast.makeText(requireContext(), "Аватарка изменена, полностью перезайдите чтобы увидеть", Toast.LENGTH_SHORT).show()
-                                }
+                                val path = viewModel.uploadAvatar(File(photo[0].availablePath))
+                                if(path != "") {
+                                    val success = viewModel.updateGroupAvatar(path)
+                                    if(success) {
+                                        Toast.makeText(requireContext(), "Аватарка изменена, полностью перезайдите чтобы увидеть", Toast.LENGTH_SHORT).show()
+                                    } else Toast.makeText(requireContext(), "Ошибка, нет сети!", Toast.LENGTH_SHORT).show()
+                                } else Toast.makeText(requireContext(), "Ошибка, нет сети!", Toast.LENGTH_SHORT).show()
                             }
                         }
                     } else {
@@ -180,7 +186,7 @@ class GroupInfoFragment(
                             val success = async { viewModel.updateGroupAvatar("delete") }
                             if(success.await()) {
                                 Toast.makeText(requireContext(), "Аватарка удалена, полностью перезайдите чтобы увидеть", Toast.LENGTH_SHORT).show()
-                            }
+                            } else Toast.makeText(requireContext(), "Ошибка, нет сети!", Toast.LENGTH_SHORT).show()
                         }
                     } else {
                         Toast.makeText(requireContext(), "Аватарки и так нет!", Toast.LENGTH_SHORT).show()
@@ -216,6 +222,7 @@ class GroupInfoFragment(
                     }
                     val success = async { viewModel.updateGroupName(input) }
                     if(success.await()) Toast.makeText(requireContext(), "Название изменено, полностью перезайдите чтобы увидеть", Toast.LENGTH_SHORT).show()
+                    else Toast.makeText(requireContext(), "Ошибка, нет сети!", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Назад") { dialogInterface, _ ->

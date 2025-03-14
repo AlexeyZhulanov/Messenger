@@ -1,7 +1,6 @@
 package com.example.messenger.retrofit.source.messages
 
 import com.example.messenger.model.Conversation
-import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.Message
 import com.example.messenger.model.UserShort
 
@@ -37,7 +36,5 @@ interface MessagesSource {
     suspend fun updateAutoDeleteInterval(dialogId: Int, autoDeleteInterval: Int) : String
 
     suspend fun deleteDialogMessages(dialogId: Int) : String
-
-    suspend fun getDialogSettings(dialogId: Int) : ConversationSettings
 
 }

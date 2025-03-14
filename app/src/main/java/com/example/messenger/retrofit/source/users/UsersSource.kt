@@ -9,7 +9,7 @@ interface UsersSource {
 
     suspend fun updateProfile(username: String? = null, avatar: String? = null) : String
 
-    suspend fun updatePassword(password: String) : String
+    suspend fun updatePassword(oldPassword: String, newPassword: String) : String
 
     suspend fun updateLastSession() : String
 

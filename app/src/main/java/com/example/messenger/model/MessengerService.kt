@@ -1,5 +1,6 @@
 package com.example.messenger.model
 
+import android.util.Log
 import com.example.messenger.room.dao.ChatSettingsDao
 import com.example.messenger.room.dao.ConversationDao
 import com.example.messenger.room.dao.GroupMemberDao
@@ -38,15 +39,13 @@ class MessengerService(
 
     override suspend fun getConversations(): List<Conversation> = withContext(ioDispatcher) {
         val conversationEntities = conversationDao.getConversations()
-
         val userIds = conversationEntities.mapNotNull { it.otherUserId }
-        val lastMessageIds = conversationEntities.mapNotNull { it.lastMessageId }
+        val lastMessagePairs = conversationEntities.map { it.chatId to it.type }
 
         val users = conversationDao.getUsersByIds(userIds)
-        val lastMessages = conversationDao.getLastMessagesByIds(lastMessageIds)
+        val lastMessages = conversationDao.getLastMessagesByPairs(lastMessagePairs)
 
         val conversationDbEntities = conversationDao.mapToConversationDbEntity(conversationEntities, users, lastMessages)
-
         return@withContext conversationDbEntities.map { it.toConversation() }
     }
 
@@ -55,8 +54,8 @@ class MessengerService(
         val conversationDbEntity = if(conversationEntity.type == "dialog") {
             val userId = conversationEntity.otherUserId ?: return@withContext null
             val userEntity = conversationDao.getUserById(userId)
-            ConversationDbEntity(conversationEntity, userEntity, LastMessageEntity(-1))
-        } else ConversationDbEntity(conversationEntity, null, LastMessageEntity(-1))
+            ConversationDbEntity(conversationEntity, userEntity, LastMessageEntity(-1, ""))
+        } else ConversationDbEntity(conversationEntity, null, LastMessageEntity(-1, ""))
 
         return@withContext conversationDbEntity.toConversation()
     }

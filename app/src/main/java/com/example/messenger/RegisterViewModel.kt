@@ -2,6 +2,7 @@ package com.example.messenger
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.messenger.model.AccountAlreadyExistsException
 import com.example.messenger.model.RetrofitService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -15,11 +16,17 @@ class RegisterViewModel @Inject constructor(
 
     fun register(name: String, username: String, password: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
-            val result = async { retrofitService.register(name, username, password) }
-            if (result.await()) {
-                onSuccess()
-            } else {
+            val result = try {
+                retrofitService.register(name, username, password)
+            } catch (e: AccountAlreadyExistsException) {
                 onError("Ошибка: Имя пользователя уже занято")
+                false
+            } catch (e: Exception) {
+                onError("Ошибка: Нет сети!")
+                false
+            }
+            if (result) {
+                onSuccess()
             }
         }
     }

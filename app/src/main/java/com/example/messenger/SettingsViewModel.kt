@@ -8,15 +8,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.FileManager
-import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
-import com.example.messenger.model.User
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -27,7 +23,6 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val prefs: SharedPreferences,
     private val retrofitService: RetrofitService,
-    private val messengerService: MessengerService,
     private val fileManager: FileManager,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
@@ -59,10 +54,6 @@ class SettingsViewModel @Inject constructor(
         _themeNumber.value = themeNumber
     }
 
-    suspend fun getUser(): User {
-        return retrofitService.getUser(0) // 0 - current user from jwt
-    }
-
     fun fManagerIsExistAvatar(fileName: String): Boolean {
         return fileManager.isExistAvatar(fileName)
     }
@@ -76,7 +67,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     suspend fun uploadAvatar(avatar: File): String {
-        return retrofitService.uploadAvatar(avatar)
+        return try {
+            retrofitService.uploadAvatar(avatar)
+        } catch (e: Exception) { "" }
     }
 
     suspend fun downloadAvatar(context: Context, filename: String): String {
@@ -84,22 +77,27 @@ class SettingsViewModel @Inject constructor(
     }
 
     suspend fun updateAvatar(photo: String) : Boolean {
-        return retrofitService.updateProfile(null, photo)
+        return try {
+            retrofitService.updateProfile(null, photo)
+        } catch (e: Exception) { false }
     }
     
     suspend fun updateUserName(username: String) : Boolean {
-        return retrofitService.updateProfile(username, null)
+        return try {
+            retrofitService.updateProfile(username, null)
+        } catch (e: Exception) { false }
     }
 
     fun updatePassword(oldPassword: String, newPassword: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
-            // todo здесь нужно сделать нормальный запрос со старым и новым паролем обязательно
             if(newPassword != oldPassword) {
-                val result = retrofitService.updatePassword(newPassword)
+                val result = try {
+                    retrofitService.updatePassword(oldPassword, newPassword)
+                } catch (e: Exception) { false }
                 if (result) {
                     onSuccess()
                 } else {
-                    onError("Ошибка: Имя пользователя уже занято")
+                    onError("Ошибка: Неверный старый пароль либо нет сети")
                 }
             } else {
                 onError("Ошибка: Старый и новый пароли совпадают")

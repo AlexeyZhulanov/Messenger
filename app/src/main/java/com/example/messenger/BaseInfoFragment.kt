@@ -62,6 +62,7 @@ abstract class BaseInfoFragment : Fragment() {
 
     abstract fun getAvatarString(): String
     abstract fun getUpperName(): String
+    abstract fun getIsOwner(): Boolean
     abstract fun getCanDelete(): Boolean
     abstract fun getInterval(): Int
     abstract fun getMembers(): List<User>
@@ -143,6 +144,16 @@ abstract class BaseInfoFragment : Fragment() {
         lifecycleScope.launch {
             binding.switchNotifications.isChecked = viewModel.isNotificationsEnabled()
         }
+        if(getIsOwner()) {
+            binding.switchDelete.setOnClickListener {
+                binding.switchDelete.isEnabled = false
+                lifecycleScope.launch {
+                    viewModel.toggleCanDeleteDialog()
+                    delay(5000)
+                    binding.switchDelete.isEnabled = true
+                }
+            }
+        } else binding.switchDelete.isEnabled = false
         binding.switchDelete.isChecked = getCanDelete()
         binding.switchNotifications.setOnClickListener {
             binding.switchNotifications.isEnabled = false
@@ -150,14 +161,6 @@ abstract class BaseInfoFragment : Fragment() {
                 viewModel.turnNotifications()
                 delay(5000)
                 binding.switchNotifications.isEnabled = true
-            }
-        }
-        binding.switchDelete.setOnClickListener {
-            binding.switchDelete.isEnabled = false
-            lifecycleScope.launch {
-                viewModel.toggleCanDeleteDialog()
-                delay(5000)
-                binding.switchDelete.isEnabled = true
             }
         }
         binding.loadButton.setOnClickListener {
@@ -301,7 +304,8 @@ abstract class BaseInfoFragment : Fragment() {
                         currentPage++
                         callback(true)
                     } else {
-                        Toast.makeText(requireContext(), "Медиа файлов нет", Toast.LENGTH_SHORT).show()
+                        if(list == null) Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
+                        else Toast.makeText(requireContext(), "Медиа файлов нет", Toast.LENGTH_SHORT).show()
                         if(currentPage == 0) callback(false) else isCanDoPagination = false
                     }
                 }
@@ -314,7 +318,8 @@ abstract class BaseInfoFragment : Fragment() {
                         currentPage++
                         callback(true)
                     } else {
-                        Toast.makeText(requireContext(), "Файлов нет", Toast.LENGTH_SHORT).show()
+                        if(list == null) Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
+                        else Toast.makeText(requireContext(), "Файлов нет", Toast.LENGTH_SHORT).show()
                         if(currentPage == 0) callback(false) else isCanDoPagination = false
                     }
                     binding.loadButton.visibility = View.GONE
@@ -328,7 +333,8 @@ abstract class BaseInfoFragment : Fragment() {
                         currentPage++
                         callback(true)
                     } else {
-                        Toast.makeText(requireContext(), "Голосовых нет", Toast.LENGTH_SHORT).show()
+                        if(list == null) Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
+                        else Toast.makeText(requireContext(), "Голосовых нет", Toast.LENGTH_SHORT).show()
                         if(currentPage == 0) callback(false) else isCanDoPagination = false
                     }
                     binding.loadButton.visibility = View.GONE
@@ -390,18 +396,21 @@ abstract class BaseInfoFragment : Fragment() {
             }
             R.id.delete_all_messages -> {
                 lifecycleScope.launch {
-                    viewModel.deleteAllMessages()
+                    val success = viewModel.deleteAllMessages()
+                    if(success) requireActivity().onBackPressedDispatcher.onBackPressed()
+                    else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                 }
-                requireActivity().onBackPressedDispatcher.onBackPressed()
                 true
             }
             R.id.delete_dialog -> {
                 lifecycleScope.launch {
-                    viewModel.deleteConv()
+                    val success = viewModel.deleteConv()
+                    if(success) {
+                        parentFragmentManager.beginTransaction()
+                            .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_FROM_DIALOG_TAG")
+                            .commit()
+                    } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                 }
-                parentFragmentManager.beginTransaction()
-                    .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_FROM_DIALOG_TAG")
-                    .commit()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -433,7 +442,6 @@ abstract class BaseInfoFragment : Fragment() {
             .setPositiveButton("OK") { _, _ ->
                 // Обработка выбранного значения
                 val selectedValue = values[numberPicker.value]
-                Toast.makeText(requireContext(), "Установлено автоудаление: $selectedValue", Toast.LENGTH_SHORT).show()
                 if(numberPicker.value != numb) {
                     val interval = when(numberPicker.value) {
                         0 -> 0
@@ -444,7 +452,9 @@ abstract class BaseInfoFragment : Fragment() {
                         else -> 0
                     }
                     lifecycleScope.launch {
-                        viewModel.updateAutoDeleteInterval(interval)
+                        val success = viewModel.updateAutoDeleteInterval(interval)
+                        if(success) Toast.makeText(requireContext(), "Установлено автоудаление: $selectedValue", Toast.LENGTH_SHORT).show()
+                        else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                     }
                 }
             }

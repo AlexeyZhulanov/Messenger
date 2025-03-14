@@ -33,7 +33,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlin.coroutines.cancellation.CancellationException
 import com.example.messenger.databinding.FragmentMessageBinding
-import com.example.messenger.model.ConversationSettings
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
 import com.example.messenger.picker.ExoPlayerEngine
@@ -59,8 +58,6 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.PrintWriter
@@ -104,6 +101,7 @@ abstract class BaseChatFragment(
     abstract fun getMembers(): List<User>
     abstract fun setupAdapterDialog()
     abstract fun isGroup(): Boolean
+    abstract fun canDelete(): Boolean
 
     private val file: File by lazy {
         val f = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.pcm")
@@ -655,14 +653,7 @@ abstract class BaseChatFragment(
                     })
                     .startActivityPreview(position, false, images)
             }
-        }, currentUser.id, requireContext(), viewModel, isGroup())
-        lifecycleScope.launch {
-            try {
-                adapter.dialogSettings = viewModel.getConvSettings()
-            } catch (e: Exception) {
-                adapter.dialogSettings = ConversationSettings()
-            }
-        }
+        }, currentUser.id, requireContext(), viewModel, isGroup(), canDelete())
         binding.recyclerview.adapter = adapter
     }
 
@@ -1030,7 +1021,7 @@ abstract class BaseChatFragment(
                                     } else {
                                         if (text.isNotEmpty()) {
                                             val resp = async {
-                                                viewModel.editMessage(message.id, text, arrayListOf(), null, null)
+                                                viewModel.editMessage(message.id, text, null, null, null)
                                             }
                                             val f = resp.await()
                                             editFlag = false

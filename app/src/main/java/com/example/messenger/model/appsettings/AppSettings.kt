@@ -19,4 +19,10 @@ interface AppSettings {
     fun getRemember(): Boolean
 
     fun setRemember(bool: Boolean)
+
+    fun setTokenRefreshing(refreshing: Boolean)
+
+    fun isTokenRefreshing(): Boolean
+
+    fun isTokenRecentlyRefreshed(): Boolean
 }

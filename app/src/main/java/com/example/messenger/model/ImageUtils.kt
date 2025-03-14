@@ -14,7 +14,8 @@ class ImageUtils {
     suspend fun createImagePreview(context: Context, file: File, outputFileName: String, maxWidth: Int, maxHeight: Int): File {
         return withContext(Dispatchers.IO) {
 
-            val previewFile = File.createTempFile(outputFileName, ".jpg", file.parentFile)
+            val concatFileName = "$outputFileName.jpg"
+            val previewFile = File(context.cacheDir, concatFileName)
 
             val bitmap = Glide.with(context)
                 .asBitmap()
@@ -31,7 +32,7 @@ class ImageUtils {
         }
     }
 
-    fun createVideoPreview(file: File, outputFileName: String, maxWidth: Int, maxHeight: Int): File {
+    fun createVideoPreview(context: Context, file: File, outputFileName: String, maxWidth: Int, maxHeight: Int): File {
         val retriever = MediaMetadataRetriever()
         retriever.setDataSource(file.absolutePath)
 
@@ -43,7 +44,7 @@ class ImageUtils {
         val bitmap = retriever.frameAtTime
 
         val previewFileName = "${outputFileName}_${durationInSeconds}s:$fileExtension.jpg"
-        val previewFile = File(file.parentFile, previewFileName)
+        val previewFile = File(context.cacheDir, previewFileName)
 
         if (bitmap != null) {
             val scaledBitmap = Bitmap.createScaledBitmap(bitmap, maxWidth, maxHeight, true)
