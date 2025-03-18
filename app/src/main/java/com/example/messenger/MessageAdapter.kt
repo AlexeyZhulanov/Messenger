@@ -182,12 +182,13 @@ class MessageAdapter(
         if(listIds.isNotEmpty()) {
             val currentPagingData = currentList
             val updatedPagingData = currentPagingData.map { pair ->
-                if (pair.first.id in listIds) {
+                if (pair.first.id in listIds && pair.first.idSender == currentUserId) {
                     pair.copy(first = pair.first.copy(isRead = true))
                 } else {
                     pair
                 }
             }
+            if(updatedPagingData == currentPagingData) return
             submitList(updatedPagingData)
         }
     }

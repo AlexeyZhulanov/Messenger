@@ -17,7 +17,6 @@ import com.example.messenger.room.dao.ChatSettingsDao
 import com.example.messenger.room.dao.ConversationDao
 import com.example.messenger.room.dao.GroupMemberDao
 import com.example.messenger.room.dao.GroupMessageDao
-import com.example.messenger.room.dao.LastReadMessageDao
 import com.example.messenger.room.dao.MessageDao
 import com.example.messenger.room.dao.NewsDao
 import com.example.messenger.room.dao.UnsentMessageDao
@@ -73,12 +72,6 @@ object MessengerModule {
 
     @Provides
     @Singleton
-    fun provideLastReadMessageDao(appDatabase: AppDatabase): LastReadMessageDao {
-        return appDatabase.getLastReadMessageDao()
-    }
-
-    @Provides
-    @Singleton
     fun provideChatSettingsDao(appDatabase: AppDatabase): ChatSettingsDao {
         return appDatabase.getChatSettingsDao()
     }
@@ -108,7 +101,6 @@ object MessengerModule {
         messageDao: MessageDao,
         groupMessageDao: GroupMessageDao,
         userDao: UserDao,
-        lastReadMessageDao: LastReadMessageDao,
         chatSettingsDao: ChatSettingsDao,
         unsentMessageDao: UnsentMessageDao,
         groupMemberDao: GroupMemberDao,
@@ -116,7 +108,7 @@ object MessengerModule {
         @IoDispatcher ioDispatcher: CoroutineDispatcher
     ): MessengerService {
         return MessengerService(conversationDao, messageDao, groupMessageDao, userDao,
-            lastReadMessageDao, chatSettingsDao, unsentMessageDao, groupMemberDao, newsDao, ioDispatcher)
+            chatSettingsDao, unsentMessageDao, groupMemberDao, newsDao, ioDispatcher)
     }
 
     @Provides

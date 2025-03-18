@@ -1,0 +1,8 @@
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Цвет фона -->
+    <solid android:color="@color/count_message" />
+
+    <!-- Форма: круг или овал -->
+    <corners android:radius="999dp" /> <!-- Большой радиус для округления -->
+
+</shape>

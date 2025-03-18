@@ -23,6 +23,7 @@
     <color name="white">#FFFFFFFF</color>
     <color name="orange">#FF9800</color>
     <color name="grey">#808080</color>
+    <color name="count_message">#C0C0C0</color>
     <color name="color1_main">#81C784</color>
     <color name="color1_secondary">#424242</color>"
     <color name="color2_main">#CE93D8</color>

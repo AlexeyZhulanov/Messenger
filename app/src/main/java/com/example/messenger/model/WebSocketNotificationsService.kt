@@ -58,6 +58,7 @@ class  WebSocketNotificationsService : LifecycleService() {
             launch {
                 webSocketService.notificationMessageFlow
                     .filter { webSocketService.isNotificationsEnabled(it.chatId, it.isGroup) }
+                    .filter { !webSocketService.isViewModelActive.value }
                     .collect {
                         sendNotification(it)
                     }

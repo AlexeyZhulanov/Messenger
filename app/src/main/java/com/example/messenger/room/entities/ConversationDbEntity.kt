@@ -30,7 +30,7 @@ data class ConversationDbEntity(
         createdBy = conversation.createdBy, avatar = conversation.avatar,
         lastMessage = lastMessage.toLastMessage(), countMsg = conversation.countMsg,
         isOwner = conversation.isOwner, canDelete = conversation.canDelete,
-        autoDeleteInterval = conversation.autoDeleteInterval
+        autoDeleteInterval = conversation.autoDeleteInterval, unreadCount = 0 // 0 т.к. без сети всё равно сообщения не увидеть эти
     )
     companion object {
         fun fromUserInput(conversation: Conversation, orderIndex: Int): ConversationDbEntity {

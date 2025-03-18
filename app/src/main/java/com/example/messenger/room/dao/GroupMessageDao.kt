@@ -25,7 +25,4 @@ interface GroupMessageDao {
 
     @Query("DELETE FROM group_messages WHERE group_id = :groupId")
     suspend fun deleteGroupMessagesByGroupId(groupId: Int)
-
-    @Query("SELECT * FROM group_messages WHERE group_id = :groupId AND id < :lastMessageId ORDER BY id DESC LIMIT 1")
-    suspend fun getPreviousMessage(groupId: Int, lastMessageId: Int): GroupMessageDbEntity?
 }

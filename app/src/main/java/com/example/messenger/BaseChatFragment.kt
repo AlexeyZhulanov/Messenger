@@ -35,6 +35,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import com.example.messenger.databinding.FragmentMessageBinding
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
+import com.example.messenger.model.chunkedFlowLast
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
@@ -48,13 +49,9 @@ import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
 import com.tougee.recorderview.AudioRecordView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
-import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -82,6 +79,7 @@ abstract class BaseChatFragment(
     private var typingHandler: Handler = Handler(Looper.getMainLooper())
     private var isTyping = false
     protected var isStopPagination = false
+    private var countNewMsg = 0
     private val typingRunnable = Runnable {
         if (isTyping) {
             sendTypingEvent(false)
@@ -95,13 +93,13 @@ abstract class BaseChatFragment(
     abstract fun getAvatarString(): String
     abstract fun getUpperName(): String
     abstract fun getUserName(): String
-    abstract fun rememberLastMessage()
     abstract fun replaceCurrentFragment()
     abstract fun composeAnswer(message: Message)
     abstract fun getMembers(): List<User>
     abstract fun setupAdapterDialog()
     abstract fun isGroup(): Boolean
     abstract fun canDelete(): Boolean
+    abstract fun getUnreadCount(): Int
 
     private val file: File by lazy {
         val f = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.pcm")
@@ -122,6 +120,26 @@ abstract class BaseChatFragment(
     private val adapterDataObserver = object : RecyclerView.AdapterDataObserver() {
         override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
             binding.recyclerview.scrollToPosition(0)
+            binding.recyclerview.adapter?.unregisterAdapterDataObserver(this)
+        }
+    }
+
+    private val adapterArrowObserver = object : RecyclerView.AdapterDataObserver() {
+        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+            val firstVisiblePosition = (binding.recyclerview.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition()
+            if(firstVisiblePosition > 2) {
+                countNewMsg++
+                showArrow()
+            } else binding.recyclerview.scrollToPosition(0)
+            binding.recyclerview.adapter?.unregisterAdapterDataObserver(this)
+        }
+    }
+
+    private val adapterInitialListObserver = object: RecyclerView.AdapterDataObserver() {
+        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+            countNewMsg = getUnreadCount() - 3
+            binding.recyclerview.scrollToPosition(getUnreadCount() - 2)
+            showArrow()
             binding.recyclerview.adapter?.unregisterAdapterDataObserver(this)
         }
     }
@@ -149,11 +167,15 @@ abstract class BaseChatFragment(
                     .chunkedFlowLast(200) // custom func
                     .collect { newMessages ->
                         if(newMessages.isNotEmpty()) {
-                            registerScrollObserver()
+                            registerArrowObserver()
                             val clearMessages = newMessages.filterNotNull()
                             adapter.addNewMessages(clearMessages)
                             val unreadMessages = clearMessages.filter {
-                                currentUser.id != it.first.idSender && !it.first.isRead
+                                if(it.first.isPersonalUnread == null) {
+                                    currentUser.id != it.first.idSender && !it.first.isRead
+                                } else {
+                                    currentUser.id != it.first.idSender && it.first.isPersonalUnread == true
+                                }
                             }
                             if (unreadMessages.isNotEmpty()) {
                                 viewModel.markMessagesAsRead(unreadMessages.map { it.first })
@@ -201,6 +223,14 @@ abstract class BaseChatFragment(
                 }
             }
         }
+
+        binding.floatingActionButtonArrowDown.setOnClickListener {
+            binding.recyclerview.smoothScrollToPosition(0)
+            binding.floatingActionButtonArrowDown.visibility = View.GONE
+        }
+
+        registerArrowScrollListener()
+
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.custom_action_bar, toolbarContainer, false)
@@ -526,6 +556,65 @@ abstract class BaseChatFragment(
         }
     }
 
+    private fun registerArrowObserver() {
+        try {
+            binding.recyclerview.adapter?.registerAdapterDataObserver(adapterArrowObserver)
+        } catch (e: Exception) {
+            binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterArrowObserver)
+            binding.recyclerview.adapter?.registerAdapterDataObserver(adapterArrowObserver)
+        }
+    }
+
+    protected fun registerInitialListObserver() {
+        try {
+            binding.recyclerview.adapter?.registerAdapterDataObserver(adapterInitialListObserver)
+        } catch (e: Exception) {
+            binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterInitialListObserver)
+            binding.recyclerview.adapter?.registerAdapterDataObserver(adapterInitialListObserver)
+        }
+    }
+
+    private fun registerArrowScrollListener() {
+        binding.recyclerview.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+
+                val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+                val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+
+                if (firstVisibleItemPosition > 2) {
+                    if(countNewMsg >= firstVisibleItemPosition) countNewMsg = firstVisibleItemPosition - 1
+                    showArrow()
+                } else {
+                    hideArrow()
+                }
+            }
+        })
+    }
+
+    private fun showArrow() {
+        if(binding.floatingActionButtonArrowDown.visibility == View.GONE) {
+            binding.floatingActionButtonArrowDown.visibility = View.VISIBLE
+        }
+        if(countNewMsg > 0) {
+            if(binding.countNewMsgTextView.visibility == View.GONE) {
+                binding.countNewMsgTextView.visibility = View.VISIBLE
+            }
+            val strCount = countNewMsg.toString()
+            binding.countNewMsgTextView.text = strCount
+        } else if(binding.countNewMsgTextView.visibility == View.VISIBLE) {
+            binding.countNewMsgTextView.visibility = View.GONE
+        }
+    }
+
+    private fun hideArrow() {
+        if(binding.floatingActionButtonArrowDown.visibility == View.VISIBLE) {
+            binding.floatingActionButtonArrowDown.visibility = View.GONE
+            binding.countNewMsgTextView.visibility = View.GONE
+        }
+        countNewMsg = 0
+    }
+
     private fun backPressed() {
         if(isFromNotification) {
             parentFragmentManager.beginTransaction()
@@ -657,16 +746,6 @@ abstract class BaseChatFragment(
         binding.recyclerview.adapter = adapter
     }
 
-    protected fun findPositionById(messageId: Int): Int {
-        val currentPagingData = adapter.currentList
-        val positionInPagingData = currentPagingData.indexOfFirst { it.first.id == messageId }
-
-        if (positionInPagingData != -1) {
-            return positionInPagingData
-        }
-        return -1
-    }
-
     override val defaultViewModelCreationExtras: CreationExtras
         get() = super.defaultViewModelCreationExtras
 
@@ -733,7 +812,6 @@ abstract class BaseChatFragment(
     override fun onPause() {
         viewModel.stopRefresh()
         super.onPause()
-        rememberLastMessage()
     }
 
     private fun handleFileUri(uri: Uri) {
@@ -1135,31 +1213,4 @@ abstract class BaseChatFragment(
             return false
         }
     }
-
-    private fun <T> Flow<T>.chunkedFlowLast(timeout: Long): Flow<List<T>> = channelFlow {
-        val buffer = mutableListOf<T>()
-        var emitJob: Job? = null
-
-        try {
-            collect { message ->
-                buffer.add(message)
-                emitJob?.cancel()
-                emitJob = coroutineScope {
-                    launch {
-                        delay(timeout)
-                        if(buffer.isNotEmpty()) {
-                            send(buffer.toList())
-                            buffer.clear()
-                        }
-                    }
-                }
-            }
-        } finally {
-            emitJob?.cancel()
-            if (buffer.isNotEmpty()) {
-                send(buffer.toList())
-            }
-        }
-    }
-
 }

@@ -22,18 +22,6 @@ interface MessengerRepository {
 
     suspend fun deleteCurrentUser()
 
-    suspend fun getPreviousMessage(idDialog: Int, lastMessageId: Int): Message?
-
-    suspend fun getPreviousMessageGroup(groupId: Int, lastMessageId: Int): Message?
-
-    suspend fun saveLastReadMessage(lastMessageId: Int, idDialog: Int?, idGroup: Int?)
-
-    suspend fun getLastReadMessage(idDialog: Int): Int?
-
-    suspend fun getLastReadMessageGroup(idGroup: Int): Int?
-
-    suspend fun updateLastReadMessage(lastMessageId: Int, idDialog: Int?, idGroup: Int?)
-
     suspend fun isNotificationsEnabled(id: Int, type: Boolean) : Boolean
 
     suspend fun insertChatSettings(chatSettings: ChatSettings)

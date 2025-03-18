@@ -13,6 +13,7 @@
     <color name="colorDayNightAttr">@color/colorPrimaryDark</color>
     <color name="colorDayNightAttrReversed">@color/colorPrimary</color>
     <color name="colorDayNightAttr2">@color/colorAccent</color>
+    <color name="count_message">#4D4D4D</color>
     <color name="color1_main">#1ABC9C</color>
     <color name="color1_secondary">#3498DB</color>"
     <color name="color2_main">#2ECC71</color>

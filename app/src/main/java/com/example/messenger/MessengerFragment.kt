@@ -6,10 +6,8 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.text.SpannableString
-import android.text.style.ForegroundColorSpan
+import android.util.Log
 import android.view.LayoutInflater
-import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
@@ -32,9 +30,10 @@ import com.example.messenger.databinding.FragmentMessengerBinding
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
+import com.example.messenger.model.chunkedFlowLast
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -47,7 +46,6 @@ class MessengerFragment : Fragment() {
     private var forwardFlag: Boolean = false
     private var forwardMessages: List<Message>? = null
     private var forwardUsernames: List<String>? = null
-    private var updateJob: Job? = null
     private var uriGlobal: Uri? = null
     private val messengerViewModel: MessengerViewModel by viewModels()
 
@@ -141,18 +139,16 @@ class MessengerFragment : Fragment() {
                 .addToBackStack(null)
                 .commit()
         }
+        if(messengerViewModel.isNeedFetchConversations) messengerViewModel.fetchConversations() // При повторном заходе во фрагмент
         setupRecyclerView()
+        messengerViewModel.stopNotifications(true)
         return binding.root
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        updateJob?.cancel()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        updateJob?.cancel()
+        messengerViewModel.isNeedFetchConversations = true
+        messengerViewModel.stopNotifications(false)
     }
 
     private fun observeViewModel() {
@@ -164,7 +160,18 @@ class MessengerFragment : Fragment() {
             }
         }
         messengerViewModel.conversations.observe(viewLifecycleOwner) { conversations ->
-            adapter.conversations = conversations
+            Log.d("testConvFetch", "Conversations Fetched")
+            adapter.submitList(conversations)
+        }
+        lifecycleScope.launch {
+            messengerViewModel.newMessageFlow
+                .buffer()
+                .chunkedFlowLast(200) // custom func
+                .collect { newMessages ->
+                    if(newMessages.isNotEmpty()) {
+                        adapter.updateConversations(newMessages)
+                    }
+                }
         }
     }
 
@@ -183,7 +190,10 @@ class MessengerFragment : Fragment() {
                             if(forwardMessages != null) {
                                 val list = forwardMessages
                                 val list2 = forwardUsernames
-                                messengerViewModel.forwardMessages(list, list2, conversation.toDialog().id)
+                                messengerViewModel.forwardMessages(list, list2, conversation.toDialog().id) { success ->
+                                    val textMessage = if(success) "Сообщения успешно пересланы" else "Не удалось переслать сообщения, возможно нет ключа шифрования, либо нет сети"
+                                    Toast.makeText(requireContext(), textMessage, Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
                     }
@@ -198,7 +208,10 @@ class MessengerFragment : Fragment() {
                             if(forwardMessages != null) {
                                 val list = forwardMessages
                                 val list2 = forwardUsernames
-                                messengerViewModel.forwardGroupMessages(list, list2, conversation.toGroup().id)
+                                messengerViewModel.forwardGroupMessages(list, list2, conversation.toGroup().id) { success ->
+                                    val textMessage = if(success) "Сообщения успешно пересланы" else "Не удалось переслать сообщения, возможно нет ключа шифрования, либо нет сети"
+                                    Toast.makeText(requireContext(), textMessage, Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
                     }
@@ -251,15 +264,6 @@ class MessengerFragment : Fragment() {
                     .replace(R.id.fragmentContainer, LoginFragment(), "LOGIN_FRAGMENT_TAG3")
                     .commit()
             } else Toast.makeText(requireContext(), "Не удалось выйти из аккаунта, нет сети", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun applyMenuTextColor(menu: Menu, color: Int) { // todo не используется
-        for (i in 0 until menu.size()) {
-            val menuItem = menu.getItem(i)
-            val spannableTitle = SpannableString(menuItem.title)
-            spannableTitle.setSpan(ForegroundColorSpan(color), 0, spannableTitle.length, 0)
-            menuItem.title = spannableTitle
         }
     }
 

@@ -14,7 +14,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.net.URISyntaxException
@@ -28,7 +30,7 @@ class WebSocketService @Inject constructor(
     private val retrofitService: RetrofitService,
     private val messengerService: MessengerService
 ) {
-    private lateinit var socket: Socket
+    private var socket: Socket? = null
     private var lastEvent: String? = null
     private var lastData: JSONObject? = null
     private val notificationEnabledCache = mutableMapOf<Pair<Int, Boolean>, Boolean>()
@@ -67,6 +69,14 @@ class WebSocketService @Inject constructor(
     private val _notificationNewsFlow = MutableSharedFlow<NewsEvent>(extraBufferCapacity = 1)
     val notificationNewsFlow: SharedFlow<NewsEvent> get() = _notificationNewsFlow
 
+    // todo Нужно тщательно протестировать, возможно придется менять/полностью удалить
+    private val _isViewModelActive = MutableStateFlow(false)
+    val isViewModelActive: StateFlow<Boolean> get() = _isViewModelActive
+
+    fun setViewModelActive(active: Boolean) {
+        _isViewModelActive.value = active
+    }
+
     private val moshi: Moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory()) // support serializable kt class
         .build()
@@ -87,11 +97,11 @@ class WebSocketService @Inject constructor(
 
         try {
             socket = IO.socket("https://amessenger.ru", options)
-            socket.on(Socket.EVENT_CONNECT) {
+            socket?.on(Socket.EVENT_CONNECT) {
                 Log.d("testSocketIO", "Connected successfully")
-            }.on(Socket.EVENT_CONNECT_ERROR) { args ->
+            }?.on(Socket.EVENT_CONNECT_ERROR) { args ->
                 Log.d("testSocketIO", "Connection error: ${args[0]}")
-            }.on(Socket.EVENT_DISCONNECT) {
+            }?.on(Socket.EVENT_DISCONNECT) {
                 Log.d("testSocketIO", "Disconnected")
                 if(flagExpiredInit) {
                     refresh()
@@ -100,40 +110,50 @@ class WebSocketService @Inject constructor(
             // Register additional event listeners here
             registerEventListeners()
 
-            socket.connect()
+            socket?.connect()
         } catch (e: URISyntaxException) {
             Log.e("WebSocket", "URI Syntax Error", e)
         }
     }
 
     fun disconnect() {
-        socket.disconnect()
+        socket?.disconnect()
+    }
+
+    fun reconnectIfNeeded() {
+        if (!isConnected()) {
+            connect()
+        }
+    }
+
+    private fun isConnected(): Boolean {
+        return socket?.connected() ?: false
     }
 
     private fun registerEventListeners() {
         // Registering the "user_joined" event listener
-        socket.on("user_joined", onUserJoined)
-        socket.on("user_left", onUserLeft)
+        socket?.on("user_joined", onUserJoined)
+        socket?.on("user_left", onUserLeft)
 
         // Notifications
-        socket.on("new_message_notification", onMessageNotification)
-        socket.on("news_notification", onNewsNotification)
+        socket?.on("new_message_notification", onMessageNotification)
+        socket?.on("news_notification", onNewsNotification)
 
         // Registering message-related event listeners
-        socket.on("new_message", onNewMessage)
-        socket.on("message_edited", onEditedMessage)
-        socket.on("messages_deleted", onMessagesDeleted)
+        socket?.on("new_message", onNewMessage)
+        socket?.on("message_edited", onEditedMessage)
+        socket?.on("messages_deleted", onMessagesDeleted)
 
         // Register more events
-        socket.on("dialog_deleted", onDialogDeleted)
-        socket.on("user_session_updated", onUserSessionUpdated)
-        socket.on("typing", onStartTyping)
-        socket.on("stop_typing", onStopTyping)
-        socket.on("messages_read", onMessagesRead)
-        socket.on("messages_all_deleted", onAllMessagesDeleted)
+        socket?.on("dialog_deleted", onDialogDeleted)
+        socket?.on("user_session_updated", onUserSessionUpdated)
+        socket?.on("typing", onStartTyping)
+        socket?.on("stop_typing", onStopTyping)
+        socket?.on("messages_read", onMessagesRead)
+        socket?.on("messages_all_deleted", onAllMessagesDeleted)
 
         // token expired
-        socket.on("token_expired", onTokenExpired)
+        socket?.on("token_expired", onTokenExpired)
     }
 
     private val onTokenExpired = Emitter.Listener {
@@ -180,14 +200,14 @@ class WebSocketService @Inject constructor(
     private suspend fun reconnect() {
         // send last emit
         if(lastData != null && lastEvent != null) {
-            socket.disconnect()
+            socket?.disconnect()
             delay(200)
             connect()
-            socket.emit(lastEvent, lastData)
+            socket?.emit(lastEvent, lastData)
             lastData = null
             lastEvent = null
         } else {
-            socket.disconnect()
+            socket?.disconnect()
             delay(200)
             connect()
             lastData = null
@@ -212,7 +232,7 @@ class WebSocketService @Inject constructor(
     fun send(event: String, data: JSONObject) {
         lastEvent = event
         lastData = data
-        socket.emit(event, data)
+        socket?.emit(event, data)
     }
 
     private val onNewMessage = Emitter.Listener { args ->

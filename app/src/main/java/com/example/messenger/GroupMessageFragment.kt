@@ -8,8 +8,6 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.model.Group
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
@@ -40,6 +38,7 @@ class GroupMessageFragment(
                 if(pagingData.isNotEmpty()) {
                     Log.d("testPagingFlow", "Submitting paging data")
                     if(viewModel.isFirstPage()) {
+                        if(group.unreadCount in 4..29) registerInitialListObserver()
                         val mes = viewModel.getUnsentMessages()
                         val summaryPagingData = if(mes != null) {
                             val pair = mes.map { Pair(it, "") }
@@ -62,18 +61,6 @@ class GroupMessageFragment(
                     }
                 } else {
                     isStopPagination = true
-                }
-            }
-        }
-        lifecycleScope.launch {
-            val lastReadMessageId = viewModel.getLastMessageId()
-            if(lastReadMessageId != -1) {
-                val position = findPositionById(lastReadMessageId)
-                if(position != -1) {
-                    binding.recyclerview.scrollToPosition(position)
-                } else {
-                    val pos = viewModel.getPreviousMessageId(lastReadMessageId)
-                    if(pos != -1) binding.recyclerview.scrollToPosition(pos)
                 }
             }
         }
@@ -122,6 +109,8 @@ class GroupMessageFragment(
 
     override fun canDelete(): Boolean = group.canDelete
 
+    override fun getUnreadCount(): Int = group.unreadCount
+
     override fun replaceToInfoFragment() {
         parentFragmentManager.beginTransaction()
             .replace(
@@ -134,23 +123,5 @@ class GroupMessageFragment(
     }
 
     override fun replaceCurrentFragment() = replaceFragment(GroupMessageFragment(group, currentUser, isFromNotification))
-
-    override fun rememberLastMessage() {
-        if (adapter.itemCount == 0) return
-
-        val layoutManager = binding.recyclerview.layoutManager as LinearLayoutManager
-        val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
-        val firstMessageId = if (firstVisibleItemPosition != RecyclerView.NO_POSITION && firstVisibleItemPosition < 25) {
-            val firstMessage = adapter.getItemNotProtected(firstVisibleItemPosition).first
-            if(firstMessage.isRead) {
-                adapter.getItemNotProtected(0).first.id
-            } else {
-                firstMessage.id
-            }
-        } else {
-            adapter.getItemNotProtected(0).first.id
-        }
-        viewModel.saveLastMessage(firstMessageId)
-    }
 
 }

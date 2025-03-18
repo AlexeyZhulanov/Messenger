@@ -39,11 +39,12 @@
         android:ellipsize="end"
         android:textSize="16sp"
         android:layout_marginTop="4dp"
+        android:layout_marginEnd="10dp"
         tools:text="Google Inc."
         android:textColor="?attr/colorAccent"
         app:layout_constraintTop_toBottomOf="@id/userNameTextView"
         app:layout_constraintStart_toStartOf="@id/userNameTextView"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toStartOf="@id/unreadText"/>
 
     <ImageView
         android:id="@+id/ic_check"
@@ -54,7 +55,6 @@
         android:layout_marginEnd="-5dp"
         android:padding="8dp"
         android:visibility="invisible"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="@id/dateText"
         app:layout_constraintBottom_toBottomOf="@id/dateText"
         app:layout_constraintEnd_toStartOf="@id/dateText"/>
@@ -68,11 +68,9 @@
         android:layout_marginEnd="-5dp"
         android:padding="8dp"
         android:visibility="invisible"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="@id/dateText"
         app:layout_constraintBottom_toBottomOf="@id/dateText"
         app:layout_constraintEnd_toStartOf="@id/dateText"/>
-
 
     <TextView
         android:id="@+id/dateText"
@@ -83,9 +81,25 @@
         android:textColor="?attr/colorAccent"
         android:layout_marginEnd="10dp"
         android:layout_marginTop="6dp"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="@id/userNameTextView"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <TextView
+        android:id="@+id/unreadText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        tools:text="4"
+        android:textColor="#FCFCFC"
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="5dp"
+        android:paddingHorizontal="7dp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        android:background="@drawable/unread_count_background"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/userNameTextView"
         app:layout_constraintEnd_toEndOf="parent"/>
 
     <androidx.constraintlayout.widget.Barrier

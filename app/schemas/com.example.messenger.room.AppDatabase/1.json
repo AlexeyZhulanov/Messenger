@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "a769adf0126d2d376f4c34d6430d203d",
+    "identityHash": "aa314fdbd39572fcf1a344ea8f195069",
     "entities": [
       {
         "tableName": "conversations",
@@ -440,63 +440,6 @@
         "foreignKeys": []
       },
       {
-        "tableName": "last_read_message",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `dialog_id` INTEGER, `group_id` INTEGER, `last_read_message_id` INTEGER NOT NULL, PRIMARY KEY(`id`))",
-        "fields": [
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "dialogId",
-            "columnName": "dialog_id",
-            "affinity": "INTEGER",
-            "notNull": false
-          },
-          {
-            "fieldPath": "groupId",
-            "columnName": "group_id",
-            "affinity": "INTEGER",
-            "notNull": false
-          },
-          {
-            "fieldPath": "lastReadMessageId",
-            "columnName": "last_read_message_id",
-            "affinity": "INTEGER",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "id"
-          ]
-        },
-        "indices": [
-          {
-            "name": "index_last_read_message_dialog_id",
-            "unique": true,
-            "columnNames": [
-              "dialog_id"
-            ],
-            "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_last_read_message_dialog_id` ON `${TABLE_NAME}` (`dialog_id`)"
-          },
-          {
-            "name": "index_last_read_message_group_id",
-            "unique": true,
-            "columnNames": [
-              "group_id"
-            ],
-            "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_last_read_message_group_id` ON `${TABLE_NAME}` (`group_id`)"
-          }
-        ],
-        "foreignKeys": []
-      },
-      {
         "tableName": "chat_settings",
         "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_chat` INTEGER NOT NULL, `type` INTEGER NOT NULL)",
         "fields": [
@@ -772,7 +715,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a769adf0126d2d376f4c34d6430d203d')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'aa314fdbd39572fcf1a344ea8f195069')"
     ]
   }
 }

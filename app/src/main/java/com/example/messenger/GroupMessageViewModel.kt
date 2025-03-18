@@ -59,6 +59,7 @@ class GroupMessageViewModel @Inject constructor(
             }
 
         init {
+            webSocketService.reconnectIfNeeded()
             viewModelScope.launch {
                 initFlow.collect {
                     pagingSource = MessagePagingSource(retrofitService, messengerService, convId, fileManager, tinkAesGcmHelper, false)
@@ -78,11 +79,6 @@ class GroupMessageViewModel @Inject constructor(
                     message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
                     Log.d("testSocketsMessage", "Edited Message: $message")
                     _editMessageFlow.value = message
-                    recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-                        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                            recyclerView.scrollToPosition(0)
-                        }
-                    })
                 }
             }
             viewModelScope.launch {
@@ -151,14 +147,6 @@ class GroupMessageViewModel @Inject constructor(
             }
         }
 
-        fun saveLastMessage(id: Int) {
-            viewModelScope.launch {
-                val temp = messengerService.getLastReadMessageGroup(convId)
-                if(temp != null) messengerService.updateLastReadMessage(id, null, convId)
-                else messengerService.saveLastReadMessage(id, null, convId)
-            }
-        }
-
         fun sendTypingEvent(flag: Boolean) {
             val typingData = JSONObject()
             typingData.put("group_id", convId)
@@ -180,7 +168,7 @@ class GroupMessageViewModel @Inject constructor(
                     // Проверяем видимые элементы от последнего к первому
                     if (lastVisibleItemPosition != RecyclerView.NO_POSITION && firstVisibleItemPosition != RecyclerView.NO_POSITION) {
                         val visibleMessages = (lastVisibleItemPosition downTo firstVisibleItemPosition).mapNotNull { position ->
-                            adapter.getItemNotProtected(position).first.takeIf { it.idSender != currentUserId && !it.isRead }
+                            adapter.getItemNotProtected(position).first.takeIf { it.idSender != currentUserId && it.isPersonalUnread == true }
                         }
 
                         markMessagesAsRead(visibleMessages)
@@ -192,14 +180,6 @@ class GroupMessageViewModel @Inject constructor(
                 }
             }
             recyclerView.addOnScrollListener(scrollListener)
-        }
-
-        suspend fun getLastMessageId(): Int {
-            return messengerService.getLastReadMessageGroup(convId) ?: -1
-        }
-
-        suspend fun getPreviousMessageId(id: Int): Int {
-            return messengerService.getPreviousMessageGroup(convId, id)?.id ?: -1
         }
 
         fun separateMessages(messages: List<Pair<Message, String>>, currentUserId: Int): Map<Int, Pair<String?, String?>?> {
