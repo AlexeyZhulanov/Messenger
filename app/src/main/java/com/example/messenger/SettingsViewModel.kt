@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.model.User
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,6 +34,9 @@ class SettingsViewModel @Inject constructor(
     private val _themeNumber = MutableLiveData<Int>()
     val themeNumber: LiveData<Int> get() = _themeNumber
 
+    private val _currentUser = MutableLiveData<User>()
+    val currentUser: LiveData<User> get() = _currentUser
+
     init {
         loadSettings()
     }
@@ -52,6 +56,18 @@ class SettingsViewModel @Inject constructor(
     fun updateTheme(themeNumber: Int) {
         prefs.edit().putInt(PREF_THEME, themeNumber).apply()
         _themeNumber.value = themeNumber
+    }
+
+    fun setUser(user: User) {
+        _currentUser.value = user
+    }
+
+    fun updateUsernameValue(newUsername: String) {
+        _currentUser.value = _currentUser.value?.copy(username = newUsername)
+    }
+
+    fun updateAvatarValue(newAvatar: String) {
+        _currentUser.value = _currentUser.value?.copy(avatar = newAvatar)
     }
 
     fun fManagerIsExistAvatar(fileName: String): Boolean {

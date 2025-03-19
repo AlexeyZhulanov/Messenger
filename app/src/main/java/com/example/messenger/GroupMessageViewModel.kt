@@ -185,31 +185,27 @@ class GroupMessageViewModel @Inject constructor(
         fun separateMessages(messages: List<Pair<Message, String>>, currentUserId: Int): Map<Int, Pair<String?, String?>?> {
             // Optimizing access to users using the Map
             val userMap = currentMemberList.associate { it.id to (it.username to it.avatar) }
-
             val groupedMessages = mutableListOf<List<Message>>()
             val tempList = mutableListOf<Message>()
 
-            for ((message, date) in messages) {
-                if (message.idSender == currentUserId) continue // Skipping the current user
-
+            for ((message, date) in messages.reversed()) {
                 if(tempList.isNotEmpty()) {
                     if ((tempList.last().idSender != message.idSender) || (date != "")) {
                         groupedMessages.add(ArrayList(tempList))
                         tempList.clear()
                     }
                 }
-                tempList.add(message)
+                if (message.idSender != currentUserId) tempList.add(message)
             }
             if (tempList.isNotEmpty()) {
                 groupedMessages.add(tempList)
             }
-
             // Filling in the final Map with username and avatar
             val messageDisplayMap = mutableMapOf<Int, Pair<String?, String?>?>()
 
             for (mes in groupedMessages) {
-                val first = mes.first()
-                val last = mes.last()
+                val first = mes.last() // reversed
+                val last = mes.first() // reversed
                 val userInfo = userMap[first.idSender]
 
                 // If there is one element in the group, both fields are used.

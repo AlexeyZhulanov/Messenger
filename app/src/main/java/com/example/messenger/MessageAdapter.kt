@@ -492,13 +492,16 @@ class MessageAdapter(
                     if(user.first != null) {
                         binding.userNameTextView.visibility = View.VISIBLE
                         binding.userNameTextView.text = user.first
-                    }
+                    } else binding.userNameTextView.visibility = View.GONE
                     if(user.second != null) {
                         binding.photoImageView.visibility = View.VISIBLE
                         if(user.second != "") messageViewModel.avatarSet(user.second ?: "", binding.photoImageView, context)
                     } else binding.spaceAvatar.visibility = View.VISIBLE
                 } else binding.spaceAvatar.visibility = View.VISIBLE
-            } else binding.spaceAvatar.visibility = View.GONE
+            } else {
+                binding.spaceAvatar.visibility = View.GONE
+                binding.photoImageView.visibility = View.GONE
+            }
             if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions

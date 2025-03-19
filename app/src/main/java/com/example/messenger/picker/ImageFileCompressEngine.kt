@@ -34,9 +34,10 @@ class ImageFileCompressEngine : CompressFileEngine {
             }
 
             override fun onSuccess(source: String, compressFile: File) {
-                reduceQualityAndResize(compressFile, 85, 1920, 1080)
+                val cachedFile = copyToAppStorage(context, compressFile)
+                reduceQualityAndResize(cachedFile, 85, 1920, 1080)
                 if (call != null) {
-                    call.onCallback(source, compressFile.absolutePath)
+                    call.onCallback(source, cachedFile.absolutePath)
                 }
             }
 
@@ -88,6 +89,16 @@ class ImageFileCompressEngine : CompressFileEngine {
         }
 
         bitmap.recycle()
+    }
+
+    fun copyToAppStorage(context: Context, sourceFile: File): File {
+        val destFile = File(context.cacheDir, sourceFile.name)
+        sourceFile.inputStream().use { input ->
+            destFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+        return destFile
     }
 
 }

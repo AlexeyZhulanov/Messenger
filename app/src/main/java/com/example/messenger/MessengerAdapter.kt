@@ -17,6 +17,7 @@ import com.example.messenger.model.LastMessage
 import com.example.messenger.model.ShortMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.io.File
@@ -122,32 +123,38 @@ class MessengerAdapter(
                 dateText.visibility = View.GONE
                 unreadText.visibility = View.GONE
             }
-            uiScope.launch {
-                val avatar = conversation.otherUser?.avatar ?: conversation.avatar ?: ""
-                if (avatar != "") {
-                    val filePathTemp = async {
-                        if (messengerViewModel.fManagerIsExistAvatar(avatar)) {
-                            return@async Pair(messengerViewModel.fManagerGetAvatarPath(avatar), true)
-                        } else {
-                            try {
-                                return@async Pair(messengerViewModel.downloadAvatar(context, avatar), false)
-                            } catch (e: Exception) {
-                                return@async Pair(null, true)
+
+            val avatar = conversation.otherUser?.avatar ?: conversation.avatar ?: ""
+            if (avatar != "") {
+                uiScope.launch {
+                    // Проверяем, актуален ли ViewHolder
+                    if (holder.itemView.tag == conversation) {
+                        val filePathTemp = async {
+                            if (messengerViewModel.fManagerIsExistAvatar(avatar)) {
+                                return@async Pair(messengerViewModel.fManagerGetAvatarPath(avatar), true)
+                            } else {
+                                try {
+                                    return@async Pair(messengerViewModel.downloadAvatar(context, avatar), false)
+                                } catch (e: Exception) {
+                                    return@async Pair(null, true)
+                                }
                             }
                         }
-                    }
-                    val (first, second) = filePathTemp.await()
-                    if (first != null) {
-                        val file = File(first)
-                        if (file.exists()) {
-                            if (!second) messengerViewModel.fManagerSaveAvatar(avatar, file.readBytes())
-                            val uri = Uri.fromFile(file)
-                            photoImageView.imageTintList = null
-                            Glide.with(context)
-                                .load(uri)
-                                .apply(RequestOptions.circleCropTransform())
-                                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                .into(photoImageView)
+                        val (first, second) = filePathTemp.await()
+
+                        // Проверяем, актуален ли ViewHolder перед обновлением UI
+                        if (holder.itemView.tag == conversation && first != null) {
+                            val file = File(first)
+                            if (file.exists()) {
+                                if (!second) messengerViewModel.fManagerSaveAvatar(avatar, file.readBytes())
+                                val uri = Uri.fromFile(file)
+                                photoImageView.imageTintList = null
+                                Glide.with(context)
+                                    .load(uri)
+                                    .apply(RequestOptions.circleCropTransform())
+                                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                    .into(photoImageView)
+                            }
                         }
                     }
                 }

@@ -336,27 +336,22 @@ abstract class BaseChatViewModel(
 
     suspend fun uploadPhoto(photo: File, context: Context, isVideo: Boolean): Pair<String, Boolean> {
         return try {
-            val tempDir = context.cacheDir
-            val tempFile = File(tempDir, photo.name)
-
-            tinkAesGcmHelper?.encryptFile(photo, tempFile)
-
-            val path = retrofitService.uploadPhoto(convId, tempFile, isGroup)
-            tempFile.delete()
-
-            val name = path.substringBeforeLast(".")
+            val name = photo.name.substringBeforeLast(".")
 
             val previewFile = if(isVideo) {
                 imageUtils.createVideoPreview(context, photo, name, 300, 300)
             } else imageUtils.createImagePreview(context, photo, name, 300, 300)
 
-            val tempFilePreview = File(tempDir, previewFile.name)
-            tinkAesGcmHelper?.encryptFile(previewFile, tempFilePreview)
+            tinkAesGcmHelper?.encryptFile(photo, photo)
 
-            retrofitService.uploadPhotoPreview(convId, tempFilePreview, isGroup)
+            val path = retrofitService.uploadPhoto(convId, photo, isGroup)
+
+            tinkAesGcmHelper?.encryptFile(previewFile, previewFile)
+
+            retrofitService.uploadPhotoPreview(convId, previewFile, isGroup)
 
             previewFile.delete()
-            tempFilePreview.delete()
+            photo.delete()
             Pair(path, true)
         } catch (e: Exception) {
             Log.d("testUploadError", e.message.toString())
@@ -701,8 +696,8 @@ abstract class BaseChatViewModel(
     }
 
     fun avatarSet(avatar: String, imageView: ImageView, context: Context) {
-        viewModelScope.launch {
-            if (avatar != "") {
+        if (avatar != "") {
+            viewModelScope.launch {
                 val filePathTemp = async {
                     if (fManagerIsExistAvatar(avatar)) {
                         return@async Pair(fManagerGetAvatarPath(avatar), true)

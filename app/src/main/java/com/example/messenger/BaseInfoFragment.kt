@@ -404,12 +404,12 @@ abstract class BaseInfoFragment : Fragment() {
             }
             R.id.delete_dialog -> {
                 lifecycleScope.launch {
-                    val success = viewModel.deleteConv()
+                    val (success, message) = viewModel.deleteConv()
                     if(success) {
                         parentFragmentManager.beginTransaction()
                             .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_FROM_DIALOG_TAG")
                             .commit()
-                    } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
+                    } else Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
                 }
                 true
             }
