@@ -242,7 +242,7 @@ class NewsViewModel @Inject constructor(
         return txt
     }
 
-    suspend fun sendNews(headerText: String, text: String?, images: List<String>?,
+    suspend fun sendNews(headerText: String?, text: String?, images: List<String>?,
                          voices: List<String>?, files: List<String>?): Boolean {
         return try {
             val bodyText = encryptText(text)
@@ -251,7 +251,7 @@ class NewsViewModel @Inject constructor(
         } catch (e: Exception) { false }
     }
 
-    suspend fun editNews(newsId: Int, headerText: String, text: String?, images: List<String>?,
+    suspend fun editNews(newsId: Int, headerText: String?, text: String?, images: List<String>?,
                          voices: List<String>?, files: List<String>?): Boolean {
         return try {
             val bodyText = encryptText(text)

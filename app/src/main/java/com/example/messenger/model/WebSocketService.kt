@@ -69,7 +69,6 @@ class WebSocketService @Inject constructor(
     private val _notificationNewsFlow = MutableSharedFlow<NewsEvent>(extraBufferCapacity = 1)
     val notificationNewsFlow: SharedFlow<NewsEvent> get() = _notificationNewsFlow
 
-    // todo Нужно тщательно протестировать, возможно придется менять/полностью удалить
     private val _isViewModelActive = MutableStateFlow(false)
     val isViewModelActive: StateFlow<Boolean> get() = _isViewModelActive
 
@@ -118,6 +117,7 @@ class WebSocketService @Inject constructor(
 
     fun disconnect() {
         socket?.disconnect()
+        socket = null
     }
 
     fun reconnectIfNeeded() {

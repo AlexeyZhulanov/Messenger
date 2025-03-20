@@ -9,7 +9,7 @@ import com.example.messenger.model.News
 data class NewsDbEntity(
     @PrimaryKey(autoGenerate = true) val id: Int,
     @ColumnInfo(name = "written_by") val writtenBy: Int,
-    @ColumnInfo(name = "header_text") var headerText: String,
+    @ColumnInfo(name = "header_text") var headerText: String? = null,
     var text: String? = null,
     var images: List<String>? = null,
     var voices: List<String>? = null,

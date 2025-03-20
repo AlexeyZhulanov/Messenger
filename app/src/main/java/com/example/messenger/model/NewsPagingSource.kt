@@ -30,7 +30,7 @@ class NewsPagingSource(
             if(flag) {
                 news.forEach {
                     it.text = it.text?.let { text -> tinkAesGcmHelper?.decryptText(text) }
-                    it.headerText = tinkAesGcmHelper?.decryptText(it.headerText) ?: it.headerText
+                    it.headerText = it.headerText?.let { text -> tinkAesGcmHelper?.decryptText(text) }
                 }
             }
             if(pageIndex == 1 && flag) messengerService.replaceNews(news, fileManager)

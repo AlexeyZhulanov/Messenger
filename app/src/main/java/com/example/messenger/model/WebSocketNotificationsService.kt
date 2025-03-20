@@ -91,8 +91,10 @@ class  WebSocketNotificationsService : LifecycleService() {
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
 
         val notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("WebSocket работает")
+            .setContentTitle("Для моментальных уведомлений")
+            .setContentText("Можете закрыть, уведомления всё равно будут приходить")
             .setSmallIcon(R.drawable.ic_eye)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
             .build()
 
         startForeground(1, notification)
