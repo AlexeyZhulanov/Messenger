@@ -6,6 +6,7 @@
     <color name="colorPrimary">#71BC78</color>
     <color name="colorPrimaryDark">#ffffff</color>
     <color name="colorAccent">#A0A0A4</color>
+    <color name="navigation_bar_color">#121212</color>
     <color name="colorMessageSenderBack">#00693E</color>
     <color name="colorMessageReceiverBack">#333333</color>"
     <color name="colorTransparent">#60000000</color>

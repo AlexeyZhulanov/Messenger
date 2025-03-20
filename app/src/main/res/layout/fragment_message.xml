@@ -16,7 +16,9 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <LinearLayout
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerview"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintStart_toStartOf="parent"
@@ -24,17 +26,8 @@
         app:layout_constraintTop_toBottomOf="@id/toolbar_container"
         app:layout_constraintBottom_toTopOf="@id/layout_enter"
         android:layout_marginTop="15dp"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        android:orientation="vertical">
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerview"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            />
-
-    </LinearLayout>
-
+        />
+    
 
     <ProgressBar
         android:id="@+id/progressBar"

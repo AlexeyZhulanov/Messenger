@@ -231,6 +231,8 @@ abstract class BaseChatFragment(
 
         registerArrowScrollListener()
 
+        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        requireActivity().window.navigationBarColor = ContextCompat.getColor(requireContext(), R.color.navigation_bar_color)
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.custom_action_bar, toolbarContainer, false)

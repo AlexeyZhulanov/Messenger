@@ -1,8 +1,9 @@
 package com.example.messenger
 
 import android.annotation.SuppressLint
-import android.content.Context
-import android.content.SharedPreferences
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -11,18 +12,19 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
-import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
@@ -41,7 +43,6 @@ import java.io.File
 class MessengerFragment : Fragment() {
     private lateinit var binding: FragmentMessengerBinding
     private lateinit var adapter: MessengerAdapter
-    private lateinit var preferences: SharedPreferences
     private var currentUser: User? = null
     private var forwardFlag: Boolean = false
     private var forwardMessages: List<Message>? = null
@@ -63,20 +64,18 @@ class MessengerFragment : Fragment() {
             forwardUsernames = usernames
             forwardFlag = true
         }
-        val toolbar: Toolbar = view.findViewById(R.id.toolbar)
-        (activity as AppCompatActivity).setSupportActionBar(toolbar)
-        (activity as AppCompatActivity).supportActionBar?.setDisplayShowTitleEnabled(false)
+        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
+        val defaultToolbar = LayoutInflater.from(context)
+            .inflate(R.layout.toolbar_custom, toolbarContainer, false)
+        toolbarContainer.addView(defaultToolbar)
         val avatarImageView: ImageView = view.findViewById(R.id.toolbar_avatar)
         avatarImageView.setOnClickListener {
-            Toast.makeText(context, "Avatar clicked!", Toast.LENGTH_SHORT).show()
+            goToSettingsFragment()
         }
         val titleTextView: TextView = view.findViewById(R.id.toolbar_title)
         titleTextView.setOnClickListener {
-            Toast.makeText(context, "Title clicked!", Toast.LENGTH_SHORT).show()
-        }
-        val checkImageView: ImageView = view.findViewById(R.id.ic_options)
-        checkImageView.setOnClickListener {
-            showPopupMenu(it, R.menu.popup_menu_check)
+            goToSettingsFragment()
         }
         val addImageView: ImageView = view.findViewById(R.id.ic_add)
         addImageView.setOnClickListener {
@@ -126,16 +125,10 @@ class MessengerFragment : Fragment() {
     @SuppressLint("DiscouragedApi")
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentMessengerBinding.inflate(inflater, container, false)
-        preferences = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
-        val wallpaper = preferences.getString(PREF_WALLPAPER, "")
-        if(wallpaper != "") {
-            val resId = resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
-            if(resId != 0)
-                binding.messengerLayout.background = ContextCompat.getDrawable(requireContext(), resId)
-        }
+
         binding.button.setOnClickListener {
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, NewsFragment(uriGlobal, currentUser?.id), "NEWS_FRAGMENT_TAG")
+                .replace(R.id.fragmentContainer, NewsFragment(uriGlobal, currentUser), "NEWS_FRAGMENT_TAG")
                 .addToBackStack(null)
                 .commit()
         }
@@ -230,17 +223,6 @@ class MessengerFragment : Fragment() {
         popupMenu.menuInflater.inflate(menuRes, popupMenu.menu)
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
-                R.id.menu_item1 -> {
-                    parentFragmentManager.beginTransaction()
-                        .replace(R.id.fragmentContainer, SettingsFragment(currentUser ?: User(0, "", "")), "SETTINGS_FRAGMENT_TAG")
-                        .addToBackStack(null)
-                        .commit()
-                    true
-                }
-                R.id.menu_item2 -> {
-                    logout()
-                    true
-                }
                 R.id.menu_item3 -> {
                     showAddDialog()
                     true
@@ -265,6 +247,13 @@ class MessengerFragment : Fragment() {
                     .commit()
             } else Toast.makeText(requireContext(), "Не удалось выйти из аккаунта, нет сети", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun goToSettingsFragment() {
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, SettingsFragment(currentUser ?: User(0, "", "")), "SETTINGS_FRAGMENT_TAG")
+            .addToBackStack(null)
+            .commit()
     }
 
     private fun showAddDialog() {

@@ -65,6 +65,8 @@ class SettingsFragment(
                 binding.wallpaperName.text = "Classic"
             }
         }
+        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        requireActivity().window.navigationBarColor = ContextCompat.getColor(requireContext(), R.color.navigation_bar_color)
         viewModel.themeNumber.observe(viewLifecycleOwner) { themeNumber ->
             if (themeNumber != 0) binding.colorThemeName.text =
                 "Theme ${themeNumber + 1}" else binding.colorThemeName.text = "Classic"
@@ -142,6 +144,9 @@ class SettingsFragment(
         }
         binding.changeWallpaper.setOnClickListener {
             showWallpapersPopupMenu(it, container as ViewGroup)
+        }
+        binding.logoutButton.setOnClickListener {
+            logout()
         }
         return binding.root
     }
@@ -348,5 +353,17 @@ class SettingsFragment(
                 }
             })
             .startActivityPreview(0, false, arrayListOf(localMedia))
+    }
+
+    private fun logout() {
+        lifecycleScope.launch {
+            val success = viewModel.deleteFCMToken()
+            if(success) {
+                viewModel.clearCurrentUser()
+                parentFragmentManager.beginTransaction()
+                    .replace(R.id.fragmentContainer, LoginFragment(), "LOGIN_FRAGMENT_TAG3")
+                    .commit()
+            } else Toast.makeText(requireContext(), "Не удалось выйти из аккаунта, нет сети", Toast.LENGTH_SHORT).show()
+        }
     }
 }

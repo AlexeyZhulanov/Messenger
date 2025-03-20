@@ -10,8 +10,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -23,6 +25,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentNewsBinding
 import com.example.messenger.model.News
+import com.example.messenger.model.User
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
@@ -38,7 +41,7 @@ import java.io.File
 @AndroidEntryPoint
 class NewsFragment(
     private val currentUserUri: Uri?,
-    private val currentUserId: Int?
+    private val currentUser: User?
 ) : Fragment() {
 
     private lateinit var binding: FragmentNewsBinding
@@ -67,12 +70,20 @@ class NewsFragment(
                 adapter.submitData(pagingData)
             }
         }
+        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.toolbar_news, toolbarContainer, false)
         toolbarContainer.addView(defaultToolbar)
+        val avatarImageView: ImageView = view.findViewById(R.id.toolbar_avatar)
+        avatarImageView.setOnClickListener {
+            goToSettingsFragment()
+        }
+        val titleTextView: TextView = view.findViewById(R.id.toolbar_title)
+        titleTextView.setOnClickListener {
+            goToSettingsFragment()
+        }
         if(currentUserUri != null) {
-            val avatarImageView: ImageView = view.findViewById(R.id.toolbar_avatar)
             avatarImageView.imageTintList = null
             Glide.with(requireContext())
                 .load(currentUserUri)
@@ -84,7 +95,7 @@ class NewsFragment(
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentNewsBinding.inflate(inflater, container, false)
-        viewModel.setEncryptHelper(currentUserId)
+        viewModel.setEncryptHelper(currentUser?.id)
         lifecycleScope.launch {
             permission = viewModel.getPermission()
             if(permission == 1) {
@@ -175,6 +186,13 @@ class NewsFragment(
     private fun backPressed() {
         parentFragmentManager.beginTransaction()
             .replace(R.id.fragmentContainer, MessengerFragment())
+            .commit()
+    }
+
+    private fun goToSettingsFragment() {
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, SettingsFragment(currentUser ?: User(0, "", "")), "SETTINGS_FRAGMENT_TAG2")
+            .addToBackStack(null)
             .commit()
     }
 

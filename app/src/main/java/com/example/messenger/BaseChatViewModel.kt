@@ -342,16 +342,26 @@ abstract class BaseChatViewModel(
                 imageUtils.createVideoPreview(context, photo, name, 300, 300)
             } else imageUtils.createImagePreview(context, photo, name, 300, 300)
 
-            tinkAesGcmHelper?.encryptFile(photo, photo)
-
-            val path = retrofitService.uploadPhoto(convId, photo, isGroup)
-
+            val path = if(isVideo) {
+                withContext(ioDispatcher) {
+                    val tempDir = context.cacheDir
+                    val tempFile = File(tempDir, photo.name)
+                    tinkAesGcmHelper?.encryptFile(photo, tempFile)
+                    val p = retrofitService.uploadPhoto(convId, tempFile, isGroup)
+                    tempFile.delete()
+                    return@withContext p
+                }
+            } else {
+                withContext(ioDispatcher) {
+                    tinkAesGcmHelper?.encryptFile(photo, photo)
+                    val p = retrofitService.uploadPhoto(convId, photo, isGroup)
+                    photo.delete()
+                    return@withContext p
+                }
+            }
             tinkAesGcmHelper?.encryptFile(previewFile, previewFile)
-
             retrofitService.uploadPhotoPreview(convId, previewFile, isGroup)
-
             previewFile.delete()
-            photo.delete()
             Pair(path, true)
         } catch (e: Exception) {
             Log.d("testUploadError", e.message.toString())
@@ -377,9 +387,10 @@ abstract class BaseChatViewModel(
             val tempDir = context.cacheDir
             val tempFile = File(tempDir, audio.name)
 
-            tinkAesGcmHelper?.encryptFile(audio, tempFile)
-
-            val path = retrofitService.uploadAudio(convId, tempFile, isGroup)
+            val path = withContext(ioDispatcher) {
+                tinkAesGcmHelper?.encryptFile(audio, tempFile)
+                return@withContext retrofitService.uploadAudio(convId, tempFile, isGroup)
+            }
             tempFile.delete()
             Pair(path, true)
         } catch (e: Exception) {
@@ -393,9 +404,10 @@ abstract class BaseChatViewModel(
             val tempDir = context.cacheDir
             val tempFile = File(tempDir, file.name)
 
-            tinkAesGcmHelper?.encryptFile(file, tempFile)
-
-            val path = retrofitService.uploadFile(convId, tempFile, isGroup)
+            val path = withContext(ioDispatcher) {
+                tinkAesGcmHelper?.encryptFile(file, tempFile)
+                return@withContext retrofitService.uploadFile(convId, tempFile, isGroup)
+            }
             tempFile.delete()
             Pair(path, true)
         } catch (e: Exception) {
@@ -404,13 +416,13 @@ abstract class BaseChatViewModel(
         }
     }
 
-    suspend fun downloadFile(context: Context, folder: String, filename: String): String {
+    suspend fun downloadFile(context: Context, folder: String, filename: String): String = withContext(ioDispatcher) {
         val downloadedFilePath = retrofitService.downloadFile(context, folder, convId, filename, isGroup)
         val downloadedFile = File(downloadedFilePath)
 
         tinkAesGcmHelper?.decryptFile(downloadedFile, downloadedFile)
 
-        return downloadedFile.absolutePath
+        return@withContext downloadedFile.absolutePath
     }
 
     fun fManagerIsExist(fileName: String): Boolean {
