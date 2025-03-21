@@ -69,8 +69,10 @@ class GroupMessageViewModel @Inject constructor(
                 webSocketService.newMessageFlow.collect { message ->
                     message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
                     Log.d("testSocketsMessage", "New Message: $message")
-                    val newMessagePair = if(lastMessageDate == "") message to "" else message to formatMessageDate(message.timestamp)
-                    _newMessageFlow.tryEmit(newMessagePair)
+                    val newMessageTriple =
+                        if(lastMessageDate == "") Triple(message,"", formatMessageTime(message.timestamp))
+                        else Triple(message,formatMessageDate(message.timestamp), formatMessageTime(message.timestamp))
+                    _newMessageFlow.tryEmit(newMessageTriple)
                     updateLastDate(message.timestamp)
                 }
             }
@@ -182,7 +184,7 @@ class GroupMessageViewModel @Inject constructor(
             recyclerView.addOnScrollListener(scrollListener)
         }
 
-        fun separateMessages(messages: List<Pair<Message, String>>, currentUserId: Int): Map<Int, Pair<String?, String?>?> {
+        fun separateMessages(messages: List<Triple<Message, String, String>>, currentUserId: Int): Map<Int, Pair<String?, String?>?> {
             // Optimizing access to users using the Map
             val userMap = currentMemberList.associate { it.id to (it.username to it.avatar) }
             val groupedMessages = mutableListOf<List<Message>>()

@@ -37,7 +37,7 @@ class MessageFragment(
                         if(dialog.unreadCount in 4..29) registerInitialListObserver()
                         val mes = viewModel.getUnsentMessages()
                         val summaryPagingData = if(mes != null) {
-                            val pair = mes.map { Pair(it, "") }
+                            val pair = mes.map { Triple(it, "", "") }
                             pair + pagingData
                         } else pagingData
                         adapter.submitList(summaryPagingData)

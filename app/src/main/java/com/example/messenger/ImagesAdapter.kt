@@ -18,7 +18,7 @@ import com.luck.picture.lib.entity.LocalMedia
 
 interface ImagesActionListener {
     fun onImageClicked(images: ArrayList<LocalMedia>, position: Int)
-    fun onLongImageClicked(position: Int)
+    fun onLongImageClicked()
 }
 
 class ImagesAdapter(
@@ -40,9 +40,7 @@ class ImagesAdapter(
     }
 
     override fun onLongClick(v: View): Boolean {
-        val viewHolder = v.tag as ImagesViewHolder
-        val position = viewHolder.bindingAdapterPosition
-        actionListener.onLongImageClicked(position)
+        actionListener.onLongImageClicked()
         return true
     }
 

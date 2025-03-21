@@ -71,6 +71,7 @@ abstract class BaseChatViewModel(
     private val chatKeyManager = ChatKeyManager()
     protected var tinkAesGcmHelper: TinkAesGcmHelper? = null
     private val imageUtils = ImageUtils()
+    private var avatarCache: MutableMap<String, Uri> = mutableMapOf()
 
     protected val searchBy = MutableLiveData("")
     protected val currentPage = MutableStateFlow(0)
@@ -78,8 +79,8 @@ abstract class BaseChatViewModel(
     private val _initFlow = MutableSharedFlow<Unit>()
     val initFlow: SharedFlow<Unit> = _initFlow
 
-    protected val _newMessageFlow = MutableSharedFlow<Pair<Message, String>?>(extraBufferCapacity = 5)
-    val newMessageFlow: SharedFlow<Pair<Message, String>?> = _newMessageFlow
+    protected val _newMessageFlow = MutableSharedFlow<Triple<Message, String, String>?>(extraBufferCapacity = 5)
+    val newMessageFlow: SharedFlow<Triple<Message, String, String>?> = _newMessageFlow
 
     protected val _typingState = MutableStateFlow<Pair<Boolean, String?>>(Pair(false, null))
     val typingState: StateFlow<Pair<Boolean, String?>> get() = _typingState
@@ -465,9 +466,7 @@ abstract class BaseChatViewModel(
         return@withContext fileManager.getFileFromPath(filePath)
     }
 
-    fun formatMessageTime(timestamp: Long?): String {
-        if (timestamp == null) return "-"
-
+    fun formatMessageTime(timestamp: Long): String {
         val greenwichMessageDate = Calendar.getInstance().apply {
             timeInMillis = timestamp
         }
@@ -694,7 +693,7 @@ abstract class BaseChatViewModel(
         return null
     }
 
-    fun processDateDuplicates(list: MutableList<Pair<Message, String>>): MutableList<Pair<Message, String>> {
+    fun processDateDuplicates(list: MutableList<Triple<Message, String, String>>): MutableList<Triple<Message, String, String>> {
         val seenDates = mutableSetOf<String>()
         for (i in list.indices.reversed()) {
             val pair = list[i]
@@ -710,29 +709,42 @@ abstract class BaseChatViewModel(
     fun avatarSet(avatar: String, imageView: ImageView, context: Context) {
         if (avatar != "") {
             viewModelScope.launch {
-                val filePathTemp = async {
-                    if (fManagerIsExistAvatar(avatar)) {
-                        return@async Pair(fManagerGetAvatarPath(avatar), true)
-                    } else {
-                        try {
-                            return@async Pair(downloadAvatar(context, avatar), false)
-                        } catch (e: Exception) {
-                            return@async Pair(null, true)
-                        }
-                    }
-                }
-                val (first, second) = filePathTemp.await()
-                if (first != null) {
-                    val file = File(first)
-                    if (file.exists()) {
-                        if (!second) fManagerSaveAvatar(avatar, file.readBytes())
-                        val uri = Uri.fromFile(file)
+                withContext(ioDispatcher) {
+                    val uriCached = avatarCache[avatar]
+                    if(uriCached != null) {
                         imageView.imageTintList = null
                         Glide.with(context)
-                            .load(uri)
+                            .load(uriCached)
                             .apply(RequestOptions.circleCropTransform())
                             .diskCacheStrategy(DiskCacheStrategy.ALL)
                             .into(imageView)
+                    } else {
+                        val filePathTemp = async {
+                            if (fManagerIsExistAvatar(avatar)) {
+                                return@async Pair(fManagerGetAvatarPath(avatar), true)
+                            } else {
+                                try {
+                                    return@async Pair(downloadAvatar(context, avatar), false)
+                                } catch (e: Exception) {
+                                    return@async Pair(null, true)
+                                }
+                            }
+                        }
+                        val (first, second) = filePathTemp.await()
+                        if (first != null) {
+                            val file = File(first)
+                            if (file.exists()) {
+                                if (!second) fManagerSaveAvatar(avatar, file.readBytes())
+                                val uri = Uri.fromFile(file)
+                                avatarCache[avatar] = uri
+                                imageView.imageTintList = null
+                                Glide.with(context)
+                                    .load(uri)
+                                    .apply(RequestOptions.circleCropTransform())
+                                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                    .into(imageView)
+                            }
+                        }
                     }
                 }
             }

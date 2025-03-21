@@ -67,8 +67,10 @@ class MessageViewModel @Inject constructor(
             webSocketService.newMessageFlow.collect { message ->
                 message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
                 Log.d("testSocketsMessage", "New Message: $message")
-                val newMessagePair = if(lastMessageDate == "") message to "" else message to formatMessageDate(message.timestamp)
-                _newMessageFlow.tryEmit(newMessagePair)
+                val newMessageTriple =
+                    if(lastMessageDate == "") Triple(message,"", formatMessageTime(message.timestamp))
+                    else Triple(message,formatMessageDate(message.timestamp), formatMessageTime(message.timestamp))
+                _newMessageFlow.tryEmit(newMessageTriple)
                 updateLastDate(message.timestamp)
             }
         }

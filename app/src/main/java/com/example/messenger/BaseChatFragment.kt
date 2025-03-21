@@ -50,7 +50,6 @@ import com.tougee.recorderview.AudioRecordView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
@@ -188,7 +187,7 @@ abstract class BaseChatFragment(
                     if(uMessage != null) {
                         registerScrollObserver()
                         Log.d("testUnsentFlow", "OK")
-                        adapter.addNewMessage(Pair(uMessage, ""))
+                        adapter.addNewMessage(Triple(uMessage, "", ""))
                     }
                 }
             }
@@ -440,9 +439,11 @@ abstract class BaseChatFragment(
         val layoutManager = LinearLayoutManager(requireContext()).apply {
             stackFromEnd = false
             reverseLayout = true
+            initialPrefetchItemCount = 10 // не особо заметил разницы с и без
         }
         binding.recyclerview.layoutManager = layoutManager
         binding.recyclerview.addItemDecoration(VerticalSpaceItemDecoration(15))
+        binding.recyclerview.setItemViewCacheSize(30) // works good
         viewModel.bindRecyclerView(binding.recyclerview)
         binding.selectedPhotosRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         binding.selectedPhotosRecyclerView.adapter = imageAdapter
@@ -462,6 +463,8 @@ abstract class BaseChatFragment(
             }
         })
         binding.enterButton.setOnClickListener {
+            binding.enterButton.isEnabled = false
+            binding.progressBarEnter.visibility = View.VISIBLE
             val text = binding.enterMessage.text.toString()
             val items = imageAdapter.getData()
 
@@ -541,9 +544,10 @@ abstract class BaseChatFragment(
                         }
                     }
                 }
-
                 val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 enterText.setText("")
+                binding.progressBarEnter.visibility = View.GONE
+                binding.enterButton.isEnabled = true
             }
         }
         return binding.root
@@ -612,8 +616,8 @@ abstract class BaseChatFragment(
     private fun hideArrow() {
         if(binding.floatingActionButtonArrowDown.visibility == View.VISIBLE) {
             binding.floatingActionButtonArrowDown.visibility = View.GONE
-            binding.countNewMsgTextView.visibility = View.GONE
         }
+        binding.countNewMsgTextView.visibility = View.GONE
         countNewMsg = 0
     }
 
@@ -629,13 +633,6 @@ abstract class BaseChatFragment(
         adapter = MessageAdapter(object : MessageActionListener {
             override fun onUnsentMessageClick(message: Message, itemView: View) {
                 showPopupMenuUnsent(itemView, R.menu.popup_menu_unsent, message)
-            }
-
-            override fun onUnsentMessagesAdd() {
-                lifecycleScope.launch {
-                    delay(200)
-                    binding.recyclerview.smoothScrollToPosition(0)
-                }
             }
 
             override fun onMessageClick(message: Message, itemView: View, isSender: Boolean) {
@@ -745,6 +742,7 @@ abstract class BaseChatFragment(
                     .startActivityPreview(position, false, images)
             }
         }, currentUser.id, requireContext(), viewModel, isGroup(), canDelete())
+        adapter.setHasStableIds(true)
         binding.recyclerview.adapter = adapter
     }
 
