@@ -4,13 +4,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="70dp"
+    android:layout_height="72dp"
     android:background="@drawable/messenger_item_background">
 
     <ImageView
         android:id="@+id/photoImageView"
         android:layout_width="70dp"
-        android:layout_height="match_parent"
+        android:layout_height="70dp"
         android:src="@drawable/ic_user_avatar"
         android:padding="6dp"
         app:tint="@color/colorDayNightAttr"
@@ -39,11 +39,12 @@
         android:ellipsize="end"
         android:textSize="16sp"
         android:layout_marginTop="4dp"
+        android:layout_marginEnd="10dp"
         tools:text="Google Inc."
         android:textColor="?attr/colorAccent"
         app:layout_constraintTop_toBottomOf="@id/userNameTextView"
         app:layout_constraintStart_toStartOf="@id/userNameTextView"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toStartOf="@id/unreadText"/>
 
     <ImageView
         android:id="@+id/ic_check"
@@ -54,7 +55,6 @@
         android:layout_marginEnd="-5dp"
         android:padding="8dp"
         android:visibility="invisible"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="@id/dateText"
         app:layout_constraintBottom_toBottomOf="@id/dateText"
         app:layout_constraintEnd_toStartOf="@id/dateText"/>
@@ -68,11 +68,9 @@
         android:layout_marginEnd="-5dp"
         android:padding="8dp"
         android:visibility="invisible"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="@id/dateText"
         app:layout_constraintBottom_toBottomOf="@id/dateText"
         app:layout_constraintEnd_toStartOf="@id/dateText"/>
-
 
     <TextView
         android:id="@+id/dateText"
@@ -83,21 +81,34 @@
         android:textColor="?attr/colorAccent"
         android:layout_marginEnd="10dp"
         android:layout_marginTop="6dp"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="@id/userNameTextView"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <androidx.constraintlayout.widget.Barrier
-        android:id="@+id/barrier"
-        android:layout_width="wrap_content"
+    <TextView
+        android:id="@+id/unreadText"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        app:constraint_referenced_ids="photoImageView,userNameTextView"
-        app:barrierDirection="bottom"/>
+        android:textSize="16sp"
+        tools:text="4"
+        android:textColor="#FCFCFC"
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="5dp"
+        android:paddingHorizontal="7dp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        android:background="@drawable/unread_count_background"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/userNameTextView"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
-    <Space
-        android:layout_width="wrap_content"
-        android:layout_height="6dp"
-        app:layout_constraintTop_toBottomOf="@id/barrier"/>
+    <!-- Разделительная линия -->
+    <FrameLayout
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        app:layout_constraintTop_toBottomOf="@id/photoImageView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:background="@color/colorBar" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

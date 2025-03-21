@@ -9,15 +9,13 @@ import android.os.Bundle
 import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
-import android.view.Menu
-import android.view.MenuInflater
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.NumberPicker
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -72,16 +70,18 @@ abstract class BaseInfoFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        // Настройка Toolbar
-        val toolbar: Toolbar = view.findViewById(R.id.toolbar)
-        (activity as AppCompatActivity).setSupportActionBar(toolbar)
-        @Suppress("DEPRECATION")
-        setHasOptionsMenu(true) // Включить меню для этого фрагмента
-
-        // Настройка кнопки "назад"
-        toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
-        toolbar.setNavigationOnClickListener {
+        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
+        val defaultToolbar = LayoutInflater.from(context)
+            .inflate(R.layout.toolbar_info, toolbarContainer, false)
+        toolbarContainer.addView(defaultToolbar)
+        val backArrow: ImageView = view.findViewById(R.id.back_arrow)
+        backArrow.setOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
+        }
+        val options: ImageView = view.findViewById(R.id.ic_options)
+        options.setOnClickListener {
+            showPopupMenu(it, R.menu.dialog_info_menu)
         }
     }
 
@@ -378,43 +378,38 @@ abstract class BaseInfoFragment : Fragment() {
         }
     }
 
-    @Suppress("DEPRECATION")
-    @Deprecated("Deprecated in Java")
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        super.onCreateOptionsMenu(menu, inflater)
-        inflater.inflate(R.menu.dialog_info_menu, menu)
-    }
-
-
-    @Deprecated("Deprecated in Java")
-    @Suppress("DEPRECATION")
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.auto_delete -> {
-                showNumberPickerDialog()
-                true
-            }
-            R.id.delete_all_messages -> {
-                lifecycleScope.launch {
-                    val success = viewModel.deleteAllMessages()
-                    if(success) requireActivity().onBackPressedDispatcher.onBackPressed()
-                    else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
+    private fun showPopupMenu(view: View, menuRes: Int) {
+        val popupMenu = PopupMenu(requireContext(), view)
+        popupMenu.menuInflater.inflate(menuRes, popupMenu.menu)
+        popupMenu.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.auto_delete -> {
+                    showNumberPickerDialog()
+                    true
                 }
-                true
-            }
-            R.id.delete_dialog -> {
-                lifecycleScope.launch {
-                    val success = viewModel.deleteConv()
-                    if(success) {
-                        parentFragmentManager.beginTransaction()
-                            .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_FROM_DIALOG_TAG")
-                            .commit()
-                    } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
+                R.id.delete_all_messages -> {
+                    lifecycleScope.launch {
+                        val success = viewModel.deleteAllMessages()
+                        if(success) requireActivity().onBackPressedDispatcher.onBackPressed()
+                        else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
+                    }
+                    true
                 }
-                true
+                R.id.delete_dialog -> {
+                    lifecycleScope.launch {
+                        val (success, message) = viewModel.deleteConv()
+                        if(success) {
+                            parentFragmentManager.beginTransaction()
+                                .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_FROM_DIALOG_TAG")
+                                .commit()
+                        } else Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                    }
+                    true
+                }
+                else -> false
             }
-            else -> super.onOptionsItemSelected(item)
         }
+        popupMenu.show()
     }
 
     private fun showNumberPickerDialog() {

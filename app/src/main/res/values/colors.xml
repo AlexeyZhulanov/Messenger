@@ -2,11 +2,13 @@
 <resources>
     <color name="colorDefault">#000000</color>
     <color name="colorDefault2">#FCFCFC</color>
-    <color name="colorBar">#FCFCFC</color>
+    <color name="colorBar">#E0FFFF</color>
     <color name="colorPrimary">#529BEA</color>
     <color name="colorPrimaryDark">#000000</color>
     <color name="colorAccent">#808080</color>
     <!-- <color name="colorMessageSenderBack">#E1FFC7</color> -->
+    <color name="login_color">#A485F7</color>
+    <color name="navigation_bar_color">#F5F5F5</color>
     <color name="colorMessageSenderBack">#E7F0F9</color>
     <color name="colorMessageReceiverBack">#A6CAF0</color>"
     <color name="colorTransparent">#CCFFFFFF</color>
@@ -23,6 +25,7 @@
     <color name="white">#FFFFFFFF</color>
     <color name="orange">#FF9800</color>
     <color name="grey">#808080</color>
+    <color name="count_message">#C0C0C0</color>
     <color name="color1_main">#81C784</color>
     <color name="color1_secondary">#424242</color>"
     <color name="color2_main">#CE93D8</color>

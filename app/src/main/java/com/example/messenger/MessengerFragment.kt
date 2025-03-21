@@ -1,30 +1,30 @@
 package com.example.messenger
 
 import android.annotation.SuppressLint
-import android.content.Context
-import android.content.SharedPreferences
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.text.SpannableString
-import android.text.style.ForegroundColorSpan
+import android.util.Log
 import android.view.LayoutInflater
-import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
-import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
@@ -32,9 +32,10 @@ import com.example.messenger.databinding.FragmentMessengerBinding
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
+import com.example.messenger.model.chunkedFlowLast
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -42,12 +43,10 @@ import java.io.File
 class MessengerFragment : Fragment() {
     private lateinit var binding: FragmentMessengerBinding
     private lateinit var adapter: MessengerAdapter
-    private lateinit var preferences: SharedPreferences
     private var currentUser: User? = null
     private var forwardFlag: Boolean = false
     private var forwardMessages: List<Message>? = null
     private var forwardUsernames: List<String>? = null
-    private var updateJob: Job? = null
     private var uriGlobal: Uri? = null
     private val messengerViewModel: MessengerViewModel by viewModels()
 
@@ -65,20 +64,18 @@ class MessengerFragment : Fragment() {
             forwardUsernames = usernames
             forwardFlag = true
         }
-        val toolbar: Toolbar = view.findViewById(R.id.toolbar)
-        (activity as AppCompatActivity).setSupportActionBar(toolbar)
-        (activity as AppCompatActivity).supportActionBar?.setDisplayShowTitleEnabled(false)
+        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
+        val defaultToolbar = LayoutInflater.from(context)
+            .inflate(R.layout.toolbar_custom, toolbarContainer, false)
+        toolbarContainer.addView(defaultToolbar)
         val avatarImageView: ImageView = view.findViewById(R.id.toolbar_avatar)
         avatarImageView.setOnClickListener {
-            Toast.makeText(context, "Avatar clicked!", Toast.LENGTH_SHORT).show()
+            goToSettingsFragment()
         }
         val titleTextView: TextView = view.findViewById(R.id.toolbar_title)
         titleTextView.setOnClickListener {
-            Toast.makeText(context, "Title clicked!", Toast.LENGTH_SHORT).show()
-        }
-        val checkImageView: ImageView = view.findViewById(R.id.ic_options)
-        checkImageView.setOnClickListener {
-            showPopupMenu(it, R.menu.popup_menu_check)
+            goToSettingsFragment()
         }
         val addImageView: ImageView = view.findViewById(R.id.ic_add)
         addImageView.setOnClickListener {
@@ -128,31 +125,23 @@ class MessengerFragment : Fragment() {
     @SuppressLint("DiscouragedApi")
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentMessengerBinding.inflate(inflater, container, false)
-        preferences = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
-        val wallpaper = preferences.getString(PREF_WALLPAPER, "")
-        if(wallpaper != "") {
-            val resId = resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
-            if(resId != 0)
-                binding.messengerLayout.background = ContextCompat.getDrawable(requireContext(), resId)
-        }
+
         binding.button.setOnClickListener {
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, NewsFragment(uriGlobal, currentUser?.id), "NEWS_FRAGMENT_TAG")
+                .replace(R.id.fragmentContainer, NewsFragment(uriGlobal, currentUser), "NEWS_FRAGMENT_TAG")
                 .addToBackStack(null)
                 .commit()
         }
+        if(messengerViewModel.isNeedFetchConversations) messengerViewModel.fetchConversations() // При повторном заходе во фрагмент
         setupRecyclerView()
+        messengerViewModel.stopNotifications(true)
         return binding.root
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        updateJob?.cancel()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        updateJob?.cancel()
+        messengerViewModel.isNeedFetchConversations = true
+        messengerViewModel.stopNotifications(false)
     }
 
     private fun observeViewModel() {
@@ -164,7 +153,18 @@ class MessengerFragment : Fragment() {
             }
         }
         messengerViewModel.conversations.observe(viewLifecycleOwner) { conversations ->
-            adapter.conversations = conversations
+            Log.d("testConvFetch", "Conversations Fetched")
+            adapter.submitList(conversations)
+        }
+        lifecycleScope.launch {
+            messengerViewModel.newMessageFlow
+                .buffer()
+                .chunkedFlowLast(200) // custom func
+                .collect { newMessages ->
+                    if(newMessages.isNotEmpty()) {
+                        adapter.updateConversations(newMessages)
+                    }
+                }
         }
     }
 
@@ -183,7 +183,10 @@ class MessengerFragment : Fragment() {
                             if(forwardMessages != null) {
                                 val list = forwardMessages
                                 val list2 = forwardUsernames
-                                messengerViewModel.forwardMessages(list, list2, conversation.toDialog().id)
+                                messengerViewModel.forwardMessages(list, list2, conversation.toDialog().id) { success ->
+                                    val textMessage = if(success) "Сообщения успешно пересланы" else "Не удалось переслать сообщения, возможно нет ключа шифрования, либо нет сети"
+                                    Toast.makeText(requireContext(), textMessage, Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
                     }
@@ -198,7 +201,10 @@ class MessengerFragment : Fragment() {
                             if(forwardMessages != null) {
                                 val list = forwardMessages
                                 val list2 = forwardUsernames
-                                messengerViewModel.forwardGroupMessages(list, list2, conversation.toGroup().id)
+                                messengerViewModel.forwardGroupMessages(list, list2, conversation.toGroup().id) { success ->
+                                    val textMessage = if(success) "Сообщения успешно пересланы" else "Не удалось переслать сообщения, возможно нет ключа шифрования, либо нет сети"
+                                    Toast.makeText(requireContext(), textMessage, Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
                     }
@@ -217,17 +223,6 @@ class MessengerFragment : Fragment() {
         popupMenu.menuInflater.inflate(menuRes, popupMenu.menu)
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
-                R.id.menu_item1 -> {
-                    parentFragmentManager.beginTransaction()
-                        .replace(R.id.fragmentContainer, SettingsFragment(currentUser ?: User(0, "", "")), "SETTINGS_FRAGMENT_TAG")
-                        .addToBackStack(null)
-                        .commit()
-                    true
-                }
-                R.id.menu_item2 -> {
-                    logout()
-                    true
-                }
                 R.id.menu_item3 -> {
                     showAddDialog()
                     true
@@ -254,13 +249,11 @@ class MessengerFragment : Fragment() {
         }
     }
 
-    private fun applyMenuTextColor(menu: Menu, color: Int) { // todo не используется
-        for (i in 0 until menu.size()) {
-            val menuItem = menu.getItem(i)
-            val spannableTitle = SpannableString(menuItem.title)
-            spannableTitle.setSpan(ForegroundColorSpan(color), 0, spannableTitle.length, 0)
-            menuItem.title = spannableTitle
-        }
+    private fun goToSettingsFragment() {
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, SettingsFragment(currentUser ?: User(0, "", "")), "SETTINGS_FRAGMENT_TAG")
+            .addToBackStack(null)
+            .commit()
     }
 
     private fun showAddDialog() {

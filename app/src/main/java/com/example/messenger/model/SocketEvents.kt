@@ -27,6 +27,16 @@ data class ChatMessageEvent(
     val avatar: String? = null,
     @Json(name = "is_group") val isGroup: Boolean,
     @Json(name = "group_name") val groupName: String? = null,
+) {
+    fun toShortMessage(timestamp: Long) = ShortMessage(chatId, isGroup, text, senderName, timestamp)
+}
+
+data class ShortMessage(
+    val chatId: Int,
+    val isGroup: Boolean,
+    var text: String? = null,
+    val senderName: String,
+    val timestamp: Long
 )
 
 data class NewsEvent(

@@ -27,7 +27,7 @@ class MessagePagingSource(
         private const val MAX_CACHE_SIZE = 50 // 50 queries
     }
 
-    suspend fun loadPage(pageIndex: Int, pageSize: Int, currentQuery: String): List<Pair<Message, String>> {
+    suspend fun loadPage(pageIndex: Int, pageSize: Int, currentQuery: String): List<Triple<Message, String, String>> {
         return try {
             val messages = if (currentQuery.isEmpty()) {
                 try {
@@ -61,17 +61,17 @@ class MessagePagingSource(
                     result
                 }
             }
-
+            val formattedData = formatMessageTimesAndDates(messages)
             // Формирование дат для адаптера
             val dates = mutableSetOf<String>()
-            val messageDatePairs = mutableListOf<Pair<Message, String>>()
-            messages.forEach {
-                val tTime = formatMessageDate(it.timestamp)
-                if (tTime !in dates) {
-                    messageDatePairs.add(it to tTime)
-                    dates.add(tTime)
+            val messageDatePairs = mutableListOf<Triple<Message, String, String>>()
+            messages.forEach { message ->
+                val (formattedTime, formattedDate) = formattedData[message.id] ?: ("-" to "-")
+                if (formattedDate !in dates) {
+                    messageDatePairs.add(Triple(message,formattedDate, formattedTime))
+                    dates.add(formattedDate)
                 } else {
-                    messageDatePairs.add(it to "")
+                    messageDatePairs.add(Triple(message,"", formattedTime))
                 }
             }
 
@@ -86,21 +86,31 @@ class MessagePagingSource(
         }
     }
 
-    private fun formatMessageDate(timestamp: Long?): String {
-        if (timestamp == null) return ""
-
-        val greenwichMessageDate = Calendar.getInstance().apply {
-            timeInMillis = timestamp
-        }
+    private fun formatMessageTimesAndDates(messages: List<Message>): Map<Int, Pair<String, String>> {
+        val formattedData = mutableMapOf<Int, Pair<String, String>>()
+        val dateFormatToday = SimpleDateFormat("HH:mm", Locale.getDefault())
         val dateFormatMonthDay = SimpleDateFormat("d MMMM", Locale.getDefault())
         val dateFormatYear = SimpleDateFormat("d MMMM yyyy", Locale.getDefault())
         val localNow = Calendar.getInstance()
 
-        return when {
-            isToday(localNow, greenwichMessageDate) -> dateFormatMonthDay.format(greenwichMessageDate.time)
-            isThisYear(localNow, greenwichMessageDate) -> dateFormatMonthDay.format(greenwichMessageDate.time)
-            else -> dateFormatYear.format(greenwichMessageDate.time)
+        for (message in messages) {
+            val timestamp = message.timestamp
+            val greenwichMessageDate = Calendar.getInstance().apply {
+                timeInMillis = timestamp
+            }
+            // Форматируем время
+            val formattedTime = dateFormatToday.format(greenwichMessageDate.time)
+
+            // Форматируем дату
+            val formattedDate = when {
+                isToday(localNow, greenwichMessageDate) -> dateFormatMonthDay.format(greenwichMessageDate.time)
+                isThisYear(localNow, greenwichMessageDate) -> dateFormatMonthDay.format(greenwichMessageDate.time)
+                else -> dateFormatYear.format(greenwichMessageDate.time)
+            }
+            // Сохраняем результат
+            formattedData[message.id] = formattedTime to formattedDate
         }
+        return formattedData
     }
 
     private fun isToday(now: Calendar, messageDate: Calendar): Boolean {

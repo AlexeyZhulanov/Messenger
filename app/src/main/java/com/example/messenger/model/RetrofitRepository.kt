@@ -117,12 +117,12 @@ interface RetrofitRepository {
 
     suspend fun getPermission() : Int
 
-    suspend fun sendNews(headerText: String, text: String?, images: List<String>?, voices: List<String>?,
+    suspend fun sendNews(headerText: String?, text: String?, images: List<String>?, voices: List<String>?,
                          files: List<String>?) : Boolean
 
     suspend fun getNews(pageIndex: Int, pageSize: Int) : List<News>
 
-    suspend fun editNews(newsId: Int, headerText: String, text: String?, images: List<String>?,
+    suspend fun editNews(newsId: Int, headerText: String?, text: String?, images: List<String>?,
                          voices: List<String>?, files: List<String>?) : Boolean
 
     suspend fun deleteNews(newsId: Int) : Boolean

@@ -6,6 +6,7 @@
     <color name="colorPrimary">#71BC78</color>
     <color name="colorPrimaryDark">#ffffff</color>
     <color name="colorAccent">#A0A0A4</color>
+    <color name="navigation_bar_color">#121212</color>
     <color name="colorMessageSenderBack">#00693E</color>
     <color name="colorMessageReceiverBack">#333333</color>"
     <color name="colorTransparent">#60000000</color>
@@ -13,6 +14,7 @@
     <color name="colorDayNightAttr">@color/colorPrimaryDark</color>
     <color name="colorDayNightAttrReversed">@color/colorPrimary</color>
     <color name="colorDayNightAttr2">@color/colorAccent</color>
+    <color name="count_message">#4D4D4D</color>
     <color name="color1_main">#1ABC9C</color>
     <color name="color1_secondary">#3498DB</color>"
     <color name="color2_main">#2ECC71</color>

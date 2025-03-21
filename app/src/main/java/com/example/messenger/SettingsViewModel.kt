@@ -2,18 +2,26 @@ package com.example.messenger
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.FileManager
+import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.model.User
+import com.example.messenger.model.WebSocketService
+import com.example.messenger.model.appsettings.AppSettings
+import com.google.firebase.messaging.FirebaseMessaging
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
@@ -24,6 +32,9 @@ class SettingsViewModel @Inject constructor(
     private val prefs: SharedPreferences,
     private val retrofitService: RetrofitService,
     private val fileManager: FileManager,
+    private val appSettings: AppSettings,
+    private val messengerService: MessengerService,
+    private val webSocketService: WebSocketService,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
@@ -32,6 +43,9 @@ class SettingsViewModel @Inject constructor(
 
     private val _themeNumber = MutableLiveData<Int>()
     val themeNumber: LiveData<Int> get() = _themeNumber
+
+    private val _currentUser = MutableLiveData<User>()
+    val currentUser: LiveData<User> get() = _currentUser
 
     init {
         loadSettings()
@@ -52,6 +66,18 @@ class SettingsViewModel @Inject constructor(
     fun updateTheme(themeNumber: Int) {
         prefs.edit().putInt(PREF_THEME, themeNumber).apply()
         _themeNumber.value = themeNumber
+    }
+
+    fun setUser(user: User) {
+        _currentUser.value = user
+    }
+
+    fun updateUsernameValue(newUsername: String) {
+        _currentUser.value = _currentUser.value?.copy(username = newUsername)
+    }
+
+    fun updateAvatarValue(newAvatar: String) {
+        _currentUser.value = _currentUser.value?.copy(avatar = newAvatar)
     }
 
     fun fManagerIsExistAvatar(fileName: String): Boolean {
@@ -101,6 +127,26 @@ class SettingsViewModel @Inject constructor(
                 }
             } else {
                 onError("Ошибка: Старый и новый пароли совпадают")
+            }
+        }
+    }
+
+    suspend fun deleteFCMToken() : Boolean {
+        return try {
+            retrofitService.deleteFCMToken()
+        } catch (e: Exception) { false }
+    }
+
+    fun clearCurrentUser() {
+        viewModelScope.launch {
+            withContext(NonCancellable) {
+                Log.d("testClearUser", "OK")
+                webSocketService.disconnect()
+                FirebaseMessaging.getInstance().deleteToken().await()
+                messengerService.deleteCurrentUser()
+                appSettings.setCurrentAccessToken(null)
+                appSettings.setCurrentRefreshToken(null)
+                appSettings.setRemember(false)
             }
         }
     }

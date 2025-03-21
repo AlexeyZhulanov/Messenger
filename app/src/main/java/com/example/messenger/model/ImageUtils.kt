@@ -14,7 +14,7 @@ class ImageUtils {
     suspend fun createImagePreview(context: Context, file: File, outputFileName: String, maxWidth: Int, maxHeight: Int): File {
         return withContext(Dispatchers.IO) {
 
-            val concatFileName = "$outputFileName.jpg"
+            val concatFileName = "preview_$outputFileName.jpg"
             val previewFile = File(context.cacheDir, concatFileName)
 
             val bitmap = Glide.with(context)
@@ -43,7 +43,7 @@ class ImageUtils {
 
         val bitmap = retriever.frameAtTime
 
-        val previewFileName = "${outputFileName}_${durationInSeconds}s:$fileExtension.jpg"
+        val previewFileName = "preview_${outputFileName}_${durationInSeconds}s:$fileExtension.jpg"
         val previewFile = File(context.cacheDir, previewFileName)
 
         if (bitmap != null) {

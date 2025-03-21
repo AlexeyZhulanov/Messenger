@@ -209,18 +209,18 @@ class NewsViewModel @Inject constructor(
         fileManager.saveNewsFile(fileName, fileData)
     }
 
-    suspend fun downloadNews(context: Context, filename: String): String {
+    suspend fun downloadNews(context: Context, filename: String): String = withContext(ioDispatcher) {
         val downloadedFilePath = try {
             retrofitService.downloadNews(context, filename)
-        } catch (e: Exception) { return "" }
+        } catch (e: Exception) { return@withContext "" }
         val downloadedFile = File(downloadedFilePath)
-        return tinkAesGcmHelper?.let {
+        return@withContext tinkAesGcmHelper?.let {
             it.decryptFile(downloadedFile, downloadedFile)
             downloadedFile.absolutePath
         } ?: ""
     }
 
-    suspend fun uploadNews(file: File, context: Context): Pair<String, Boolean> {
+    suspend fun uploadNews(file: File, context: Context): Pair<String, Boolean> = withContext(ioDispatcher) {
         val path = try {
             val tempDir = context.cacheDir
             val tempFile = File(tempDir, file.name)
@@ -229,11 +229,11 @@ class NewsViewModel @Inject constructor(
                 val pt = retrofitService.uploadNews(file)
                 tempFile.delete()
                 pt
-            } ?: return Pair("", false)
+            } ?: return@withContext Pair("", false)
         } catch (e: Exception) {
-            return Pair("", false)
+            return@withContext Pair("", false)
         }
-        return Pair(path, true)
+        return@withContext Pair(path, true)
     }
 
     private fun encryptText(text: String?) : String? {
@@ -242,7 +242,7 @@ class NewsViewModel @Inject constructor(
         return txt
     }
 
-    suspend fun sendNews(headerText: String, text: String?, images: List<String>?,
+    suspend fun sendNews(headerText: String?, text: String?, images: List<String>?,
                          voices: List<String>?, files: List<String>?): Boolean {
         return try {
             val bodyText = encryptText(text)
@@ -251,7 +251,7 @@ class NewsViewModel @Inject constructor(
         } catch (e: Exception) { false }
     }
 
-    suspend fun editNews(newsId: Int, headerText: String, text: String?, images: List<String>?,
+    suspend fun editNews(newsId: Int, headerText: String?, text: String?, images: List<String>?,
                          voices: List<String>?, files: List<String>?): Boolean {
         return try {
             val bodyText = encryptText(text)

@@ -8,6 +8,7 @@ import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.ChatSettings
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.MessengerService
+import com.example.messenger.model.NoPermissionException
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.UserNotFoundException
 import com.example.messenger.security.ChatKeyManager
@@ -163,10 +164,17 @@ class BaseInfoViewModel @Inject constructor(
         } catch (e: Exception) { false }
     }
 
-    suspend fun deleteConv(): Boolean {
+    suspend fun deleteConv(): Pair<Boolean, String> {
         return try {
-            if(isGroup == 0) retrofitService.deleteDialog(convId) else retrofitService.deleteGroup(convId)
-        } catch (e: Exception) { false }
+            if(isGroup == 0) {
+                retrofitService.deleteDialog(convId) to "Ошибка: Нет сети!"
+            } else retrofitService.deleteGroup(convId) to "Ошибка: Нет сети!"
+        } catch (e: NoPermissionException) {
+            false to "Ошибка: Только создатель группы может её удалить"
+        }
+        catch (e: Exception) {
+            false to "Ошибка: Нет сети!"
+        }
     }
 
     suspend fun updateAutoDeleteInterval(interval: Int): Boolean {

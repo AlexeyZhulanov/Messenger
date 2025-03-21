@@ -14,23 +14,17 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <LinearLayout
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerview"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/toolbar_container"
         app:layout_constraintBottom_toTopOf="@id/bottomGuideLine"
-        android:layout_marginTop="15dp"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        android:orientation="vertical">
+        android:layout_marginTop="8dp" />
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerview"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-    </LinearLayout>
 
     <ProgressBar
         android:id="@+id/progressBar"
@@ -84,7 +78,8 @@
         app:layout_constraintEnd_toStartOf="@+id/button3"
         app:layout_constraintHorizontal_chainStyle="spread_inside"
         android:textColor="?attr/colorPrimary"
-        style="?android:attr/buttonBarButtonStyle" />
+        android:backgroundTint="@color/colorBar"
+        android:padding="4dp" />
 
     <Button
         android:id="@+id/button3"
@@ -95,7 +90,8 @@
         android:autoSizeMinTextSize="10sp"
         android:autoSizeMaxTextSize="22sp"
         android:autoSizeStepGranularity="2sp"
-        style="?android:attr/buttonBarButtonStyle"
+        android:backgroundTint="@color/colorBar"
+        android:padding="4dp"
         app:layout_constraintTop_toBottomOf="@+id/bottomGuideLine"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@+id/button"
@@ -112,12 +108,39 @@
         android:autoSizeMinTextSize="10sp"
         android:autoSizeMaxTextSize="22sp"
         android:autoSizeStepGranularity="2sp"
-        style="?android:attr/buttonBarButtonStyle"
+        android:backgroundTint="@color/colorBar"
+        android:padding="4dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/bottomGuideLine"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@+id/button3"
         android:textColor="?attr/colorAccent"
         android:text="Apanel" />
+
+    <FrameLayout
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="@id/bottomGuideLine"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/button"
+        app:layout_constraintEnd_toStartOf="@id/button3"
+        android:layout_marginStart="-5dp"
+        android:layout_marginEnd="-5dp"
+        android:elevation="2dp"
+        android:background="@color/colorBar"
+        />
+
+    <FrameLayout
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="@id/bottomGuideLine"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/button3"
+        app:layout_constraintEnd_toStartOf="@id/button4"
+        android:layout_marginStart="-5dp"
+        android:layout_marginEnd="-5dp"
+        android:elevation="2dp"
+        android:background="@color/colorBar"
+        />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

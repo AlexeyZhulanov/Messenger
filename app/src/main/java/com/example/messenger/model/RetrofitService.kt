@@ -741,7 +741,7 @@ class RetrofitService(
         return@withContext vacation
     }
 
-    override suspend fun sendNews(headerText: String, text: String?, images: List<String>?,
+    override suspend fun sendNews(headerText: String?, text: String?, images: List<String>?,
                          voices: List<String>?, files: List<String>?): Boolean = withContext(ioDispatcher) {
         return@withContext try {
             newsSource.sendNews(headerText, text, images, voices, files)
@@ -777,7 +777,7 @@ class RetrofitService(
         return@withContext news
     }
 
-    override suspend fun editNews(newsId: Int, headerText: String, text: String?, images: List<String>?,
+    override suspend fun editNews(newsId: Int, headerText: String?, text: String?, images: List<String>?,
                      voices: List<String>?, files: List<String>?): Boolean = withContext(ioDispatcher) {
         val message = try {
             newsSource.editNews(newsId, headerText, text, images, voices, files)

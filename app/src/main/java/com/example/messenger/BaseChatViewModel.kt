@@ -71,6 +71,7 @@ abstract class BaseChatViewModel(
     private val chatKeyManager = ChatKeyManager()
     protected var tinkAesGcmHelper: TinkAesGcmHelper? = null
     private val imageUtils = ImageUtils()
+    private var avatarCache: MutableMap<String, Uri> = mutableMapOf()
 
     protected val searchBy = MutableLiveData("")
     protected val currentPage = MutableStateFlow(0)
@@ -78,8 +79,8 @@ abstract class BaseChatViewModel(
     private val _initFlow = MutableSharedFlow<Unit>()
     val initFlow: SharedFlow<Unit> = _initFlow
 
-    protected val _newMessageFlow = MutableSharedFlow<Pair<Message, String>?>(extraBufferCapacity = 5)
-    val newMessageFlow: SharedFlow<Pair<Message, String>?> = _newMessageFlow
+    protected val _newMessageFlow = MutableSharedFlow<Triple<Message, String, String>?>(extraBufferCapacity = 5)
+    val newMessageFlow: SharedFlow<Triple<Message, String, String>?> = _newMessageFlow
 
     protected val _typingState = MutableStateFlow<Pair<Boolean, String?>>(Pair(false, null))
     val typingState: StateFlow<Pair<Boolean, String?>> get() = _typingState
@@ -336,27 +337,32 @@ abstract class BaseChatViewModel(
 
     suspend fun uploadPhoto(photo: File, context: Context, isVideo: Boolean): Pair<String, Boolean> {
         return try {
-            val tempDir = context.cacheDir
-            val tempFile = File(tempDir, photo.name)
-
-            tinkAesGcmHelper?.encryptFile(photo, tempFile)
-
-            val path = retrofitService.uploadPhoto(convId, tempFile, isGroup)
-            tempFile.delete()
-
-            val name = path.substringBeforeLast(".")
+            val name = photo.name.substringBeforeLast(".")
 
             val previewFile = if(isVideo) {
                 imageUtils.createVideoPreview(context, photo, name, 300, 300)
             } else imageUtils.createImagePreview(context, photo, name, 300, 300)
 
-            val tempFilePreview = File(tempDir, previewFile.name)
-            tinkAesGcmHelper?.encryptFile(previewFile, tempFilePreview)
-
-            retrofitService.uploadPhotoPreview(convId, tempFilePreview, isGroup)
-
+            val path = if(isVideo) {
+                withContext(ioDispatcher) {
+                    val tempDir = context.cacheDir
+                    val tempFile = File(tempDir, photo.name)
+                    tinkAesGcmHelper?.encryptFile(photo, tempFile)
+                    val p = retrofitService.uploadPhoto(convId, tempFile, isGroup)
+                    tempFile.delete()
+                    return@withContext p
+                }
+            } else {
+                withContext(ioDispatcher) {
+                    tinkAesGcmHelper?.encryptFile(photo, photo)
+                    val p = retrofitService.uploadPhoto(convId, photo, isGroup)
+                    photo.delete()
+                    return@withContext p
+                }
+            }
+            tinkAesGcmHelper?.encryptFile(previewFile, previewFile)
+            retrofitService.uploadPhotoPreview(convId, previewFile, isGroup)
             previewFile.delete()
-            tempFilePreview.delete()
             Pair(path, true)
         } catch (e: Exception) {
             Log.d("testUploadError", e.message.toString())
@@ -382,9 +388,10 @@ abstract class BaseChatViewModel(
             val tempDir = context.cacheDir
             val tempFile = File(tempDir, audio.name)
 
-            tinkAesGcmHelper?.encryptFile(audio, tempFile)
-
-            val path = retrofitService.uploadAudio(convId, tempFile, isGroup)
+            val path = withContext(ioDispatcher) {
+                tinkAesGcmHelper?.encryptFile(audio, tempFile)
+                return@withContext retrofitService.uploadAudio(convId, tempFile, isGroup)
+            }
             tempFile.delete()
             Pair(path, true)
         } catch (e: Exception) {
@@ -398,9 +405,10 @@ abstract class BaseChatViewModel(
             val tempDir = context.cacheDir
             val tempFile = File(tempDir, file.name)
 
-            tinkAesGcmHelper?.encryptFile(file, tempFile)
-
-            val path = retrofitService.uploadFile(convId, tempFile, isGroup)
+            val path = withContext(ioDispatcher) {
+                tinkAesGcmHelper?.encryptFile(file, tempFile)
+                return@withContext retrofitService.uploadFile(convId, tempFile, isGroup)
+            }
             tempFile.delete()
             Pair(path, true)
         } catch (e: Exception) {
@@ -409,13 +417,13 @@ abstract class BaseChatViewModel(
         }
     }
 
-    suspend fun downloadFile(context: Context, folder: String, filename: String): String {
+    suspend fun downloadFile(context: Context, folder: String, filename: String): String = withContext(ioDispatcher) {
         val downloadedFilePath = retrofitService.downloadFile(context, folder, convId, filename, isGroup)
         val downloadedFile = File(downloadedFilePath)
 
         tinkAesGcmHelper?.decryptFile(downloadedFile, downloadedFile)
 
-        return downloadedFile.absolutePath
+        return@withContext downloadedFile.absolutePath
     }
 
     fun fManagerIsExist(fileName: String): Boolean {
@@ -458,9 +466,7 @@ abstract class BaseChatViewModel(
         return@withContext fileManager.getFileFromPath(filePath)
     }
 
-    fun formatMessageTime(timestamp: Long?): String {
-        if (timestamp == null) return "-"
-
+    fun formatMessageTime(timestamp: Long): String {
         val greenwichMessageDate = Calendar.getInstance().apply {
             timeInMillis = timestamp
         }
@@ -687,7 +693,7 @@ abstract class BaseChatViewModel(
         return null
     }
 
-    fun processDateDuplicates(list: MutableList<Pair<Message, String>>): MutableList<Pair<Message, String>> {
+    fun processDateDuplicates(list: MutableList<Triple<Message, String, String>>): MutableList<Triple<Message, String, String>> {
         val seenDates = mutableSetOf<String>()
         for (i in list.indices.reversed()) {
             val pair = list[i]
@@ -701,31 +707,44 @@ abstract class BaseChatViewModel(
     }
 
     fun avatarSet(avatar: String, imageView: ImageView, context: Context) {
-        viewModelScope.launch {
-            if (avatar != "") {
-                val filePathTemp = async {
-                    if (fManagerIsExistAvatar(avatar)) {
-                        return@async Pair(fManagerGetAvatarPath(avatar), true)
-                    } else {
-                        try {
-                            return@async Pair(downloadAvatar(context, avatar), false)
-                        } catch (e: Exception) {
-                            return@async Pair(null, true)
-                        }
-                    }
-                }
-                val (first, second) = filePathTemp.await()
-                if (first != null) {
-                    val file = File(first)
-                    if (file.exists()) {
-                        if (!second) fManagerSaveAvatar(avatar, file.readBytes())
-                        val uri = Uri.fromFile(file)
+        if (avatar != "") {
+            viewModelScope.launch {
+                withContext(ioDispatcher) {
+                    val uriCached = avatarCache[avatar]
+                    if(uriCached != null) {
                         imageView.imageTintList = null
                         Glide.with(context)
-                            .load(uri)
+                            .load(uriCached)
                             .apply(RequestOptions.circleCropTransform())
                             .diskCacheStrategy(DiskCacheStrategy.ALL)
                             .into(imageView)
+                    } else {
+                        val filePathTemp = async {
+                            if (fManagerIsExistAvatar(avatar)) {
+                                return@async Pair(fManagerGetAvatarPath(avatar), true)
+                            } else {
+                                try {
+                                    return@async Pair(downloadAvatar(context, avatar), false)
+                                } catch (e: Exception) {
+                                    return@async Pair(null, true)
+                                }
+                            }
+                        }
+                        val (first, second) = filePathTemp.await()
+                        if (first != null) {
+                            val file = File(first)
+                            if (file.exists()) {
+                                if (!second) fManagerSaveAvatar(avatar, file.readBytes())
+                                val uri = Uri.fromFile(file)
+                                avatarCache[avatar] = uri
+                                imageView.imageTintList = null
+                                Glide.with(context)
+                                    .load(uri)
+                                    .apply(RequestOptions.circleCropTransform())
+                                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                    .into(imageView)
+                            }
+                        }
                     }
                 }
             }

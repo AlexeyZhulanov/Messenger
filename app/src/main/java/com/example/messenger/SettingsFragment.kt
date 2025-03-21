@@ -41,16 +41,18 @@ import java.io.File
 
 @AndroidEntryPoint
 class SettingsFragment(
-    private val currentUser: User
+    private val initialUser: User
 ) : Fragment() {
     private lateinit var binding: FragmentSettingsBinding
     private val viewModel: SettingsViewModel by viewModels()
     private var fileUpdate: File? = null
+    private var currentUser: User? = null
     private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('А'..'Я') + ('а'..'я') + ('!') + ('$') + (' ')
 
     @SuppressLint("DiscouragedApi")
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentSettingsBinding.inflate(inflater, container, false)
+        viewModel.setUser(initialUser)
         val filePickerManager = FilePickerManager(fragment2 = this)
         viewModel.wallpaper.observe(viewLifecycleOwner) { wallpaper ->
             if (wallpaper != "") {
@@ -63,56 +65,66 @@ class SettingsFragment(
                 binding.wallpaperName.text = "Classic"
             }
         }
+        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        requireActivity().window.navigationBarColor = ContextCompat.getColor(requireContext(), R.color.navigation_bar_color)
         viewModel.themeNumber.observe(viewLifecycleOwner) { themeNumber ->
             if (themeNumber != 0) binding.colorThemeName.text =
                 "Theme ${themeNumber + 1}" else binding.colorThemeName.text = "Classic"
         }
-        lifecycleScope.launch {
-            binding.usernameTextView.text = currentUser.username
-            binding.nameTextView.text = currentUser.name
-            val avatar = currentUser.avatar ?: ""
-            if (avatar != "") {
-            binding.progressBar.visibility = View.VISIBLE
-            val filePathTemp = async {
-                if (viewModel.fManagerIsExistAvatar(avatar)) {
-                    return@async Pair(viewModel.fManagerGetAvatarPath(avatar), true)
-                } else {
-                    try {
-                        return@async Pair(viewModel.downloadAvatar(requireContext(), avatar), false)
-                    } catch (e: Exception) {
-                        return@async Pair(null, true)
+        viewModel.currentUser.observe(viewLifecycleOwner) { user ->
+            currentUser = user
+            binding.usernameTextView.text = user.username
+            binding.nameTextView.text = user.name
+            lifecycleScope.launch {
+                val avatar = user.avatar ?: ""
+                if (avatar != "") {
+                    binding.progressBar.visibility = View.VISIBLE
+                    val filePathTemp = async {
+                        if (viewModel.fManagerIsExistAvatar(avatar)) {
+                            return@async Pair(viewModel.fManagerGetAvatarPath(avatar), true)
+                        } else {
+                            try {
+                                return@async Pair(viewModel.downloadAvatar(requireContext(), avatar), false)
+                            } catch (e: Exception) {
+                                return@async Pair(null, true)
+                            }
+                        }
+                    }
+                    val (first, second) = filePathTemp.await()
+                    if (first != null) {
+                        val file = File(first)
+                        if (file.exists()) {
+                            fileUpdate = file
+                            if (!second) viewModel.fManagerSaveAvatar(avatar, file.readBytes())
+                            val uri = Uri.fromFile(file)
+                            binding.photoImageView.imageTintList = null
+                            Glide.with(requireContext())
+                                .load(uri)
+                                .apply(RequestOptions.circleCropTransform())
+                                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                .into(binding.photoImageView)
+                            binding.progressBar.visibility = View.GONE
+                        } else {
+                            binding.progressBar.visibility = View.GONE
+                            binding.errorImageView.visibility = View.VISIBLE
+                        }
+                    } else {
+                        binding.progressBar.visibility = View.GONE
+                        binding.errorImageView.visibility = View.VISIBLE
                     }
                 }
             }
-            val (first, second) = filePathTemp.await()
-            if (first != null) {
-                val file = File(first)
-                if (file.exists()) {
-                    fileUpdate = file
-                    if (!second) viewModel.fManagerSaveAvatar(avatar, file.readBytes())
-                    val uri = Uri.fromFile(file)
-                    binding.photoImageView.imageTintList = null
-                    Glide.with(requireContext())
-                        .load(uri)
-                        .apply(RequestOptions.circleCropTransform())
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .into(binding.photoImageView)
-                    binding.progressBar.visibility = View.GONE
-                } else {
-                    binding.progressBar.visibility = View.GONE
-                    binding.errorImageView.visibility = View.VISIBLE
-                }
-            } else {
-                binding.progressBar.visibility = View.GONE
-                binding.errorImageView.visibility = View.VISIBLE
+            binding.editUsernameButton.setOnClickListener {
+                showAddDialog(user.username)
             }
+            binding.copyNameButton.setOnClickListener {
+                val clipboard = context?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("label", user.name)
+                clipboard.setPrimaryClip(clip)
             }
         }
         binding.editPhotoButton.setOnClickListener {
             showPopupMenu(it, R.menu.popup_menu_user, filePickerManager, fileUpdate)
-        }
-        binding.editUsernameButton.setOnClickListener {
-            showAddDialog(currentUser.username)
         }
         binding.photoImageView.setOnClickListener {
             if(fileUpdate != null)
@@ -127,16 +139,14 @@ class SettingsFragment(
             }).show(childFragmentManager, "PasswordChange")
 
         }
-        binding.copyNameButton.setOnClickListener {
-            val clipboard = context?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText("label", currentUser.name)
-            clipboard.setPrimaryClip(clip)
-        }
         binding.changeColorTheme.setOnClickListener {
             showColorThemePopupMenu(it, container as ViewGroup)
         }
         binding.changeWallpaper.setOnClickListener {
             showWallpapersPopupMenu(it, container as ViewGroup)
+        }
+        binding.logoutButton.setOnClickListener {
+            logout()
         }
         return binding.root
     }
@@ -222,7 +232,6 @@ class SettingsFragment(
         )
         val adapter = ColorThemeMenuAdapter(menuItems) { menuItem ->
             viewModel.updateTheme(menuItem.themeNumber)
-            requireActivity().recreate()
             popupWindow.dismiss()
         }
 
@@ -231,31 +240,18 @@ class SettingsFragment(
         popupWindow.showAsDropDown(view)
     }
 
-    @SuppressLint("DiscouragedApi")
-    private fun updateWallpapers(wallpaper: String) {
-        binding.wallpaperName.text = wallpaper
-        if (wallpaper != "") {
-            val resId = resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
-            if (resId != 0)
-                binding.settingsLayout.background =
-                    ContextCompat.getDrawable(requireContext(), resId)
-        } else {
-            binding.settingsLayout.background = null
-            binding.wallpaperName.text = "Classic"
-        }
-    }
-
     private fun showPopupMenu(view: View, menuRes: Int, filePickerManager: FilePickerManager, file: File?) {
         val popupMenu = PopupMenu(requireContext(), view)
         popupMenu.menuInflater.inflate(menuRes, popupMenu.menu)
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.item_delete -> {
-                    if(currentUser.avatar != null) {
+                    if(currentUser?.avatar != null) {
                         lifecycleScope.launch {
                             val success = viewModel.updateAvatar("delete")
                             if(success) {
-                                requireActivity().recreate()
+                                viewModel.updateAvatarValue("")
+                                Toast.makeText(requireContext(), "Аватарка успешно удалена, чтобы увидеть, выйдите с этой страницы", Toast.LENGTH_SHORT).show()
                             } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                         }
                     } else {
@@ -274,7 +270,7 @@ class SettingsFragment(
                             if(path != "") {
                                 val success = viewModel.updateAvatar(path)
                                 if(success) {
-                                    requireActivity().recreate()
+                                    viewModel.updateAvatarValue(path)
                                 } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                             } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                         }
@@ -294,7 +290,7 @@ class SettingsFragment(
                             if(path != "") {
                                 val success = viewModel.updateAvatar(path)
                                 if(success) {
-                                    requireActivity().recreate()
+                                    viewModel.updateAvatarValue(path)
                                 } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                             } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                         }
@@ -326,7 +322,7 @@ class SettingsFragment(
                         }
                     }
                     val success = viewModel.updateUserName(input)
-                    if(success) requireActivity().recreate()
+                    if(success) viewModel.updateUsernameValue(input)
                     else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -357,5 +353,17 @@ class SettingsFragment(
                 }
             })
             .startActivityPreview(0, false, arrayListOf(localMedia))
+    }
+
+    private fun logout() {
+        lifecycleScope.launch {
+            val success = viewModel.deleteFCMToken()
+            if(success) {
+                viewModel.clearCurrentUser()
+                parentFragmentManager.beginTransaction()
+                    .replace(R.id.fragmentContainer, LoginFragment(), "LOGIN_FRAGMENT_TAG3")
+                    .commit()
+            } else Toast.makeText(requireContext(), "Не удалось выйти из аккаунта, нет сети", Toast.LENGTH_SHORT).show()
+        }
     }
 }

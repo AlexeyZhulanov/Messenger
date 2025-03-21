@@ -59,6 +59,7 @@ class GroupMessageViewModel @Inject constructor(
             }
 
         init {
+            webSocketService.reconnectIfNeeded()
             viewModelScope.launch {
                 initFlow.collect {
                     pagingSource = MessagePagingSource(retrofitService, messengerService, convId, fileManager, tinkAesGcmHelper, false)
@@ -68,8 +69,10 @@ class GroupMessageViewModel @Inject constructor(
                 webSocketService.newMessageFlow.collect { message ->
                     message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
                     Log.d("testSocketsMessage", "New Message: $message")
-                    val newMessagePair = if(lastMessageDate == "") message to "" else message to formatMessageDate(message.timestamp)
-                    _newMessageFlow.tryEmit(newMessagePair)
+                    val newMessageTriple =
+                        if(lastMessageDate == "") Triple(message,"", formatMessageTime(message.timestamp))
+                        else Triple(message,formatMessageDate(message.timestamp), formatMessageTime(message.timestamp))
+                    _newMessageFlow.tryEmit(newMessageTriple)
                     updateLastDate(message.timestamp)
                 }
             }
@@ -78,11 +81,6 @@ class GroupMessageViewModel @Inject constructor(
                     message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
                     Log.d("testSocketsMessage", "Edited Message: $message")
                     _editMessageFlow.value = message
-                    recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-                        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                            recyclerView.scrollToPosition(0)
-                        }
-                    })
                 }
             }
             viewModelScope.launch {
@@ -151,14 +149,6 @@ class GroupMessageViewModel @Inject constructor(
             }
         }
 
-        fun saveLastMessage(id: Int) {
-            viewModelScope.launch {
-                val temp = messengerService.getLastReadMessageGroup(convId)
-                if(temp != null) messengerService.updateLastReadMessage(id, null, convId)
-                else messengerService.saveLastReadMessage(id, null, convId)
-            }
-        }
-
         fun sendTypingEvent(flag: Boolean) {
             val typingData = JSONObject()
             typingData.put("group_id", convId)
@@ -180,7 +170,7 @@ class GroupMessageViewModel @Inject constructor(
                     // Проверяем видимые элементы от последнего к первому
                     if (lastVisibleItemPosition != RecyclerView.NO_POSITION && firstVisibleItemPosition != RecyclerView.NO_POSITION) {
                         val visibleMessages = (lastVisibleItemPosition downTo firstVisibleItemPosition).mapNotNull { position ->
-                            adapter.getItemNotProtected(position).first.takeIf { it.idSender != currentUserId && !it.isRead }
+                            adapter.getItemNotProtected(position).first.takeIf { it.idSender != currentUserId && it.isPersonalUnread == true }
                         }
 
                         markMessagesAsRead(visibleMessages)
@@ -194,42 +184,30 @@ class GroupMessageViewModel @Inject constructor(
             recyclerView.addOnScrollListener(scrollListener)
         }
 
-        suspend fun getLastMessageId(): Int {
-            return messengerService.getLastReadMessageGroup(convId) ?: -1
-        }
-
-        suspend fun getPreviousMessageId(id: Int): Int {
-            return messengerService.getPreviousMessageGroup(convId, id)?.id ?: -1
-        }
-
-        fun separateMessages(messages: List<Pair<Message, String>>, currentUserId: Int): Map<Int, Pair<String?, String?>?> {
+        fun separateMessages(messages: List<Triple<Message, String, String>>, currentUserId: Int): Map<Int, Pair<String?, String?>?> {
             // Optimizing access to users using the Map
             val userMap = currentMemberList.associate { it.id to (it.username to it.avatar) }
-
             val groupedMessages = mutableListOf<List<Message>>()
             val tempList = mutableListOf<Message>()
 
-            for ((message, date) in messages) {
-                if (message.idSender == currentUserId) continue // Skipping the current user
-
+            for ((message, date) in messages.reversed()) {
                 if(tempList.isNotEmpty()) {
                     if ((tempList.last().idSender != message.idSender) || (date != "")) {
                         groupedMessages.add(ArrayList(tempList))
                         tempList.clear()
                     }
                 }
-                tempList.add(message)
+                if (message.idSender != currentUserId) tempList.add(message)
             }
             if (tempList.isNotEmpty()) {
                 groupedMessages.add(tempList)
             }
-
             // Filling in the final Map with username and avatar
             val messageDisplayMap = mutableMapOf<Int, Pair<String?, String?>?>()
 
             for (mes in groupedMessages) {
-                val first = mes.first()
-                val last = mes.last()
+                val first = mes.last() // reversed
+                val last = mes.first() // reversed
                 val userInfo = userMap[first.idSender]
 
                 // If there is one element in the group, both fields are used.

@@ -18,7 +18,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -58,6 +57,7 @@ class MessageViewModel @Inject constructor(
         }
 
     init {
+        webSocketService.reconnectIfNeeded()
         viewModelScope.launch {
             initFlow.collect {
                 pagingSource = MessagePagingSource(retrofitService, messengerService, convId, fileManager, tinkAesGcmHelper, true)
@@ -67,8 +67,10 @@ class MessageViewModel @Inject constructor(
             webSocketService.newMessageFlow.collect { message ->
                 message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
                 Log.d("testSocketsMessage", "New Message: $message")
-                val newMessagePair = if(lastMessageDate == "") message to "" else message to formatMessageDate(message.timestamp)
-                _newMessageFlow.tryEmit(newMessagePair)
+                val newMessageTriple =
+                    if(lastMessageDate == "") Triple(message,"", formatMessageTime(message.timestamp))
+                    else Triple(message,formatMessageDate(message.timestamp), formatMessageTime(message.timestamp))
+                _newMessageFlow.tryEmit(newMessageTriple)
                 updateLastDate(message.timestamp)
             }
         }
@@ -77,11 +79,6 @@ class MessageViewModel @Inject constructor(
                 message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
                 Log.d("testSocketsMessage", "Edited Message: $message")
                 _editMessageFlow.value = message
-                recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-                    override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                        recyclerView.scrollToPosition(0)
-                    }
-                })
             }
         }
         viewModelScope.launch {
@@ -185,23 +182,6 @@ class MessageViewModel @Inject constructor(
             }
         }
         recyclerView.addOnScrollListener(scrollListener)
-    }
-
-
-    fun saveLastMessage(id: Int) {
-        viewModelScope.launch {
-            val temp = messengerService.getLastReadMessage(convId)
-            if(temp != null) messengerService.updateLastReadMessage(id, convId, null)
-            else messengerService.saveLastReadMessage(id, convId, null)
-        }
-    }
-
-    suspend fun getLastMessageId(): Int {
-        return messengerService.getLastReadMessage(convId) ?: -1
-    }
-
-    suspend fun getPreviousMessageId(id: Int): Int {
-        return messengerService.getPreviousMessage(convId, id)?.id ?: -1
     }
 
     private fun joinDialog() {

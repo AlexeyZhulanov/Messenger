@@ -98,13 +98,17 @@ class NewsAdapter(
                 binding.textContainer.visibility = View.VISIBLE
                 binding.textContainer.text = news.text
             } else binding.textContainer.visibility = View.GONE
-            binding.headerTextView.text = news.headerText
+            val txt = news.headerText
+            binding.headerTextView.text = if(txt.isNullOrEmpty()) "Amessenger" else txt
             binding.editedText.visibility = if(news.isEdited) View.VISIBLE else View.GONE
             binding.dateText.text = newsViewModel.formatMessageNews(news.timestamp)
             val strViewsCount = news.viewsCount.toString()
             binding.viewCountTextView.text = strViewsCount
             // Обработка фото (ViewStub)
             if (news.images?.isNotEmpty() == true) {
+                if(binding.nestedLayout.visibility == View.GONE) {
+                    binding.nestedLayout.visibility = View.VISIBLE
+                }
                 if (photosView == null) {
                     photosView = LayoutInflater.from(context)
                         .inflate(R.layout.viewstub_photos, binding.nestedLayout, true)
@@ -149,6 +153,9 @@ class NewsAdapter(
 
             // Обработка файлов (ViewStub)
             if (news.files?.isNotEmpty() == true) {
+                if(binding.nestedLayout.visibility == View.GONE) {
+                    binding.nestedLayout.visibility = View.VISIBLE
+                }
                 if (filesView == null) {
                     filesView = LayoutInflater.from(context)
                         .inflate(R.layout.viewstub_files, binding.nestedLayout, true)
@@ -193,6 +200,9 @@ class NewsAdapter(
 
             // Обработка голосовых (ViewStub)
             if (news.voices?.isNotEmpty() == true) {
+                if(binding.nestedLayout.visibility == View.GONE) {
+                    binding.nestedLayout.visibility = View.VISIBLE
+                }
                 if (voiceView == null) {
                     voiceView = LayoutInflater.from(context)
                         .inflate(R.layout.viewstub_voice, binding.nestedLayout, true)
@@ -236,9 +246,12 @@ class NewsAdapter(
 
             } else voiceView?.visibility = View.GONE
 
+            if(filesView == null && voiceView == null && photosView == null) {
+                binding.nestedLayout.visibility = View.GONE
+            }
+
             if(permission == 1) {
-                binding.icOptions.visibility = View.VISIBLE
-                binding.icOptions.setOnClickListener {
+                binding.root.setOnClickListener {
                     val triple = Triple(adapterImages.images, adapterFiles.files, listVoiceFiles.toList())
                     showPopupMenu(itemView, news, triple)
                 }

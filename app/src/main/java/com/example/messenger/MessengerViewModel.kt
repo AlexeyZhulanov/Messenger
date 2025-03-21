@@ -10,10 +10,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.FileManager
-import com.example.messenger.model.LastMessage
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.model.ShortMessage
 import com.example.messenger.model.User
 import com.example.messenger.model.WebSocketService
 import com.example.messenger.model.appsettings.AppSettings
@@ -23,12 +23,15 @@ import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.security.KeyFactory
 import java.security.PublicKey
 import java.security.spec.X509EncodedKeySpec
+import java.time.Instant
 import java.util.Arrays
 import javax.inject.Inject
 
@@ -49,13 +52,18 @@ class MessengerViewModel @Inject constructor(
     private val _vacation = MutableLiveData<Pair<String, String>?>()
     val vacation: LiveData<Pair<String, String>?> = _vacation
 
+    var isNeedFetchConversations = false
+    private val _newMessageFlow = MutableSharedFlow<ShortMessage>(extraBufferCapacity = 10)
+    val newMessageFlow: SharedFlow<ShortMessage> = _newMessageFlow
+
     private val chatKeyManager = ChatKeyManager()
 
     init {
+        webSocketService.reconnectIfNeeded()
         fetchVacation()
         fetchCurrentUser()
         fetchConversations()
-        // todo подписаться на нужные flow WebSocketService
+        fetchNewMessages()
     }
 
     private fun fetchVacation() {
@@ -91,12 +99,13 @@ class MessengerViewModel @Inject constructor(
         }
     }
 
-    private fun fetchConversations() {
+    fun fetchConversations() {
         viewModelScope.launch {
             try {
-                val initialConversations = messengerService.getConversations()
-                _conversations.postValue(initialConversations)
-
+                if(!isNeedFetchConversations) {
+                    val initialConversations = messengerService.getConversations()
+                    _conversations.postValue(initialConversations)
+                } else isNeedFetchConversations = false
                 val updatedConversations = retrofitService.getConversations()
                 val decryptedConversations = mutableListOf<Conversation>()
 
@@ -124,6 +133,26 @@ class MessengerViewModel @Inject constructor(
 
             } catch (e: Exception) { return@launch }
         }
+    }
+
+    private fun fetchNewMessages() {
+        viewModelScope.launch {
+            webSocketService.notificationMessageFlow.collect {
+                val message = it.toShortMessage(getCurrentTime())
+                val typeStr = if(message.isGroup) "group" else "dialog"
+                val aead = chatKeyManager.getAead(message.chatId, typeStr)
+                if(aead != null) {
+                    val tinkAesGcmHelper = TinkAesGcmHelper(aead)
+                    message.text = message.text?.let { txt -> tinkAesGcmHelper.decryptText(txt) } ?: "[Вложение]"
+                    Log.d("testMessengerNewMessage", "New Message: $message")
+                    _newMessageFlow.tryEmit(message)
+                }
+            }
+        }
+    }
+
+    fun stopNotifications(bool: Boolean) {
+        webSocketService.setViewModelActive(bool)
     }
 
     fun createDialog(name: String, keyCurrentUser: String?, onError: (String) -> Unit) {
@@ -184,17 +213,23 @@ class MessengerViewModel @Inject constructor(
         return KeyFactory.getInstance("RSA").generatePublic(keySpec)
     }
 
-    fun forwardMessages(list: List<Message>?, usernames: List<String>?, id: Int) {
+    fun forwardMessages(list: List<Message>?, usernames: List<String>?, id: Int, callback: (Boolean) -> Unit) {
         viewModelScope.launch {
-            list?.forEachIndexed { index, message ->
-                if(message.usernameAuthorOriginal == null) {
-                    forwardMessage(id, message.text, message.images, message.voice, message.file,
-                        message.referenceToMessageId, usernames?.get(index))
-                } else {
-                    forwardMessage(id, message.text, message.images, message.voice, message.file,
-                        message.referenceToMessageId, message.usernameAuthorOriginal)
+            val aead = chatKeyManager.getAead(id, "dialog")
+            if(aead != null) {
+                val tinkAesGcmHelper = TinkAesGcmHelper(aead)
+                list?.forEachIndexed { index, message ->
+                    val encryptedText = message.text?.let { tinkAesGcmHelper.encryptText(it) }
+                    if(message.usernameAuthorOriginal == null) {
+                        forwardMessage(id, encryptedText, message.images, message.voice, message.file,
+                            message.referenceToMessageId, usernames?.get(index))
+                    } else {
+                        forwardMessage(id, encryptedText, message.images, message.voice, message.file,
+                            message.referenceToMessageId, message.usernameAuthorOriginal)
+                    }
                 }
-            }
+                callback(true)
+            } else callback(false)
         }
     }
 
@@ -206,17 +241,23 @@ class MessengerViewModel @Inject constructor(
         } catch (e: Exception) { return }
     }
 
-    fun forwardGroupMessages(list: List<Message>?, usernames: List<String>?, id: Int) {
+    fun forwardGroupMessages(list: List<Message>?, usernames: List<String>?, id: Int, callback: (Boolean) -> Unit) {
         viewModelScope.launch {
-            list?.forEachIndexed { index, message ->
-                if(message.usernameAuthorOriginal == null) {
-                    forwardGroupMessage(id, message.text, message.images, message.voice, message.file,
-                        message.referenceToMessageId, usernames?.get(index))
-                } else {
-                    forwardGroupMessage(id, message.text, message.images, message.voice, message.file,
-                        message.referenceToMessageId, message.usernameAuthorOriginal)
+            val aead = chatKeyManager.getAead(id, "group")
+            if(aead != null) {
+                val tinkAesGcmHelper = TinkAesGcmHelper(aead)
+                list?.forEachIndexed { index, message ->
+                    val encryptedText = message.text?.let { tinkAesGcmHelper.encryptText(it) }
+                    if(message.usernameAuthorOriginal == null) {
+                        forwardGroupMessage(id, encryptedText, message.images, message.voice, message.file,
+                            message.referenceToMessageId, usernames?.get(index))
+                    } else {
+                        forwardGroupMessage(id, encryptedText, message.images, message.voice, message.file,
+                            message.referenceToMessageId, message.usernameAuthorOriginal)
+                    }
                 }
-            }
+                callback(true)
+            } else callback(false)
         }
     }
 
@@ -242,6 +283,10 @@ class MessengerViewModel @Inject constructor(
 
     suspend fun downloadAvatar(context: Context, filename: String): String {
         return retrofitService.downloadAvatar(context, filename)
+    }
+
+    private fun getCurrentTime(): Long {
+        return Instant.now().toEpochMilli()
     }
 
     suspend fun deleteFCMToken() : Boolean {
