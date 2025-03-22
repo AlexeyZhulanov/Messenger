@@ -65,6 +65,10 @@ class MessageDiffCallback : DiffUtil.ItemCallback<Triple<Message, String, String
     override fun areContentsTheSame(oldItem: Triple<Message, String, String>, newItem: Triple<Message, String, String>): Boolean {
         return oldItem.first == newItem.first
     }
+
+    override fun getChangePayload(oldItem: Triple<Message, String, String>, newItem: Triple<Message, String, String>): Any? {
+        return if (!oldItem.first.isRead && newItem.first.isRead) "isRead" else null
+    }
 }
 
 class MessageAdapter(
@@ -80,7 +84,6 @@ class MessageAdapter(
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
     private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
-    private var readSet: MutableSet<Int> = mutableSetOf()
     private var highlightedPosition: Int? = null
     private val uiScopeMain = CoroutineScope(Dispatchers.Main)
 
@@ -186,7 +189,6 @@ class MessageAdapter(
             val currentPagingData = currentList
             val updatedPagingData = currentPagingData.map { pair ->
                 if (pair.first.id in listIds && pair.first.idSender == currentUserId) {
-                    readSet.add(pair.first.id)
                     pair.copy(first = pair.first.copy(isRead = true))
                 } else {
                     pair
@@ -313,6 +315,20 @@ class MessageAdapter(
         }
     }
 
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: MutableList<Any>) {
+        if (payloads.contains("isRead")) {
+            when(holder) {
+                is MessagesViewHolderSender -> holder.updateReadStatus()
+                is MessagesViewHolderVoiceSender -> holder.updateReadStatus()
+                is MessagesViewHolderFileSender -> holder.updateReadStatus()
+                is MessagesViewHolderTextImageSender -> holder.updateReadStatus()
+                is MessagesViewHolderTextImagesSender -> holder.updateReadStatus()
+            }
+            return
+        }
+        onBindViewHolder(holder, position)
+    }
+
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val item = getItem(position) ?: return
         val message = item.first
@@ -332,36 +348,26 @@ class MessageAdapter(
         } else holder.itemView.setBackgroundColor(Color.TRANSPARENT)
 
         when (holder) {
-            is MessagesViewHolderReceiver -> {
-                holder.bind(message, date, time, position, isAnswer)
-            }
-            is MessagesViewHolderSender -> {
-                holder.bind(message, date, time, position, isAnswer)
-            }
-            is MessagesViewHolderVoiceReceiver -> {
-                holder.bind(message, date, time, position, isInLast30, isAnswer)
-            }
-            is MessagesViewHolderVoiceSender -> {
-                holder.bind(message, date, time, position, isInLast30, isAnswer)
-            }
-            is MessagesViewHolderFileReceiver -> {
-                holder.bind(message, date, time, position, isInLast30, isAnswer)
-            }
-            is MessagesViewHolderFileSender -> {
-                holder.bind(message, date, time, position, isInLast30, isAnswer)
-            }
-            is MessagesViewHolderTextImageReceiver -> {
-                holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
-            }
-            is MessagesViewHolderTextImageSender -> {
-                holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
-            }
-            is MessagesViewHolderTextImagesReceiver -> {
-                holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
-            }
-            is MessagesViewHolderTextImagesSender -> {
-                holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
-            }
+            is MessagesViewHolderReceiver -> holder.bind(message, date, time, position, isAnswer)
+
+            is MessagesViewHolderSender -> holder.bind(message, date, time, position, isAnswer)
+
+            is MessagesViewHolderVoiceReceiver -> holder.bind(message, date, time, position, isInLast30, isAnswer)
+
+            is MessagesViewHolderVoiceSender -> holder.bind(message, date, time, position, isInLast30, isAnswer)
+
+            is MessagesViewHolderFileReceiver -> holder.bind(message, date, time, position, isInLast30, isAnswer)
+
+            is MessagesViewHolderFileSender -> holder.bind(message, date, time, position, isInLast30, isAnswer)
+
+            is MessagesViewHolderTextImageReceiver -> holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
+
+            is MessagesViewHolderTextImageSender -> holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
+
+            is MessagesViewHolderTextImagesReceiver -> holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
+
+            is MessagesViewHolderTextImagesSender -> holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
+
         }
     }
 
@@ -461,11 +467,6 @@ class MessageAdapter(
         fun bind(message: Message, date: String, time: String, position: Int, isAnswer: Boolean) {
             messageSave = message
 
-            if(message.id in readSet) {
-                readSet.remove(message.id)
-                return
-            }
-
             if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
@@ -547,15 +548,14 @@ class MessageAdapter(
             }
         }
 
+        fun updateReadStatus() {
+            binding.icCheck.visibility = View.INVISIBLE
+            binding.icCheck2.visibility = View.VISIBLE
+            binding.icCheck2.bringToFront()
+        }
+
         fun bind(message: Message, date: String, time: String, position: Int, isAnswer: Boolean) {
             messageSave = message
-
-            if(message.id in readSet) {
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-                readSet.remove(message.id)
-                return
-            }
 
             if(isAnswer) {
                 handleAnswerLayout(binding, message)
@@ -601,8 +601,7 @@ class MessageAdapter(
                 binding.timeTextView.text = time
 
                 if (message.isRead) {
-                    binding.icCheck.visibility = View.INVISIBLE
-                    binding.icCheck2.visibility = View.VISIBLE
+                    updateReadStatus()
                 } else {
                     binding.icCheck.visibility = View.VISIBLE
                     binding.icCheck2.visibility = View.INVISIBLE
@@ -840,11 +839,6 @@ class MessageAdapter(
         fun bind(message: Message, date: String, time: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
 
-            if(message.id in readSet) {
-                readSet.remove(message.id)
-                return
-            }
-
             binding.playButton.visibility = View.VISIBLE
 
             if(!canLongClick && canDelete) {
@@ -992,15 +986,15 @@ class MessageAdapter(
             }
         }
 
+        fun updateReadStatus() {
+            binding.icCheck.visibility = View.INVISIBLE
+            binding.icCheck2.visibility = View.VISIBLE
+            binding.icCheck2.bringToFront()
+        }
+
         fun bind(message: Message, date: String, time: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
 
-            if(message.id in readSet) {
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-                readSet.remove(message.id)
-                return
-            }
             binding.playButton.visibility = View.VISIBLE
 
             if(isAnswer) handleAnswerLayout(binding, message)
@@ -1035,8 +1029,7 @@ class MessageAdapter(
                 } else binding.checkbox.visibility = View.GONE
 
                 if (message.isRead) {
-                    binding.icCheck.visibility = View.INVISIBLE
-                    binding.icCheck2.visibility = View.VISIBLE
+                    updateReadStatus()
                 } else {
                     binding.icCheck.visibility = View.VISIBLE
                     binding.icCheck2.visibility = View.INVISIBLE
@@ -1134,11 +1127,6 @@ class MessageAdapter(
 
         fun bind(message: Message, date: String, time: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
-
-            if(message.id in readSet) {
-                readSet.remove(message.id)
-                return
-            }
 
             if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
@@ -1255,15 +1243,14 @@ class MessageAdapter(
             }
         }
 
+        fun updateReadStatus() {
+            binding.icCheck.visibility = View.INVISIBLE
+            binding.icCheck2.visibility = View.VISIBLE
+            binding.icCheck2.bringToFront()
+        }
+
         fun bind(message: Message, date: String, time: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
-
-            if(message.id in readSet) {
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-                readSet.remove(message.id)
-                return
-            }
 
             if(isAnswer) handleAnswerLayout(binding, message)
             else binding.answerLayout.root.visibility = View.GONE
@@ -1295,8 +1282,7 @@ class MessageAdapter(
                 } else binding.checkbox.visibility = View.GONE
 
                 if (message.isRead) {
-                    binding.icCheck.visibility = View.INVISIBLE
-                    binding.icCheck2.visibility = View.VISIBLE
+                    updateReadStatus()
                 } else {
                     binding.icCheck.visibility = View.VISIBLE
                     binding.icCheck2.visibility = View.INVISIBLE
@@ -1373,11 +1359,6 @@ class MessageAdapter(
 
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
-
-            if(message.id in readSet) {
-                readSet.remove(message.id)
-                return
-            }
 
             if(isAnswer) handleAnswerLayout(binding, message)
             else binding.answerLayout.root.visibility = View.GONE
@@ -1517,15 +1498,14 @@ class MessageAdapter(
             }
         }
 
+        fun updateReadStatus() {
+            binding.icCheck.visibility = View.INVISIBLE
+            binding.icCheck2.visibility = View.VISIBLE
+            binding.icCheck2.bringToFront()
+        }
+
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
-
-            if(message.id in readSet) {
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-                readSet.remove(message.id)
-                return
-            }
 
             if(isAnswer) handleAnswerLayout(binding, message)
             else binding.answerLayout.root.visibility = View.GONE
@@ -1572,8 +1552,7 @@ class MessageAdapter(
                 } else binding.checkbox.visibility = View.GONE
 
                 if (message.isRead) {
-                    icCheck.visibility = View.INVISIBLE
-                    icCheck2.visibility = View.VISIBLE
+                    updateReadStatus()
                 } else {
                     icCheck.visibility = View.VISIBLE
                     icCheck2.visibility = View.INVISIBLE
@@ -1692,11 +1671,6 @@ class MessageAdapter(
 
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
-
-            if(message.id in readSet) {
-                readSet.remove(message.id)
-                return
-            }
 
             if(isAnswer) handleAnswerLayout(binding, message)
             else binding.answerLayout.root.visibility = View.GONE
@@ -1844,15 +1818,14 @@ class MessageAdapter(
             }
         }
 
+        fun updateReadStatus() {
+            binding.icCheck.visibility = View.INVISIBLE
+            binding.icCheck2.visibility = View.VISIBLE
+            binding.icCheck2.bringToFront()
+        }
+
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
-
-            if(message.id in readSet) {
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-                readSet.remove(message.id)
-                return
-            }
 
             if(isAnswer) handleAnswerLayout(binding, message)
             else binding.answerLayout.root.visibility = View.GONE
@@ -1900,8 +1873,7 @@ class MessageAdapter(
                 else binding.checkbox.visibility = View.GONE
 
                 if (message.isRead) {
-                    icCheck.visibility = View.INVISIBLE
-                    icCheck2.visibility = View.VISIBLE
+                    updateReadStatus()
                 } else {
                     icCheck.visibility = View.VISIBLE
                     icCheck2.visibility = View.INVISIBLE

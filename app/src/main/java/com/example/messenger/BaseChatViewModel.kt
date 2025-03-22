@@ -709,41 +709,39 @@ abstract class BaseChatViewModel(
     fun avatarSet(avatar: String, imageView: ImageView, context: Context) {
         if (avatar != "") {
             viewModelScope.launch {
-                withContext(ioDispatcher) {
-                    val uriCached = avatarCache[avatar]
-                    if(uriCached != null) {
-                        imageView.imageTintList = null
-                        Glide.with(context)
-                            .load(uriCached)
-                            .apply(RequestOptions.circleCropTransform())
-                            .diskCacheStrategy(DiskCacheStrategy.ALL)
-                            .into(imageView)
-                    } else {
-                        val filePathTemp = async {
-                            if (fManagerIsExistAvatar(avatar)) {
-                                return@async Pair(fManagerGetAvatarPath(avatar), true)
-                            } else {
-                                try {
-                                    return@async Pair(downloadAvatar(context, avatar), false)
-                                } catch (e: Exception) {
-                                    return@async Pair(null, true)
-                                }
+                val uriCached = avatarCache[avatar]
+                if(uriCached != null) {
+                    imageView.imageTintList = null
+                    Glide.with(context)
+                        .load(uriCached)
+                        .apply(RequestOptions.circleCropTransform())
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .into(imageView)
+                } else {
+                    val filePathTemp = async {
+                        if (fManagerIsExistAvatar(avatar)) {
+                            return@async Pair(fManagerGetAvatarPath(avatar), true)
+                        } else {
+                            try {
+                                return@async Pair(downloadAvatar(context, avatar), false)
+                            } catch (e: Exception) {
+                                return@async Pair(null, true)
                             }
                         }
-                        val (first, second) = filePathTemp.await()
-                        if (first != null) {
-                            val file = File(first)
-                            if (file.exists()) {
-                                if (!second) fManagerSaveAvatar(avatar, file.readBytes())
-                                val uri = Uri.fromFile(file)
-                                avatarCache[avatar] = uri
-                                imageView.imageTintList = null
-                                Glide.with(context)
-                                    .load(uri)
-                                    .apply(RequestOptions.circleCropTransform())
-                                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                    .into(imageView)
-                            }
+                    }
+                    val (first, second) = filePathTemp.await()
+                    if (first != null) {
+                        val file = File(first)
+                        if (file.exists()) {
+                            if (!second) fManagerSaveAvatar(avatar, file.readBytes())
+                            val uri = Uri.fromFile(file)
+                            avatarCache[avatar] = uri
+                            imageView.imageTintList = null
+                            Glide.with(context)
+                                .load(uri)
+                                .apply(RequestOptions.circleCropTransform())
+                                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                .into(imageView)
                         }
                     }
                 }
