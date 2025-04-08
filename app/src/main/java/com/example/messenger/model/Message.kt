@@ -18,6 +18,7 @@ data class Message(
     @Json(name = "is_edited") var isEdited: Boolean,
     @Json(name = "reference_to_message_id") var referenceToMessageId: Int? = null,
     @Json(name = "is_forwarded") var isForwarded: Boolean,
+    @Json(name = "is_url") var isUrl: Boolean? = false,
     @Json(name = "username_author_original") var usernameAuthorOriginal: String? = null,
     var isUnsent: Boolean? = false,
     var localFilePaths: List<String>? = null

@@ -9,9 +9,9 @@ interface GroupsSource {
     suspend fun createGroup(name: String, key: String) : Int
 
     suspend fun sendGroupMessage(groupId: Int, text: String? = null,
-                           images: List<String>? = null, voice: String? = null,
-                           file: String? = null, referenceToMessageId: Int? = null,
-                           isForwarded: Boolean = false, usernameAuthorOriginal: String? = null) : String
+                    images: List<String>? = null, voice: String? = null,
+                    file: String? = null, referenceToMessageId: Int? = null,
+                    isForwarded: Boolean = false, isUrl: Boolean? = null, usernameAuthorOriginal: String? = null) : String
 
     suspend fun getGroupMessages(groupId: Int, pageIndex: Int, pageSize: Int) : List<Message>
 
@@ -19,7 +19,7 @@ interface GroupsSource {
 
     suspend fun editGroupMessage(groupId: Int, messageId: Int, text: String? = null,
                                  images: List<String>? = null, voice: String? = null,
-                                 file: String? = null) : String
+                                 file: String? = null, isUrl: Boolean? = null) : String
 
     suspend fun deleteGroupMessages(groupId: Int, ids: List<Int>) : String
 

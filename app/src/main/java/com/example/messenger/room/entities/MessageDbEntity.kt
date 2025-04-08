@@ -16,6 +16,7 @@ data class MessageDbEntity(
     val file: String?,
     @ColumnInfo(name = "is_read") val isRead: Boolean = false,
     @ColumnInfo(name = "is_edited") val isEdited: Boolean = false,
+    @ColumnInfo(name = "is_url") val isUrl: Boolean? = false,
     val timestamp: Long,
     @ColumnInfo(name = "is_forwarded") val isForwarded: Boolean = false,
     @ColumnInfo(name = "reference_to_message_id") val referenceToMessageId: Int?,
@@ -24,7 +25,7 @@ data class MessageDbEntity(
     fun toMessage(): Message = Message(
         id = id, idSender = idSender, text = text, images = images, voice = voice, file = file,
         timestamp = timestamp, isRead = isRead, isEdited = isEdited,
-        referenceToMessageId = referenceToMessageId, isForwarded = isForwarded,
+        referenceToMessageId = referenceToMessageId, isForwarded = isForwarded, isUrl = isUrl,
         usernameAuthorOriginal = usernameAuthorOriginal
     )
     companion object {
@@ -33,7 +34,7 @@ data class MessageDbEntity(
             images = message.images, voice = message.voice, file = message.file,
             isRead = message.isRead, isEdited = message.isEdited, timestamp = message.timestamp,
             isForwarded = message.isForwarded, referenceToMessageId = message.referenceToMessageId,
-            usernameAuthorOriginal = message.usernameAuthorOriginal
+            usernameAuthorOriginal = message.usernameAuthorOriginal, isUrl = message.isUrl
         )
     }
 }

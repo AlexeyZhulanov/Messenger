@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.messenger.room.dao.ChatSettingsDao
 import com.example.messenger.room.dao.ConversationDao
+import com.example.messenger.room.dao.GitlabDao
 import com.example.messenger.room.dao.GroupMemberDao
 import com.example.messenger.room.dao.GroupMessageDao
 import com.example.messenger.room.dao.MessageDao
@@ -13,6 +14,7 @@ import com.example.messenger.room.dao.UnsentMessageDao
 import com.example.messenger.room.dao.UserDao
 import com.example.messenger.room.entities.ChatSettingsDbEntity
 import com.example.messenger.room.entities.ConversationEntity
+import com.example.messenger.room.entities.GitlabDbEntity
 import com.example.messenger.room.entities.GroupMemberDbEntity
 import com.example.messenger.room.entities.GroupMessageDbEntity
 import com.example.messenger.room.entities.LastMessageEntity
@@ -34,7 +36,8 @@ import com.example.messenger.room.entities.UserEntity
         ChatSettingsDbEntity::class,
         UnsentMessageEntity::class,
         GroupMemberDbEntity::class,
-        NewsDbEntity::class
+        NewsDbEntity::class,
+        GitlabDbEntity::class
     ]
 )
 
@@ -56,4 +59,6 @@ abstract class AppDatabase: RoomDatabase() {
     abstract fun getGroupMemberDao(): GroupMemberDao
 
     abstract fun getNewsDao(): NewsDao
+
+    abstract fun getGitlabDao(): GitlabDao
 }

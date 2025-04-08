@@ -80,7 +80,7 @@ class NewsAdapter(
                 actionListener.onImagesClick(images, position)
             }
 
-            override fun onLongImageClicked(position: Int) {}
+            override fun onLongImageClicked() {}
         })
 
         private val adapterFiles = FilesAdapter(newsViewModel, object: FilesActionListener {

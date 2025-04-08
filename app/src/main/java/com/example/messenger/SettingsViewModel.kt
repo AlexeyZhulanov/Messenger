@@ -147,6 +147,8 @@ class SettingsViewModel @Inject constructor(
                 appSettings.setCurrentAccessToken(null)
                 appSettings.setCurrentRefreshToken(null)
                 appSettings.setRemember(false)
+                appSettings.setCurrentGitlabToken(null)
+                appSettings.setFCMToken(null)
             }
         }
     }

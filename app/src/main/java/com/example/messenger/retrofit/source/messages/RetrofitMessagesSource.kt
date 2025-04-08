@@ -23,11 +23,11 @@ class RetrofitMessagesSource(
     }
 
     override suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?,
-                                     voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-                                     usernameAuthorOriginal: String?): String = wrapRetrofitExceptions {
+                    voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
+                    isUrl: Boolean?, usernameAuthorOriginal: String?): String = wrapRetrofitExceptions {
         val sendMessageRequestEntity = SendMessageRequestEntity(text = text, images = images,
             file = file, voice = voice, referenceToMessageId = referenceToMessageId,
-            isForwarded = isForwarded, usernameAuthorOriginal = usernameAuthorOriginal)
+            isForwarded = isForwarded, isUrl = isUrl, usernameAuthorOriginal = usernameAuthorOriginal)
         messagesApi.sendMessage(idDialog, sendMessageRequestEntity).message
     }
 
@@ -43,9 +43,9 @@ class RetrofitMessagesSource(
 
     override suspend fun editMessage(idDialog: Int, messageId: Int, text: String?,
                                      images: List<String>?, voice: String?,
-                                     file: String?): String = wrapRetrofitExceptions {
+                                     file: String?, isUrl: Boolean?): String = wrapRetrofitExceptions {
         val sendMessageRequestEntity = SendMessageRequestEntity(text = text, images = images,
-            file = file, voice = voice)
+            file = file, voice = voice, isUrl = isUrl)
         messagesApi.editMessage(messageId, idDialog, sendMessageRequestEntity).message
     }
 

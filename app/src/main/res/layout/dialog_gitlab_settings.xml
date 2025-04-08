@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:padding="8dp">
+
+    <TextView
+        android:id="@+id/titleTextView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Настройка уведомлений"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="?attr/colorPrimary"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:id="@+id/descriptionTextView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Укажите события, о которых хотите получать уведомления"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@id/titleTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="24dp"/>
+
+
+    <CheckedTextView
+        android:id="@+id/hookPushTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:layout_marginTop="10dp"
+        android:text="Push"
+        android:textColor="?attr/colorAccent"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/listChoiceBackgroundIndicator"
+        android:checkMark="?android:attr/listChoiceIndicatorMultiple"
+        android:checkMarkTint="?attr/colorPrimary"
+        app:layout_constraintTop_toBottomOf="@id/descriptionTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0"
+        />
+
+    <CheckedTextView
+        android:id="@+id/hookMergeTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:text="Merge"
+        android:layout_marginTop="10dp"
+        android:textColor="?attr/colorAccent"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/listChoiceBackgroundIndicator"
+        android:checkMark="?android:attr/listChoiceIndicatorMultiple"
+        android:checkMarkTint="?attr/colorPrimary"
+        app:layout_constraintTop_toBottomOf="@id/descriptionTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        />
+
+    <CheckedTextView
+        android:id="@+id/hookTagTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:text="Tag"
+        android:layout_marginTop="10dp"
+        android:textColor="?attr/colorAccent"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/listChoiceBackgroundIndicator"
+        android:checkMark="?android:attr/listChoiceIndicatorMultiple"
+        android:checkMarkTint="?attr/colorPrimary"
+        app:layout_constraintTop_toBottomOf="@id/descriptionTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1"
+        />
+
+    <CheckedTextView
+        android:id="@+id/hookIssueTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:text="Issue"
+        android:layout_marginTop="10dp"
+        android:textColor="?attr/colorAccent"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/listChoiceBackgroundIndicator"
+        android:checkMark="?android:attr/listChoiceIndicatorMultiple"
+        android:checkMarkTint="?attr/colorPrimary"
+        app:layout_constraintTop_toBottomOf="@id/hookPushTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0"
+        />
+
+    <CheckedTextView
+        android:id="@+id/hookNoteTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:text="Note"
+        android:layout_marginTop="10dp"
+        android:textColor="?attr/colorAccent"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/listChoiceBackgroundIndicator"
+        android:checkMark="?android:attr/listChoiceIndicatorMultiple"
+        android:checkMarkTint="?attr/colorPrimary"
+        app:layout_constraintTop_toBottomOf="@id/hookPushTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        />
+
+    <CheckedTextView
+        android:id="@+id/hookReleaseTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:text="Release"
+        android:layout_marginTop="10dp"
+        android:textColor="?attr/colorAccent"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/listChoiceBackgroundIndicator"
+        android:checkMark="?android:attr/listChoiceIndicatorMultiple"
+        android:checkMarkTint="?attr/colorPrimary"
+        app:layout_constraintTop_toBottomOf="@id/hookPushTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1"
+        />
+
+    <Button
+        android:id="@+id/saveButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Сохранить"
+        android:textColor="?attr/colorPrimaryDark"
+        app:layout_constraintTop_toBottomOf="@id/hookIssueTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="10dp"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

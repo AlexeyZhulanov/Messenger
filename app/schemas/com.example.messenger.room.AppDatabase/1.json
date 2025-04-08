@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "4d96dfdcdbf86cca11b6f3ecc57ff112",
+    "identityHash": "2d6a6c5d7f40bb2b9798ee1c49e669bf",
     "entities": [
       {
         "tableName": "conversations",
@@ -197,7 +197,7 @@
       },
       {
         "tableName": "messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_dialog` INTEGER NOT NULL, `id_sender` INTEGER NOT NULL, `text` TEXT, `images` TEXT, `voice` TEXT, `file` TEXT, `is_read` INTEGER NOT NULL, `is_edited` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `is_forwarded` INTEGER NOT NULL, `reference_to_message_id` INTEGER, `username_author_original` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_dialog` INTEGER NOT NULL, `id_sender` INTEGER NOT NULL, `text` TEXT, `images` TEXT, `voice` TEXT, `file` TEXT, `is_read` INTEGER NOT NULL, `is_edited` INTEGER NOT NULL, `is_url` INTEGER, `timestamp` INTEGER NOT NULL, `is_forwarded` INTEGER NOT NULL, `reference_to_message_id` INTEGER, `username_author_original` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -254,6 +254,12 @@
             "notNull": true
           },
           {
+            "fieldPath": "isUrl",
+            "columnName": "is_url",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
             "fieldPath": "timestamp",
             "columnName": "timestamp",
             "affinity": "INTEGER",
@@ -289,7 +295,7 @@
       },
       {
         "tableName": "group_messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `group_id` INTEGER NOT NULL, `id_sender` INTEGER NOT NULL, `text` TEXT, `images` TEXT, `voice` TEXT, `file` TEXT, `is_read` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `is_edited` INTEGER NOT NULL, `is_forwarded` INTEGER NOT NULL, `reference_to_message_id` INTEGER, `username_author_original` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `group_id` INTEGER NOT NULL, `id_sender` INTEGER NOT NULL, `text` TEXT, `images` TEXT, `voice` TEXT, `file` TEXT, `is_read` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `is_edited` INTEGER NOT NULL, `is_forwarded` INTEGER NOT NULL, `is_url` INTEGER, `reference_to_message_id` INTEGER, `username_author_original` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -356,6 +362,12 @@
             "columnName": "is_forwarded",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "isUrl",
+            "columnName": "is_url",
+            "affinity": "INTEGER",
+            "notNull": false
           },
           {
             "fieldPath": "referenceToMessageId",
@@ -473,7 +485,7 @@
       },
       {
         "tableName": "unsent_messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_dialog` INTEGER, `id_group` INTEGER, `id_sender` INTEGER NOT NULL, `text` TEXT, `images` TEXT, `voice` TEXT, `file` TEXT, `is_read` INTEGER NOT NULL, `is_edited` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `is_forwarded` INTEGER NOT NULL, `reference_to_message_id` INTEGER, `username_author_original` TEXT, `is_unsent` INTEGER, `local_file_paths` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_dialog` INTEGER, `id_group` INTEGER, `id_sender` INTEGER NOT NULL, `text` TEXT, `images` TEXT, `voice` TEXT, `file` TEXT, `is_read` INTEGER NOT NULL, `is_edited` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `is_forwarded` INTEGER NOT NULL, `is_url` INTEGER, `reference_to_message_id` INTEGER, `username_author_original` TEXT, `is_unsent` INTEGER, `local_file_paths` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -546,6 +558,12 @@
             "columnName": "is_forwarded",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "isUrl",
+            "columnName": "is_url",
+            "affinity": "INTEGER",
+            "notNull": false
           },
           {
             "fieldPath": "referenceToMessageId",
@@ -710,12 +728,92 @@
         },
         "indices": [],
         "foreignKeys": []
+      },
+      {
+        "tableName": "gitlab",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `project_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `web_url` TEXT NOT NULL, `last_activity` TEXT NOT NULL, `hook_push` INTEGER NOT NULL, `hook_merge` INTEGER NOT NULL, `hook_tag` INTEGER NOT NULL, `hook_issue` INTEGER NOT NULL, `hook_note` INTEGER NOT NULL, `hook_release` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "projectId",
+            "columnName": "project_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "webUrl",
+            "columnName": "web_url",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastActivity",
+            "columnName": "last_activity",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hookPush",
+            "columnName": "hook_push",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hookMerge",
+            "columnName": "hook_merge",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hookTag",
+            "columnName": "hook_tag",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hookIssue",
+            "columnName": "hook_issue",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hookNote",
+            "columnName": "hook_note",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hookRelease",
+            "columnName": "hook_release",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4d96dfdcdbf86cca11b6f3ecc57ff112')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2d6a6c5d7f40bb2b9798ee1c49e669bf')"
     ]
   }
 }

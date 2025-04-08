@@ -9,10 +9,16 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.TextPaint
+import android.text.method.LinkMovementMethod
+import android.text.style.ClickableSpan
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
@@ -65,6 +71,10 @@ class MessageDiffCallback : DiffUtil.ItemCallback<Triple<Message, String, String
     override fun areContentsTheSame(oldItem: Triple<Message, String, String>, newItem: Triple<Message, String, String>): Boolean {
         return oldItem.first == newItem.first
     }
+
+    override fun getChangePayload(oldItem: Triple<Message, String, String>, newItem: Triple<Message, String, String>): Any? {
+        return if (!oldItem.first.isRead && newItem.first.isRead) "isRead" else null
+    }
 }
 
 class MessageAdapter(
@@ -80,9 +90,9 @@ class MessageAdapter(
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
     private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
-    private var readSet: MutableSet<Int> = mutableSetOf()
     private var highlightedPosition: Int? = null
     private val uiScopeMain = CoroutineScope(Dispatchers.Main)
+    private val linkPattern = Regex("""\[([^]]+)]\((https?://[^)]+)\)|(https?://\S+)""")
 
 
     fun addNewMessages(messages: List<Triple<Message, String, String>>) {
@@ -186,7 +196,6 @@ class MessageAdapter(
             val currentPagingData = currentList
             val updatedPagingData = currentPagingData.map { pair ->
                 if (pair.first.id in listIds && pair.first.idSender == currentUserId) {
-                    readSet.add(pair.first.id)
                     pair.copy(first = pair.first.copy(isRead = true))
                 } else {
                     pair
@@ -313,6 +322,20 @@ class MessageAdapter(
         }
     }
 
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: MutableList<Any>) {
+        if (payloads.contains("isRead")) {
+            when(holder) {
+                is MessagesViewHolderSender -> holder.updateReadStatus()
+                is MessagesViewHolderVoiceSender -> holder.updateReadStatus()
+                is MessagesViewHolderFileSender -> holder.updateReadStatus()
+                is MessagesViewHolderTextImageSender -> holder.updateReadStatus()
+                is MessagesViewHolderTextImagesSender -> holder.updateReadStatus()
+            }
+            return
+        }
+        onBindViewHolder(holder, position)
+    }
+
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val item = getItem(position) ?: return
         val message = item.first
@@ -332,36 +355,26 @@ class MessageAdapter(
         } else holder.itemView.setBackgroundColor(Color.TRANSPARENT)
 
         when (holder) {
-            is MessagesViewHolderReceiver -> {
-                holder.bind(message, date, time, position, isAnswer)
-            }
-            is MessagesViewHolderSender -> {
-                holder.bind(message, date, time, position, isAnswer)
-            }
-            is MessagesViewHolderVoiceReceiver -> {
-                holder.bind(message, date, time, position, isInLast30, isAnswer)
-            }
-            is MessagesViewHolderVoiceSender -> {
-                holder.bind(message, date, time, position, isInLast30, isAnswer)
-            }
-            is MessagesViewHolderFileReceiver -> {
-                holder.bind(message, date, time, position, isInLast30, isAnswer)
-            }
-            is MessagesViewHolderFileSender -> {
-                holder.bind(message, date, time, position, isInLast30, isAnswer)
-            }
-            is MessagesViewHolderTextImageReceiver -> {
-                holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
-            }
-            is MessagesViewHolderTextImageSender -> {
-                holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
-            }
-            is MessagesViewHolderTextImagesReceiver -> {
-                holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
-            }
-            is MessagesViewHolderTextImagesSender -> {
-                holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
-            }
+            is MessagesViewHolderReceiver -> holder.bind(message, date, time, position, isAnswer)
+
+            is MessagesViewHolderSender -> holder.bind(message, date, time, position, isAnswer)
+
+            is MessagesViewHolderVoiceReceiver -> holder.bind(message, date, time, position, isInLast30, isAnswer)
+
+            is MessagesViewHolderVoiceSender -> holder.bind(message, date, time, position, isInLast30, isAnswer)
+
+            is MessagesViewHolderFileReceiver -> holder.bind(message, date, time, position, isInLast30, isAnswer)
+
+            is MessagesViewHolderFileSender -> holder.bind(message, date, time, position, isInLast30, isAnswer)
+
+            is MessagesViewHolderTextImageReceiver -> holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
+
+            is MessagesViewHolderTextImageSender -> holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
+
+            is MessagesViewHolderTextImagesReceiver -> holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
+
+            is MessagesViewHolderTextImagesSender -> holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
+
         }
     }
 
@@ -431,6 +444,71 @@ class MessageAdapter(
         }
     }
 
+    private fun parseMessageWithLinks(text: String): SpannableStringBuilder {
+        if (!text.contains("""\[[^]]+]\(https?://[^)]+\)""".toRegex())
+            && !text.contains("https?://\\S+".toRegex())
+        ) {
+            return SpannableStringBuilder(text)
+        }
+
+        val spannable = SpannableStringBuilder(text)
+        val matches = linkPattern.findAll(text).toList()
+
+        // Обрабатываем ссылки с конца к началу, чтобы индексы не сдвигались
+        matches.reversed().forEach { match ->
+            when {
+                // Именованные ссылки: [текст](URL)
+                match.groups[1] != null && match.groups[2] != null -> {
+                    val (linkText, url) = match.destructured
+                    val start = match.range.first
+                    val end = match.range.last + 1
+
+                    if (start <= end && end <= spannable.length) {
+                        spannable.replace(start, end, linkText)
+                        applyLinkStyle(spannable, start, start + linkText.length, url)
+                    }
+                }
+                // Обычные URL: https://...
+                match.groups[3] != null -> {
+                    val url = match.groups[3]!!.value
+                    val start = match.range.first
+                    val end = match.range.last + 1
+
+                    if (start <= end && end <= spannable.length) {
+                        applyLinkStyle(spannable, start, end, url)
+                    }
+                }
+            }
+        }
+        return spannable
+    }
+
+    private fun applyLinkStyle(spannable: SpannableStringBuilder, start: Int, end: Int, url: String) {
+        spannable.setSpan(
+            object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    openUrl(url)
+                }
+                override fun updateDrawState(ds: TextPaint) {
+                    super.updateDrawState(ds)
+                    ds.color = Color.CYAN
+                    ds.isUnderlineText = true
+                }
+            },
+            start, end,
+            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+    }
+
+    private fun openUrl(url: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Невозможно открыть ссылку", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     // ViewHolder для текстовых сообщений получателя
     inner class MessagesViewHolderReceiver(private val binding: ItemMessageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
 
@@ -461,11 +539,6 @@ class MessageAdapter(
         fun bind(message: Message, date: String, time: String, position: Int, isAnswer: Boolean) {
             messageSave = message
 
-            if(message.id in readSet) {
-                readSet.remove(message.id)
-                return
-            }
-
             if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
                 binding.checkbox.isChecked = position in checkedPositions
@@ -490,7 +563,14 @@ class MessageAdapter(
                 }
             } else binding.forwardLayout.root.visibility = View.GONE
 
-            binding.messageReceiverTextView.text = message.text
+            message.text?.let {
+                if(message.isUrl == true) {
+                    val processedText = parseMessageWithLinks(it)
+                    binding.messageReceiverTextView.text = processedText
+                    binding.messageReceiverTextView.movementMethod = LinkMovementMethod.getInstance()
+                } else binding.messageReceiverTextView.text = it
+            }
+
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
@@ -547,15 +627,14 @@ class MessageAdapter(
             }
         }
 
+        fun updateReadStatus() {
+            binding.icCheck.visibility = View.INVISIBLE
+            binding.icCheck2.visibility = View.VISIBLE
+            binding.icCheck2.bringToFront()
+        }
+
         fun bind(message: Message, date: String, time: String, position: Int, isAnswer: Boolean) {
             messageSave = message
-
-            if(message.id in readSet) {
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-                readSet.remove(message.id)
-                return
-            }
 
             if(isAnswer) {
                 handleAnswerLayout(binding, message)
@@ -601,8 +680,7 @@ class MessageAdapter(
                 binding.timeTextView.text = time
 
                 if (message.isRead) {
-                    binding.icCheck.visibility = View.INVISIBLE
-                    binding.icCheck2.visibility = View.VISIBLE
+                    updateReadStatus()
                 } else {
                     binding.icCheck.visibility = View.VISIBLE
                     binding.icCheck2.visibility = View.INVISIBLE
@@ -610,7 +688,13 @@ class MessageAdapter(
                 if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
                 else binding.editTextView.visibility = View.GONE
             }
-            binding.messageSenderTextView.text = message.text
+            message.text?.let {
+                if(message.isUrl == true) {
+                    val processedText = parseMessageWithLinks(it)
+                    binding.messageSenderTextView.text = processedText
+                    binding.messageSenderTextView.movementMethod = LinkMovementMethod.getInstance()
+                } else binding.messageSenderTextView.text = it
+            }
         }
     }
 
@@ -840,11 +924,6 @@ class MessageAdapter(
         fun bind(message: Message, date: String, time: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
 
-            if(message.id in readSet) {
-                readSet.remove(message.id)
-                return
-            }
-
             binding.playButton.visibility = View.VISIBLE
 
             if(!canLongClick && canDelete) {
@@ -992,15 +1071,15 @@ class MessageAdapter(
             }
         }
 
+        fun updateReadStatus() {
+            binding.icCheck.visibility = View.INVISIBLE
+            binding.icCheck2.visibility = View.VISIBLE
+            binding.icCheck2.bringToFront()
+        }
+
         fun bind(message: Message, date: String, time: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
 
-            if(message.id in readSet) {
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-                readSet.remove(message.id)
-                return
-            }
             binding.playButton.visibility = View.VISIBLE
 
             if(isAnswer) handleAnswerLayout(binding, message)
@@ -1035,8 +1114,7 @@ class MessageAdapter(
                 } else binding.checkbox.visibility = View.GONE
 
                 if (message.isRead) {
-                    binding.icCheck.visibility = View.INVISIBLE
-                    binding.icCheck2.visibility = View.VISIBLE
+                    updateReadStatus()
                 } else {
                     binding.icCheck.visibility = View.VISIBLE
                     binding.icCheck2.visibility = View.INVISIBLE
@@ -1134,11 +1212,6 @@ class MessageAdapter(
 
         fun bind(message: Message, date: String, time: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
-
-            if(message.id in readSet) {
-                readSet.remove(message.id)
-                return
-            }
 
             if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
@@ -1255,15 +1328,14 @@ class MessageAdapter(
             }
         }
 
+        fun updateReadStatus() {
+            binding.icCheck.visibility = View.INVISIBLE
+            binding.icCheck2.visibility = View.VISIBLE
+            binding.icCheck2.bringToFront()
+        }
+
         fun bind(message: Message, date: String, time: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
-
-            if(message.id in readSet) {
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-                readSet.remove(message.id)
-                return
-            }
 
             if(isAnswer) handleAnswerLayout(binding, message)
             else binding.answerLayout.root.visibility = View.GONE
@@ -1295,8 +1367,7 @@ class MessageAdapter(
                 } else binding.checkbox.visibility = View.GONE
 
                 if (message.isRead) {
-                    binding.icCheck.visibility = View.INVISIBLE
-                    binding.icCheck2.visibility = View.VISIBLE
+                    updateReadStatus()
                 } else {
                     binding.icCheck.visibility = View.VISIBLE
                     binding.icCheck2.visibility = View.INVISIBLE
@@ -1374,11 +1445,6 @@ class MessageAdapter(
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
 
-            if(message.id in readSet) {
-                readSet.remove(message.id)
-                return
-            }
-
             if(isAnswer) handleAnswerLayout(binding, message)
             else binding.answerLayout.root.visibility = View.GONE
 
@@ -1393,7 +1459,13 @@ class MessageAdapter(
                 if(flagText) {
                     customMessageLayout.visibility = View.VISIBLE
                     timeLayout.visibility = View.GONE
-                    messageReceiverTextView.text = message.text
+                    message.text?.let {
+                        if(message.isUrl == true) {
+                            val processedText = parseMessageWithLinks(it)
+                            binding.messageReceiverTextView.text = processedText
+                            binding.messageReceiverTextView.movementMethod = LinkMovementMethod.getInstance()
+                        } else binding.messageReceiverTextView.text = it
+                    }
                 } else {
                     customMessageLayout.visibility = View.GONE
                     timeLayout.visibility = View.VISIBLE
@@ -1517,15 +1589,14 @@ class MessageAdapter(
             }
         }
 
+        fun updateReadStatus() {
+            binding.icCheck.visibility = View.INVISIBLE
+            binding.icCheck2.visibility = View.VISIBLE
+            binding.icCheck2.bringToFront()
+        }
+
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
-
-            if(message.id in readSet) {
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-                readSet.remove(message.id)
-                return
-            }
 
             if(isAnswer) handleAnswerLayout(binding, message)
             else binding.answerLayout.root.visibility = View.GONE
@@ -1544,7 +1615,13 @@ class MessageAdapter(
                 if(flagText) {
                     customMessageLayout.visibility = View.VISIBLE
                     timeLayout.visibility = View.GONE
-                    messageSenderTextView.text = message.text
+                    message.text?.let {
+                        if(message.isUrl == true) {
+                            val processedText = parseMessageWithLinks(it)
+                            binding.messageSenderTextView.text = processedText
+                            binding.messageSenderTextView.movementMethod = LinkMovementMethod.getInstance()
+                        } else binding.messageSenderTextView.text = it
+                    }
                 } else {
                     customMessageLayout.visibility = View.GONE
                     timeLayout.visibility = View.VISIBLE
@@ -1572,8 +1649,7 @@ class MessageAdapter(
                 } else binding.checkbox.visibility = View.GONE
 
                 if (message.isRead) {
-                    icCheck.visibility = View.INVISIBLE
-                    icCheck2.visibility = View.VISIBLE
+                    updateReadStatus()
                 } else {
                     icCheck.visibility = View.VISIBLE
                     icCheck2.visibility = View.INVISIBLE
@@ -1693,11 +1769,6 @@ class MessageAdapter(
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
 
-            if(message.id in readSet) {
-                readSet.remove(message.id)
-                return
-            }
-
             if(isAnswer) handleAnswerLayout(binding, message)
             else binding.answerLayout.root.visibility = View.GONE
 
@@ -1712,7 +1783,13 @@ class MessageAdapter(
                 if(flagText) {
                     customMessageLayout.visibility = View.VISIBLE
                     timeLayout.visibility = View.GONE
-                    messageReceiverTextView.text = message.text
+                    message.text?.let {
+                        if(message.isUrl == true) {
+                            val processedText = parseMessageWithLinks(it)
+                            binding.messageReceiverTextView.text = processedText
+                            binding.messageReceiverTextView.movementMethod = LinkMovementMethod.getInstance()
+                        } else binding.messageReceiverTextView.text = it
+                    }
                 } else {
                     customMessageLayout.visibility = View.GONE
                     timeLayout.visibility = View.VISIBLE
@@ -1844,15 +1921,14 @@ class MessageAdapter(
             }
         }
 
+        fun updateReadStatus() {
+            binding.icCheck.visibility = View.INVISIBLE
+            binding.icCheck2.visibility = View.VISIBLE
+            binding.icCheck2.bringToFront()
+        }
+
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
-
-            if(message.id in readSet) {
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.VISIBLE
-                readSet.remove(message.id)
-                return
-            }
 
             if(isAnswer) handleAnswerLayout(binding, message)
             else binding.answerLayout.root.visibility = View.GONE
@@ -1871,7 +1947,13 @@ class MessageAdapter(
                 if(flagText) {
                     customMessageLayout.visibility = View.VISIBLE
                     timeLayout.visibility = View.GONE
-                    messageSenderTextView.text = message.text
+                    message.text?.let {
+                        if(message.isUrl == true) {
+                            val processedText = parseMessageWithLinks(it)
+                            binding.messageSenderTextView.text = processedText
+                            binding.messageSenderTextView.movementMethod = LinkMovementMethod.getInstance()
+                        } else binding.messageSenderTextView.text = it
+                    }
                 } else {
                     customMessageLayout.visibility = View.GONE
                     timeLayout.visibility = View.VISIBLE
@@ -1900,8 +1982,7 @@ class MessageAdapter(
                 else binding.checkbox.visibility = View.GONE
 
                 if (message.isRead) {
-                    icCheck.visibility = View.INVISIBLE
-                    icCheck2.visibility = View.VISIBLE
+                    updateReadStatus()
                 } else {
                     icCheck.visibility = View.VISIBLE
                     icCheck2.visibility = View.INVISIBLE

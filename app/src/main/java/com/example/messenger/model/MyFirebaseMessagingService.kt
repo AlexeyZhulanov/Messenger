@@ -29,7 +29,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         Log.d("testFCM", "New token: $token")
-        if(appSettings.getRemember()) sendTokenToServer(token)
+        if(appSettings.getRemember()) sendTokenToServer(token) else appSettings.setFCMToken(token)
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        GitlabNotificationHelper.createNotificationChannel(this)
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
@@ -39,6 +44,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         remoteMessage.data["type"]?.let { type ->
             when (type) {
                 "wakeup" -> startWebSocketService()
+                else -> showDefaultNotification(remoteMessage)
             }
         }
     }
@@ -60,5 +66,19 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 Log.d("testFCM", "Не удалось отправить токен на сервер: ${e.message}")
             }
         }
+    }
+
+    private fun showDefaultNotification(remoteMessage: RemoteMessage) {
+        val title = remoteMessage.notification?.title ?: "GitLab Event"
+        val message = remoteMessage.notification?.body ?: "Check it in repository"
+        val url = remoteMessage.data["url"] ?: "https://gitlab.amessenger.ru"
+
+        GitlabNotificationHelper.showNotification(
+            this,
+            title,
+            message,
+            title.hashCode(),
+            url
+        )
     }
 }

@@ -18,13 +18,14 @@ data class GroupMessageDbEntity(
     val timestamp: Long,
     @ColumnInfo(name = "is_edited") val isEdited: Boolean = false,
     @ColumnInfo(name = "is_forwarded") val isForwarded: Boolean = false,
+    @ColumnInfo(name = "is_url") val isUrl: Boolean? = false,
     @ColumnInfo(name = "reference_to_message_id") val referenceToMessageId: Int?,
     @ColumnInfo(name = "username_author_original") val usernameAuthorOriginal: String?
 ) {
     fun toMessage(): Message = Message(
         id = id, idSender = idSender, text = text, images = images,
         voice = voice, file = file, timestamp = timestamp, isRead = isRead, isEdited = isEdited,
-        referenceToMessageId = referenceToMessageId, isForwarded = isForwarded,
+        referenceToMessageId = referenceToMessageId, isForwarded = isForwarded, isUrl = isUrl,
         usernameAuthorOriginal = usernameAuthorOriginal
     )
     companion object {
@@ -33,7 +34,7 @@ data class GroupMessageDbEntity(
                 id = it.id, groupId = groupId, idSender = it.idSender, text = it.text,
                 images = it.images, voice = it.voice, file = it.file, isRead = it.isRead,
                 timestamp = it.timestamp, isEdited = it.isEdited, isForwarded = it.isForwarded,
-                referenceToMessageId = it.referenceToMessageId,
+                isUrl = it.isUrl, referenceToMessageId = it.referenceToMessageId,
                 usernameAuthorOriginal = it.usernameAuthorOriginal
             )
         }

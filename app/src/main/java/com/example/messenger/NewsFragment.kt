@@ -119,7 +119,15 @@ class NewsFragment(
                 }
             })
         binding.button3.setOnClickListener {
-            backPressed()
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_TAG9")
+                .commit()
+        }
+        binding.button4.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, GitlabFragment(currentUserUri, currentUser), "GITLAB_FRAGMENT_TAG")
+                .addToBackStack(null)
+                .commit()
         }
         filePickerManager = FilePickerManager(fragment4 = this)
         adapter = NewsAdapter(object: NewsActionListener {

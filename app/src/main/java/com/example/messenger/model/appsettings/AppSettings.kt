@@ -25,4 +25,12 @@ interface AppSettings {
     fun isTokenRefreshing(): Boolean
 
     fun isTokenRecentlyRefreshed(): Boolean
+
+    fun getCurrentGitlabToken(): String?
+
+    fun setCurrentGitlabToken(token: String?)
+
+    fun getFCMToken(): String?
+
+    fun setFCMToken(token: String?)
 }

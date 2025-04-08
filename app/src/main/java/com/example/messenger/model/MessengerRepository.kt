@@ -45,4 +45,8 @@ interface MessengerRepository {
     suspend fun getNews() : List<News>
 
     suspend fun replaceNews(newNews: List<News>, fileManager: FileManager)
+
+    suspend fun getRepos() : List<Repo>
+
+    suspend fun replaceRepos(newRepos: List<Repo>)
 }

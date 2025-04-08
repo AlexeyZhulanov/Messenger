@@ -12,17 +12,14 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
-import com.example.messenger.MainActivity
 import com.example.messenger.R
 import com.example.messenger.di.MessengerModule
-import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
 
 class ReplyReceiver : BroadcastReceiver() {
 
@@ -41,16 +38,18 @@ class ReplyReceiver : BroadcastReceiver() {
         val senderName = intent.getStringExtra("sender_name") ?: "User"
 
         if (!replyText.isNullOrEmpty() && chatId != -1 && messageId != -1) {
+            val isLink = !(!replyText.contains("""\[[^]]+]\(https?://[^)]+\)""".toRegex())
+                    && !replyText.contains("https?://\\S+".toRegex()))
             val entryPoint = EntryPointAccessors.fromApplication(context, MessengerModule.ReplyReceiverEntryPoint::class.java)
             val retrofitService = entryPoint.retrofitService()
             serviceScope.launch {
                 try {
                     if (isGroup) {
                         retrofitService.sendGroupMessage(chatId, replyText, null, null,
-                            null, messageId, false, senderName)
+                            null, messageId, false, isLink, senderName)
                     } else {
                         retrofitService.sendMessage(chatId, replyText, null, null,
-                            null, messageId, false, senderName)
+                            null, messageId, false, isLink, senderName)
                     }
                     withContext(Dispatchers.Main) {
                         updateNotification(context, chatId, success = true)

@@ -1,9 +1,6 @@
 package com.example.messenger
 
 import android.annotation.SuppressLint
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -22,9 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
@@ -129,6 +124,12 @@ class MessengerFragment : Fragment() {
         binding.button.setOnClickListener {
             parentFragmentManager.beginTransaction()
                 .replace(R.id.fragmentContainer, NewsFragment(uriGlobal, currentUser), "NEWS_FRAGMENT_TAG")
+                .addToBackStack(null)
+                .commit()
+        }
+        binding.button4.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, GitlabFragment(uriGlobal, currentUser), "GITLAB_FRAGMENT_TAG")
                 .addToBackStack(null)
                 .commit()
         }

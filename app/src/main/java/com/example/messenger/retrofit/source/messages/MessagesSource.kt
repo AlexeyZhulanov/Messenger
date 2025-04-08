@@ -9,7 +9,7 @@ interface MessagesSource {
 
     suspend fun sendMessage(idDialog: Int, text: String? = null, images: List<String>? = null,
                             voice: String? = null, file: String? = null, referenceToMessageId: Int? = null,
-                            isForwarded: Boolean = false, usernameAuthorOriginal: String? = null) : String
+                            isForwarded: Boolean = false, isUrl: Boolean? = null, usernameAuthorOriginal: String? = null) : String
 
     suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int) : List<Message>
 
@@ -17,7 +17,7 @@ interface MessagesSource {
 
     suspend fun editMessage(idDialog: Int, messageId: Int, text: String? = null,
                             images: List<String>? = null, voice: String? = null,
-                            file: String? = null) : String
+                            file: String? = null, isUrl: Boolean? = null) : String
 
     suspend fun deleteMessages(idDialog: Int, ids: List<Int>) : String
 

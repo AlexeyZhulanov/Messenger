@@ -11,5 +11,6 @@ data class SendMessageRequestEntity(
     val voice: String? = null,
     @Json(name = "reference_to_message_id") val referenceToMessageId: Int? = null,
     @Json(name = "is_forwarded") val isForwarded: Boolean? = false,
+    @Json(name = "is_url") var isUrl: Boolean? = false,
     @Json(name = "username_author_original") val usernameAuthorOriginal: String? = null
 )

@@ -35,6 +35,27 @@
         android:name="com.example.messenger.permission.RECEIVE_MARK_READ"
         android:protectionLevel="signature" />
 
+    <queries>
+        <!-- Разрешить поиск браузеров -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+
+        <!-- Для HTTP -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+
+        <!-- Для HTTPS -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:largeHeap="true"
@@ -60,7 +81,9 @@
 
         <service
             android:name=".model.MyFirebaseMessagingService"
-            android:exported="false">
+            android:exported="false"
+            android:stopWithTask="false"
+            android:directBootAware="true">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT"/>
             </intent-filter>

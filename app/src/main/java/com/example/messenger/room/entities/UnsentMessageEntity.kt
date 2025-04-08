@@ -19,15 +19,16 @@ class UnsentMessageEntity(
     @ColumnInfo(name = "is_edited") val isEdited: Boolean = false,
     val timestamp: Long = 0,
     @ColumnInfo(name = "is_forwarded") val isForwarded: Boolean = false,
+    @ColumnInfo(name = "is_url") val isUrl: Boolean? = false,
     @ColumnInfo(name = "reference_to_message_id") val referenceToMessageId: Int?,
     @ColumnInfo(name = "username_author_original") val usernameAuthorOriginal: String?,
     @ColumnInfo(name = "is_unsent") val isUnsent: Boolean? = false,
     @ColumnInfo(name = "local_file_paths") val localFilePaths: List<String>? = null
 ) {
     fun toMessage(): Message = Message(
-        id = id, idSender = idSender, text = text, images = images, voice = voice, file = file,
+        id = id+100000, idSender = idSender, text = text, images = images, voice = voice, file = file,
         timestamp = timestamp, isRead = isRead, isEdited = isEdited,
-        referenceToMessageId = referenceToMessageId, isForwarded = isForwarded,
+        referenceToMessageId = referenceToMessageId, isForwarded = isForwarded, isUrl = isUrl,
         usernameAuthorOriginal = usernameAuthorOriginal, isUnsent = isUnsent, localFilePaths = localFilePaths
     )
     companion object {
@@ -37,7 +38,7 @@ class UnsentMessageEntity(
             isRead = message.isRead, isEdited = message.isEdited, timestamp = message.timestamp,
             isForwarded = message.isForwarded, referenceToMessageId = message.referenceToMessageId,
             usernameAuthorOriginal = message.usernameAuthorOriginal, isUnsent = message.isUnsent,
-            localFilePaths = message.localFilePaths
+            localFilePaths = message.localFilePaths, isUrl = message.isUrl
         )
     }
 }
