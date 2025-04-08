@@ -2,7 +2,7 @@ package com.example.messenger.retrofit.api
 
 import com.example.messenger.retrofit.entities.ResponseEntityMessageAnswer
 import com.example.messenger.retrofit.entities.news.GetNewsKeyResponseEntity
-import com.example.messenger.retrofit.entities.news.News
+import com.example.messenger.retrofit.entities.news.GetNewsResponseEntity
 import com.example.messenger.retrofit.entities.news.SendNewsRequestEntity
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -22,7 +22,7 @@ interface NewsApi {
     suspend fun getNews(
         @Query("page") pageIndex: Int,
         @Query("size") pageSize: Int
-    ) : List<News>
+    ) : List<GetNewsResponseEntity>
 
     @PUT("news/{news_id}")
     suspend fun editNews(

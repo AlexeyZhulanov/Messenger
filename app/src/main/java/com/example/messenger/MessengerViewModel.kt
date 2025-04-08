@@ -60,6 +60,7 @@ class MessengerViewModel @Inject constructor(
 
     init {
         webSocketService.reconnectIfNeeded()
+        checkFCM()
         fetchVacation()
         fetchCurrentUser()
         fetchConversations()
@@ -151,6 +152,20 @@ class MessengerViewModel @Inject constructor(
         }
     }
 
+    private fun checkFCM() {
+        viewModelScope.launch {
+            val token = appSettings.getFCMToken()
+            if(!token.isNullOrEmpty()) {
+                if(appSettings.getRemember()) {
+                    try {
+                        retrofitService.saveFCMToken(token)
+                        appSettings.setFCMToken(null)
+                    } catch (e: Exception) { return@launch }
+                }
+            }
+        }
+    }
+
     fun stopNotifications(bool: Boolean) {
         webSocketService.setViewModelActive(bool)
     }
@@ -222,10 +237,10 @@ class MessengerViewModel @Inject constructor(
                     val encryptedText = message.text?.let { tinkAesGcmHelper.encryptText(it) }
                     if(message.usernameAuthorOriginal == null) {
                         forwardMessage(id, encryptedText, message.images, message.voice, message.file,
-                            message.referenceToMessageId, usernames?.get(index))
+                            message.isUrl, message.referenceToMessageId, usernames?.get(index))
                     } else {
                         forwardMessage(id, encryptedText, message.images, message.voice, message.file,
-                            message.referenceToMessageId, message.usernameAuthorOriginal)
+                            message.isUrl, message.referenceToMessageId, message.usernameAuthorOriginal)
                     }
                 }
                 callback(true)
@@ -234,10 +249,10 @@ class MessengerViewModel @Inject constructor(
     }
 
     private suspend fun forwardMessage(idDialog: Int, text: String?, images: List<String>?,
-                            voice: String?, file: String?, referenceToMessageId: Int?,
+                            voice: String?, file: String?, isUrl: Boolean?, referenceToMessageId: Int?,
                             usernameAuthorOriginal: String?) {
         try {
-            retrofitService.sendMessage(idDialog, text, images, voice, file, referenceToMessageId, true, usernameAuthorOriginal)
+            retrofitService.sendMessage(idDialog, text, images, voice, file, referenceToMessageId, true, isUrl, usernameAuthorOriginal)
         } catch (e: Exception) { return }
     }
 
@@ -250,10 +265,10 @@ class MessengerViewModel @Inject constructor(
                     val encryptedText = message.text?.let { tinkAesGcmHelper.encryptText(it) }
                     if(message.usernameAuthorOriginal == null) {
                         forwardGroupMessage(id, encryptedText, message.images, message.voice, message.file,
-                            message.referenceToMessageId, usernames?.get(index))
+                            message.isUrl, message.referenceToMessageId, usernames?.get(index))
                     } else {
                         forwardGroupMessage(id, encryptedText, message.images, message.voice, message.file,
-                            message.referenceToMessageId, message.usernameAuthorOriginal)
+                            message.isUrl, message.referenceToMessageId, message.usernameAuthorOriginal)
                     }
                 }
                 callback(true)
@@ -262,10 +277,10 @@ class MessengerViewModel @Inject constructor(
     }
 
     private suspend fun forwardGroupMessage(idGroup: Int, text: String?, images: List<String>?,
-                                            voice: String?, file: String?, referenceToMessageId: Int?,
+                                            voice: String?, file: String?, isUrl: Boolean?, referenceToMessageId: Int?,
                                             usernameAuthorOriginal: String?) {
         try {
-            retrofitService.sendGroupMessage(idGroup, text, images, voice, file, referenceToMessageId, true, usernameAuthorOriginal)
+            retrofitService.sendGroupMessage(idGroup, text, images, voice, file, referenceToMessageId, true, isUrl, usernameAuthorOriginal)
         } catch (e: Exception) { return }
     }
 
@@ -305,6 +320,8 @@ class MessengerViewModel @Inject constructor(
                 appSettings.setCurrentAccessToken(null)
                 appSettings.setCurrentRefreshToken(null)
                 appSettings.setRemember(false)
+                appSettings.setCurrentGitlabToken(null)
+                appSettings.setFCMToken(null)
             }
         }
     }

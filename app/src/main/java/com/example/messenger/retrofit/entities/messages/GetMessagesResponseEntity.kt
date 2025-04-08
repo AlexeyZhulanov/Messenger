@@ -19,16 +19,17 @@ data class Message(
     @Json(name = "is_personal_unread") var isPersonalUnread: Boolean? = null,
     @Json(name = "is_edited") var isEdited: Boolean,
     @Json(name = "is_forwarded") var isForwarded: Boolean,
+    @Json(name = "is_url") var isUrl: Boolean? = null,
     @Json(name = "reference_to_message_id") var referenceToMessageId: Int? = null,
     @Json(name = "username_author_original") var usernameAuthorOriginal: String? = null,
     var position: Int? = null
 ) {
-    fun toMessage(): com.example.messenger.model.Message  {
+    fun toMessage(): com.example.messenger.model.Message {
         val longTimestamp = parseTimestampToLong(timestamp)
         return com.example.messenger.model.Message(
             id = id, idSender = idSender, text = text, images = images, voice = voice, file = file,
             timestamp = longTimestamp, isRead = isRead, isPersonalUnread = isPersonalUnread,  isEdited = isEdited, isForwarded = isForwarded,
-            referenceToMessageId = referenceToMessageId, usernameAuthorOriginal = usernameAuthorOriginal
+            isUrl = isUrl, referenceToMessageId = referenceToMessageId, usernameAuthorOriginal = usernameAuthorOriginal
         )
     }
 }

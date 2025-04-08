@@ -1,8 +1,8 @@
 package com.example.messenger.model
 
-import android.util.Log
 import com.example.messenger.room.dao.ChatSettingsDao
 import com.example.messenger.room.dao.ConversationDao
+import com.example.messenger.room.dao.GitlabDao
 import com.example.messenger.room.dao.GroupMemberDao
 import com.example.messenger.room.dao.GroupMessageDao
 import com.example.messenger.room.dao.MessageDao
@@ -11,6 +11,7 @@ import com.example.messenger.room.dao.UnsentMessageDao
 import com.example.messenger.room.dao.UserDao
 import com.example.messenger.room.entities.ChatSettingsDbEntity
 import com.example.messenger.room.entities.ConversationDbEntity
+import com.example.messenger.room.entities.GitlabDbEntity
 import com.example.messenger.room.entities.GroupMemberDbEntity
 import com.example.messenger.room.entities.GroupMessageDbEntity
 import com.example.messenger.room.entities.LastMessageEntity
@@ -31,6 +32,7 @@ class MessengerService(
     private val unsentMessageDao: UnsentMessageDao,
     private val groupMemberDao: GroupMemberDao,
     private val newsDao: NewsDao,
+    private val gitlabDao: GitlabDao,
     private val ioDispatcher: CoroutineDispatcher
 ) : MessengerRepository {
 
@@ -134,13 +136,13 @@ class MessengerService(
     override suspend fun insertUnsentMessage(idDialog: Int, message: Message) : Int = withContext(ioDispatcher) {
         val v = unsentMessageDao.insertUnsentMessage(UnsentMessageEntity.fromUserInput(message,
             idDialog = idDialog, idGroup = null))
-        return@withContext v.toInt()
+        return@withContext v.toInt()+100000
     }
 
     override suspend fun insertUnsentMessageGroup(idGroup: Int, message: Message): Int = withContext(ioDispatcher) {
         val v = unsentMessageDao.insertUnsentMessage(UnsentMessageEntity.fromUserInput(message,
             idDialog = null, idGroup = idGroup))
-        return@withContext v.toInt()
+        return@withContext v.toInt()+100000
     }
 
     override suspend fun getUnsentMessages(idDialog: Int): List<Message>? = withContext(ioDispatcher) {
@@ -152,7 +154,7 @@ class MessengerService(
     }
 
     override suspend fun deleteUnsentMessage(messageId: Int) = withContext(ioDispatcher) {
-        unsentMessageDao.deleteUnsentMessage(messageId)
+        unsentMessageDao.deleteUnsentMessage(messageId-100000)
     }
 
     override suspend fun getGroupMembers(groupId: Int): List<User> = withContext(ioDispatcher) {
@@ -179,5 +181,14 @@ class MessengerService(
             }
         }.toSet()
         fileManager.cleanupUnusedMessageFiles(usedFiles)
+    }
+
+    override suspend fun getRepos(): List<Repo> = withContext(ioDispatcher) {
+        return@withContext gitlabDao.getRepos().map { it.toRepo() }
+    }
+
+    override suspend fun replaceRepos(newRepos: List<Repo>) = withContext(ioDispatcher) {
+        val gitlabDbEntity = newRepos.map { GitlabDbEntity.fromUserInput(it) }
+        gitlabDao.replaceRepos(gitlabDbEntity)
     }
 }

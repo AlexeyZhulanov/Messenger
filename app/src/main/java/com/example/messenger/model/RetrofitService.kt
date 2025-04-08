@@ -3,6 +3,7 @@ package com.example.messenger.model
 import android.content.Context
 import android.util.Log
 import com.example.messenger.model.appsettings.AppSettings
+import com.example.messenger.retrofit.source.gitlab.GitlabSource
 import com.example.messenger.retrofit.source.groups.GroupsSource
 import com.example.messenger.retrofit.source.messages.MessagesSource
 import com.example.messenger.retrofit.source.news.NewsSource
@@ -19,6 +20,7 @@ class RetrofitService(
     private val groupsSource: GroupsSource,
     private val uploadSource: UploadsSource,
     private val newsSource: NewsSource,
+    private val gitlabSource: GitlabSource,
     private val appSettings: AppSettings,
     private val ioDispatcher: CoroutineDispatcher
 ) : RetrofitRepository {
@@ -150,11 +152,11 @@ class RetrofitService(
     }
 
     override suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?,
-                                     voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-                                     usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
+                    voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
+                    isUrl: Boolean?, usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
         return@withContext try {
             messagesSource.sendMessage(idDialog, text, images, voice, file, referenceToMessageId,
-                isForwarded, usernameAuthorOriginal)
+                isForwarded, isUrl, usernameAuthorOriginal)
             Log.d("testSendMessage", "Message sent successfully")
             true
         } catch (e: BackendException) {
@@ -205,9 +207,9 @@ class RetrofitService(
     }
 
     override suspend fun editMessage(idDialog: Int, messageId: Int, text: String?, images: List<String>?,
-        voice: String?, file: String?): Boolean = withContext(ioDispatcher) {
+        voice: String?, file: String?, isUrl: Boolean?): Boolean = withContext(ioDispatcher) {
         val message = try {
-            messagesSource.editMessage(idDialog, messageId, text, images, voice, file)
+            messagesSource.editMessage(idDialog, messageId, text, images, voice, file, isUrl)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw MessageNotFoundException(e)
@@ -343,10 +345,10 @@ class RetrofitService(
 
     override suspend fun sendGroupMessage(groupId: Int, text: String?, images: List<String>?,
              voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-             usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
+             isUrl: Boolean?, usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
         val message = try {
             groupsSource.sendGroupMessage(groupId, text, images, voice, file, referenceToMessageId,
-                isForwarded, usernameAuthorOriginal)
+                isForwarded, isUrl, usernameAuthorOriginal)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw GroupNotFoundException(e)
@@ -388,9 +390,9 @@ class RetrofitService(
     }
 
     override suspend fun editGroupMessage(groupId: Int, messageId: Int, text: String?,
-        images: List<String>?, voice: String?, file: String?): Boolean = withContext(ioDispatcher) {
+        images: List<String>?, voice: String?, file: String?, isUrl: Boolean?): Boolean = withContext(ioDispatcher) {
         val message = try {
-            groupsSource.editGroupMessage(groupId, messageId, text, images, voice, file)
+            groupsSource.editGroupMessage(groupId, messageId, text, images, voice, file, isUrl)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw MessageNotFoundException(e)
@@ -907,5 +909,25 @@ class RetrofitService(
         }
         Log.d("testNewsKey", key.toString())
         return@withContext key
+    }
+
+    override suspend fun getRepos(token: String): List<Repo> = withContext(ioDispatcher) {
+        val list = try {
+            gitlabSource.getRepos(token)
+        } catch (e: BackendException) {
+            if(e.code == 404) throw RepositoryNotFoundException(e)
+            else throw e
+        }
+        Log.d("testGetRepos", list.toString())
+        return@withContext list
+    }
+
+    override suspend fun updateRepo(projectId: Int, hPush: Boolean?, hMerge: Boolean?, hTag: Boolean?,
+        hIssue: Boolean?, hNote: Boolean?, hRelease: Boolean?): Boolean = withContext(ioDispatcher) {
+        val message = try {
+            gitlabSource.updateRepo(projectId, hPush, hMerge, hTag, hIssue, hNote, hRelease)
+        } catch (e: BackendException) { throw e }
+        Log.d("testUpdateRepo", message)
+        return@withContext true
     }
 }

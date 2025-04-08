@@ -85,6 +85,12 @@ abstract class BaseChatFragment(
             isTyping = false
         }
     }
+    private val linkRegex = Regex("""https?://\S+""") // Регулярка для HTTP/HTTPS ссылок
+    private val links = mutableSetOf<String>()
+    private val namedLinks = mutableMapOf<String, String>()
+    private var currentLink: String? = null
+    private var currentLinkNumber = 0
+
     abstract val viewModel: BaseChatViewModel
 
     abstract fun sendTypingEvent(isSend: Boolean)
@@ -295,10 +301,9 @@ abstract class BaseChatFragment(
         preferences = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
         val wallpaper = preferences.getString(PREF_WALLPAPER, "")
         if (wallpaper != "") {
-            val resId = resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
-            if (resId != 0)
-                binding.messageLayout.background =
-                    ContextCompat.getDrawable(requireContext(), resId)
+            val resId = WALLPAPER_MAP[wallpaper] ?: -1
+            if(resId != -1)
+                binding.messageLayout.background = ContextCompat.getDrawable(requireContext(), resId)
         }
         filePickerManager = FilePickerManager(this)
         setupAdapterDialog()
@@ -341,6 +346,8 @@ abstract class BaseChatFragment(
             }
         })
         binding.enterMessage.addTextChangedListener(object : TextWatcher {
+            private var lastText = ""
+
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -356,6 +363,10 @@ abstract class BaseChatFragment(
                     sendTypingEvent(false)
                     isTyping = false
                     typingHandler.removeCallbacks(typingRunnable)
+                    links.clear()
+                    namedLinks.clear()
+                    currentLink = null
+                    binding.linkLayout.visibility = View.GONE
                 } else {
                     binding.recordView.visibility = View.INVISIBLE
                     if (!editFlag) {
@@ -373,11 +384,66 @@ abstract class BaseChatFragment(
                     // Перезапускаем таймер отсчета до отправки "typing_stopped"
                     typingHandler.removeCallbacks(typingRunnable)
                     typingHandler.postDelayed(typingRunnable, typingStoppedTimeout)
+
+                    val currentText = s.toString()
+                    if (currentText != lastText) {
+                        val newLinks = linkRegex.findAll(s).map { it.value }.toSet()
+
+                        // Удаляем ссылки, которых больше нет в тексте
+                        val removedLinks = links.filter { it !in newLinks }.toSet()
+                        links.removeAll(removedLinks)
+
+                        // Если текущая ссылка удалена — переключаем на предыдущую
+                        if (currentLink in removedLinks) {
+                            currentLink = links.lastOrNull()
+                            currentLinkNumber = links.size
+                        }
+
+                        newLinks.forEach { link ->
+                            if (!links.contains(link)) {
+                                if(links.isEmpty()) binding.linkLayout.visibility = View.VISIBLE
+                                links.add(link)
+                                if (currentLink == null) {
+                                    currentLink = link
+                                    currentLinkNumber = 1
+                                }
+                                Log.d("testLinkAdded", "Новая ссылка: $link")
+                            }
+                        }
+                        updateLinkLayout()
+                        lastText = currentText
+                    }
                 }
             }
 
             override fun afterTextChanged(s: Editable?) {}
         })
+
+        binding.upImageView.setOnClickListener {
+            if(links.size > 1 && currentLinkNumber != 1) {
+                val currentIndex = links.indexOf(currentLink)
+                currentLink?.let {
+                    namedLinks[it] = binding.namedLinkEditText.text.toString()
+                }
+                currentLinkNumber = (currentIndex).takeIf { it >= 0 } ?: links.size
+                currentLink = links.elementAt(currentLinkNumber - 1)
+                updateLinkLayout()
+                Log.d("testClick", "Стрелка вверх нажата!")
+            }
+        }
+
+        binding.downImageView.setOnClickListener {
+            if(links.size > 1 && currentLinkNumber != links.size) {
+                val currentIndex = links.indexOf(currentLink)
+                currentLink?.let {
+                    namedLinks[it] = binding.namedLinkEditText.text.toString()
+                }
+                currentLinkNumber = (currentIndex + 2).takeIf { it < links.size } ?: links.size
+                currentLink = links.elementAt(currentLinkNumber - 1)
+                updateLinkLayout()
+                Log.d("testClick", "Стрелка вниз нажата!")
+            }
+        }
 
         binding.recordView.apply {
             activity = requireActivity()
@@ -465,7 +531,7 @@ abstract class BaseChatFragment(
         binding.enterButton.setOnClickListener {
             binding.enterButton.isEnabled = false
             binding.progressBarEnter.visibility = View.VISIBLE
-            val text = binding.enterMessage.text.toString()
+            val (text, isLink) = prepareTextForSend(binding.enterMessage.text.toString())
             val items = imageAdapter.getData()
 
             lifecycleScope.launch {
@@ -514,22 +580,22 @@ abstract class BaseChatFragment(
                     val (list, localFilePaths) = listik.await()
                     if(text.isNotEmpty()) {
                         if (list.isNotEmpty()) {
-                            if(!answerFlag) viewModel.sendMessage(text, list, null, null, null, false, null, localFilePaths)
+                            if(!answerFlag) viewModel.sendMessage(text, list, null, null, null, false, isLink, null, localFilePaths)
                             else {
-                                viewModel.sendMessage(text, list, null, null, answerMessage?.first, false, answerMessage?.second, localFilePaths)
+                                viewModel.sendMessage(text, list, null, null, answerMessage?.first, false, isLink, answerMessage?.second, localFilePaths)
                                 disableAnswer()
                             }
                         } else {
-                            if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, false, null, null)
+                            if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, false, isLink, null, null)
                             else {
-                                viewModel.sendMessage(text, null, null, null, answerMessage?.first, false, answerMessage?.second, null)
+                                viewModel.sendMessage(text, null, null, null, answerMessage?.first, false, isLink, answerMessage?.second, null)
                                 disableAnswer()
                             }
                         }
                     } else if (list.isNotEmpty()) {
-                        if(!answerFlag) viewModel.sendMessage(null, list, null, null, null, false, null, localFilePaths)
+                        if(!answerFlag) viewModel.sendMessage(null, list, null, null, null, false, null, null, localFilePaths)
                         else {
-                            viewModel.sendMessage(null, list, null, null, answerMessage?.first, false, answerMessage?.second, localFilePaths)
+                            viewModel.sendMessage(null, list, null, null, answerMessage?.first, false, null, answerMessage?.second, localFilePaths)
                             disableAnswer()
                         }
                     }
@@ -537,9 +603,9 @@ abstract class BaseChatFragment(
                     imageAdapter.clearImages()
                 } else {
                     if(text.isNotEmpty()) {
-                        if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, false, null, null)
+                        if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, false, isLink, null, null)
                         else {
-                            viewModel.sendMessage(text, null, null, null, answerMessage?.first, false, answerMessage?.second, null)
+                            viewModel.sendMessage(text, null, null, null, answerMessage?.first, false, isLink, answerMessage?.second, null)
                             disableAnswer()
                         }
                     }
@@ -619,6 +685,46 @@ abstract class BaseChatFragment(
         }
         binding.countNewMsgTextView.visibility = View.GONE
         countNewMsg = 0
+    }
+
+    private fun updateLinkLayout() {
+        with(binding) {
+            if (links.isEmpty()) {
+                linkLayout.visibility = View.GONE
+                return
+            }
+            linkLayout.visibility = View.VISIBLE
+            val linkNumbStr = currentLinkNumber.toString()
+            currentLinkTextView.text = linkNumbStr
+            val linkSizeStr = links.size.toString()
+            linkCountTextView.text = linkSizeStr
+            linkTextView.text = currentLink ?: ""
+            val str = namedLinks[currentLink]
+            if(!str.isNullOrEmpty()) namedLinkEditText.setText(str) else namedLinkEditText.text.clear()
+        }
+    }
+
+    private fun prepareTextForSend(rawText: String): Pair<String, Boolean> {
+        Log.d("testLinks", links.toString())
+        Log.d("testNamedLinks", namedLinks.toString())
+        if(links.isEmpty()) return rawText to false
+
+        var processedText = rawText
+
+        linkRegex.findAll(rawText).forEach { match ->
+            val url = match.value
+            val name = namedLinks[url]
+            if(!name.isNullOrEmpty()) {
+                processedText = processedText.replace(url, "[$name]($url)")
+            } else {
+                val unsavedName = binding.namedLinkEditText.text.toString()
+                if(unsavedName.isNotEmpty()) {
+                    processedText = processedText.replace(url, "[$unsavedName]($url)")
+                    binding.namedLinkEditText.text.clear()
+                }
+            }
+        }
+        return processedText to true
     }
 
     private fun backPressed() {
@@ -777,9 +883,9 @@ abstract class BaseChatFragment(
                         }
                     }
                     val(first, second) = response.await()
-                    if(!answerFlag) viewModel.sendMessage(null, null, first, null, null, false, null, second)
+                    if(!answerFlag) viewModel.sendMessage(null, null, first, null, null, false, null, null, second)
                     else {
-                        viewModel.sendMessage(null, null, first, null, answerMessage?.first, false, answerMessage?.second, second)
+                        viewModel.sendMessage(null, null, first, null, answerMessage?.first, false, null, answerMessage?.second, second)
                         disableAnswer()
                     }
                     registerScrollObserver()
@@ -830,9 +936,9 @@ abstract class BaseChatFragment(
                     }
                 }
                 val(first, second) = response.await()
-                if(!answerFlag) viewModel.sendMessage(null, null, null, first, null, false, null, second)
+                if(!answerFlag) viewModel.sendMessage(null, null, null, first, null, false, null, null, second)
                 else {
-                    viewModel.sendMessage(null, null, file.name, first, answerMessage?.first, false, answerMessage?.second, second)
+                    viewModel.sendMessage(null, null, file.name, first, answerMessage?.first, false, null, answerMessage?.second, second)
                     disableAnswer()
                 }
                 registerScrollObserver()
@@ -1043,7 +1149,7 @@ abstract class BaseChatFragment(
                                 try {
                                     viewModel.stopRefresh()
                                     val tempItems = imageAdapter.getData()
-                                    val text = editText.text.toString()
+                                    val (text, isLink) = prepareTextForSend(editText.text.toString())
                                     if (tempItems.isNotEmpty()) {
                                         val itemsToUpload = if (localMedias == null) tempItems
                                         else tempItems.filter { it !in localMedias } as ArrayList<LocalMedia>
@@ -1084,9 +1190,9 @@ abstract class BaseChatFragment(
                                         val finalList = imagesMessage + uploadList.await()
                                         val resp = async {
                                             if (text.isNotEmpty()) {
-                                                viewModel.editMessage(message.id, text, finalList, null, null)
+                                                viewModel.editMessage(message.id, text, finalList, null, null, isLink)
                                             } else
-                                                viewModel.editMessage(message.id, null, finalList, null, null)
+                                                viewModel.editMessage(message.id, null, finalList, null, null, null)
                                         }
                                         val f = resp.await()
                                         editFlag = false
@@ -1099,7 +1205,7 @@ abstract class BaseChatFragment(
                                     } else {
                                         if (text.isNotEmpty()) {
                                             val resp = async {
-                                                viewModel.editMessage(message.id, text, null, null, null)
+                                                viewModel.editMessage(message.id, text, null, null, null, isLink)
                                             }
                                             val f = resp.await()
                                             editFlag = false
@@ -1212,5 +1318,20 @@ abstract class BaseChatFragment(
         override fun onLongPressDownload(context: Context, media: LocalMedia): Boolean {
             return false
         }
+    }
+
+    companion object {
+        private val WALLPAPER_MAP = mapOf(
+            "wallpaper1" to R.drawable.wallpaper1,
+            "wallpaper2" to R.drawable.wallpaper2,
+            "wallpaper3" to R.drawable.wallpaper3,
+            "wallpaper4" to R.drawable.wallpaper4,
+            "wallpaper5" to R.drawable.wallpaper5,
+            "wallpaper6" to R.drawable.wallpaper6,
+            "wallpaper7" to R.drawable.wallpaper7,
+            "wallpaper8" to R.drawable.wallpaper8,
+            "wallpaper9" to R.drawable.wallpaper9,
+            "wallpaper10" to R.drawable.wallpaper10
+        )
     }
 }

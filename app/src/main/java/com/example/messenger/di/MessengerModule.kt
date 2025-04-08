@@ -15,6 +15,7 @@ import com.example.messenger.retrofit.source.base.SourcesProvider
 import com.example.messenger.room.AppDatabase
 import com.example.messenger.room.dao.ChatSettingsDao
 import com.example.messenger.room.dao.ConversationDao
+import com.example.messenger.room.dao.GitlabDao
 import com.example.messenger.room.dao.GroupMemberDao
 import com.example.messenger.room.dao.GroupMessageDao
 import com.example.messenger.room.dao.MessageDao
@@ -96,6 +97,12 @@ object MessengerModule {
 
     @Provides
     @Singleton
+    fun provideGitlabDao(appDatabase: AppDatabase): GitlabDao {
+        return appDatabase.getGitlabDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideMessengerService(
         conversationDao: ConversationDao,
         messageDao: MessageDao,
@@ -105,10 +112,11 @@ object MessengerModule {
         unsentMessageDao: UnsentMessageDao,
         groupMemberDao: GroupMemberDao,
         newsDao: NewsDao,
+        gitlabDao: GitlabDao,
         @IoDispatcher ioDispatcher: CoroutineDispatcher
     ): MessengerService {
         return MessengerService(conversationDao, messageDao, groupMessageDao, userDao,
-            chatSettingsDao, unsentMessageDao, groupMemberDao, newsDao, ioDispatcher)
+            chatSettingsDao, unsentMessageDao, groupMemberDao, newsDao, gitlabDao, ioDispatcher)
     }
 
     @Provides
@@ -129,6 +137,7 @@ object MessengerModule {
         val groupsSource = sourcesProvider.getGroupsSource()
         val uploadsSource = sourcesProvider.getUploadsSource()
         val newsSource = sourcesProvider.getNewsSource()
+        val gitlabSource = sourcesProvider.getGitlabSource()
 
         return RetrofitService(
             usersSource = usersSource,
@@ -136,6 +145,7 @@ object MessengerModule {
             groupsSource = groupsSource,
             uploadSource = uploadsSource,
             newsSource = newsSource,
+            gitlabSource = gitlabSource,
             appSettings = appSettings,
             ioDispatcher = ioDispatcher
         )

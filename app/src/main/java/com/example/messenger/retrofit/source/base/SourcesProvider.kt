@@ -1,5 +1,6 @@
 package com.example.messenger.retrofit.source.base
 
+import com.example.messenger.retrofit.source.gitlab.GitlabSource
 import com.example.messenger.retrofit.source.groups.GroupsSource
 import com.example.messenger.retrofit.source.messages.MessagesSource
 import com.example.messenger.retrofit.source.news.NewsSource
@@ -16,4 +17,6 @@ interface SourcesProvider {
     fun getUploadsSource() : UploadsSource
 
     fun getNewsSource() : NewsSource
+
+    fun getGitlabSource() : GitlabSource
 }

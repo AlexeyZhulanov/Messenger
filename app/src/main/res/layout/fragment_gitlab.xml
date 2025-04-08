@@ -2,8 +2,8 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="true"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:fitsSystemWindows="true"
     xmlns:tools="http://schemas.android.com/tools">
 
     <FrameLayout
@@ -14,6 +14,66 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/infoLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@color/colorBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar_container">
+
+        <TextView
+            android:id="@+id/tokenTextView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:layout_marginStart="5dp"
+            android:gravity="start"
+            android:lines="1"
+            android:ellipsize="end"
+            android:textColor="?attr/colorPrimaryDark"
+            android:textSize="24sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/verticalGuideLine"
+            tools:text="Token: glpat-5nXzh2of8Tq41h9BiNf-" />
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/verticalGuideLine"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.9"
+            />
+
+        <ImageView
+            android:id="@+id/edit_token_button"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_marginStart="5dp"
+            android:src="@drawable/ic_edit"
+            app:layout_constraintBottom_toBottomOf="@id/tokenTextView"
+            app:layout_constraintStart_toEndOf="@id/tokenTextView"
+            app:layout_constraintTop_toTopOf="@id/tokenTextView"
+            app:tint="?attr/colorPrimary" />
+
+        <Button
+            android:id="@+id/open_gitlab"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="10dp"
+            android:textSize="18sp"
+            android:gravity="center"
+            android:text="Открыть Gitlab"
+            android:textAllCaps="false"
+            android:textColor="?attr/colorPrimaryDark"
+            android:textStyle="bold|italic"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tokenTextView" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerview"
@@ -21,38 +81,9 @@
         android:layout_height="0dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar_container"
+        app:layout_constraintTop_toBottomOf="@id/infoLayout"
         app:layout_constraintBottom_toTopOf="@id/bottomGuideLine"
         android:layout_marginTop="8dp" />
-
-
-    <ProgressBar
-        android:id="@+id/progressBar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:visibility="gone" />
-
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/floatingActionButtonAdd"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:clickable="true"
-        android:layout_marginBottom="10dp"
-        app:layout_constraintBottom_toTopOf="@+id/bottomGuideLine"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:src="@drawable/ic_add"
-        app:tint="?attr/colorPrimaryDark"
-        android:backgroundTint="?attr/colorPrimary"
-        app:borderWidth="0dp"
-        tools:visibility="visible"
-        android:visibility="gone" />
-
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/bottomGuideLine"
@@ -77,7 +108,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/button3"
         app:layout_constraintHorizontal_chainStyle="spread_inside"
-        android:textColor="?attr/colorPrimary"
+        android:textColor="?attr/colorAccent"
         android:backgroundTint="@color/colorBar"
         app:cornerRadius="0dp"
         android:padding="4dp" />
@@ -116,7 +147,7 @@
         app:layout_constraintTop_toBottomOf="@+id/bottomGuideLine"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@+id/button3"
-        android:textColor="?attr/colorAccent"
+        android:textColor="?attr/colorPrimary"
         app:cornerRadius="0dp"
         android:text="Gitlab" />
 

@@ -271,7 +271,7 @@ abstract class BaseChatViewModel(
     }
 
     fun sendMessage(text: String?, images: List<String>?, voice: String?, file: String?,
-                    referenceToMessageId: Int?, isForwarded: Boolean,
+                    referenceToMessageId: Int?, isForwarded: Boolean, isUrl: Boolean?,
                     usernameAuthorOriginal: String?, localFilePaths: List<String>?) {
         viewModelScope.launch {
             val flag = if (!localFilePaths.isNullOrEmpty()) { false }
@@ -279,15 +279,15 @@ abstract class BaseChatViewModel(
                 try {
                     val encryptedText = encryptText(text)
                     if(isGroup == 0) retrofitService.sendMessage(convId, encryptedText, images, voice, file,
-                        referenceToMessageId, isForwarded, usernameAuthorOriginal)
+                        referenceToMessageId, isForwarded, isUrl, usernameAuthorOriginal)
                     else retrofitService.sendGroupMessage(convId, encryptedText, images, voice, file,
-                        referenceToMessageId, isForwarded, usernameAuthorOriginal)
+                        referenceToMessageId, isForwarded, isUrl, usernameAuthorOriginal)
                 } catch (e: Exception) { false }
             }
             if(!flag) {
                 var mes = Message(id = 0, idSender = -5, text = text, images = images, voice = voice, file = file,
                     referenceToMessageId = referenceToMessageId, isForwarded = isForwarded, usernameAuthorOriginal = usernameAuthorOriginal,
-                    timestamp = 0, isEdited = false, isUnsent = true, localFilePaths = localFilePaths)
+                    timestamp = 0, isEdited = false, isUrl = isUrl, isUnsent = true, localFilePaths = localFilePaths)
                 val id = if(isGroup == 0) messengerService.insertUnsentMessage(convId, mes)
                 else messengerService.insertUnsentMessageGroup(convId, mes)
                 mes = mes.copy(id = id)
@@ -296,11 +296,12 @@ abstract class BaseChatViewModel(
         }
     }
 
-    suspend fun editMessage(messageId: Int, text: String?, images: List<String>?, voice: String?, file: String?) : Boolean {
+    suspend fun editMessage(messageId: Int, text: String?, images: List<String>?, voice: String?,
+                            file: String?, isUrl: Boolean?) : Boolean {
         try {
             val encryptedText = encryptText(text)
-            if(isGroup == 0) retrofitService.editMessage(convId, messageId, encryptedText, images, voice, file)
-            else retrofitService.editGroupMessage(convId, messageId, encryptedText, images, voice, file)
+            if(isGroup == 0) retrofitService.editMessage(convId, messageId, encryptedText, images, voice, file, isUrl)
+            else retrofitService.editGroupMessage(convId, messageId, encryptedText, images, voice, file, isUrl)
             return true
         } catch (e: Exception) {
             return false
@@ -328,9 +329,9 @@ abstract class BaseChatViewModel(
             val text = mes.text
             val encryptedText = encryptText(text)
             if(isGroup == 0) retrofitService.sendMessage(convId, encryptedText, mes.images, mes.voice,
-                mes.file, mes.referenceToMessageId, mes.isForwarded, mes.usernameAuthorOriginal)
+                mes.file, mes.referenceToMessageId, mes.isForwarded, mes.isUrl, mes.usernameAuthorOriginal)
             else retrofitService.sendGroupMessage(convId, encryptedText, mes.images, mes.voice,
-                mes.file, mes.referenceToMessageId, mes.isForwarded, mes.usernameAuthorOriginal)
+                mes.file, mes.referenceToMessageId, mes.isForwarded, mes.isUrl, mes.usernameAuthorOriginal)
         } catch (e: Exception) { false }
         return flag
     }

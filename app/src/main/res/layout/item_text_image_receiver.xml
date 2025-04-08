@@ -238,6 +238,7 @@
                 android:textSize="16sp"
                 android:gravity="start"
                 tools:text="Сообщение"
+                android:textIsSelectable="true"
                 android:textColor="?attr/colorPrimaryDark"
                 android:layout_marginEnd="3dp" />
 

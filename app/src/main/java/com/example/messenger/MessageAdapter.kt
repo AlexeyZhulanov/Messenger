@@ -9,10 +9,16 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.TextPaint
+import android.text.method.LinkMovementMethod
+import android.text.style.ClickableSpan
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
@@ -86,6 +92,7 @@ class MessageAdapter(
     private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
     private var highlightedPosition: Int? = null
     private val uiScopeMain = CoroutineScope(Dispatchers.Main)
+    private val linkPattern = Regex("""\[([^]]+)]\((https?://[^)]+)\)|(https?://\S+)""")
 
 
     fun addNewMessages(messages: List<Triple<Message, String, String>>) {
@@ -437,6 +444,71 @@ class MessageAdapter(
         }
     }
 
+    private fun parseMessageWithLinks(text: String): SpannableStringBuilder {
+        if (!text.contains("""\[[^]]+]\(https?://[^)]+\)""".toRegex())
+            && !text.contains("https?://\\S+".toRegex())
+        ) {
+            return SpannableStringBuilder(text)
+        }
+
+        val spannable = SpannableStringBuilder(text)
+        val matches = linkPattern.findAll(text).toList()
+
+        // Обрабатываем ссылки с конца к началу, чтобы индексы не сдвигались
+        matches.reversed().forEach { match ->
+            when {
+                // Именованные ссылки: [текст](URL)
+                match.groups[1] != null && match.groups[2] != null -> {
+                    val (linkText, url) = match.destructured
+                    val start = match.range.first
+                    val end = match.range.last + 1
+
+                    if (start <= end && end <= spannable.length) {
+                        spannable.replace(start, end, linkText)
+                        applyLinkStyle(spannable, start, start + linkText.length, url)
+                    }
+                }
+                // Обычные URL: https://...
+                match.groups[3] != null -> {
+                    val url = match.groups[3]!!.value
+                    val start = match.range.first
+                    val end = match.range.last + 1
+
+                    if (start <= end && end <= spannable.length) {
+                        applyLinkStyle(spannable, start, end, url)
+                    }
+                }
+            }
+        }
+        return spannable
+    }
+
+    private fun applyLinkStyle(spannable: SpannableStringBuilder, start: Int, end: Int, url: String) {
+        spannable.setSpan(
+            object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    openUrl(url)
+                }
+                override fun updateDrawState(ds: TextPaint) {
+                    super.updateDrawState(ds)
+                    ds.color = Color.CYAN
+                    ds.isUnderlineText = true
+                }
+            },
+            start, end,
+            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+    }
+
+    private fun openUrl(url: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Невозможно открыть ссылку", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     // ViewHolder для текстовых сообщений получателя
     inner class MessagesViewHolderReceiver(private val binding: ItemMessageReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
 
@@ -491,7 +563,14 @@ class MessageAdapter(
                 }
             } else binding.forwardLayout.root.visibility = View.GONE
 
-            binding.messageReceiverTextView.text = message.text
+            message.text?.let {
+                if(message.isUrl == true) {
+                    val processedText = parseMessageWithLinks(it)
+                    binding.messageReceiverTextView.text = processedText
+                    binding.messageReceiverTextView.movementMethod = LinkMovementMethod.getInstance()
+                } else binding.messageReceiverTextView.text = it
+            }
+
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
@@ -609,7 +688,13 @@ class MessageAdapter(
                 if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
                 else binding.editTextView.visibility = View.GONE
             }
-            binding.messageSenderTextView.text = message.text
+            message.text?.let {
+                if(message.isUrl == true) {
+                    val processedText = parseMessageWithLinks(it)
+                    binding.messageSenderTextView.text = processedText
+                    binding.messageSenderTextView.movementMethod = LinkMovementMethod.getInstance()
+                } else binding.messageSenderTextView.text = it
+            }
         }
     }
 
@@ -1374,7 +1459,13 @@ class MessageAdapter(
                 if(flagText) {
                     customMessageLayout.visibility = View.VISIBLE
                     timeLayout.visibility = View.GONE
-                    messageReceiverTextView.text = message.text
+                    message.text?.let {
+                        if(message.isUrl == true) {
+                            val processedText = parseMessageWithLinks(it)
+                            binding.messageReceiverTextView.text = processedText
+                            binding.messageReceiverTextView.movementMethod = LinkMovementMethod.getInstance()
+                        } else binding.messageReceiverTextView.text = it
+                    }
                 } else {
                     customMessageLayout.visibility = View.GONE
                     timeLayout.visibility = View.VISIBLE
@@ -1524,7 +1615,13 @@ class MessageAdapter(
                 if(flagText) {
                     customMessageLayout.visibility = View.VISIBLE
                     timeLayout.visibility = View.GONE
-                    messageSenderTextView.text = message.text
+                    message.text?.let {
+                        if(message.isUrl == true) {
+                            val processedText = parseMessageWithLinks(it)
+                            binding.messageSenderTextView.text = processedText
+                            binding.messageSenderTextView.movementMethod = LinkMovementMethod.getInstance()
+                        } else binding.messageSenderTextView.text = it
+                    }
                 } else {
                     customMessageLayout.visibility = View.GONE
                     timeLayout.visibility = View.VISIBLE
@@ -1686,7 +1783,13 @@ class MessageAdapter(
                 if(flagText) {
                     customMessageLayout.visibility = View.VISIBLE
                     timeLayout.visibility = View.GONE
-                    messageReceiverTextView.text = message.text
+                    message.text?.let {
+                        if(message.isUrl == true) {
+                            val processedText = parseMessageWithLinks(it)
+                            binding.messageReceiverTextView.text = processedText
+                            binding.messageReceiverTextView.movementMethod = LinkMovementMethod.getInstance()
+                        } else binding.messageReceiverTextView.text = it
+                    }
                 } else {
                     customMessageLayout.visibility = View.GONE
                     timeLayout.visibility = View.VISIBLE
@@ -1844,7 +1947,13 @@ class MessageAdapter(
                 if(flagText) {
                     customMessageLayout.visibility = View.VISIBLE
                     timeLayout.visibility = View.GONE
-                    messageSenderTextView.text = message.text
+                    message.text?.let {
+                        if(message.isUrl == true) {
+                            val processedText = parseMessageWithLinks(it)
+                            binding.messageSenderTextView.text = processedText
+                            binding.messageSenderTextView.movementMethod = LinkMovementMethod.getInstance()
+                        } else binding.messageSenderTextView.text = it
+                    }
                 } else {
                     customMessageLayout.visibility = View.GONE
                     timeLayout.visibility = View.VISIBLE

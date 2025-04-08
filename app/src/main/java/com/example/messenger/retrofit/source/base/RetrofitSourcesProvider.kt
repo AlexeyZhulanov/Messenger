@@ -1,5 +1,7 @@
 package com.example.messenger.retrofit.source.base
 
+import com.example.messenger.retrofit.source.gitlab.GitlabSource
+import com.example.messenger.retrofit.source.gitlab.RetrofitGitlabSource
 import com.example.messenger.retrofit.source.groups.GroupsSource
 import com.example.messenger.retrofit.source.groups.RetrofitGroupsSource
 import com.example.messenger.retrofit.source.messages.MessagesSource
@@ -32,5 +34,9 @@ class RetrofitSourcesProvider(
 
     override fun getNewsSource(): NewsSource {
         return RetrofitNewsSource(config)
+    }
+
+    override fun getGitlabSource(): GitlabSource {
+        return RetrofitGitlabSource(config)
     }
 }
