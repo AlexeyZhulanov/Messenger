@@ -486,6 +486,12 @@ abstract class BaseChatFragment(
                 override fun onFileClick() {
                     pickFileLauncher.launch(arrayOf("*/*"))
                 }
+                override fun onCodeClick() {
+                    parentFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, CodeFragment(), "CODE_FRAGMENT_TAG")
+                        .addToBackStack(null)
+                        .commit()
+                }
             }).show(childFragmentManager, "ChoosePickTag")
             true
         }

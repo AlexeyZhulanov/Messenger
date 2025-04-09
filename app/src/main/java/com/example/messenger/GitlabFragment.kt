@@ -69,7 +69,8 @@ class GitlabFragment(
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentGitlabBinding.inflate(inflater, container, false)
-        binding.tokenTextView.text = viewModel.getGitlabToken()
+        val txt = "Token: " + viewModel.getGitlabToken()
+        binding.tokenTextView.text = txt
 
         binding.button.setOnClickListener {
             parentFragmentManager.beginTransaction()

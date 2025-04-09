@@ -37,7 +37,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toStartOf="@id/verticalGuideLine"
-            tools:text="Token: glpat-5nXzh2of8Tq41h9BiNf-" />
+            tools:text="Token: example token" />
 
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/verticalGuideLine"
