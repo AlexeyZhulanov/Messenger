@@ -18,10 +18,10 @@
         android:layout_height="match_parent"
         android:layout_above="@+id/source_info_layout"
         android:layout_below="@id/toolbar_container"
-        android:background="#272822"
+        android:background="@color/code_background"
         android:dropDownWidth="150dp"
         android:dropDownHorizontalOffset="0dp"
-        android:dropDownSelector="#272822"
+        android:dropDownSelector="@color/code_background"
         android:gravity="top|start"
         android:textDirection="firstStrong" />
 

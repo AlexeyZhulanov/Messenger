@@ -16,10 +16,12 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.Toast
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.amrdeveloper.codeview.Code
 import com.example.messenger.codeview.plugins.CommentManager
 import com.example.messenger.codeview.plugins.SourcePositionListener
@@ -28,14 +30,17 @@ import com.example.messenger.codeview.syntax.LanguageManager
 import com.example.messenger.codeview.syntax.LanguageName
 import com.example.messenger.codeview.syntax.ThemeName
 import com.example.messenger.databinding.FragmentCodeBinding
+import com.example.messenger.model.Message
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.regex.Pattern
 
 
-@AndroidEntryPoint
-class CodeFragment : Fragment() {
+class CodeFragment(
+    private val baseChatViewModel: BaseChatViewModel,
+    private val message: Message? = null,
+) : Fragment() {
 
     private lateinit var binding: FragmentCodeBinding
 
@@ -43,7 +48,14 @@ class CodeFragment : Fragment() {
     private var commentManager: CommentManager? = null
     private var undoRedoManager: UndoRedoManager? = null
 
-    private var currentLanguage = LanguageName.JAVA
+    private val isEdit = message != null
+    private var currentLanguage = if(isEdit) {
+        when(message?.codeLanguage) {
+            "python" -> LanguageName.PYTHON
+            "go" -> LanguageName.GO_LANG
+            else -> LanguageName.JAVA
+        }
+    } else LanguageName.JAVA
     private var currentTheme = ThemeName.MONOKAI
 
     private val useModernAutoCompleteAdapter = true
@@ -55,9 +67,38 @@ class CodeFragment : Fragment() {
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.toolbar_code, toolbarContainer, false)
         toolbarContainer.addView(defaultToolbar)
+
+        val langStr = when(currentLanguage) {
+            LanguageName.JAVA -> "java"
+            LanguageName.PYTHON -> "python"
+            LanguageName.GO_LANG -> "go"
+        }
         val icSend: ImageView = view.findViewById(R.id.ic_send)
-        icSend.setOnClickListener {
-            // todo отправка кода
+        if(isEdit) {
+            icSend.visibility = View.INVISIBLE
+            val icEdit: ImageView = view.findViewById(R.id.ic_edit)
+            icEdit.visibility = View.VISIBLE
+            icEdit.setOnClickListener {
+                val code = binding.codeView.text.toString()
+                message?.let {
+                    lifecycleScope.launch {
+                        val success = baseChatViewModel.editMessage(it.id, null,
+                            null, null, null, code, langStr, null)
+
+                        if(success) requireActivity().onBackPressedDispatcher.onBackPressed() // return to chat fragment
+                        else Toast.makeText(requireContext(), "Не удалось редактировать код", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        } else {
+            icSend.setOnClickListener {
+                val code = binding.codeView.text.toString()
+
+                 baseChatViewModel.sendMessage(null, null, null, null, code,
+                     langStr, null, false, null, null, null)
+
+                requireActivity().onBackPressedDispatcher.onBackPressed() // return to chat fragment
+            }
         }
         val icRedo: ImageView = view.findViewById(R.id.ic_redo)
         icRedo.setOnClickListener {
@@ -66,6 +107,10 @@ class CodeFragment : Fragment() {
         val icUndo: ImageView = view.findViewById(R.id.ic_undo)
         icUndo.setOnClickListener {
             undoRedoManager?.undo()
+        }
+        val backArrow: ImageView = view.findViewById(R.id.back_arrow)
+        backArrow.setOnClickListener {
+            requireActivity().onBackPressedDispatcher.onBackPressed()
         }
     }
 
@@ -125,8 +170,7 @@ class CodeFragment : Fragment() {
             setLineNumberTextColor(Color.GRAY)
             setLineNumberTextSize(45f)
             // Setup highlighting current line
-            //setEnableHighlightCurrentLine(false) // todo подобрать нужный цвет в objects
-            setHighlightCurrentLineColor(Color.GRAY)
+            setEnableHighlightCurrentLine(true)
             // Setup Auto indenting feature
             setTabLength(4)
             setEnableAutoIndentation(true)
@@ -134,6 +178,9 @@ class CodeFragment : Fragment() {
             setPairCompleteMap(pairCompleteMap)
             enablePairComplete(true)
             enablePairCompleteCenterCursor(true)
+        }
+        message?.code?.let {
+            binding.codeView.setText(it)
         }
         // Setup the language and theme with SyntaxManager helper class
         languageManager = LanguageManager(requireContext(), binding.codeView).apply {
@@ -145,7 +192,7 @@ class CodeFragment : Fragment() {
     }
 
     private fun configLanguageAutoComplete() {
-        if (useModernAutoCompleteAdapter) { // todo что-то одно оставить из этого
+        if (useModernAutoCompleteAdapter) { // todo что-то одно оставить из этого либо добавить опцию выбора
             // Load the code list (keywords and snippets) for the current language
             val codeList: List<Code?> = languageManager?.getLanguageCodeList(currentLanguage) ?: return
 
@@ -235,7 +282,7 @@ class CodeFragment : Fragment() {
         }
 
         if (currentTheme != oldTheme) {
-            languageManager!!.applyTheme(currentLanguage, currentTheme)
+            languageManager?.applyTheme(currentLanguage, currentTheme)
         }
     }
 
@@ -279,7 +326,7 @@ class CodeFragment : Fragment() {
             binding.codeView.findNextMatch()
         }
 
-        replacementAction!!.setOnClickListener {
+        replacementAction?.setOnClickListener {
             val regex = searchEdit?.text.toString()
             val replacement = replacementEdit?.text.toString()
             binding.codeView.replaceAllMatches(regex, replacement)

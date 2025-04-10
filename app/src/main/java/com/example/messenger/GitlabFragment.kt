@@ -62,7 +62,6 @@ class GitlabFragment(
         }
 
         viewModel.repos.observe(viewLifecycleOwner) { repos ->
-            Log.d("testReposFetch", repos.toString()) // todo потом убрать
             adapter.repos = repos
         }
     }

@@ -42,6 +42,7 @@ object PythonLanguage {
 
         //View Background
         codeView.setBackgroundColor(codeView.context.getColorCompat(R.color.monokia_pro_black))
+        codeView.setHighlightCurrentLineColor(context.getColorCompat(R.color.monokia_pro_highlight))
 
         //Syntax Colors
         codeView.addSyntaxPattern(PATTERN_HEX, context.getColorCompat(R.color.monokia_pro_purple))
@@ -67,6 +68,7 @@ object PythonLanguage {
 
         //View Background
         codeView.setBackgroundColor(context.getColorCompat(R.color.noctis_white))
+        codeView.setHighlightCurrentLineColor(context.getColorCompat(R.color.noctis_highlight))
 
         //Syntax Colors
         codeView.addSyntaxPattern(PATTERN_HEX, context.getColorCompat(R.color.noctis_purple))
@@ -93,6 +95,7 @@ object PythonLanguage {
 
         //View Background
         codeView.setBackgroundColor(context.getColorCompat(R.color.five_dark_black))
+        codeView.setHighlightCurrentLineColor(context.getColorCompat(R.color.five_dark_highlight))
 
         //Syntax Colors
         codeView.addSyntaxPattern(PATTERN_HEX, context.getColorCompat(R.color.five_dark_purple))
@@ -119,6 +122,7 @@ object PythonLanguage {
 
         //View Background
         codeView.setBackgroundColor(context.getColorCompat(R.color.orange_box_black))
+        codeView.setHighlightCurrentLineColor(context.getColorCompat(R.color.orange_box_highlight))
 
         //Syntax Colors
         codeView.addSyntaxPattern(PATTERN_HEX, context.getColorCompat(R.color.gold))

@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <TextView
+        android:id="@+id/dateTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/message_background_date"
+        android:textSize="16sp"
+        android:textColor="@color/colorDefault"
+        android:gravity="center"
+        android:textStyle="italic"
+        tools:text="2 августа"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/senderGuideLine"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.15"
+        />
+
+    <CheckBox
+        android:id="@+id/checkbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:button="@drawable/ic_flag"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/layout_message"
+        app:layout_constraintBottom_toBottomOf="@id/layout_message"
+        android:visibility="gone"
+        />
+
+    <LinearLayout
+        android:id="@+id/layout_message"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="5dp"
+        app:layout_constraintStart_toEndOf="@id/senderGuideLine"
+        app:layout_constraintTop_toBottomOf="@id/dateTextView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:gravity="end"
+        >
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+            <FrameLayout
+                android:id="@+id/headLayout"
+                android:layout_width="0dp"
+                android:layout_height="30dp"
+                android:background="@drawable/code_head_message"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <TextView
+                    android:id="@+id/languageTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    tools:text="java"
+                    android:textColor="?attr/colorAccent"
+                    android:layout_gravity="start|center_vertical"
+                    />
+
+                <ImageView
+                    android:id="@+id/openFullIcon"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_open_full"
+                    app:tint="?attr/colorPrimaryDark"
+                    android:layout_marginEnd="3dp"
+                    android:layout_gravity="end|center_vertical"
+                    />
+
+            </FrameLayout>
+
+            <com.amrdeveloper.codeview.CodeView
+                android:id="@+id/codeView"
+                android:layout_width="200dp"
+                android:layout_height="100dp"
+                android:background="@drawable/code_background_message"
+                android:dropDownWidth="150dp"
+                android:dropDownHorizontalOffset="0dp"
+                android:dropDownSelector="#272822"
+                android:gravity="top|start"
+                android:textSize="16sp"
+                tools:text="package main;\n\nint a = 5;\nfloat b = 1.2;"
+                android:paddingHorizontal="8dp"
+                android:textDirection="firstStrong"
+                android:enabled="false"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/headLayout" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/timeLayout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="5dp"
+                android:layout_marginBottom="5dp"
+                android:background="@drawable/messenger_item_transparent_background"
+                app:layout_constraintBottom_toBottomOf="@id/codeView"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <TextView
+                    android:id="@+id/editTextViewImage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:textSize="12sp"
+                    android:textStyle="italic"
+                    android:text="изменено"
+                    android:textColor="@color/colorDayNightAttr"
+                    android:layout_marginEnd="5dp"
+                    android:layout_marginStart="5dp"
+                    android:paddingStart="5dp"
+                    android:visibility="gone"
+                    app:layout_constraintTop_toTopOf="@id/timeTextViewImage"
+                    app:layout_constraintBottom_toBottomOf="@id/timeTextViewImage"
+                    app:layout_constraintEnd_toStartOf="@id/timeTextViewImage" />
+
+                <TextView
+                    android:id="@+id/timeTextViewImage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="21:35"
+                    android:textSize="12sp"
+                    android:maxLines="1"
+                    android:textStyle="italic"
+                    android:textColor="@color/colorDayNightAttr"
+                    android:paddingStart="3dp"
+                    app:layout_constraintEnd_toStartOf="@id/icCheckImage"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+
+                <ImageView
+                    android:id="@+id/icCheckImage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_check"
+                    app:tint="@color/colorDayNightAttr"
+                    android:scaleX="0.8"
+                    android:scaleY="0.8"
+                    android:layout_marginStart="-10dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/timeTextViewImage"
+                    app:layout_constraintBottom_toBottomOf="@id/timeTextViewImage"
+                    />
+
+                <ImageView
+                    android:id="@+id/icCheck2Image"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_check_two"
+                    app:tint="@color/colorDayNightAttr"
+                    android:visibility="invisible"
+                    android:scaleX="0.8"
+                    android:scaleY="0.8"
+                    android:layout_marginStart="-10dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/timeTextViewImage"
+                    app:layout_constraintBottom_toBottomOf="@id/timeTextViewImage"
+                    />
+
+                <ImageView
+                    android:id="@+id/icErrorImage"
+                    android:layout_width="25dp"
+                    android:layout_height="25dp"
+                    android:src="@drawable/ic_error"
+                    android:visibility="gone"
+                    android:paddingVertical="3dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/timeTextViewImage"
+                    app:layout_constraintBottom_toBottomOf="@id/timeTextViewImage"
+                    app:tint="?attr/colorError" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -60,8 +60,21 @@
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:src="@drawable/ic_send"
-        android:padding="8dp"
+        android:padding="6dp"
         app:tint="?attr/colorPrimary"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <ImageView
+        android:id="@+id/ic_edit"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_check_circle"
+        android:padding="5dp"
+        app:tint="?attr/colorPrimary"
+        android:visibility="gone"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
