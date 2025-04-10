@@ -23,15 +23,16 @@ interface RetrofitRepository {
 
     suspend fun createDialog(name: String, keyUser1: String, keyUser2: String) : Int
 
-    suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?, voice: String?,
-     file: String?, referenceToMessageId: Int?, isForwarded: Boolean, isUrl: Boolean?, usernameAuthorOriginal: String?) : Boolean
+    suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?, voice: String?, file: String?,
+                            code: String?, codeLanguage: String?, referenceToMessageId: Int?, isForwarded: Boolean,
+                            isUrl: Boolean?, usernameAuthorOriginal: String?) : Boolean
 
     suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int) : List<Message>
 
     suspend fun findMessage(idMessage: Int, idDialog: Int) : Pair<Message, Int>
 
-    suspend fun editMessage(idDialog: Int, messageId: Int, text: String?,
-                            images: List<String>?, voice: String?, file: String?, isUrl: Boolean?) : Boolean
+    suspend fun editMessage(idDialog: Int, messageId: Int, text: String?, images: List<String>?,
+           voice: String?, file: String?, code: String?, codeLanguage: String?, isUrl: Boolean?) : Boolean
 
     suspend fun deleteMessages(idDialog: Int, ids: List<Int>) : Boolean
 
@@ -52,14 +53,15 @@ interface RetrofitRepository {
     suspend fun createGroup(name: String, key: String) : Int
 
     suspend fun sendGroupMessage(groupId: Int, text: String?, images: List<String>?, voice: String?,
-     file: String?, referenceToMessageId: Int?, isForwarded: Boolean, isUrl: Boolean?, usernameAuthorOriginal: String?) : Boolean
+                   file: String?, code: String?, codeLanguage: String?, referenceToMessageId: Int?,
+                   isForwarded: Boolean, isUrl: Boolean?, usernameAuthorOriginal: String?) : Boolean
 
     suspend fun getGroupMessages(groupId: Int, start: Int, end: Int): List<Message>
 
     suspend fun findGroupMessage(idMessage: Int, groupId: Int) : Pair<Message, Int>
 
-    suspend fun editGroupMessage(groupId: Int, messageId: Int, text: String?,
-                                 images: List<String>?, voice: String?, file: String?, isUrl: Boolean?) : Boolean
+    suspend fun editGroupMessage(groupId: Int, messageId: Int, text: String?, images: List<String>?,
+       voice: String?, file: String?, code: String?, codeLanguage: String?, isUrl: Boolean?) : Boolean
 
     suspend fun deleteGroupMessages(groupId: Int, ids: List<Int>) : Boolean
 

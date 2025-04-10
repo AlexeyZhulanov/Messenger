@@ -9,6 +9,8 @@ data class SendMessageRequestEntity(
     val images: List<String>? = null,
     val file: String? = null,
     val voice: String? = null,
+    val code: String? = null,
+    @Json(name = "code_language") val codeLanguage: String? = null,
     @Json(name = "reference_to_message_id") val referenceToMessageId: Int? = null,
     @Json(name = "is_forwarded") val isForwarded: Boolean? = false,
     @Json(name = "is_url") var isUrl: Boolean? = false,

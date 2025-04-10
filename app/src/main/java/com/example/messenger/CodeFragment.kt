@@ -1,14 +1,12 @@
 package com.example.messenger
 
 import android.content.Context
-import android.content.res.Resources
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View

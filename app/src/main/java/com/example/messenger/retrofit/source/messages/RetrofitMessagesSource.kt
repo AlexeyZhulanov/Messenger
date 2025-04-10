@@ -23,10 +23,10 @@ class RetrofitMessagesSource(
     }
 
     override suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?,
-                    voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-                    isUrl: Boolean?, usernameAuthorOriginal: String?): String = wrapRetrofitExceptions {
-        val sendMessageRequestEntity = SendMessageRequestEntity(text = text, images = images,
-            file = file, voice = voice, referenceToMessageId = referenceToMessageId,
+            voice: String?, file: String?, code: String?, codeLanguage: String?, referenceToMessageId: Int?, isForwarded: Boolean,
+            isUrl: Boolean?, usernameAuthorOriginal: String?): String = wrapRetrofitExceptions {
+        val sendMessageRequestEntity = SendMessageRequestEntity(text = text, images = images, file = file,
+            code = code, codeLanguage = codeLanguage, voice = voice, referenceToMessageId = referenceToMessageId,
             isForwarded = isForwarded, isUrl = isUrl, usernameAuthorOriginal = usernameAuthorOriginal)
         messagesApi.sendMessage(idDialog, sendMessageRequestEntity).message
     }
@@ -41,11 +41,11 @@ class RetrofitMessagesSource(
         Pair(response.toMessage(), response.position ?: -1)
     }
 
-    override suspend fun editMessage(idDialog: Int, messageId: Int, text: String?,
-                                     images: List<String>?, voice: String?,
-                                     file: String?, isUrl: Boolean?): String = wrapRetrofitExceptions {
+    override suspend fun editMessage(idDialog: Int, messageId: Int, text: String?, images: List<String>?,
+                                     voice: String?, file: String?, code: String?, codeLanguage: String?,
+                                     isUrl: Boolean?): String = wrapRetrofitExceptions {
         val sendMessageRequestEntity = SendMessageRequestEntity(text = text, images = images,
-            file = file, voice = voice, isUrl = isUrl)
+            file = file, voice = voice, code = code, codeLanguage = codeLanguage, isUrl = isUrl)
         messagesApi.editMessage(messageId, idDialog, sendMessageRequestEntity).message
     }
 

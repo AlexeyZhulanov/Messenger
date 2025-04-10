@@ -152,11 +152,12 @@ class RetrofitService(
     }
 
     override suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?,
-                    voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-                    isUrl: Boolean?, usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
+                         voice: String?, file: String?, code: String?, codeLanguage: String?,
+                         referenceToMessageId: Int?, isForwarded: Boolean, isUrl: Boolean?,
+                         usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
         return@withContext try {
-            messagesSource.sendMessage(idDialog, text, images, voice, file, referenceToMessageId,
-                isForwarded, isUrl, usernameAuthorOriginal)
+            messagesSource.sendMessage(idDialog, text, images, voice, file, code, codeLanguage,
+                referenceToMessageId, isForwarded, isUrl, usernameAuthorOriginal)
             Log.d("testSendMessage", "Message sent successfully")
             true
         } catch (e: BackendException) {
@@ -207,9 +208,10 @@ class RetrofitService(
     }
 
     override suspend fun editMessage(idDialog: Int, messageId: Int, text: String?, images: List<String>?,
-        voice: String?, file: String?, isUrl: Boolean?): Boolean = withContext(ioDispatcher) {
+                                     voice: String?, file: String?, code: String?, codeLanguage: String?,
+                                     isUrl: Boolean?): Boolean = withContext(ioDispatcher) {
         val message = try {
-            messagesSource.editMessage(idDialog, messageId, text, images, voice, file, isUrl)
+            messagesSource.editMessage(idDialog, messageId, text, images, voice, file, code, codeLanguage, isUrl)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw MessageNotFoundException(e)
@@ -344,11 +346,11 @@ class RetrofitService(
     }
 
     override suspend fun sendGroupMessage(groupId: Int, text: String?, images: List<String>?,
-             voice: String?, file: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-             isUrl: Boolean?, usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
+             voice: String?, file: String?, code: String?, codeLanguage: String?, referenceToMessageId: Int?,
+             isForwarded: Boolean, isUrl: Boolean?, usernameAuthorOriginal: String?): Boolean = withContext(ioDispatcher) {
         val message = try {
-            groupsSource.sendGroupMessage(groupId, text, images, voice, file, referenceToMessageId,
-                isForwarded, isUrl, usernameAuthorOriginal)
+            groupsSource.sendGroupMessage(groupId, text, images, voice, file, code, codeLanguage,
+                referenceToMessageId, isForwarded, isUrl, usernameAuthorOriginal)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw GroupNotFoundException(e)
@@ -390,9 +392,10 @@ class RetrofitService(
     }
 
     override suspend fun editGroupMessage(groupId: Int, messageId: Int, text: String?,
-        images: List<String>?, voice: String?, file: String?, isUrl: Boolean?): Boolean = withContext(ioDispatcher) {
+                              images: List<String>?, voice: String?, file: String?, code: String?,
+                              codeLanguage: String?, isUrl: Boolean?): Boolean = withContext(ioDispatcher) {
         val message = try {
-            groupsSource.editGroupMessage(groupId, messageId, text, images, voice, file, isUrl)
+            groupsSource.editGroupMessage(groupId, messageId, text, images, voice, file, code, codeLanguage, isUrl)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw MessageNotFoundException(e)

@@ -14,6 +14,8 @@ data class GroupMessageDbEntity(
     val images: List<String>?,
     val voice: String?,
     val file: String?,
+    val code: String?,
+    @ColumnInfo(name = "code_language") val codeLanguage: String?,
     @ColumnInfo(name = "is_read") val isRead: Boolean = false,
     val timestamp: Long,
     @ColumnInfo(name = "is_edited") val isEdited: Boolean = false,
@@ -23,18 +25,19 @@ data class GroupMessageDbEntity(
     @ColumnInfo(name = "username_author_original") val usernameAuthorOriginal: String?
 ) {
     fun toMessage(): Message = Message(
-        id = id, idSender = idSender, text = text, images = images,
-        voice = voice, file = file, timestamp = timestamp, isRead = isRead, isEdited = isEdited,
-        referenceToMessageId = referenceToMessageId, isForwarded = isForwarded, isUrl = isUrl,
-        usernameAuthorOriginal = usernameAuthorOriginal
+        id = id, idSender = idSender, text = text, images = images, voice = voice, file = file,
+        code = code, codeLanguage = codeLanguage,  timestamp = timestamp, isRead = isRead,
+        isEdited = isEdited, referenceToMessageId = referenceToMessageId, isForwarded = isForwarded,
+        isUrl = isUrl, usernameAuthorOriginal = usernameAuthorOriginal
     )
     companion object {
         fun fromUserInput(message: Message, groupId: Int): GroupMessageDbEntity = message.let {
             GroupMessageDbEntity(
                 id = it.id, groupId = groupId, idSender = it.idSender, text = it.text,
-                images = it.images, voice = it.voice, file = it.file, isRead = it.isRead,
-                timestamp = it.timestamp, isEdited = it.isEdited, isForwarded = it.isForwarded,
-                isUrl = it.isUrl, referenceToMessageId = it.referenceToMessageId,
+                images = it.images, voice = it.voice, file = it.file, code = it.code,
+                codeLanguage = it.codeLanguage, isRead = it.isRead, timestamp = it.timestamp,
+                isEdited = it.isEdited, isForwarded = it.isForwarded, isUrl = it.isUrl,
+                referenceToMessageId = it.referenceToMessageId,
                 usernameAuthorOriginal = it.usernameAuthorOriginal
             )
         }
