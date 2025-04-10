@@ -10,6 +10,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 interface ChoosePickListener {
     fun onGalleryClick()
     fun onFileClick()
+    fun onCodeClick()
 }
 
 class ChoosePickFragment(
@@ -25,6 +26,10 @@ class ChoosePickFragment(
         }
         binding.filePick.setOnClickListener {
             choosePickListener.onFileClick()
+            dismiss()
+        }
+        binding.codePick.setOnClickListener {
+            choosePickListener.onCodeClick()
             dismiss()
         }
         return binding.root

@@ -15,6 +15,8 @@ class UnsentMessageEntity(
     val images: List<String>?,
     val voice: String?,
     val file: String?,
+    val code: String?,
+    @ColumnInfo(name = "code_language") val codeLanguage: String?,
     @ColumnInfo(name = "is_read") val isRead: Boolean = false,
     @ColumnInfo(name = "is_edited") val isEdited: Boolean = false,
     val timestamp: Long = 0,
@@ -27,7 +29,7 @@ class UnsentMessageEntity(
 ) {
     fun toMessage(): Message = Message(
         id = id+100000, idSender = idSender, text = text, images = images, voice = voice, file = file,
-        timestamp = timestamp, isRead = isRead, isEdited = isEdited,
+        code = code, codeLanguage = codeLanguage, timestamp = timestamp, isRead = isRead, isEdited = isEdited,
         referenceToMessageId = referenceToMessageId, isForwarded = isForwarded, isUrl = isUrl,
         usernameAuthorOriginal = usernameAuthorOriginal, isUnsent = isUnsent, localFilePaths = localFilePaths
     )
@@ -35,8 +37,9 @@ class UnsentMessageEntity(
         fun fromUserInput(message: Message, idDialog: Int?, idGroup: Int?): UnsentMessageEntity = UnsentMessageEntity(
             idDialog = idDialog, idGroup = idGroup, idSender = message.idSender,
             text = message.text, images = message.images, voice = message.voice, file = message.file,
-            isRead = message.isRead, isEdited = message.isEdited, timestamp = message.timestamp,
-            isForwarded = message.isForwarded, referenceToMessageId = message.referenceToMessageId,
+            code = message.code, codeLanguage = message.codeLanguage, isRead = message.isRead,
+            isEdited = message.isEdited, timestamp = message.timestamp, isForwarded = message.isForwarded,
+            referenceToMessageId = message.referenceToMessageId,
             usernameAuthorOriginal = message.usernameAuthorOriginal, isUnsent = message.isUnsent,
             localFilePaths = message.localFilePaths, isUrl = message.isUrl
         )

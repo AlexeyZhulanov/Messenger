@@ -25,12 +25,14 @@ class RetrofitGroupsSource(
         groupsApi.createGroup(createGroupRequestEntity).idGroup
     }
 
-    override suspend fun sendGroupMessage(groupId: Int, text: String?,
-                     images: List<String>?, voice: String?, file: String?, referenceToMessageId: Int?,
-                     isForwarded: Boolean, isUrl: Boolean?, usernameAuthorOriginal: String?): String = wrapRetrofitExceptions {
+    override suspend fun sendGroupMessage(groupId: Int, text: String?, images: List<String>?,
+                     voice: String?, file: String?, code: String?, codeLanguage: String?,
+                     referenceToMessageId: Int?, isForwarded: Boolean, isUrl: Boolean?,
+                     usernameAuthorOriginal: String?): String = wrapRetrofitExceptions {
         val sendGroupMessageRequestEntity = SendMessageRequestEntity(text = text,
-            images = images, voice = voice, file = file, referenceToMessageId = referenceToMessageId,
-            isForwarded = isForwarded, isUrl = isUrl, usernameAuthorOriginal = usernameAuthorOriginal)
+            images = images, voice = voice, file = file, code = code, codeLanguage = codeLanguage,
+            referenceToMessageId = referenceToMessageId, isForwarded = isForwarded, isUrl = isUrl,
+            usernameAuthorOriginal = usernameAuthorOriginal)
         groupsApi.sendGroupMessage(groupId, sendGroupMessageRequestEntity).message
     }
 
@@ -45,9 +47,10 @@ class RetrofitGroupsSource(
     }
 
     override suspend fun editGroupMessage(groupId: Int, messageId: Int, text: String?, images: List<String>?,
-                         voice: String?, file: String?, isUrl: Boolean?): String = wrapRetrofitExceptions {
-        val sendGroupMessageRequestEntity = SendMessageRequestEntity(text = text,
-            images = images, voice = voice, file = file)
+                         voice: String?, file: String?, code: String?, codeLanguage: String?,
+                                          isUrl: Boolean?): String = wrapRetrofitExceptions {
+        val sendGroupMessageRequestEntity = SendMessageRequestEntity(text = text, images = images,
+            voice = voice, file = file, code = code, codeLanguage = codeLanguage, isUrl = isUrl)
         groupsApi.editGroupMessage(messageId, groupId, sendGroupMessageRequestEntity).message
     }
 

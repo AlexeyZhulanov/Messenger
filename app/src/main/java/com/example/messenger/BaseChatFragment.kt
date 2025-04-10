@@ -1,6 +1,8 @@
 package com.example.messenger
 
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Rect
@@ -486,6 +488,12 @@ abstract class BaseChatFragment(
                 override fun onFileClick() {
                     pickFileLauncher.launch(arrayOf("*/*"))
                 }
+                override fun onCodeClick() {
+                    parentFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, CodeFragment(viewModel), "CODE_FRAGMENT_TAG")
+                        .addToBackStack(null)
+                        .commit()
+                }
             }).show(childFragmentManager, "ChoosePickTag")
             true
         }
@@ -580,22 +588,22 @@ abstract class BaseChatFragment(
                     val (list, localFilePaths) = listik.await()
                     if(text.isNotEmpty()) {
                         if (list.isNotEmpty()) {
-                            if(!answerFlag) viewModel.sendMessage(text, list, null, null, null, false, isLink, null, localFilePaths)
+                            if(!answerFlag) viewModel.sendMessage(text, list, null, null, null, null, null, false, isLink, null, localFilePaths)
                             else {
-                                viewModel.sendMessage(text, list, null, null, answerMessage?.first, false, isLink, answerMessage?.second, localFilePaths)
+                                viewModel.sendMessage(text, list, null, null, null, null, answerMessage?.first, false, isLink, answerMessage?.second, localFilePaths)
                                 disableAnswer()
                             }
                         } else {
-                            if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, false, isLink, null, null)
+                            if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, null, null, false, isLink, null, null)
                             else {
-                                viewModel.sendMessage(text, null, null, null, answerMessage?.first, false, isLink, answerMessage?.second, null)
+                                viewModel.sendMessage(text, null, null, null, null, null, answerMessage?.first, false, isLink, answerMessage?.second, null)
                                 disableAnswer()
                             }
                         }
                     } else if (list.isNotEmpty()) {
-                        if(!answerFlag) viewModel.sendMessage(null, list, null, null, null, false, null, null, localFilePaths)
+                        if(!answerFlag) viewModel.sendMessage(null, list, null, null, null, null, null, false, null, null, localFilePaths)
                         else {
-                            viewModel.sendMessage(null, list, null, null, answerMessage?.first, false, null, answerMessage?.second, localFilePaths)
+                            viewModel.sendMessage(null, list, null, null, null, null, answerMessage?.first, false, null, answerMessage?.second, localFilePaths)
                             disableAnswer()
                         }
                     }
@@ -603,9 +611,9 @@ abstract class BaseChatFragment(
                     imageAdapter.clearImages()
                 } else {
                     if(text.isNotEmpty()) {
-                        if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, false, isLink, null, null)
+                        if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, null, null, false, isLink, null, null)
                         else {
-                            viewModel.sendMessage(text, null, null, null, answerMessage?.first, false, isLink, answerMessage?.second, null)
+                            viewModel.sendMessage(text, null, null, null, null, null, answerMessage?.first, false, isLink, answerMessage?.second, null)
                             disableAnswer()
                         }
                     }
@@ -847,6 +855,14 @@ abstract class BaseChatFragment(
                     })
                     .startActivityPreview(position, false, images)
             }
+            override fun onCodeOpenClick(message: Message) {
+                val code = message.code
+                val lang = message.codeLanguage
+                if(code != null && lang != null) {
+                    val dialog = CodePreviewDialogFragment(code, lang)
+                    dialog.show(parentFragmentManager, "CodePreviewDialogFragment")
+                }
+            }
         }, currentUser.id, requireContext(), viewModel, isGroup(), canDelete())
         adapter.setHasStableIds(true)
         binding.recyclerview.adapter = adapter
@@ -883,9 +899,9 @@ abstract class BaseChatFragment(
                         }
                     }
                     val(first, second) = response.await()
-                    if(!answerFlag) viewModel.sendMessage(null, null, first, null, null, false, null, null, second)
+                    if(!answerFlag) viewModel.sendMessage(null, null, first, null, null, null, null, false, null, null, second)
                     else {
-                        viewModel.sendMessage(null, null, first, null, answerMessage?.first, false, null, answerMessage?.second, second)
+                        viewModel.sendMessage(null, null, first, null, null, null, answerMessage?.first, false, null, answerMessage?.second, second)
                         disableAnswer()
                     }
                     registerScrollObserver()
@@ -936,9 +952,9 @@ abstract class BaseChatFragment(
                     }
                 }
                 val(first, second) = response.await()
-                if(!answerFlag) viewModel.sendMessage(null, null, null, first, null, false, null, null, second)
+                if(!answerFlag) viewModel.sendMessage(null, null, null, first, null, null, null, false, null, null, second)
                 else {
-                    viewModel.sendMessage(null, null, file.name, first, answerMessage?.first, false, null, answerMessage?.second, second)
+                    viewModel.sendMessage(null, null, file.name, first, null, null, answerMessage?.first, false, null, answerMessage?.second, second)
                     disableAnswer()
                 }
                 registerScrollObserver()
@@ -1100,6 +1116,12 @@ abstract class BaseChatFragment(
             when (item.itemId) {
                 R.id.item_edit -> {
                     if (message.voice.isNullOrEmpty() && message.file.isNullOrEmpty()) {
+                        if(!message.codeLanguage.isNullOrEmpty()) {
+                            parentFragmentManager.beginTransaction()
+                                .replace(R.id.fragmentContainer, CodeFragment(viewModel, message), "CODE_FRAGMENT_TAG2")
+                                .addToBackStack(null)
+                                .commit()
+                        }
                         editFlag = true
                         val editText: EditText = requireView().findViewById(R.id.enter_message)
                         val editButton: ImageView = requireView().findViewById(R.id.edit_button)
@@ -1190,9 +1212,9 @@ abstract class BaseChatFragment(
                                         val finalList = imagesMessage + uploadList.await()
                                         val resp = async {
                                             if (text.isNotEmpty()) {
-                                                viewModel.editMessage(message.id, text, finalList, null, null, isLink)
+                                                viewModel.editMessage(message.id, text, finalList, null, null, null, null, isLink)
                                             } else
-                                                viewModel.editMessage(message.id, null, finalList, null, null, null)
+                                                viewModel.editMessage(message.id, null, finalList, null, null, null, null, null)
                                         }
                                         val f = resp.await()
                                         editFlag = false
@@ -1205,7 +1227,7 @@ abstract class BaseChatFragment(
                                     } else {
                                         if (text.isNotEmpty()) {
                                             val resp = async {
-                                                viewModel.editMessage(message.id, text, null, null, null, isLink)
+                                                viewModel.editMessage(message.id, text, null, null, null, null, null, isLink)
                                             }
                                             val f = resp.await()
                                             editFlag = false
@@ -1261,6 +1283,14 @@ abstract class BaseChatFragment(
                         binding.answerImageView.visibility = View.GONE
                         binding.layoutAnswer.visibility = View.GONE
                         answerFlag = false
+                    }
+                    true
+                }
+                R.id.item_copy -> {
+                    message.text?.let {
+                        val clipboard = context?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText("label", it)
+                        clipboard.setPrimaryClip(clip)
                     }
                     true
                 }

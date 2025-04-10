@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Rect
+import android.graphics.Typeface
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Handler
@@ -21,6 +22,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.FileProvider
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -28,6 +30,11 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewbinding.ViewBinding
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.example.messenger.codeview.syntax.LanguageManager
+import com.example.messenger.codeview.syntax.LanguageName
+import com.example.messenger.codeview.syntax.ThemeName
+import com.example.messenger.databinding.ItemCodeReceiverBinding
+import com.example.messenger.databinding.ItemCodeSenderBinding
 import com.example.messenger.databinding.ItemFileReceiverBinding
 import com.example.messenger.databinding.ItemFileSenderBinding
 import com.example.messenger.databinding.ItemMessageReceiverBinding
@@ -60,6 +67,7 @@ interface MessageActionListener {
     fun onMessageLongClick(itemView: View)
     fun onImagesClick(images: ArrayList<LocalMedia>, position: Int)
     fun onUnsentMessageClick(message: Message, itemView: View)
+    fun onCodeOpenClick(message: Message)
 }
 
 
@@ -247,6 +255,8 @@ class MessageAdapter(
         private const val TYPE_TEXT_IMAGE_SENDER = 7
         private const val TYPE_TEXT_IMAGES_RECEIVER = 8
         private const val TYPE_TEXT_IMAGES_SENDER = 9
+        private const val TYPE_CODE_RECEIVER = 10
+        private const val TYPE_CODE_SENDER = 11
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -263,7 +273,8 @@ class MessageAdapter(
                 else -> {
                     when {
                         message.file?.isNotEmpty() == true -> TYPE_FILE_SENDER
-                        else -> TYPE_VOICE_SENDER
+                        message.voice?.isNotEmpty() == true -> TYPE_VOICE_SENDER
+                        else -> TYPE_CODE_SENDER
                     }
                 }
             }
@@ -279,7 +290,8 @@ class MessageAdapter(
                 else -> {
                     when {
                         message.file?.isNotEmpty() == true -> TYPE_FILE_RECEIVER
-                        else -> TYPE_VOICE_RECEIVER
+                        message.voice?.isNotEmpty() == true -> TYPE_VOICE_RECEIVER
+                        else -> TYPE_CODE_RECEIVER
                     }
                 }
             }
@@ -318,6 +330,12 @@ class MessageAdapter(
             TYPE_TEXT_IMAGES_SENDER -> MessagesViewHolderTextImagesSender(
                 ItemTextImagesSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             )
+            TYPE_CODE_RECEIVER -> MessagesViewHolderCodeReceiver(
+                ItemCodeReceiverBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            )
+            TYPE_CODE_SENDER -> MessagesViewHolderCodeSender(
+                ItemCodeSenderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            )
             else -> throw IllegalArgumentException("Invalid view type")
         }
     }
@@ -330,6 +348,7 @@ class MessageAdapter(
                 is MessagesViewHolderFileSender -> holder.updateReadStatus()
                 is MessagesViewHolderTextImageSender -> holder.updateReadStatus()
                 is MessagesViewHolderTextImagesSender -> holder.updateReadStatus()
+                is MessagesViewHolderCodeSender -> holder.updateReadStatus()
             }
             return
         }
@@ -375,6 +394,9 @@ class MessageAdapter(
 
             is MessagesViewHolderTextImagesSender -> holder.bind(message, date, time, position, flagText, isInLast30, isAnswer)
 
+            is MessagesViewHolderCodeReceiver -> holder.bind(message, date, time, position)
+
+            is MessagesViewHolderCodeSender -> holder.bind(message, date, time, position)
         }
     }
 
@@ -2035,6 +2057,185 @@ class MessageAdapter(
                 localMediasSave = localMedias.await()
                 adapter.images = localMedias.await()
                 binding.progressBar.visibility = View.GONE
+            }
+        }
+    }
+
+    // ViewHolder для текстовых сообщений получателя
+    inner class MessagesViewHolderCodeReceiver(private val binding: ItemCodeReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
+
+        private var messageSave: Message? = null
+
+        private val jetBrainsMono: Typeface? = ResourcesCompat.getFont(context, R.font.jetbrains_mono_medium)
+
+        init {
+            binding.root.setOnClickListener {
+                messageSave?.let {
+                    if(!canLongClick && canDelete) {
+                        savePosition(it.id, false)
+                    } else actionListener.onMessageClick(it, itemView, false)
+                }
+            }
+            binding.root.setOnLongClickListener {
+                if(canLongClick) {
+                    messageSave?.let {
+                        onLongClick(it.id, false)
+                        actionListener.onMessageLongClick(itemView)
+                    }
+                }
+                true
+            }
+            binding.checkbox.setOnClickListener {
+                messageSave?.let { savePosition(it.id, false) }
+            }
+            binding.openFullIcon.setOnClickListener {
+                messageSave?.let { actionListener.onCodeOpenClick(it) }
+            }
+        }
+
+        fun bind(message: Message, date: String, time: String, position: Int) {
+            messageSave = message
+
+            if(!canLongClick && canDelete) {
+                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                binding.checkbox.isChecked = position in checkedPositions
+            } else binding.checkbox.visibility = View.GONE
+
+            message.code?.let {
+                val shortCode = it.lines().take(5).joinToString("\n")
+                val lang = when(message.codeLanguage) {
+                    "java" -> LanguageName.JAVA
+                    "python" -> LanguageName.PYTHON
+                    "go" -> LanguageName.GO_LANG
+                    else -> null
+                }
+                binding.codeView.setTypeface(jetBrainsMono)
+                lang?.let {
+                    LanguageManager(context, binding.codeView).apply {
+                        applyTheme(it, ThemeName.MONOKAI)
+                    }
+                }
+                binding.codeView.setText(shortCode)
+            }
+            binding.languageTextView.text = message.codeLanguage ?: "unknown"
+            if(date != "") {
+                binding.dateTextView.visibility = View.VISIBLE
+                binding.dateTextView.text = date
+            } else binding.dateTextView.visibility = View.GONE
+
+            binding.timeTextViewImage.text = time
+            if(isGroup) {
+                val user = members[message.id]
+                if(user != null) {
+                    if(user.first != null) {
+                        binding.userNameTextView.visibility = View.VISIBLE
+                        binding.userNameTextView.text = user.first
+                    } else binding.userNameTextView.visibility = View.GONE
+                    if(user.second != null) {
+                        binding.photoImageView.visibility = View.VISIBLE
+                        if(user.second != "") messageViewModel.avatarSet(user.second ?: "", binding.photoImageView, context)
+                    } else binding.spaceAvatar.visibility = View.VISIBLE
+                } else binding.spaceAvatar.visibility = View.VISIBLE
+            } else {
+                binding.spaceAvatar.visibility = View.GONE
+                binding.photoImageView.visibility = View.GONE
+            }
+            if(message.isEdited) binding.editTextViewImage.visibility = View.VISIBLE
+            else binding.editTextViewImage.visibility = View.GONE
+        }
+    }
+
+    // ViewHolder для текстовых сообщений отправителя
+    inner class MessagesViewHolderCodeSender(private val binding: ItemCodeSenderBinding) : RecyclerView.ViewHolder(binding.root) {
+
+        private var messageSave: Message? = null
+
+        private val jetBrainsMono: Typeface? = ResourcesCompat.getFont(context, R.font.jetbrains_mono_medium)
+
+        init {
+            binding.root.setOnClickListener {
+                messageSave?.let {
+                    when {
+                        it.isUnsent == true -> actionListener.onUnsentMessageClick(it, itemView)
+                        !canLongClick -> savePosition(it.id, true)
+                        else -> actionListener.onMessageClick(it, itemView, true)
+                    }
+                }
+            }
+            binding.root.setOnLongClickListener {
+                if(canLongClick) {
+                    messageSave?.let {
+                        onLongClick(it.id, true)
+                        actionListener.onMessageLongClick(itemView)
+                    }
+                }
+                true
+            }
+            binding.checkbox.setOnClickListener {
+                messageSave?.let { savePosition(it.id, true) }
+            }
+            binding.openFullIcon.setOnClickListener {
+                messageSave?.let { actionListener.onCodeOpenClick(it) }
+            }
+        }
+
+        fun updateReadStatus() {
+            binding.icCheckImage.visibility = View.INVISIBLE
+            binding.icCheck2Image.visibility = View.VISIBLE
+            binding.icCheck2Image.bringToFront()
+        }
+
+        fun bind(message: Message, date: String, time: String, position: Int) {
+            messageSave = message
+
+            if(message.isUnsent == true) {
+                with(binding) {
+                    timeTextViewImage.text = "----"
+                    dateTextView.visibility = View.GONE
+                    icCheckImage.visibility = View.INVISIBLE
+                    icCheck2Image.visibility = View.INVISIBLE
+                    editTextViewImage.visibility = View.GONE
+                    icErrorImage.visibility = View.VISIBLE
+                }
+            } else {
+                if(!canLongClick) {
+                    if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
+                    binding.checkbox.isChecked = position in checkedPositions
+                } else binding.checkbox.visibility = View.GONE
+
+                binding.icErrorImage.visibility = View.GONE
+                if(date != "") {
+                    binding.dateTextView.visibility = View.VISIBLE
+                    binding.dateTextView.text = date
+                } else binding.dateTextView.visibility = View.GONE
+
+                binding.timeTextViewImage.text = time
+
+                if (message.isRead) {
+                    updateReadStatus()
+                } else {
+                    binding.icCheckImage.visibility = View.VISIBLE
+                    binding.icCheck2Image.visibility = View.INVISIBLE
+                }
+                if(message.isEdited) binding.editTextViewImage.visibility = View.VISIBLE
+                else binding.editTextViewImage.visibility = View.GONE
+            }
+            binding.languageTextView.text = message.codeLanguage ?: "unknown"
+            message.code?.let {
+                val shortCode = it.lines().take(5).joinToString("\n")
+                val lang = when(message.codeLanguage) {
+                    "java" -> LanguageName.JAVA
+                    "python" -> LanguageName.PYTHON
+                    "go" -> LanguageName.GO_LANG
+                    else -> null
+                }
+                binding.codeView.setTypeface(jetBrainsMono)
+                lang?.let {
+                    LanguageManager(context, binding.codeView).apply {
+                        applyTheme(it, ThemeName.MONOKAI)
+                    }
+                }
+                binding.codeView.setText(shortCode)
             }
         }
     }

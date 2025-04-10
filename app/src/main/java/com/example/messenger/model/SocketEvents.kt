@@ -22,6 +22,7 @@ data class ChatMessageEvent(
     val images: List<String>? = null,
     val voice: String? = null,
     val file: String? = null,
+    @Json(name = "code_language") val codeLanguage: String? = null,
     @Json(name = "id_sender") val idSender: Int,
     @Json(name = "sender_name") val senderName: String,
     val avatar: String? = null,

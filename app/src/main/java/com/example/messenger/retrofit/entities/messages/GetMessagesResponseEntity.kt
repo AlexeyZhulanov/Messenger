@@ -14,6 +14,8 @@ data class Message(
     var images: List<String>? = null,
     var voice: String? = null,
     var file: String? = null,
+    var code: String? = null,
+    @Json(name = "code_language") var codeLanguage: String? = null,
     var timestamp: String,
     @Json(name = "is_read") var isRead: Boolean,
     @Json(name = "is_personal_unread") var isPersonalUnread: Boolean? = null,
@@ -27,7 +29,7 @@ data class Message(
     fun toMessage(): com.example.messenger.model.Message {
         val longTimestamp = parseTimestampToLong(timestamp)
         return com.example.messenger.model.Message(
-            id = id, idSender = idSender, text = text, images = images, voice = voice, file = file,
+            id = id, idSender = idSender, text = text, images = images, voice = voice, file = file, code = code, codeLanguage = codeLanguage,
             timestamp = longTimestamp, isRead = isRead, isPersonalUnread = isPersonalUnread,  isEdited = isEdited, isForwarded = isForwarded,
             isUrl = isUrl, referenceToMessageId = referenceToMessageId, usernameAuthorOriginal = usernameAuthorOriginal
         )

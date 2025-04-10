@@ -10,7 +10,7 @@ import com.example.messenger.room.entities.GitlabDbEntity
 @Dao
 interface GitlabDao {
     @Transaction
-    @Query("SELECT * FROM gitlab ORDER BY last_activity DESC")
+    @Query("SELECT * FROM gitlab")
     suspend fun getRepos(): List<GitlabDbEntity>
 
     @Transaction

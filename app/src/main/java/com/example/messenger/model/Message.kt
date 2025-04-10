@@ -12,6 +12,8 @@ data class Message(
     var images: List<String>? = null,
     var voice: String? = null,
     var file: String? = null,
+    var code: String? = null,
+    @Json(name = "code_language") var codeLanguage: String? = null,
     var timestamp: Long,
     @Json(name = "is_read") var isRead: Boolean = false,
     @Json(name = "is_personal_unread") var isPersonalUnread: Boolean? = null,
