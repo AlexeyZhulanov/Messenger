@@ -750,11 +750,13 @@ abstract class BaseChatFragment(
             }
 
             override fun onMessageClick(message: Message, itemView: View, isSender: Boolean) {
-                showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, null, isSender)
+                if(isSender) showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, null, true)
+                else showPopupMenuMessage(itemView, R.menu.popup_menu_message_receiver, message, null, false)
             }
 
             override fun onMessageClickImage(message: Message, itemView: View, localMedias: ArrayList<LocalMedia>, isSender: Boolean) {
-                showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, localMedias, isSender)
+                if(isSender) showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, localMedias, true)
+                else showPopupMenuMessage(itemView, R.menu.popup_menu_message_receiver, message, localMedias, false)
             }
 
             override fun onMessageLongClick(itemView: View) {

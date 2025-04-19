@@ -545,7 +545,7 @@ class MessageAdapter(
                 }
             }
             binding.root.setOnLongClickListener {
-                if(canLongClick) {
+                if(canLongClick && canDelete) {
                     messageSave?.let {
                         onLongClick(it.id, false)
                         actionListener.onMessageLongClick(itemView)
@@ -930,7 +930,7 @@ class MessageAdapter(
                 }
             }
             binding.root.setOnLongClickListener {
-                if(canLongClick) {
+                if(canLongClick && canDelete) {
                     messageSave?.let {
                         onLongClick(it.id, false)
                         actionListener.onMessageLongClick(itemView)
@@ -1219,7 +1219,7 @@ class MessageAdapter(
                 }
             }
             binding.root.setOnLongClickListener {
-                if(canLongClick) {
+                if(canLongClick && canDelete) {
                     messageSave?.let {
                         onLongClick(it.id, false)
                         actionListener.onMessageLongClick(itemView)
@@ -1451,7 +1451,7 @@ class MessageAdapter(
                 }
             }
             binding.root.setOnLongClickListener {
-                if(canLongClick) {
+                if(canLongClick && canDelete) {
                     messageSave?.let {
                         onLongClick(it.id, false)
                         actionListener.onMessageLongClick(itemView)
@@ -1775,7 +1775,7 @@ class MessageAdapter(
                 }
             }
             binding.root.setOnLongClickListener {
-                if(canLongClick) {
+                if(canLongClick && canDelete) {
                     messageSave?.let {
                         onLongClick(it.id, false)
                         actionListener.onMessageLongClick(itemView)
@@ -2077,7 +2077,7 @@ class MessageAdapter(
                 }
             }
             binding.root.setOnLongClickListener {
-                if(canLongClick) {
+                if(canLongClick && canDelete) {
                     messageSave?.let {
                         onLongClick(it.id, false)
                         actionListener.onMessageLongClick(itemView)
