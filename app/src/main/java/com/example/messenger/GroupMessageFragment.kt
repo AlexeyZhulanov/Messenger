@@ -122,6 +122,4 @@ class GroupMessageFragment(
             .commit()
     }
 
-    override fun replaceCurrentFragment() = replaceFragment(GroupMessageFragment(group, currentUser, isFromNotification))
-
 }

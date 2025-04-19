@@ -118,7 +118,7 @@ abstract class BaseChatViewModel(
             return
         }
         currentPage.value = 0
-        this.searchBy.postValue(this.searchBy.value)
+        this.searchBy.value = ""
     }
 
     fun stopRefresh() {
@@ -270,6 +270,10 @@ abstract class BaseChatViewModel(
         return res
     }
 
+    private fun encryptCode(code: String?) : String? {
+        return code?.let { tinkAesGcmHelper?.encryptText(it) }
+    }
+
     fun sendMessage(text: String?, images: List<String>?, voice: String?, file: String?, code: String?,
                     codeLanguage: String?, referenceToMessageId: Int?, isForwarded: Boolean,
                     isUrl: Boolean?, usernameAuthorOriginal: String?, localFilePaths: List<String>?) {
@@ -278,10 +282,11 @@ abstract class BaseChatViewModel(
             else {
                 try {
                     val encryptedText = encryptText(text)
+                    val encryptedCode = encryptCode(code)
                     if(isGroup == 0) retrofitService.sendMessage(convId, encryptedText, images, voice,
-                        file, code, codeLanguage, referenceToMessageId, isForwarded, isUrl, usernameAuthorOriginal)
+                        file, encryptedCode, codeLanguage, referenceToMessageId, isForwarded, isUrl, usernameAuthorOriginal)
                     else retrofitService.sendGroupMessage(convId, encryptedText, images, voice, file,
-                        code, codeLanguage, referenceToMessageId, isForwarded, isUrl, usernameAuthorOriginal)
+                        encryptedCode, codeLanguage, referenceToMessageId, isForwarded, isUrl, usernameAuthorOriginal)
                 } catch (e: Exception) { false }
             }
             if(!flag) {
@@ -301,8 +306,9 @@ abstract class BaseChatViewModel(
                             file: String?, code: String?, codeLanguage: String?, isUrl: Boolean?) : Boolean {
         try {
             val encryptedText = encryptText(text)
-            if(isGroup == 0) retrofitService.editMessage(convId, messageId, encryptedText, images, voice, file, code, codeLanguage, isUrl)
-            else retrofitService.editGroupMessage(convId, messageId, encryptedText, images, voice, file, code, codeLanguage, isUrl)
+            val encryptedCode = encryptCode(code)
+            if(isGroup == 0) retrofitService.editMessage(convId, messageId, encryptedText, images, voice, file, encryptedCode, codeLanguage, isUrl)
+            else retrofitService.editGroupMessage(convId, messageId, encryptedText, images, voice, file, encryptedCode, codeLanguage, isUrl)
             return true
         } catch (e: Exception) {
             return false
@@ -329,10 +335,12 @@ abstract class BaseChatViewModel(
         val flag = try {
             val text = mes.text
             val encryptedText = encryptText(text)
+            val code = mes.code
+            val encryptedCode = encryptCode(code)
             if(isGroup == 0) retrofitService.sendMessage(convId, encryptedText, mes.images, mes.voice,
-                mes.file, mes.code, mes.codeLanguage, mes.referenceToMessageId, mes.isForwarded, mes.isUrl, mes.usernameAuthorOriginal)
+                mes.file, encryptedCode, mes.codeLanguage, mes.referenceToMessageId, mes.isForwarded, mes.isUrl, mes.usernameAuthorOriginal)
             else retrofitService.sendGroupMessage(convId, encryptedText, mes.images, mes.voice,
-                mes.file, mes.code, mes.codeLanguage, mes.referenceToMessageId, mes.isForwarded, mes.isUrl, mes.usernameAuthorOriginal)
+                mes.file, encryptedCode, mes.codeLanguage, mes.referenceToMessageId, mes.isForwarded, mes.isUrl, mes.usernameAuthorOriginal)
         } catch (e: Exception) { false }
         return flag
     }

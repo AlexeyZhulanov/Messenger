@@ -35,6 +35,7 @@ class MessagePagingSource(
                     else retrofitService.getGroupMessages(convId, pageIndex, pageSize)
                     mes.forEach {
                         it.text = it.text?.let { text -> tinkAesGcmHelper?.decryptText(text) }
+                        it.code = it.code?.let { code -> tinkAesGcmHelper?.decryptText(code) }
                     }
                     mes
                 } catch (e: Exception) {

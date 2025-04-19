@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "f7c44977250e37e387b3db4427e7ef94",
+    "identityHash": "be2bc1a683deed8cfbb5814aeab37efe",
     "entities": [
       {
         "tableName": "conversations",
@@ -509,7 +509,7 @@
       },
       {
         "tableName": "unsent_messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_dialog` INTEGER, `id_group` INTEGER, `id_sender` INTEGER NOT NULL, `text` TEXT, `images` TEXT, `voice` TEXT, `file` TEXT, `code` TEXT, `code_language` TEXT, `is_read` INTEGER NOT NULL, `is_edited` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `is_forwarded` INTEGER NOT NULL, `is_url` INTEGER, `reference_to_message_id` INTEGER, `username_author_original` TEXT, `is_unsent` INTEGER, `local_file_paths` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_dialog` INTEGER, `id_group` INTEGER, `id_sender` INTEGER NOT NULL, `text` TEXT, `images` TEXT, `voice` TEXT, `file` TEXT, `code` TEXT, `code_language` TEXT, `is_read` INTEGER NOT NULL, `is_edited` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `is_forwarded` INTEGER NOT NULL, `is_url` INTEGER, `reference_to_message_id` INTEGER, `username_author_original` TEXT, `local_file_paths` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -611,12 +611,6 @@
             "fieldPath": "usernameAuthorOriginal",
             "columnName": "username_author_original",
             "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "isUnsent",
-            "columnName": "is_unsent",
-            "affinity": "INTEGER",
             "notNull": false
           },
           {
@@ -849,7 +843,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f7c44977250e37e387b3db4427e7ef94')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'be2bc1a683deed8cfbb5814aeab37efe')"
     ]
   }
 }

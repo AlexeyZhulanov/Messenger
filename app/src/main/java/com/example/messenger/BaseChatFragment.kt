@@ -63,7 +63,7 @@ import java.io.PrintWriter
 @AndroidEntryPoint
 abstract class BaseChatFragment(
     protected val currentUser: User,
-    protected val isFromNotification: Boolean
+    private val isFromNotification: Boolean
 ) : Fragment(), AudioRecordView.Callback {
 
     protected lateinit var binding: FragmentMessageBinding
@@ -100,7 +100,6 @@ abstract class BaseChatFragment(
     abstract fun getAvatarString(): String
     abstract fun getUpperName(): String
     abstract fun getUserName(): String
-    abstract fun replaceCurrentFragment()
     abstract fun composeAnswer(message: Message)
     abstract fun getMembers(): List<User>
     abstract fun setupAdapterDialog()
@@ -250,6 +249,7 @@ abstract class BaseChatFragment(
         }
         val profilePhoto: ImageView = view.findViewById(R.id.photoImageView)
         profilePhoto.setOnClickListener {
+            binding.enterMessage.isEnabled = false // необходимо для предотвращения багов из-за клавиатуры
             replaceToInfoFragment()
         }
         val icVolumeOff: ImageView = view.findViewById(R.id.ic_volume_off)
@@ -261,6 +261,7 @@ abstract class BaseChatFragment(
         val userName: TextView = view.findViewById(R.id.userNameTextView)
         userName.text = getUpperName()
         userName.setOnClickListener {
+            binding.enterMessage.isEnabled = false
             replaceToInfoFragment()
         }
         val lastSession: TextView = view.findViewById(R.id.lastSessionTextView)
@@ -618,8 +619,7 @@ abstract class BaseChatFragment(
                         }
                     }
                 }
-                val enterText: EditText = requireView().findViewById(R.id.enter_message)
-                enterText.setText("")
+                binding.enterMessage.setText("")
                 binding.progressBarEnter.visibility = View.GONE
                 binding.enterButton.isEnabled = true
             }
@@ -972,11 +972,10 @@ abstract class BaseChatFragment(
                         requireView().findViewById(R.id.toolbar_container)
                     val alternateToolbar = LayoutInflater.from(context)
                         .inflate(R.layout.search_acton_bar, toolbarContainer, false)
-                    toolbarContainer.removeAllViews()
                     toolbarContainer.addView(alternateToolbar)
                     val backArrow: ImageView = requireView().findViewById(R.id.back_arrow)
                     backArrow.setOnClickListener {
-                        replaceCurrentFragment()
+                        getBackFromSearch(alternateToolbar)
                     }
                     val icClear: ImageView = requireView().findViewById(R.id.ic_clear)
                     icClear.setOnClickListener {
@@ -1123,16 +1122,14 @@ abstract class BaseChatFragment(
                                 .commit()
                         }
                         editFlag = true
-                        val editText: EditText = requireView().findViewById(R.id.enter_message)
-                        val editButton: ImageView = requireView().findViewById(R.id.edit_button)
                         requireActivity().onBackPressedDispatcher.addCallback(
                             viewLifecycleOwner,
                             object : OnBackPressedCallback(true) {
                                 @SuppressLint("NotifyDataSetChanged")
                                 override fun handleOnBackPressed() {
                                     if (editFlag) {
-                                        editText.setText("")
-                                        editButton.visibility = View.GONE
+                                        binding.enterMessage.setText("")
+                                        binding.editButton.visibility = View.GONE
                                         binding.recordView.visibility = View.VISIBLE
                                         imageAdapter.clearImages()
                                         editFlag = false
@@ -1146,12 +1143,12 @@ abstract class BaseChatFragment(
                             })
 
                         if (!message.text.isNullOrEmpty()) {
-                            editText.setText(message.text)
-                            editText.setSelection(message.text?.length ?: 0)
+                            binding.enterMessage.setText(message.text)
+                            binding.enterMessage.setSelection(message.text?.length ?: 0)
                         } else {
-                            editText.setText("")
-                            editText.setSelection(0)
-                            editButton.visibility = View.VISIBLE
+                            binding.enterMessage.setText("")
+                            binding.enterMessage.setSelection(0)
+                            binding.editButton.visibility = View.VISIBLE
                             binding.recordView.visibility = View.INVISIBLE
                         }
 
@@ -1161,17 +1158,17 @@ abstract class BaseChatFragment(
                         }
                         val imm =
                             requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                        editText.postDelayed({
-                            editText.requestFocus()
-                            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
+                        binding.enterMessage.postDelayed({
+                            binding.enterMessage.requestFocus()
+                            imm.showSoftInput(binding.enterMessage, InputMethodManager.SHOW_IMPLICIT)
                         }, 100)
 
-                        editButton.setOnClickListener {
+                        binding.editButton.setOnClickListener {
                             lifecycleScope.launch {
                                 try {
                                     viewModel.stopRefresh()
                                     val tempItems = imageAdapter.getData()
-                                    val (text, isLink) = prepareTextForSend(editText.text.toString())
+                                    val (text, isLink) = prepareTextForSend(binding.enterMessage.text.toString())
                                     if (tempItems.isNotEmpty()) {
                                         val itemsToUpload = if (localMedias == null) tempItems
                                         else tempItems.filter { it !in localMedias } as ArrayList<LocalMedia>
@@ -1219,8 +1216,8 @@ abstract class BaseChatFragment(
                                         val f = resp.await()
                                         editFlag = false
                                         imageAdapter.clearImages()
-                                        editText.setText("")
-                                        editButton.visibility = View.GONE
+                                        binding.enterMessage.setText("")
+                                        binding.editButton.visibility = View.GONE
                                         binding.recordView.visibility = View.VISIBLE
                                         viewModel.startRefresh()
                                         if (!f) Toast.makeText(requireContext(), "Не удалось редактировать", Toast.LENGTH_SHORT).show()
@@ -1232,8 +1229,8 @@ abstract class BaseChatFragment(
                                             val f = resp.await()
                                             editFlag = false
                                             imageAdapter.clearImages()
-                                            editText.setText("")
-                                            editButton.visibility = View.GONE
+                                            binding.enterMessage.setText("")
+                                            binding.editButton.visibility = View.GONE
                                             binding.recordView.visibility = View.VISIBLE
                                             viewModel.startRefresh()
                                             if(!f) Toast.makeText(requireContext(), "Не удалось редактировать", Toast.LENGTH_SHORT).show()
@@ -1242,8 +1239,8 @@ abstract class BaseChatFragment(
                                 }
                                 catch (e: Exception) {
                                     Toast.makeText(requireContext(), "Не удалось редактировать", Toast.LENGTH_SHORT).show()
-                                    editText.setText("")
-                                    editButton.visibility = View.GONE
+                                    binding.enterMessage.setText("")
+                                    binding.editButton.visibility = View.GONE
                                     binding.recordView.visibility = View.VISIBLE
                                     imageAdapter.clearImages()
                                     editFlag = false
@@ -1307,10 +1304,10 @@ abstract class BaseChatFragment(
         answerFlag = false
     }
 
-    protected fun replaceFragment(newFragment: Fragment) {
-        parentFragmentManager.beginTransaction()
-            .replace(R.id.fragmentContainer, newFragment)
-            .commit()
+    private fun getBackFromSearch(view: View) {
+        val toolbarContainer: FrameLayout = requireView().findViewById(R.id.toolbar_container)
+        toolbarContainer.removeView(view)
+        viewModel.refresh()
     }
 
     private fun searchMessages(query: CharSequence?) {
