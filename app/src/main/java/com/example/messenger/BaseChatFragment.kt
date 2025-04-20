@@ -354,7 +354,9 @@ abstract class BaseChatFragment(
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                if (s.isNullOrEmpty()) {
+                val text = s?.toString()?.trim()
+
+                if (text.isNullOrEmpty()) {
                     binding.recordView.visibility = View.VISIBLE
                     if (!editFlag) {
                         binding.enterButton.visibility = View.INVISIBLE
@@ -713,13 +715,13 @@ abstract class BaseChatFragment(
     }
 
     private fun prepareTextForSend(rawText: String): Pair<String, Boolean> {
-        Log.d("testLinks", links.toString())
-        Log.d("testNamedLinks", namedLinks.toString())
-        if(links.isEmpty()) return rawText to false
+        val messageText = rawText.trim()
 
-        var processedText = rawText
+        if(links.isEmpty()) return messageText to false
 
-        linkRegex.findAll(rawText).forEach { match ->
+        var processedText = messageText
+
+        linkRegex.findAll(messageText).forEach { match ->
             val url = match.value
             val name = namedLinks[url]
             if(!name.isNullOrEmpty()) {

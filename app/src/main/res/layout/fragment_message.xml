@@ -328,7 +328,9 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layout_enter"
         android:layout_width="0dp"
-        android:layout_height="53dp"
+        android:layout_height="wrap_content"
+        android:minHeight="53dp"
+        android:maxHeight="163dp"
         android:background="@color/colorBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -341,22 +343,23 @@
         android:src="@drawable/ic_attach"
         app:tint="?attr/colorPrimary"
         android:padding="3dp"
+        android:layout_marginBottom="6.5dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"/>
 
         <EditText
             android:id="@+id/enter_message"
             android:layout_width="0dp"
-            android:layout_height="40dp"
+            android:layout_height="wrap_content"
+            android:maxHeight="150dp"
             android:hint="Сообщение"
             android:padding="8dp"
             android:background="@drawable/custom_edittext2"
-            android:inputType="textCapSentences"
+            android:inputType="textMultiLine|textCapSentences"
             android:focusable="true"
             android:focusableInTouchMode="true"
-            android:imeOptions="actionNone"
+            android:imeOptions="actionSend|flagNoEnterAction"
             android:textColor="?attr/colorPrimaryDark"
             android:textColorHint="?attr/colorAccent"
             app:layout_constraintStart_toEndOf="@id/attach_button"
@@ -372,9 +375,9 @@
             app:tint="?attr/colorPrimary"
             android:padding="5dp"
             android:layout_marginEnd="5dp"
+            android:layout_marginBottom="6.5dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toStartOf="@id/space"/>
 
         <Space
@@ -396,8 +399,8 @@
             android:padding="3dp"
             android:visibility="invisible"
             android:layout_marginEnd="5dp"
+            android:layout_marginBottom="6.5dp"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
 
         <ProgressBar
@@ -421,8 +424,8 @@
             android:padding="3dp"
             android:visibility="invisible"
             android:layout_marginEnd="5dp"
+            android:layout_marginBottom="6.5dp"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
