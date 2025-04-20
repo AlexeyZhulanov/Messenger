@@ -113,10 +113,11 @@ object MessengerModule {
         groupMemberDao: GroupMemberDao,
         newsDao: NewsDao,
         gitlabDao: GitlabDao,
-        @IoDispatcher ioDispatcher: CoroutineDispatcher
+        @IoDispatcher ioDispatcher: CoroutineDispatcher,
+        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
     ): MessengerService {
         return MessengerService(conversationDao, messageDao, groupMessageDao, userDao,
-            chatSettingsDao, unsentMessageDao, groupMemberDao, newsDao, gitlabDao, ioDispatcher)
+            chatSettingsDao, unsentMessageDao, groupMemberDao, newsDao, gitlabDao, ioDispatcher, defaultDispatcher)
     }
 
     @Provides

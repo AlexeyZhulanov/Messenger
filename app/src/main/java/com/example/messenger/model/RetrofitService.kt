@@ -44,12 +44,11 @@ class RetrofitService(
         if (password.isBlank()) throw EmptyFieldException(Field.Password)
         val tokens = try {
             usersSource.login(name, password)
-        } catch (e: Exception) {
-            if (e is BackendException && e.code == 401) {
-                // map 401 error for sign-in to InvalidCredentialsException
-                throw InvalidCredentialsException(e)
-            } else {
-                throw e
+        } catch (e: BackendException) {
+            when(e.code) {
+                401 -> throw InvalidCredentialsException(e)
+                404 -> throw UserNotFoundException(e)
+                else -> throw e
             }
         }
         appSettings.setCurrentAccessToken(tokens.first)

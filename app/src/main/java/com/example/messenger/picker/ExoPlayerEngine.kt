@@ -7,7 +7,9 @@ import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.exoplayer2.ui.StyledPlayerView
+import com.google.android.exoplayer2.ui.StyledPlayerView.SHOW_BUFFERING_WHEN_PLAYING
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.config.SelectorProviders
 import com.luck.picture.lib.engine.VideoPlayerEngine
@@ -22,7 +24,15 @@ class ExoPlayerEngine : VideoPlayerEngine<StyledPlayerView> {
 
     override fun onCreateVideoPlayer(context: Context): View {
         val exoPlayer: StyledPlayerView = StyledPlayerView(context)
-        exoPlayer.useController = false
+        exoPlayer.useController = true
+        exoPlayer.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+        exoPlayer.setShowBuffering(SHOW_BUFFERING_WHEN_PLAYING)
+
+        // Добавляем отступы для системной навигации
+        exoPlayer.setOnApplyWindowInsetsListener { v, insets ->
+            v.setPadding(0, 0, 0, 50)
+            insets
+        }
         return exoPlayer
     }
 
@@ -40,6 +50,7 @@ class ExoPlayerEngine : VideoPlayerEngine<StyledPlayerView> {
             }
             val config = SelectorProviders.getInstance().selectorConfig
             player.repeatMode = if (config.isLoopAutoPlay) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
+            player.playWhenReady = true
             player.setMediaItem(mediaItem)
             player.prepare()
             player.play()

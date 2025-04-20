@@ -33,7 +33,8 @@ class MessengerService(
     private val groupMemberDao: GroupMemberDao,
     private val newsDao: NewsDao,
     private val gitlabDao: GitlabDao,
-    private val ioDispatcher: CoroutineDispatcher
+    private val ioDispatcher: CoroutineDispatcher,
+    private val defaultDispatcher: CoroutineDispatcher
 ) : MessengerRepository {
 
     override suspend fun getConversations(): List<Conversation> = withContext(ioDispatcher) {
@@ -75,16 +76,32 @@ class MessengerService(
 
     override suspend fun replaceMessages(idDialog: Int, messages: List<Message>, fileManager: FileManager) = withContext(ioDispatcher) {
         val messagesDbEntities = messages.map { MessageDbEntity.fromUserInput(it, idDialog) }
+        val oldMessages = messageDao.getMessages(idDialog).map { it.toMessage() }
         messageDao.replaceMessages(idDialog, messagesDbEntities)
-        val usedFiles = messages.flatMap { message ->
-            mutableListOf<String>().apply {
-                message.images?.let { addAll(it) }
-                message.voice?.let { add(it) }
-                message.file?.let { add(it) }
-            }
-        }.toSet()
-        fileManager.cleanupUnusedMessageFiles(usedFiles)
+
+        val filesToDelete = findFilesToDelete(oldMessages, messages)
+        if(filesToDelete.isNotEmpty()) fileManager.deleteFilesMessage(filesToDelete)
     }
+
+    private suspend fun findFilesToDelete(oldMessages: List<Message>, newMessages: List<Message>): Set<String> = withContext(defaultDispatcher) {
+            val oldFiles = oldMessages.flatMapTo(HashSet()) { message ->
+                listOfNotNull(
+                    message.images,
+                    message.voice?.let { listOf(it) },
+                    message.file?.let { listOf(it) }
+                ).flatten()
+            }
+
+            val newFiles = newMessages.flatMapTo(HashSet()) { message ->
+                listOfNotNull(
+                    message.images,
+                    message.voice?.let { listOf(it) },
+                    message.file?.let { listOf(it) }
+                ).flatten()
+            }
+
+            oldFiles - newFiles
+        }
 
     override suspend fun getGroupMessages(idGroup: Int): List<Message> = withContext(ioDispatcher) {
         return@withContext groupMessageDao.getGroupMessages(idGroup).map { it.toMessage() }
@@ -92,15 +109,11 @@ class MessengerService(
 
     override suspend fun replaceGroupMessages(idGroup: Int, groupMessages: List<Message>, fileManager: FileManager) = withContext(ioDispatcher) {
         val groupMessageDbEntities = groupMessages.map { GroupMessageDbEntity.fromUserInput(it, idGroup) }
+        val oldMessages = groupMessageDao.getGroupMessages(idGroup).map { it.toMessage() }
         groupMessageDao.replaceGroupMessages(idGroup, groupMessageDbEntities)
-        val usedFiles = groupMessages.flatMap { message ->
-            mutableListOf<String>().apply {
-                message.images?.let { addAll(it) }
-                message.voice?.let { add(it) }
-                message.file?.let { add(it) }
-            }
-        }.toSet()
-        fileManager.cleanupUnusedMessageFiles(usedFiles)
+
+        val filesToDelete = findFilesToDelete(oldMessages, groupMessages)
+        if(filesToDelete.isNotEmpty()) fileManager.deleteFilesMessage(filesToDelete)
     }
 
     override suspend fun getUser(): User? = withContext(ioDispatcher) {
@@ -180,7 +193,7 @@ class MessengerService(
                 news.files?.let { addAll(it) }
             }
         }.toSet()
-        fileManager.cleanupUnusedMessageFiles(usedFiles)
+        fileManager.cleanupNewsFiles(usedFiles)
     }
 
     override suspend fun getRepos(): List<Repo> = withContext(ioDispatcher) {

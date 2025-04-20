@@ -842,7 +842,7 @@ abstract class BaseChatFragment(
                     .openPreview()
                     .setImageEngine(GlideEngine.createGlideEngine())
                     .setVideoPlayerEngine(ExoPlayerEngine())
-                    .isAutoVideoPlay(false)
+                    .isAutoVideoPlay(true)
                     .isLoopAutoVideoPlay(false)
                     .isVideoPauseResumePlay(true)
                     .setSelectorUIStyle(filePickerManager.selectorStyle)

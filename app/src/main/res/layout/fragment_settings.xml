@@ -145,6 +145,25 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/settings_text" />
 
+    <Button
+        android:id="@+id/clearFiles"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="10dp"
+        android:autoSizeMaxTextSize="100sp"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeStepGranularity="2sp"
+        android:autoSizeTextType="uniform"
+        android:fontFamily="casual"
+        android:gravity="center"
+        android:text="Очистить память"
+        android:textAllCaps="false"
+        android:textColor="?attr/colorPrimaryDark"
+        android:textStyle="bold|italic"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/change_password" />
+
     <TextView
         android:id="@+id/customization_text"
         android:layout_width="match_parent"
@@ -161,7 +180,7 @@
         android:textStyle="bold|italic"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/change_password" />
+        app:layout_constraintTop_toBottomOf="@id/clearFiles" />
 
     <LinearLayout
         android:id="@+id/linear_block2"
