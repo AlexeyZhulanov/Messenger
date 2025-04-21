@@ -405,7 +405,7 @@ class MessageAdapter(
         notifyItemChanged(position)
     }
 
-    private inline fun <reified T : ViewBinding> handleAnswerLayout(binder: T, message: Message) {
+    private inline fun <reified T : ViewBinding> handleAnswerLayout(binder: T, message: Message): Int {
         // choose viewHolder type
         val binding = when(binder) {
             is ItemMessageReceiverBinding -> binder.answerLayout
@@ -423,8 +423,9 @@ class MessageAdapter(
         binding.root.visibility = View.VISIBLE
         binding.answerUsername.text = message.usernameAuthorOriginal
         val tmpId = message.referenceToMessageId
-        if(tmpId == null) {
+        return if(tmpId == null) {
             binding.answerMessage.text = "??????????"
+            10
         } else {
             val chk = getItemPositionWithId(tmpId)
             if(chk == -1) {
@@ -445,23 +446,25 @@ class MessageAdapter(
                         messageViewModel.smartScrollToPosition(p)
                     }
                 }
+                10
             } else {
                 val m = getItem(chk)?.first
-                uiScopeMain.launch {
-                    if(m?.images != null) {
+                if(m?.images != null) {
+                    uiScopeMain.launch {
                         messageViewModel.imageSet(m.images!!.first(), binding.answerImageView, context)
                     }
-                    binding.answerMessage.text = when {
-                        m?.text != null -> m.text
-                        m?.images != null -> "Фотография"
-                        m?.file != null -> m.file
-                        m?.voice != null -> "Голосовое сообщение"
-                        else -> "?????????"
-                    }
-                    binding.root.setOnClickListener {
-                        messageViewModel.smartScrollToPosition(chk)
-                    }
                 }
+                binding.answerMessage.text = when {
+                    m?.text != null -> m.text
+                    m?.images != null -> "Фотография"
+                    m?.file != null -> m.file
+                    m?.voice != null -> "Голосовое сообщение"
+                    else -> "?????????"
+                }
+                binding.root.setOnClickListener {
+                    messageViewModel.smartScrollToPosition(chk)
+                }
+                binding.answerMessage.text.length // return len
             }
         }
     }
@@ -567,8 +570,9 @@ class MessageAdapter(
             } else binding.checkbox.visibility = View.GONE
 
             if(isAnswer) {
-                handleAnswerLayout(binding, message)
-                if(binding.customMessageLayout.width < binding.answerLayout.root.width) {
+                val ansSize = handleAnswerLayout(binding, message)
+                val textLen = message.text?.length ?: 0
+                if(textLen < 10 && ansSize > 10) {
                     val layoutParams = binding.customMessageLayout.layoutParams as ConstraintLayout.LayoutParams
                     layoutParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                     binding.customMessageLayout.layoutParams = layoutParams
@@ -578,7 +582,9 @@ class MessageAdapter(
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
-                if(binding.customMessageLayout.width < binding.forwardLayout.root.width) {
+                val textLen = message.text?.length ?: 0
+                val fwdLen = message.usernameAuthorOriginal?.length ?: 0
+                if(textLen <= 3 || (fwdLen > 10 && textLen < 8)) {
                     val layoutParams = binding.customMessageLayout.layoutParams as ConstraintLayout.LayoutParams
                     layoutParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                     binding.customMessageLayout.layoutParams = layoutParams
@@ -659,8 +665,9 @@ class MessageAdapter(
             messageSave = message
 
             if(isAnswer) {
-                handleAnswerLayout(binding, message)
-                if(binding.customMessageLayout.width < binding.answerLayout.root.width) {
+                val ansSize = handleAnswerLayout(binding, message)
+                val textLen = message.text?.length ?: 0
+                if(textLen < 10 && ansSize > 10) {
                     val layoutParams = binding.customMessageLayout.layoutParams as ConstraintLayout.LayoutParams
                     layoutParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                     binding.customMessageLayout.layoutParams = layoutParams
@@ -670,8 +677,9 @@ class MessageAdapter(
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
-                // если длина custom message меньше fwd layout, то растягиваем текст custom на ширину fwd
-                if(binding.customMessageLayout.width < binding.forwardLayout.root.width) {
+                val textLen = message.text?.length ?: 0
+                val fwdLen = message.usernameAuthorOriginal?.length ?: 0
+                if(textLen <= 3 || (fwdLen > 10 && textLen < 8)) {
                     val layoutParams = binding.customMessageLayout.layoutParams as ConstraintLayout.LayoutParams
                     layoutParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                     binding.customMessageLayout.layoutParams = layoutParams

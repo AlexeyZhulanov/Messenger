@@ -44,6 +44,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="5dp"
+        android:layout_marginTop="10dp"
         app:layout_constraintStart_toEndOf="@id/senderGuideLine"
         app:layout_constraintTop_toBottomOf="@id/dateTextView"
         app:layout_constraintEnd_toEndOf="parent"
@@ -95,7 +96,7 @@
                     android:gravity="start"
                     android:textColor="?attr/colorPrimaryDark"
                     android:layout_marginEnd="3dp"
-                    tools:text="Сообщение" />
+                    tools:text="Со" />
 
                 <TextView
                     android:id="@+id/editTextView"

@@ -72,6 +72,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="5dp"
+        android:layout_marginTop="10dp"
         android:padding="1dp"
         android:background="@drawable/message_background_receiver"
         app:layout_constraintEnd_toStartOf="@id/receiverGuideLine"

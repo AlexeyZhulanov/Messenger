@@ -44,6 +44,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="5dp"
+        android:layout_marginTop="10dp"
         app:layout_constraintEnd_toStartOf="@id/receiverGuideLine"
         app:layout_constraintTop_toBottomOf="@id/dateTextView"
         app:layout_constraintStart_toStartOf="parent"
@@ -159,7 +160,7 @@
 
             <com.masoudss.lib.WaveformSeekBar
                 android:id="@+id/waveformSeekBar"
-                android:layout_width="225dp"
+                android:layout_width="170dp"
                 android:layout_height="50dp"
                 app:wave_progress="33"
                 app:wave_max_progress="100"
