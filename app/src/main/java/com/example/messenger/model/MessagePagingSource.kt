@@ -69,10 +69,10 @@ class MessagePagingSource(
             messages.forEach { message ->
                 val (formattedTime, formattedDate) = formattedData[message.id] ?: ("-" to "-")
                 if (formattedDate !in dates) {
-                    messageDatePairs.add(Triple(message,formattedDate, formattedTime))
+                    messageDatePairs.add(Triple(message, formattedDate, formattedTime))
                     dates.add(formattedDate)
                 } else {
-                    messageDatePairs.add(Triple(message,"", formattedTime))
+                    messageDatePairs.add(Triple(message, "", formattedTime))
                 }
             }
 

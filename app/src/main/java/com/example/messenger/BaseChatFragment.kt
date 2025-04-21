@@ -194,7 +194,7 @@ abstract class BaseChatFragment(
                     if(uMessage != null) {
                         registerScrollObserver()
                         Log.d("testUnsentFlow", "OK")
-                        adapter.addNewMessage(Triple(uMessage, "", ""))
+                        adapter.addUnsentMessage(Triple(uMessage, "", ""))
                     }
                 }
             }

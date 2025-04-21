@@ -19,6 +19,14 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <Space
+        android:id="@+id/space"
+        android:layout_width="wrap_content"
+        android:layout_height="10dp"
+        app:layout_constraintTop_toBottomOf="@id/dateTextView"
+        app:layout_constraintStart_toStartOf="@id/dateTextView"
+        />
+
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/receiverGuideLine"
         android:layout_width="wrap_content"
@@ -43,10 +51,9 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="5dp"
-        android:layout_marginTop="10dp"
         android:orientation="horizontal"
         app:layout_constraintEnd_toStartOf="@id/receiverGuideLine"
-        app:layout_constraintTop_toBottomOf="@id/dateTextView"
+        app:layout_constraintTop_toBottomOf="@id/space"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         android:gravity="start"
@@ -85,7 +92,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="14sp"
-                android:fontFamily="casual"
                 android:textStyle="bold|italic"
                 tools:text="Алексей"
                 android:visibility="gone"
@@ -100,6 +106,7 @@
                 android:id="@+id/headLayout"
                 android:layout_width="0dp"
                 android:layout_height="30dp"
+                android:layout_marginTop="5dp"
                 android:background="@drawable/code_head_message"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
