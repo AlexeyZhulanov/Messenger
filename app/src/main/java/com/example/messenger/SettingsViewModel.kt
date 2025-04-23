@@ -137,6 +137,13 @@ class SettingsViewModel @Inject constructor(
         } catch (e: Exception) { false }
     }
 
+    fun clearAllAppFiles(callback: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val bool = fileManager.clearAllAppFiles()
+            callback(bool)
+        }
+    }
+
     fun clearCurrentUser() {
         viewModelScope.launch {
             withContext(NonCancellable) {

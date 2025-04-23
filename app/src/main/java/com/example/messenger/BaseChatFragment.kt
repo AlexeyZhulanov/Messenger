@@ -1356,13 +1356,8 @@ abstract class BaseChatFragment(
             "wallpaper1" to R.drawable.wallpaper1,
             "wallpaper2" to R.drawable.wallpaper2,
             "wallpaper3" to R.drawable.wallpaper3,
-            "wallpaper4" to R.drawable.wallpaper4,
             "wallpaper5" to R.drawable.wallpaper5,
             "wallpaper6" to R.drawable.wallpaper6,
-            "wallpaper7" to R.drawable.wallpaper7,
-            "wallpaper8" to R.drawable.wallpaper8,
-            "wallpaper9" to R.drawable.wallpaper9,
-            "wallpaper10" to R.drawable.wallpaper10
         )
     }
 }

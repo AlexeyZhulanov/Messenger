@@ -29,11 +29,12 @@
             tools:text="Alexey"
             android:textColor="?attr/colorPrimaryDark"
             android:textSize="12sp"
-            android:textStyle="bold|italic"
+            android:textStyle="bold"
             android:layout_marginTop="3dp"
             android:layout_marginStart="10dp"
             android:ellipsize="end"
             android:paddingEnd="7dp"
+            android:fontFamily="@font/roboto_italic"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toEndOf="@id/answerImageView"/>
 
@@ -47,11 +48,12 @@
             android:singleLine="true"
             android:textColor="?attr/colorPrimaryDark"
             android:textSize="12sp"
-            android:textStyle="bold|italic"
+            android:textStyle="bold"
             android:layout_marginStart="10dp"
             android:layout_marginEnd="5dp"
             android:paddingBottom="3dp"
             android:paddingEnd="5dp"
+            android:fontFamily="@font/roboto_italic"
             app:layout_constraintTop_toBottomOf="@id/answerUsername"
             app:layout_constraintStart_toEndOf="@id/answerImageView"/>
 

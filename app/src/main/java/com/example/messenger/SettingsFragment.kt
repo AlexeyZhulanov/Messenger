@@ -1,18 +1,16 @@
 package com.example.messenger
 
-import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.res.Configuration
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.PopupWindow
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
@@ -44,32 +42,55 @@ class SettingsFragment(
     private val initialUser: User
 ) : Fragment() {
     private lateinit var binding: FragmentSettingsBinding
+    private lateinit var adapterWallpaper: WallpaperAdapter
+    private lateinit var adapterColorTheme: ColorThemeMenuAdapter
     private val viewModel: SettingsViewModel by viewModels()
     private var fileUpdate: File? = null
     private var currentUser: User? = null
     private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('А'..'Я') + ('а'..'я') + ('!') + ('$') + (' ')
 
-    @SuppressLint("DiscouragedApi")
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        binding = FragmentSettingsBinding.inflate(inflater, container, false)
-        viewModel.setUser(initialUser)
-        val filePickerManager = FilePickerManager(fragment2 = this)
-        viewModel.wallpaper.observe(viewLifecycleOwner) { wallpaper ->
-            if (wallpaper != "") {
-                binding.wallpaperName.text = wallpaper
-                val resId =
-                    resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
-                if (resId != 0) binding.settingsLayout.background =
-                    ContextCompat.getDrawable(requireContext(), resId)
-            } else {
-                binding.wallpaperName.text = "Classic"
-            }
-        }
+    private val colorThemeItems = listOf(
+        ColorThemeMenuItem(R.color.colorPrimary, R.color.colorMessageSenderBack, 1, false),
+        ColorThemeMenuItem(R.color.colorPrimary2, R.color.chatColor2, 2, false),
+        ColorThemeMenuItem(R.color.colorPrimary3, R.color.chatColor3, 3, false)
+    )
+
+    private val wallpaperLightItems = listOf(
+        WallpaperMenuItem(R.color.colorDefault2, "", 1, false),
+        WallpaperMenuItem(R.drawable.wallpaper6, "wallpaper6", 2, false)
+    )
+
+    private val wallpaperDarkItems = listOf(
+        WallpaperMenuItem(R.color.colorDefault2, "", 1, false),
+        WallpaperMenuItem(R.drawable.wallpaper1, "wallpaper1", 2, false)
+    )
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
         requireActivity().window.navigationBarColor = ContextCompat.getColor(requireContext(), R.color.navigation_bar_color)
+        viewModel.wallpaper.observe(viewLifecycleOwner) { wallpaper ->
+            if(isDarkTheme(requireContext())) {
+                wallpaperDarkItems.forEach {
+                    it.isChecked = wallpaper == it.wallpaperName
+                }
+                adapterWallpaper.items = wallpaperDarkItems
+            } else {
+                wallpaperLightItems.forEach {
+                    it.isChecked = wallpaper == it.wallpaperName
+                }
+                adapterWallpaper.items = wallpaperLightItems
+            }
+            if (wallpaper != "") {
+                val resId = WALLPAPER_MAP[wallpaper] ?: -1
+                if (resId != -1) binding.settingsLayout.background = ContextCompat.getDrawable(requireContext(), resId)
+            } else binding.settingsLayout.background = null
+        }
         viewModel.themeNumber.observe(viewLifecycleOwner) { themeNumber ->
-            if (themeNumber != 0) binding.colorThemeName.text =
-                "Theme ${themeNumber + 1}" else binding.colorThemeName.text = "Classic"
+            colorThemeItems.forEach { it.isChecked = false }
+            val idx = if(themeNumber == 0) 0 else (themeNumber - 1)
+            colorThemeItems[idx].isChecked = true
+            adapterColorTheme.menuItems = colorThemeItems
         }
         viewModel.currentUser.observe(viewLifecycleOwner) { user ->
             currentUser = user
@@ -123,6 +144,13 @@ class SettingsFragment(
                 clipboard.setPrimaryClip(clip)
             }
         }
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        binding = FragmentSettingsBinding.inflate(inflater, container, false)
+        viewModel.setUser(initialUser)
+        val filePickerManager = FilePickerManager(fragment2 = this)
+
         binding.editPhotoButton.setOnClickListener {
             showPopupMenu(it, R.menu.popup_menu_user, filePickerManager, fileUpdate)
         }
@@ -140,108 +168,43 @@ class SettingsFragment(
 
         }
         binding.clearFiles.setOnClickListener {
-            Toast.makeText(requireContext(), "Пока не сделано, надо добавить вывод диалога", Toast.LENGTH_SHORT).show()
-            // todo fileManager.clearAllAppFiles()
-        }
-        binding.changeColorTheme.setOnClickListener {
-            showColorThemePopupMenu(it, container as ViewGroup)
-        }
-        binding.changeWallpaper.setOnClickListener {
-            showWallpapersPopupMenu(it, container as ViewGroup)
+            showConfirmClearFilesDialog()
         }
         binding.logoutButton.setOnClickListener {
-            logout()
+            showConfirmLogoutDialog()
         }
+
+        setupWallpaperAdapter()
+        binding.wallpaperRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+        binding.wallpaperRecyclerView.addItemDecoration(HorizontalMarginItemDecoration(50))
+        binding.wallpaperRecyclerView.adapter = adapterWallpaper
+
+        setupColorThemeAdapter()
+        binding.themeRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+        binding.themeRecyclerView.addItemDecoration(HorizontalMarginItemDecoration(50))
+        binding.themeRecyclerView.adapter = adapterColorTheme
+
         return binding.root
     }
 
-    private fun showWallpapersPopupMenu(view: View, container: ViewGroup) {
-        val inflater = layoutInflater
-        val popupView = inflater.inflate(R.layout.popup_menu_wallpaper_layout, container, false)
-
-        val popupWindow = PopupWindow(
-            popupView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-
-        popupWindow.showAtLocation(requireView(), Gravity.CENTER, 0, 0)
-        val recyclerView = popupView.findViewById<RecyclerView>(R.id.recycler_view)
-        recyclerView.layoutManager = LinearLayoutManager(requireContext())
-
-        val menuItems = listOf(
-            MenuItemData("Classic", R.drawable.lightblue),
-            MenuItemData("1.", R.drawable.wallpaper1),
-            MenuItemData("2.", R.drawable.wallpaper2),
-            MenuItemData("3.", R.drawable.wallpaper3),
-            MenuItemData("4.", R.drawable.wallpaper4),
-            MenuItemData("5.", R.drawable.wallpaper5),
-            MenuItemData("6.", R.drawable.wallpaper6),
-            MenuItemData("7.", R.drawable.wallpaper7),
-            MenuItemData("8.", R.drawable.wallpaper8),
-            MenuItemData("9.", R.drawable.wallpaper9),
-            MenuItemData("10.", R.drawable.wallpaper10)
-        )
-        var temp: String
-        val adapter = PopupMenuWallpaperAdapter(menuItems) { menuItem ->
-            temp = when (menuItem.title) {
-                "Classic" -> "lightblue"
-                "1." -> "wallpaper1"
-                "2." -> "wallpaper2"
-                "3." -> "wallpaper3"
-                "4." -> "wallpaper4"
-                "5." -> "wallpaper5"
-                "6." -> "wallpaper6"
-                "7." -> "wallpaper7"
-                "8." -> "wallpaper8"
-                "9." -> "wallpaper9"
-                "10." -> "wallpaper10"
-                else -> ""
-            }
-            viewModel.updateWallpaper(temp)
-            popupWindow.dismiss()
+    private fun setupColorThemeAdapter() {
+        adapterColorTheme = ColorThemeMenuAdapter { item ->
+            viewModel.updateTheme(item.themeNumber)
         }
-
-        recyclerView.adapter = adapter
-
-        popupWindow.showAsDropDown(view)
     }
 
-    private fun showColorThemePopupMenu(view: View, container: ViewGroup) {
-        val inflater = layoutInflater
-        val popupView = inflater.inflate(R.layout.popup_menu_wallpaper_layout, container, false)
-
-        val popupWindow = PopupWindow(
-            popupView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-
-        popupWindow.showAtLocation(requireView(), Gravity.CENTER, 0, 0)
-        val recyclerView = popupView.findViewById<RecyclerView>(R.id.recycler_view)
-        recyclerView.layoutManager = LinearLayoutManager(requireContext())
-
-        val menuItems = listOf(
-            ColorThemeMenuItem(R.color.colorPrimary, R.color.colorAccent, 0),
-            ColorThemeMenuItem(R.color.color1_main, R.color.color1_secondary, 1),
-            ColorThemeMenuItem(R.color.color2_main, R.color.color2_secondary, 2),
-            ColorThemeMenuItem(R.color.color3_main, R.color.color3_secondary, 3),
-            ColorThemeMenuItem(R.color.color4_main, R.color.color4_secondary, 4),
-            ColorThemeMenuItem(R.color.color5_main, R.color.color5_secondary, 5),
-            ColorThemeMenuItem(R.color.color6_main, R.color.color6_secondary, 6),
-            ColorThemeMenuItem(R.color.color7_main, R.color.color7_secondary, 7),
-            ColorThemeMenuItem(R.color.color8_main, R.color.color8_secondary, 8)
-        )
-        val adapter = ColorThemeMenuAdapter(menuItems) { menuItem ->
-            viewModel.updateTheme(menuItem.themeNumber)
-            popupWindow.dismiss()
+    private fun setupWallpaperAdapter() {
+        adapterWallpaper = WallpaperAdapter { item ->
+            viewModel.updateWallpaper(item.wallpaperName)
         }
+    }
 
-        recyclerView.adapter = adapter
-
-        popupWindow.showAsDropDown(view)
+    private fun isDarkTheme(context: Context): Boolean {
+        return when (context.resources.configuration.uiMode and
+                Configuration.UI_MODE_NIGHT_MASK) {
+            Configuration.UI_MODE_NIGHT_YES -> true
+            else -> false
+        }
     }
 
     private fun showPopupMenu(view: View, menuRes: Int, filePickerManager: FilePickerManager, file: File?) {
@@ -338,6 +301,40 @@ class SettingsFragment(
         dialog.show()
     }
 
+    private fun showConfirmLogoutDialog() {
+        val dialog = AlertDialog.Builder(requireContext())
+            .setTitle("Вы уверены, что хотите выйди из аккаунта?")
+            .setPositiveButton("Выйти") { dialogInterface, _ ->
+                logout()
+                dialogInterface.dismiss()
+            }
+            .setNegativeButton("Назад") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+            }
+            .create()
+
+        dialog.show()
+    }
+
+    private fun showConfirmClearFilesDialog() {
+        val dialog = AlertDialog.Builder(requireContext())
+            .setTitle("Вы уверены, что хотите удалить все файлы?")
+            .setMessage("Файлы будут загружаться заново по мере их появления на экране")
+            .setPositiveButton("Удалить") { dialogInterface, _ ->
+                viewModel.clearAllAppFiles { success ->
+                    dialogInterface.dismiss()
+                    val msg = if(success) "Все файлы успешно удалены" else "Ошибка: Файлы не удалось удалить"
+                    Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Назад") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+            }
+            .create()
+
+        dialog.show()
+    }
+
     private fun openPictureSelector(filePickerManager: FilePickerManager, localMedia: LocalMedia) {
         PictureSelector.create(requireActivity())
             .openPreview()
@@ -368,6 +365,35 @@ class SettingsFragment(
                     .replace(R.id.fragmentContainer, LoginFragment(), "LOGIN_FRAGMENT_TAG3")
                     .commit()
             } else Toast.makeText(requireContext(), "Не удалось выйти из аккаунта, нет сети", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    companion object {
+        private val WALLPAPER_MAP = mapOf(
+            "wallpaper1" to R.drawable.wallpaper1,
+            "wallpaper2" to R.drawable.wallpaper2,
+            "wallpaper3" to R.drawable.wallpaper3,
+            "wallpaper5" to R.drawable.wallpaper5,
+            "wallpaper6" to R.drawable.wallpaper6,
+        )
+    }
+
+    class HorizontalMarginItemDecoration(
+        private val marginPx: Int
+    ) : RecyclerView.ItemDecoration() {
+
+        override fun getItemOffsets(
+            outRect: Rect,
+            view: View,
+            parent: RecyclerView,
+            state: RecyclerView.State
+        ) {
+            with(outRect) {
+                // Для всех элементов кроме последнего добавляем отступ справа
+                if (parent.getChildAdapterPosition(view) != parent.adapter?.itemCount?.minus(1)) {
+                    right = marginPx
+                }
+            }
         }
     }
 }

@@ -13,7 +13,7 @@
         android:layout_height="70dp"
         android:src="@drawable/ic_user_avatar"
         android:padding="6dp"
-        app:tint="@color/colorDayNightAttr"
+        app:tint="?attr/colorDayNightAttr"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 

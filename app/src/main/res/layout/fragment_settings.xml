@@ -56,17 +56,18 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
-        android:layout_marginTop="23dp"
+        android:layout_marginTop="25dp"
         android:gravity="start"
         android:lines="1"
         android:ellipsize="end"
         android:maxEms="8"
         android:textColor="?attr/colorPrimaryDark"
         android:textSize="24sp"
-        android:textStyle="bold|italic"
+        android:textStyle="bold"
+        android:fontFamily="@font/roboto_italic"
         app:layout_constraintStart_toEndOf="@id/photoImageView"
         app:layout_constraintTop_toTopOf="parent"
-        tools:text="Алексей" />
+        tools:text="Alexey" />
 
     <ImageView
         android:id="@+id/edit_username_button"
@@ -90,7 +91,8 @@
         android:lines="1"
         android:textColor="?attr/colorPrimaryDark"
         android:textSize="16sp"
-        android:textStyle="bold|italic"
+        android:textStyle="bold"
+        android:fontFamily="@font/roboto_italic"
         app:layout_constraintStart_toEndOf="@id/photoImageView"
         app:layout_constraintTop_toBottomOf="@id/usernameTextView"
         tools:text="Leha.Zhulanov.03@mail.ru" />
@@ -130,6 +132,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="10dp"
+        android:layout_marginTop="5dp"
         android:autoSizeMaxTextSize="100sp"
         android:autoSizeMinTextSize="10sp"
         android:autoSizeStepGranularity="2sp"
@@ -181,131 +184,29 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/clearFiles" />
 
-    <LinearLayout
-        android:id="@+id/linear_block2"
-        android:layout_width="match_parent"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/themeRecyclerView"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="15dp"
         android:layout_marginStart="10dp"
-        android:layout_marginTop="20dp"
-        android:layout_marginEnd="10dp"
-        android:background="@drawable/choose_settings"
-        android:orientation="vertical"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/customization_text">
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/customization_text"
+        />
 
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <TextView
-                android:id="@+id/wallpaper_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:autoSizeMaxTextSize="100sp"
-                android:autoSizeMinTextSize="10sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:text="Обои: "
-                android:textColor="?attr/colorAccent"
-                android:textStyle="bold|italic"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <TextView
-                android:id="@+id/wallpaper_name"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:autoSizeMaxTextSize="100sp"
-                android:autoSizeMinTextSize="10sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:gravity="center"
-                android:text="Classic"
-                android:textColor="?attr/colorPrimaryDark"
-                android:textStyle="bold|italic"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toEndOf="@id/wallpaper_text"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <Button
-                android:id="@+id/change_wallpaper"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="5dp"
-                android:autoSizeMaxTextSize="100sp"
-                android:autoSizeMinTextSize="10sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:fontFamily="casual"
-                android:gravity="center"
-                android:text="Сменить"
-                android:textAllCaps="false"
-                android:textColor="?attr/colorPrimaryDark"
-                android:textStyle="bold|italic"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <TextView
-                android:id="@+id/colorTheme_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:autoSizeMaxTextSize="100sp"
-                android:autoSizeMinTextSize="10sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:text="Тема: "
-                android:textColor="?attr/colorAccent"
-                android:textStyle="bold|italic"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <TextView
-                android:id="@+id/colorTheme_name"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:autoSizeMaxTextSize="100sp"
-                android:autoSizeMinTextSize="10sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:gravity="center"
-                android:text="Classic"
-                android:textColor="?attr/colorPrimaryDark"
-                android:textStyle="bold|italic"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toEndOf="@id/colorTheme_text"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <Button
-                android:id="@+id/change_colorTheme"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="5dp"
-                android:autoSizeMaxTextSize="100sp"
-                android:autoSizeMinTextSize="10sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:fontFamily="casual"
-                android:gravity="center"
-                android:text="Сменить"
-                android:textAllCaps="false"
-                android:textColor="?attr/colorPrimaryDark"
-                android:textStyle="bold|italic"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-    </LinearLayout>
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/wallpaperRecyclerView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        android:layout_marginStart="10dp"
+        android:orientation="horizontal"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/themeRecyclerView"
+        />
 
     <Button
         android:id="@+id/logout_button"

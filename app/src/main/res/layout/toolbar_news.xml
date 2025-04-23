@@ -13,7 +13,7 @@
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:src="@drawable/ic_user_avatar"
-        app:tint="@color/colorDayNightAttr"
+        app:tint="?attr/colorDayNightAttr"
         android:contentDescription="avatar"
         android:layout_gravity="start"
         android:layout_marginStart="5dp" />

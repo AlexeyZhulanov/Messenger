@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/themeLayout"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:padding="10dp"
+    android:background="@drawable/theme_background"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <TextView
+        android:id="@+id/radioTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginTop="2dp"
+        tools:text="Обои 1"
+        android:textSize="16sp"
+        android:textColor="?attr/colorPrimaryDark"
+        />
+
+    <androidx.appcompat.widget.AppCompatRadioButton
+        android:id="@+id/radio"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        app:layout_constraintStart_toEndOf="@id/radioTextView"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:clickable="false"
+        />
+
+    <View
+        android:id="@+id/wallpaper"
+        android:layout_width="80dp"
+        android:layout_height="100dp"
+        android:layout_marginTop="10dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/radioTextView"
+        tools:background="@drawable/wallpaper1"
+        />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

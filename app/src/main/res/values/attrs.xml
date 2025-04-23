@@ -3,4 +3,9 @@
     <declare-styleable name="MessageLayout">
         <attr name="isSender" format="boolean"/>
     </declare-styleable>
+    <attr name="chatColor" format="color|reference" />
+    <attr name="chatHighlightColor" format="color|reference" />
+    <attr name="colorDayNightAttr" format="color|reference" />
+    <attr name="colorDayNightAttrReversed" format="color|reference" />
+    <attr name="colorDayNightAttr2" format="color|reference" />
 </resources>

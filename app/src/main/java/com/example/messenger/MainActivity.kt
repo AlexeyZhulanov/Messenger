@@ -58,15 +58,8 @@ class MainActivity : AppCompatActivity() {
         val preferences = getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
         val themeNumber = preferences.getInt(PREF_THEME, 0)
         when (themeNumber) {
-            0 -> setTheme(R.style.Theme_Messenger)
-            1 -> setTheme(R.style.Theme1)
             2 -> setTheme(R.style.Theme2)
             3 -> setTheme(R.style.Theme3)
-            4 -> setTheme(R.style.Theme4)
-            5 -> setTheme(R.style.Theme5)
-            6 -> setTheme(R.style.Theme6)
-            7 -> setTheme(R.style.Theme7)
-            8 -> setTheme(R.style.Theme8)
             else -> setTheme(R.style.Theme_Messenger)
         }
         super.onCreate(savedInstanceState)

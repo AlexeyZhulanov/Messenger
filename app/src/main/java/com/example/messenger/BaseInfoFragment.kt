@@ -2,7 +2,6 @@ package com.example.messenger
 
 import android.app.AlertDialog
 import android.content.Context
-import android.content.SharedPreferences
 import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
@@ -29,7 +28,6 @@ import com.example.messenger.databinding.FragmentDialogInfoBinding
 import com.example.messenger.model.MediaItem
 import com.example.messenger.model.User
 import com.example.messenger.picker.CustomPreviewFragment
-import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
 import com.luck.picture.lib.basic.PictureSelector
@@ -45,7 +43,6 @@ import java.io.File
 @AndroidEntryPoint
 abstract class BaseInfoFragment : Fragment() {
     protected lateinit var binding: FragmentDialogInfoBinding
-    private lateinit var preferences: SharedPreferences
     private lateinit var adapter: DialogInfoAdapter
     protected lateinit var filePickerManager: FilePickerManager
     protected var selectedType: Int = 0
@@ -87,13 +84,6 @@ abstract class BaseInfoFragment : Fragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentDialogInfoBinding.inflate(inflater, container, false)
-        preferences = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
-        val wallpaper = preferences.getString(PREF_WALLPAPER, "")
-        if(wallpaper != "") {
-            val resId = resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
-            if(resId != 0)
-                binding.dialogInfoLayout.background = ContextCompat.getDrawable(requireContext(), resId)
-        }
         filePickerManager = FilePickerManager(fragment3 =  this)
         val typedValue = TypedValue()
         context?.theme?.resolveAttribute(android.R.attr.colorAccent, typedValue, true)
@@ -388,28 +378,58 @@ abstract class BaseInfoFragment : Fragment() {
                     true
                 }
                 R.id.delete_all_messages -> {
-                    lifecycleScope.launch {
-                        val success = viewModel.deleteAllMessages()
-                        if(success) requireActivity().onBackPressedDispatcher.onBackPressed()
-                        else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
-                    }
+                    showConfirmDeleteMessagesDialog()
                     true
                 }
                 R.id.delete_dialog -> {
-                    lifecycleScope.launch {
-                        val (success, message) = viewModel.deleteConv()
-                        if(success) {
-                            parentFragmentManager.beginTransaction()
-                                .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_FROM_DIALOG_TAG")
-                                .commit()
-                        } else Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-                    }
+                    showConfirmDeleteChatDialog()
                     true
                 }
                 else -> false
             }
         }
         popupMenu.show()
+    }
+
+    private fun showConfirmDeleteMessagesDialog() {
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Вы уверены, что хотите удалить все сообщения?")
+            .setPositiveButton("Удалить") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+                lifecycleScope.launch {
+                    val success = viewModel.deleteAllMessages()
+                    if(success) requireActivity().onBackPressedDispatcher.onBackPressed()
+                    else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Назад") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+            }
+            .create()
+
+        dialog.show()
+    }
+
+    private fun showConfirmDeleteChatDialog() {
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Вы уверены, что хотите удалить этот чат?")
+            .setPositiveButton("Удалить") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+                lifecycleScope.launch {
+                    val (success, message) = viewModel.deleteConv()
+                    if(success) {
+                        parentFragmentManager.beginTransaction()
+                            .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_FROM_DIALOG_TAG")
+                            .commit()
+                    } else Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Назад") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+            }
+            .create()
+
+        dialog.show()
     }
 
     private fun showNumberPickerDialog() {

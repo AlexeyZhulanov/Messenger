@@ -20,7 +20,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:src="@drawable/ic_user_avatar"
-        app:tint="@color/colorDayNightAttr2"
+        app:tint="?attr/colorDayNightAttr2"
         app:layout_constraintTop_toBottomOf="@id/toolbar_container"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -65,7 +65,8 @@
         android:autoSizeStepGranularity="2sp"
         android:padding="2dp"
         android:elevation="4dp"
-        android:textStyle="bold|italic" />
+        android:fontFamily="@font/roboto_italic"
+        android:textStyle="bold" />
 
     <TextView
         android:layout_width="match_parent"
@@ -83,7 +84,8 @@
         android:autoSizeStepGranularity="2sp"
         android:padding="2dp"
         android:elevation="4dp"
-        android:textStyle="bold|italic" />
+        android:fontFamily="@font/roboto_italic"
+        android:textStyle="bold" />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/topGuideLine"
@@ -150,7 +152,8 @@
             android:textColor="?attr/colorPrimaryDark"
             android:textSize="20sp"
             android:padding="2dp"
-            android:textStyle="bold|italic"/>
+            android:fontFamily="@font/roboto_italic"
+            android:textStyle="bold"/>
 
         <ImageView
             android:id="@+id/copyImageView"

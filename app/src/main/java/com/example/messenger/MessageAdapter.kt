@@ -21,6 +21,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
@@ -362,7 +363,7 @@ class MessageAdapter(
         val isInLast30 = position >= itemCount - 30
         val isAnswer = message.referenceToMessageId != null
         if (position == highlightedPosition) {
-            holder.itemView.setBackgroundColor(Color.YELLOW)
+            holder.itemView.setBackgroundColor(ContextCompat.getColor(context, R.color.chatAnswerHighlight))
             // Убираем подсветку через 1 секунду
             holder.itemView.postDelayed({
                 holder.itemView.setBackgroundColor(Color.TRANSPARENT)
