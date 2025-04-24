@@ -139,6 +139,10 @@ class SettingsFragment(
             }).show(childFragmentManager, "PasswordChange")
 
         }
+        binding.clearFiles.setOnClickListener {
+            Toast.makeText(requireContext(), "Пока не сделано, надо добавить вывод диалога", Toast.LENGTH_SHORT).show()
+            // todo fileManager.clearAllAppFiles()
+        }
         binding.changeColorTheme.setOnClickListener {
             showColorThemePopupMenu(it, container as ViewGroup)
         }

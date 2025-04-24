@@ -89,8 +89,6 @@ class MessageFragment(
     // Дублируется здесь, но в GroupFragment дублирования не будет
     override fun getUserName(): String = dialog.otherUser.username
 
-    override fun replaceCurrentFragment() = replaceFragment(MessageFragment(dialog, currentUser, isFromNotification))
-
     override fun composeAnswer(message: Message) {
         binding.answerUsername.text = dialog.otherUser.username
         answerMessage = Pair(message.id, dialog.otherUser.username)

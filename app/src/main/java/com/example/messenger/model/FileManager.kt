@@ -1,6 +1,8 @@
 package com.example.messenger.model
 
 import android.content.Context
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class FileManager(private val context: Context) {
@@ -62,12 +64,6 @@ class FileManager(private val context: Context) {
         return file.exists()
     }
 
-//    fun isExistUnsentMessage(fileName: String): Boolean {
-//        val dir = getUnsentMessageDirectory()
-//        val file = File(dir, fileName)
-//        return file.exists()
-//    }
-
     fun isExistAvatar(fileName: String): Boolean {
         val dir = getAvatarsDirectory()
         val file = File(dir, fileName)
@@ -85,7 +81,7 @@ class FileManager(private val context: Context) {
         return file.delete()
     }
 
-    fun deleteFilesMessage(files: List<String>) {
+    fun deleteFilesMessage(files: Set<String>) {
         val dir = getMessageDirectory()
         files.forEach { filename ->
             deleteFile(File(dir, filename))
@@ -106,18 +102,6 @@ class FileManager(private val context: Context) {
                 deleteFile(file)
             }
         }
-    }
-
-    fun cleanupUnusedMessageFiles(usedFiles: Set<String>) {
-        cleanupDirectory(getMessageDirectory(), usedFiles)
-    }
-
-    fun cleanupUnusedUnsentFiles(usedFiles: Set<String>) {
-        cleanupDirectory(getUnsentMessageDirectory(), usedFiles)
-    }
-
-    fun cleanupAvatarFiles(usedFiles: Set<String>) {
-        cleanupDirectory(getAvatarsDirectory(), usedFiles)
     }
 
     fun cleanupNewsFiles(usedFiles: Set<String>) {
@@ -144,5 +128,25 @@ class FileManager(private val context: Context) {
     fun getFileFromPath(filePath: String): File? {
         val file = File(filePath)
         return if (file.exists()) file else null
+    }
+
+    suspend fun clearAllAppFiles(): Boolean = withContext(Dispatchers.IO) {
+        return@withContext clearDirectoryFiles(getMessageDirectory()) &&
+                clearDirectoryFiles(getUnsentMessageDirectory()) &&
+                clearDirectoryFiles(getAvatarsDirectory()) &&
+                clearDirectoryFiles(getNewsDirectory())
+    }
+
+    private fun clearDirectoryFiles(directory: File): Boolean {
+        return try {
+            directory.listFiles()?.forEach { file ->
+                if (file.isFile) {
+                    file.delete()
+                }
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 }

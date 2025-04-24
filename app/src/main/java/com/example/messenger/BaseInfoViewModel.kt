@@ -187,7 +187,7 @@ class BaseInfoViewModel @Inject constructor(
     fun addTempFile(filename: String) = tempFiles.add(filename)
 
     fun clearTempFiles() {
-        fileManager.deleteFilesMessage(tempFiles.toList())
+        fileManager.deleteFilesMessage(tempFiles)
         tempFiles.clear()
     }
 

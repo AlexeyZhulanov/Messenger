@@ -5,6 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:maxWidth="170dp"
     android:background="@drawable/answer_background">
 
     <TextView
@@ -13,7 +14,6 @@
         android:layout_height="wrap_content"
         android:text="Forwarded from"
         android:textColor="?attr/colorPrimaryDark"
-        android:fontFamily="casual"
         android:textSize="10sp"
         android:textStyle="bold|italic"
         android:layout_marginTop="3dp"
@@ -28,11 +28,11 @@
         android:layout_height="wrap_content"
         tools:text="Алексей"
         android:textColor="?attr/colorPrimaryDark"
-        android:fontFamily="casual"
         android:textSize="12sp"
         android:textStyle="bold|italic"
         android:layout_marginStart="12dp"
         android:paddingEnd="7dp"
+        android:paddingBottom="3dp"
         app:layout_constraintTop_toBottomOf="@id/forwardText"
         app:layout_constraintStart_toStartOf="parent"/>
 

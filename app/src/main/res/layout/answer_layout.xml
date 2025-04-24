@@ -5,6 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:maxWidth="170dp"
     android:background="@drawable/answer_background">
 
     <ImageView
@@ -23,15 +24,15 @@
 
         <TextView
             android:id="@+id/answerUsername"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            tools:text="Алексей"
+            tools:text="Alexey"
             android:textColor="?attr/colorPrimaryDark"
-            android:fontFamily="casual"
             android:textSize="12sp"
             android:textStyle="bold|italic"
             android:layout_marginTop="3dp"
             android:layout_marginStart="10dp"
+            android:ellipsize="end"
             android:paddingEnd="7dp"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toEndOf="@id/answerImageView"/>
@@ -40,17 +41,16 @@
             android:id="@+id/answer_message"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            tools:text="Пример фывфы фывфывф вфывфывф"
+            tools:text="hellloo"
             android:maxEms="7"
             android:ellipsize="end"
             android:singleLine="true"
             android:textColor="?attr/colorPrimaryDark"
-            android:fontFamily="casual"
             android:textSize="12sp"
             android:textStyle="bold|italic"
             android:layout_marginStart="10dp"
             android:layout_marginEnd="5dp"
-            android:layout_marginTop="-5dp"
+            android:paddingBottom="3dp"
             android:paddingEnd="5dp"
             app:layout_constraintTop_toBottomOf="@id/answerUsername"
             app:layout_constraintStart_toEndOf="@id/answerImageView"/>

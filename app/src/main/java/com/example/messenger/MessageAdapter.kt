@@ -107,17 +107,19 @@ class MessageAdapter(
         val updatedList = currentList.toMutableList()
         var needNotify = false
         if(isGroup) {
-            var firstItemId = updatedList.firstOrNull()?.first?.id ?: -10
+            val firstItem = updatedList.firstOrNull()?.first
+            var firstItemId = firstItem?.id ?: -10
+            val firstItemSenderId = firstItem?.idSender ?: -10
             messages.forEachIndexed { index, message ->
                 val messageIdSender = message.first.idSender
                 val messageId = message.first.id
                 if(firstItemId != -10) {
                     val info = members[firstItemId]
-                    if(info != null && messageIdSender != currentUserId) {
-                        if(messageIdSender == firstItemId && message.second == "") {
-                            val second: String = info.second ?: ""
+                    if(messageIdSender != currentUserId) {
+                        if(messageIdSender == firstItemSenderId && message.second == "") {
+                            val second: String = info?.second ?: ""
                             members += messageId to (null to second)
-                            members += firstItemId to (info.first to null)
+                            members += firstItemId to (info?.first to null)
                             if(index == 0) needNotify = true
                         } else {
                             val member = membersFull.find { it.id == messageIdSender }
@@ -134,33 +136,14 @@ class MessageAdapter(
         }
         updatedList.addAll(0, messages)
         submitList(updatedList) {
-            if(needNotify) notifyItemChanged(messages.size)
+            if(needNotify) notifyItemChanged(messages.size, "isAvatar")
         }
     }
 
-    fun addNewMessage(message: Triple<Message, String, String>) {
+    fun addUnsentMessage(message: Triple<Message, String, String>) {
         val updatedList = currentList.toMutableList()
-        var needNotify = false
-        if(isGroup) {
-            val firstItemId = updatedList.first().first.id
-            val messageIdSender = message.first.idSender
-            val messageId = message.first.id
-            val info = members[firstItemId]
-            if(info != null && messageIdSender != currentUserId) {
-                if(messageIdSender == firstItemId && message.second == "") {
-                    members += messageId to (null to info.second)
-                    members += firstItemId to (info.first to null)
-                    needNotify = true
-                } else {
-                    val member = membersFull.find { it.id == messageIdSender }
-                    members += messageId to (member?.username to member?.avatar)
-                }
-            }
-        }
         updatedList.add(0, message)
-        submitList(updatedList) {
-            if(needNotify) notifyItemChanged(1)
-        }
+        submitList(updatedList)
     }
 
     fun deleteUnsentMessage(message: Message) {
@@ -341,18 +324,31 @@ class MessageAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: MutableList<Any>) {
-        if (payloads.contains("isRead")) {
-            when(holder) {
-                is MessagesViewHolderSender -> holder.updateReadStatus()
-                is MessagesViewHolderVoiceSender -> holder.updateReadStatus()
-                is MessagesViewHolderFileSender -> holder.updateReadStatus()
-                is MessagesViewHolderTextImageSender -> holder.updateReadStatus()
-                is MessagesViewHolderTextImagesSender -> holder.updateReadStatus()
-                is MessagesViewHolderCodeSender -> holder.updateReadStatus()
+        when {
+            payloads.contains("isRead") -> {
+                when(holder) {
+                    is MessagesViewHolderSender -> holder.updateReadStatus()
+                    is MessagesViewHolderVoiceSender -> holder.updateReadStatus()
+                    is MessagesViewHolderFileSender -> holder.updateReadStatus()
+                    is MessagesViewHolderTextImageSender -> holder.updateReadStatus()
+                    is MessagesViewHolderTextImagesSender -> holder.updateReadStatus()
+                    is MessagesViewHolderCodeSender -> holder.updateReadStatus()
+                }
+                return
             }
-            return
+            payloads.contains("isAvatar") -> {
+                when(holder) {
+                    is MessagesViewHolderReceiver -> holder.updateAvatar()
+                    is MessagesViewHolderVoiceReceiver -> holder.updateAvatar()
+                    is MessagesViewHolderFileReceiver -> holder.updateAvatar()
+                    is MessagesViewHolderTextImageReceiver -> holder.updateAvatar()
+                    is MessagesViewHolderTextImagesReceiver -> holder.updateAvatar()
+                    is MessagesViewHolderCodeReceiver -> holder.updateAvatar()
+                }
+                return
+            }
+            else -> onBindViewHolder(holder, position)
         }
-        onBindViewHolder(holder, position)
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
@@ -405,7 +401,7 @@ class MessageAdapter(
         notifyItemChanged(position)
     }
 
-    private inline fun <reified T : ViewBinding> handleAnswerLayout(binder: T, message: Message) {
+    private inline fun <reified T : ViewBinding> handleAnswerLayout(binder: T, message: Message): Int {
         // choose viewHolder type
         val binding = when(binder) {
             is ItemMessageReceiverBinding -> binder.answerLayout
@@ -423,8 +419,9 @@ class MessageAdapter(
         binding.root.visibility = View.VISIBLE
         binding.answerUsername.text = message.usernameAuthorOriginal
         val tmpId = message.referenceToMessageId
-        if(tmpId == null) {
+        return if(tmpId == null) {
             binding.answerMessage.text = "??????????"
+            10
         } else {
             val chk = getItemPositionWithId(tmpId)
             if(chk == -1) {
@@ -445,23 +442,25 @@ class MessageAdapter(
                         messageViewModel.smartScrollToPosition(p)
                     }
                 }
+                10
             } else {
                 val m = getItem(chk)?.first
-                uiScopeMain.launch {
-                    if(m?.images != null) {
+                if(m?.images != null) {
+                    uiScopeMain.launch {
                         messageViewModel.imageSet(m.images!!.first(), binding.answerImageView, context)
                     }
-                    binding.answerMessage.text = when {
-                        m?.text != null -> m.text
-                        m?.images != null -> "Фотография"
-                        m?.file != null -> m.file
-                        m?.voice != null -> "Голосовое сообщение"
-                        else -> "?????????"
-                    }
-                    binding.root.setOnClickListener {
-                        messageViewModel.smartScrollToPosition(chk)
-                    }
                 }
+                binding.answerMessage.text = when {
+                    m?.text != null -> m.text
+                    m?.images != null -> "Фотография"
+                    m?.file != null -> m.file
+                    m?.voice != null -> "Голосовое сообщение"
+                    else -> "?????????"
+                }
+                binding.root.setOnClickListener {
+                    messageViewModel.smartScrollToPosition(chk)
+                }
+                binding.answerMessage.text.length // return len
             }
         }
     }
@@ -545,7 +544,7 @@ class MessageAdapter(
                 }
             }
             binding.root.setOnLongClickListener {
-                if(canLongClick) {
+                if(canLongClick && canDelete) {
                     messageSave?.let {
                         onLongClick(it.id, false)
                         actionListener.onMessageLongClick(itemView)
@@ -558,6 +557,11 @@ class MessageAdapter(
             }
         }
 
+        fun updateAvatar() {
+            binding.photoImageView.visibility = View.GONE
+            binding.spaceAvatar.visibility = View.VISIBLE
+        }
+
         fun bind(message: Message, date: String, time: String, position: Int, isAnswer: Boolean) {
             messageSave = message
 
@@ -567,8 +571,9 @@ class MessageAdapter(
             } else binding.checkbox.visibility = View.GONE
 
             if(isAnswer) {
-                handleAnswerLayout(binding, message)
-                if(binding.customMessageLayout.width < binding.answerLayout.root.width) {
+                val ansSize = handleAnswerLayout(binding, message)
+                val textLen = message.text?.length ?: 0
+                if(textLen < 10 && ansSize > 10) {
                     val layoutParams = binding.customMessageLayout.layoutParams as ConstraintLayout.LayoutParams
                     layoutParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                     binding.customMessageLayout.layoutParams = layoutParams
@@ -578,7 +583,9 @@ class MessageAdapter(
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
-                if(binding.customMessageLayout.width < binding.forwardLayout.root.width) {
+                val textLen = message.text?.length ?: 0
+                val fwdLen = message.usernameAuthorOriginal?.length ?: 0
+                if(textLen <= 3 || (fwdLen > 10 && textLen < 8)) {
                     val layoutParams = binding.customMessageLayout.layoutParams as ConstraintLayout.LayoutParams
                     layoutParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                     binding.customMessageLayout.layoutParams = layoutParams
@@ -596,7 +603,10 @@ class MessageAdapter(
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+                binding.space.visibility = View.GONE
+            }
 
             binding.timeTextView.text = time
             if(isGroup) {
@@ -608,13 +618,23 @@ class MessageAdapter(
                     } else binding.userNameTextView.visibility = View.GONE
                     if(user.second != null) {
                         binding.photoImageView.visibility = View.VISIBLE
+                        binding.spaceAvatar.visibility = View.GONE
                         if(user.second != "") messageViewModel.avatarSet(user.second ?: "", binding.photoImageView, context)
-                    } else binding.spaceAvatar.visibility = View.VISIBLE
-                } else binding.spaceAvatar.visibility = View.VISIBLE
+                    } else {
+                        binding.spaceAvatar.visibility = View.VISIBLE
+                        binding.photoImageView.visibility = View.GONE
+                    }
+                } else {
+                    binding.spaceAvatar.visibility = View.VISIBLE
+                    binding.photoImageView.visibility = View.GONE
+                    binding.userNameTextView.visibility = View.GONE
+                }
             } else {
                 binding.spaceAvatar.visibility = View.GONE
                 binding.photoImageView.visibility = View.GONE
+                binding.userNameTextView.visibility = View.GONE
             }
+
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             else binding.editTextView.visibility = View.GONE
         }
@@ -659,8 +679,9 @@ class MessageAdapter(
             messageSave = message
 
             if(isAnswer) {
-                handleAnswerLayout(binding, message)
-                if(binding.customMessageLayout.width < binding.answerLayout.root.width) {
+                val ansSize = handleAnswerLayout(binding, message)
+                val textLen = message.text?.length ?: 0
+                if(textLen < 10 && ansSize > 10) {
                     val layoutParams = binding.customMessageLayout.layoutParams as ConstraintLayout.LayoutParams
                     layoutParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                     binding.customMessageLayout.layoutParams = layoutParams
@@ -670,8 +691,9 @@ class MessageAdapter(
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
-                // если длина custom message меньше fwd layout, то растягиваем текст custom на ширину fwd
-                if(binding.customMessageLayout.width < binding.forwardLayout.root.width) {
+                val textLen = message.text?.length ?: 0
+                val fwdLen = message.usernameAuthorOriginal?.length ?: 0
+                if(textLen <= 3 || (fwdLen > 10 && textLen < 8)) {
                     val layoutParams = binding.customMessageLayout.layoutParams as ConstraintLayout.LayoutParams
                     layoutParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                     binding.customMessageLayout.layoutParams = layoutParams
@@ -697,7 +719,10 @@ class MessageAdapter(
                 if(date != "") {
                     binding.dateTextView.visibility = View.VISIBLE
                     binding.dateTextView.text = date
-                } else binding.dateTextView.visibility = View.GONE
+                } else {
+                    binding.dateTextView.visibility = View.GONE
+                    binding.space.visibility = View.GONE
+                }
 
                 binding.timeTextView.text = time
 
@@ -930,7 +955,7 @@ class MessageAdapter(
                 }
             }
             binding.root.setOnLongClickListener {
-                if(canLongClick) {
+                if(canLongClick && canDelete) {
                     messageSave?.let {
                         onLongClick(it.id, false)
                         actionListener.onMessageLongClick(itemView)
@@ -941,6 +966,11 @@ class MessageAdapter(
             binding.checkbox.setOnClickListener {
                 messageSave?.let { savePosition(it.id, false) }
             }
+        }
+
+        fun updateAvatar() {
+            binding.photoImageView.visibility = View.GONE
+            binding.spaceAvatar.visibility = View.VISIBLE
         }
 
         fun bind(message: Message, date: String, time: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
@@ -964,7 +994,10 @@ class MessageAdapter(
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+                binding.space.visibility = View.GONE
+            }
 
             binding.timeTextView.text = time
             if(isGroup) {
@@ -973,13 +1006,25 @@ class MessageAdapter(
                     if(user.first != null) {
                         binding.userNameTextView.visibility = View.VISIBLE
                         binding.userNameTextView.text = user.first
-                    }
+                    } else binding.userNameTextView.visibility = View.GONE
                     if(user.second != null) {
                         binding.photoImageView.visibility = View.VISIBLE
+                        binding.spaceAvatar.visibility = View.GONE
                         if(user.second != "") messageViewModel.avatarSet(user.second ?: "", binding.photoImageView, context)
-                    } else binding.spaceAvatar.visibility = View.VISIBLE
-                } else binding.spaceAvatar.visibility = View.VISIBLE
-            } else binding.spaceAvatar.visibility = View.GONE
+                    } else {
+                        binding.spaceAvatar.visibility = View.VISIBLE
+                        binding.photoImageView.visibility = View.GONE
+                    }
+                } else {
+                    binding.spaceAvatar.visibility = View.VISIBLE
+                    binding.photoImageView.visibility = View.GONE
+                    binding.userNameTextView.visibility = View.GONE
+                }
+            } else {
+                binding.spaceAvatar.visibility = View.GONE
+                binding.photoImageView.visibility = View.GONE
+                binding.userNameTextView.visibility = View.GONE
+            }
 
             if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
             else binding.editTextView.visibility = View.GONE
@@ -1124,7 +1169,10 @@ class MessageAdapter(
                 if(date != "") {
                     binding.dateTextView.visibility = View.VISIBLE
                     binding.dateTextView.text = date
-                } else binding.dateTextView.visibility = View.GONE
+                } else {
+                    binding.dateTextView.visibility = View.GONE
+                    binding.space.visibility = View.GONE
+                }
 
                 binding.timeTextView.text = time
                 if(!canLongClick) {
@@ -1219,7 +1267,7 @@ class MessageAdapter(
                 }
             }
             binding.root.setOnLongClickListener {
-                if(canLongClick) {
+                if(canLongClick && canDelete) {
                     messageSave?.let {
                         onLongClick(it.id, false)
                         actionListener.onMessageLongClick(itemView)
@@ -1230,6 +1278,11 @@ class MessageAdapter(
             binding.checkbox.setOnClickListener {
                 messageSave?.let { savePosition(it.id, false) }
             }
+        }
+
+        fun updateAvatar() {
+            binding.photoImageView.visibility = View.GONE
+            binding.spaceAvatar.visibility = View.VISIBLE
         }
 
         fun bind(message: Message, date: String, time: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
@@ -1252,7 +1305,10 @@ class MessageAdapter(
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+                binding.space.visibility = View.GONE
+            }
 
             binding.timeTextView.text = time
 
@@ -1264,13 +1320,25 @@ class MessageAdapter(
                     if(user.first != null) {
                         binding.userNameTextView.visibility = View.VISIBLE
                         binding.userNameTextView.text = user.first
-                    }
+                    } else binding.userNameTextView.visibility = View.GONE
                     if(user.second != null) {
                         binding.photoImageView.visibility = View.VISIBLE
+                        binding.spaceAvatar.visibility = View.GONE
                         if(user.second != "") messageViewModel.avatarSet(user.second ?: "", binding.photoImageView, context)
-                    } else binding.spaceAvatar.visibility = View.VISIBLE
-                } else binding.spaceAvatar.visibility = View.VISIBLE
-            } else binding.spaceAvatar.visibility = View.GONE
+                    } else {
+                        binding.spaceAvatar.visibility = View.VISIBLE
+                        binding.photoImageView.visibility = View.GONE
+                    }
+                } else {
+                    binding.spaceAvatar.visibility = View.VISIBLE
+                    binding.photoImageView.visibility = View.GONE
+                    binding.userNameTextView.visibility = View.GONE
+                }
+            } else {
+                binding.spaceAvatar.visibility = View.GONE
+                binding.photoImageView.visibility = View.GONE
+                binding.userNameTextView.visibility = View.GONE
+            }
 
             uiScopeMain.launch {
                 val filePathTemp = async {
@@ -1379,7 +1447,10 @@ class MessageAdapter(
                 if(date != "") {
                     binding.dateTextView.visibility = View.VISIBLE
                     binding.dateTextView.text = date
-                } else binding.dateTextView.visibility = View.GONE
+                } else {
+                    binding.dateTextView.visibility = View.GONE
+                    binding.space.visibility = View.GONE
+                }
 
                 binding.timeTextView.text = time
 
@@ -1451,7 +1522,7 @@ class MessageAdapter(
                 }
             }
             binding.root.setOnLongClickListener {
-                if(canLongClick) {
+                if(canLongClick && canDelete) {
                     messageSave?.let {
                         onLongClick(it.id, false)
                         actionListener.onMessageLongClick(itemView)
@@ -1462,6 +1533,11 @@ class MessageAdapter(
             binding.checkbox.setOnClickListener {
                 messageSave?.let { savePosition(it.id, false) }
             }
+        }
+
+        fun updateAvatar() {
+            binding.photoImageView.visibility = View.GONE
+            binding.spaceAvatar.visibility = View.VISIBLE
         }
 
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
@@ -1496,7 +1572,10 @@ class MessageAdapter(
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+                binding.space.visibility = View.GONE
+            }
 
             timeTextView.text = time
             if(isGroup) {
@@ -1505,13 +1584,25 @@ class MessageAdapter(
                     if(user.first != null) {
                         binding.userNameTextView.visibility = View.VISIBLE
                         binding.userNameTextView.text = user.first
-                    }
+                    } else binding.userNameTextView.visibility = View.GONE
                     if(user.second != null) {
                         binding.photoImageView.visibility = View.VISIBLE
+                        binding.spaceAvatar.visibility = View.GONE
                         if(user.second != "") messageViewModel.avatarSet(user.second ?: "", binding.photoImageView, context)
-                    } else binding.spaceAvatar.visibility = View.VISIBLE
-                } else binding.spaceAvatar.visibility = View.VISIBLE
-            } else binding.spaceAvatar.visibility = View.GONE
+                    } else {
+                        binding.spaceAvatar.visibility = View.VISIBLE
+                        binding.photoImageView.visibility = View.GONE
+                    }
+                } else {
+                    binding.spaceAvatar.visibility = View.VISIBLE
+                    binding.photoImageView.visibility = View.GONE
+                    binding.userNameTextView.visibility = View.GONE
+                }
+            } else {
+                binding.spaceAvatar.visibility = View.GONE
+                binding.photoImageView.visibility = View.GONE
+                binding.userNameTextView.visibility = View.GONE
+            }
 
             if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
@@ -1661,7 +1752,10 @@ class MessageAdapter(
                 if(date != "") {
                     binding.dateTextView.visibility = View.VISIBLE
                     binding.dateTextView.text = date
-                } else binding.dateTextView.visibility = View.GONE
+                } else {
+                    binding.dateTextView.visibility = View.GONE
+                    binding.space.visibility = View.GONE
+                }
 
                 timeTextView.text = time
 
@@ -1775,7 +1869,7 @@ class MessageAdapter(
                 }
             }
             binding.root.setOnLongClickListener {
-                if(canLongClick) {
+                if(canLongClick && canDelete) {
                     messageSave?.let {
                         onLongClick(it.id, false)
                         actionListener.onMessageLongClick(itemView)
@@ -1786,6 +1880,11 @@ class MessageAdapter(
             binding.checkbox.setOnClickListener {
                 messageSave?.let { savePosition(it.id, false) }
             }
+        }
+
+        fun updateAvatar() {
+            binding.photoImageView.visibility = View.GONE
+            binding.spaceAvatar.visibility = View.VISIBLE
         }
 
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
@@ -1821,7 +1920,10 @@ class MessageAdapter(
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+                binding.space.visibility = View.GONE
+            }
 
             timeTextView.text = time
             if(isGroup) {
@@ -1830,13 +1932,25 @@ class MessageAdapter(
                     if(user.first != null) {
                         binding.userNameTextView.visibility = View.VISIBLE
                         binding.userNameTextView.text = user.first
-                    }
+                    } else binding.userNameTextView.visibility = View.GONE
                     if(user.second != null) {
                         binding.photoImageView.visibility = View.VISIBLE
+                        binding.spaceAvatar.visibility = View.GONE
                         if(user.second != "") messageViewModel.avatarSet(user.second ?: "", binding.photoImageView, context)
-                    } else binding.spaceAvatar.visibility = View.VISIBLE
-                } else binding.spaceAvatar.visibility = View.VISIBLE
-            } else binding.spaceAvatar.visibility = View.GONE
+                    } else {
+                        binding.spaceAvatar.visibility = View.VISIBLE
+                        binding.photoImageView.visibility = View.GONE
+                    }
+                } else {
+                    binding.spaceAvatar.visibility = View.VISIBLE
+                    binding.photoImageView.visibility = View.GONE
+                    binding.userNameTextView.visibility = View.GONE
+                }
+            } else {
+                binding.spaceAvatar.visibility = View.GONE
+                binding.photoImageView.visibility = View.GONE
+                binding.userNameTextView.visibility = View.GONE
+            }
 
             if(!canLongClick && canDelete) {
                 if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
@@ -1993,7 +2107,10 @@ class MessageAdapter(
                 if(date != "") {
                     binding.dateTextView.visibility = View.VISIBLE
                     binding.dateTextView.text = date
-                } else binding.dateTextView.visibility = View.GONE
+                } else {
+                    binding.dateTextView.visibility = View.GONE
+                    binding.space.visibility = View.GONE
+                }
 
                 timeTextView.text = time
 
@@ -2077,7 +2194,7 @@ class MessageAdapter(
                 }
             }
             binding.root.setOnLongClickListener {
-                if(canLongClick) {
+                if(canLongClick && canDelete) {
                     messageSave?.let {
                         onLongClick(it.id, false)
                         actionListener.onMessageLongClick(itemView)
@@ -2091,6 +2208,11 @@ class MessageAdapter(
             binding.openFullIcon.setOnClickListener {
                 messageSave?.let { actionListener.onCodeOpenClick(it) }
             }
+        }
+
+        fun updateAvatar() {
+            binding.photoImageView.visibility = View.GONE
+            binding.spaceAvatar.visibility = View.VISIBLE
         }
 
         fun bind(message: Message, date: String, time: String, position: Int) {
@@ -2121,7 +2243,10 @@ class MessageAdapter(
             if(date != "") {
                 binding.dateTextView.visibility = View.VISIBLE
                 binding.dateTextView.text = date
-            } else binding.dateTextView.visibility = View.GONE
+            } else {
+                binding.dateTextView.visibility = View.GONE
+                binding.space.visibility = View.GONE
+            }
 
             binding.timeTextViewImage.text = time
             if(isGroup) {
@@ -2133,13 +2258,23 @@ class MessageAdapter(
                     } else binding.userNameTextView.visibility = View.GONE
                     if(user.second != null) {
                         binding.photoImageView.visibility = View.VISIBLE
+                        binding.spaceAvatar.visibility = View.GONE
                         if(user.second != "") messageViewModel.avatarSet(user.second ?: "", binding.photoImageView, context)
-                    } else binding.spaceAvatar.visibility = View.VISIBLE
-                } else binding.spaceAvatar.visibility = View.VISIBLE
+                    } else {
+                        binding.spaceAvatar.visibility = View.VISIBLE
+                        binding.photoImageView.visibility = View.GONE
+                    }
+                } else {
+                    binding.spaceAvatar.visibility = View.VISIBLE
+                    binding.photoImageView.visibility = View.GONE
+                    binding.userNameTextView.visibility = View.GONE
+                }
             } else {
                 binding.spaceAvatar.visibility = View.GONE
                 binding.photoImageView.visibility = View.GONE
+                binding.userNameTextView.visibility = View.GONE
             }
+
             if(message.isEdited) binding.editTextViewImage.visibility = View.VISIBLE
             else binding.editTextViewImage.visibility = View.GONE
         }
@@ -2207,7 +2342,10 @@ class MessageAdapter(
                 if(date != "") {
                     binding.dateTextView.visibility = View.VISIBLE
                     binding.dateTextView.text = date
-                } else binding.dateTextView.visibility = View.GONE
+                } else {
+                    binding.dateTextView.visibility = View.GONE
+                    binding.space.visibility = View.GONE
+                }
 
                 binding.timeTextViewImage.text = time
 

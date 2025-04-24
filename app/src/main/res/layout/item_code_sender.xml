@@ -19,6 +19,14 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <Space
+        android:id="@+id/space"
+        android:layout_width="wrap_content"
+        android:layout_height="10dp"
+        app:layout_constraintTop_toBottomOf="@id/dateTextView"
+        app:layout_constraintStart_toStartOf="@id/dateTextView"
+        />
+
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/senderGuideLine"
         android:layout_width="wrap_content"
@@ -44,7 +52,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="5dp"
         app:layout_constraintStart_toEndOf="@id/senderGuideLine"
-        app:layout_constraintTop_toBottomOf="@id/dateTextView"
+        app:layout_constraintTop_toBottomOf="@id/space"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         android:gravity="end"

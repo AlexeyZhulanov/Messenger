@@ -5,7 +5,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
-
     <TextView
         android:id="@+id/dateTextView"
         android:layout_width="wrap_content"
@@ -19,6 +18,14 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <Space
+        android:id="@+id/space"
+        android:layout_width="wrap_content"
+        android:layout_height="10dp"
+        app:layout_constraintTop_toBottomOf="@id/dateTextView"
+        app:layout_constraintStart_toStartOf="@id/dateTextView"
+        />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/receiverGuideLine"
@@ -46,7 +53,7 @@
         android:layout_marginStart="5dp"
         android:orientation="horizontal"
         app:layout_constraintEnd_toStartOf="@id/receiverGuideLine"
-        app:layout_constraintTop_toBottomOf="@id/dateTextView"
+        app:layout_constraintTop_toBottomOf="@id/space"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         android:gravity="start"
@@ -83,7 +90,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="14sp"
-                android:fontFamily="casual"
                 android:textStyle="bold|italic"
                 tools:text="Алексей"
                 android:visibility="gone"

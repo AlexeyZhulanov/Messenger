@@ -3,6 +3,7 @@ package com.example.messenger
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.messenger.model.RetrofitService
+import com.example.messenger.model.UserNotFoundException
 import com.example.messenger.model.appsettings.AppSettings
 import com.example.messenger.security.ChatKeyManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,6 +39,8 @@ class LoginViewModel @Inject constructor(
                 } else {
                     onError("Ошибка: Неверный логин или пароль")
                 }
+            } catch (e: UserNotFoundException) {
+                onError("Ошибка: Аккаунт с таким именем не существует")
             } catch (e: Exception) {
                 onError("Ошибка: Неверный логин или пароль")
             }

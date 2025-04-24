@@ -59,18 +59,17 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.95"
+        app:layout_constraintGuide_percent="0.94"
         />
 
-    <Button
+    <TextView
         android:id="@+id/button"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:textAllCaps="false"
+        android:layout_height="0dp"
         android:text="Новости"
         android:autoSizeTextType="uniform"
         android:autoSizeMinTextSize="10sp"
-        android:autoSizeMaxTextSize="22sp"
+        android:autoSizeMaxTextSize="100sp"
         android:autoSizeStepGranularity="2sp"
         app:layout_constraintTop_toBottomOf="@+id/bottomGuideLine"
         app:layout_constraintStart_toStartOf="parent"
@@ -78,46 +77,52 @@
         app:layout_constraintEnd_toStartOf="@+id/button3"
         app:layout_constraintHorizontal_chainStyle="spread_inside"
         android:textColor="?attr/colorPrimary"
-        android:backgroundTint="@color/colorBar"
-        app:cornerRadius="0dp"
-        android:padding="4dp" />
+        android:textFontWeight="@integer/material_motion_duration_medium_2"
+        android:background="@color/colorBar"
+        android:gravity="center"
+        android:textStyle="bold"
+        android:padding="5dp"
+       />
 
-    <Button
+    <TextView
         android:id="@+id/button3"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:textAllCaps="false"
+        android:layout_height="0dp"
         android:autoSizeTextType="uniform"
         android:autoSizeMinTextSize="10sp"
-        android:autoSizeMaxTextSize="22sp"
+        android:autoSizeMaxTextSize="100sp"
         android:autoSizeStepGranularity="2sp"
-        android:backgroundTint="@color/colorBar"
-        android:padding="4dp"
+        android:background="@color/colorBar"
+        android:padding="5dp"
+        android:gravity="center"
+        android:textStyle="bold"
+        android:textFontWeight="@integer/material_motion_duration_medium_2"
         app:layout_constraintTop_toBottomOf="@+id/bottomGuideLine"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@+id/button"
         app:layout_constraintEnd_toStartOf="@+id/button4"
         android:textColor="?attr/colorAccent"
-        app:cornerRadius="0dp"
         android:text="Сообщения" />
 
-    <Button
+    <TextView
         android:id="@+id/button4"
         android:layout_width="0dp"
         android:textAllCaps="false"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
         android:autoSizeTextType="uniform"
         android:autoSizeMinTextSize="10sp"
-        android:autoSizeMaxTextSize="22sp"
+        android:autoSizeMaxTextSize="100sp"
         android:autoSizeStepGranularity="2sp"
-        android:backgroundTint="@color/colorBar"
-        android:padding="4dp"
+        android:background="@color/colorBar"
+        android:padding="5dp"
+        android:textStyle="bold"
+        android:textFontWeight="@integer/material_motion_duration_medium_2"
+        android:gravity="center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/bottomGuideLine"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@+id/button3"
         android:textColor="?attr/colorAccent"
-        app:cornerRadius="0dp"
         android:text="Gitlab" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

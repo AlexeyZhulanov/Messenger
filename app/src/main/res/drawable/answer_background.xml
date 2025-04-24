@@ -10,11 +10,11 @@
     </item>
 
     <!-- Толстая рамка слева -->
-    <item android:left="6dp">
+    <item android:left="3.5dp">
         <shape android:shape="rectangle">
             <solid android:color="?attr/colorAccent" /> <!-- цвет внутри -->
-            <stroke android:width="1.5dp" android:color="?attr/colorPrimary" /> <!-- Толстая рамка -->
-            <corners android:radius="8dp" />
+            <stroke android:width="1dp" android:color="?attr/colorPrimary" /> <!-- Толстая рамка -->
+            <corners android:radius="5dp" />
         </shape>
     </item>
 
