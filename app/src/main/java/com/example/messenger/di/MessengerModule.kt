@@ -3,7 +3,6 @@ package com.example.messenger.di
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.room.Room
-import com.example.messenger.APP_PREFERENCES
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
@@ -11,6 +10,7 @@ import com.example.messenger.model.appsettings.AppSettings
 import com.example.messenger.model.appsettings.SharedPreferencesAppSettings
 import com.example.messenger.retrofit.source.SourceProviderHolder
 import com.example.messenger.model.WebSocketService
+import com.example.messenger.model.appsettings.SharedPreferencesAppSettings.Companion.APP_PREFERENCES
 import com.example.messenger.retrofit.source.base.SourcesProvider
 import com.example.messenger.room.AppDatabase
 import com.example.messenger.room.dao.ChatSettingsDao
@@ -44,7 +44,7 @@ object MessengerModule {
             appContext,
             AppDatabase::class.java,
             "database.db"
-        ).createFromAsset("init_db.db").build()
+        ).build()
     }
 
     @Provides

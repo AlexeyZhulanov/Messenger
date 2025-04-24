@@ -8,14 +8,24 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import com.example.messenger.model.Dialog
+import com.example.messenger.model.LastMessage
 import com.example.messenger.model.User
+import com.example.messenger.model.getParcelableCompat
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class DialogInfoFragment(
-    private val dialog: Dialog,
-    private val lastSessionString : String
-) : BaseInfoFragment() {
+class DialogInfoFragment : BaseInfoFragment() {
+
+    private lateinit var dialog: Dialog
+    private var lastSessionString: String = "Unknown"
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        dialog = arguments?.getParcelableCompat<Dialog>(ARG_DIALOG) ?: Dialog(0, null,
+            User(0, "", ""), LastMessage(null, null, null),
+            0, 0, false, canDelete = false, 0)
+        lastSessionString = requireArguments().getString(ARG_LAST_SESSION) ?: "Unknown"
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         viewModel.setConvInfo(dialog.id, 0)
@@ -52,4 +62,16 @@ class DialogInfoFragment(
     override fun getGroupOwnerId(): Int = 0 // only for group
 
     override fun deleteUserFromGroup(user: User) {} // only for group
+
+    companion object {
+        private const val ARG_DIALOG = "arg_dialog"
+        private const val ARG_LAST_SESSION = "arg_last_session"
+
+        fun newInstance(dialog: Dialog, lastSessionString: String) = DialogInfoFragment().apply {
+            arguments = Bundle().apply {
+                putParcelable(ARG_DIALOG, dialog)
+                putString(ARG_LAST_SESSION, lastSessionString)
+            }
+        }
+    }
 }

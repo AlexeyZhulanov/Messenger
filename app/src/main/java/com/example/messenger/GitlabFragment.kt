@@ -3,7 +3,6 @@ package com.example.messenger
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -24,18 +23,25 @@ import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentGitlabBinding
 import com.example.messenger.model.Repo
 import com.example.messenger.model.User
+import com.example.messenger.model.getParcelableCompat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class GitlabFragment(
-    private val currentUserUri: Uri?,
-    private val currentUser: User?
-) : Fragment(), OnSaveButtonGitlabClickListener {
+class GitlabFragment : Fragment(), OnSaveButtonGitlabClickListener {
+
+    private var currentUserUri: Uri? = null
+    private var currentUser: User? = null
 
     private lateinit var binding: FragmentGitlabBinding
     private lateinit var adapter: GitlabAdapter
     private val viewModel: GitlabViewModel by viewModels()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        currentUserUri = arguments?.getParcelableCompat<Uri>(ARG_USER_URI)
+        currentUser = arguments?.getParcelableCompat<User>(ARG_USER)
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -73,7 +79,7 @@ class GitlabFragment(
 
         binding.button.setOnClickListener {
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, NewsFragment(currentUserUri, currentUser), "NEWS_FRAGMENT_TAG2")
+                .replace(R.id.fragmentContainer, NewsFragment.newInstance(currentUserUri, currentUser), "NEWS_FRAGMENT_TAG2")
                 .addToBackStack(null)
                 .commit()
         }
@@ -132,7 +138,7 @@ class GitlabFragment(
 
     private fun goToSettingsFragment() {
         parentFragmentManager.beginTransaction()
-            .replace(R.id.fragmentContainer, SettingsFragment(currentUser ?: User(0, "", "")), "SETTINGS_FRAGMENT_TAG2")
+            .replace(R.id.fragmentContainer, SettingsFragment.newInstance(currentUser ?: User(0, "", "")), "SETTINGS_FRAGMENT_TAG2")
             .addToBackStack(null)
             .commit()
     }
@@ -178,5 +184,17 @@ class GitlabFragment(
             .create()
 
         dialog.show()
+    }
+
+    companion object {
+        private const val ARG_USER_URI = "currentUserUri"
+        private const val ARG_USER = "currentUser"
+
+        fun newInstance(currentUserUri: Uri? = null, currentUser: User? = null) = GitlabFragment().apply {
+            arguments = Bundle().apply {
+                putParcelable(ARG_USER_URI, currentUserUri)
+                putParcelable(ARG_USER, currentUser)
+            }
+        }
     }
 }

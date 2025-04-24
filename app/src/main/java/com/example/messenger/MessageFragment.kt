@@ -9,21 +9,27 @@ import android.widget.TextView
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.example.messenger.model.Dialog
+import com.example.messenger.model.LastMessage
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
+import com.example.messenger.model.getParcelableCompat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class MessageFragment(
-    private val dialog: Dialog,
-    currentUser: User,
-    isFromNotification: Boolean
-) : BaseChatFragment(currentUser, isFromNotification) {
+class MessageFragment : BaseChatFragment() {
+
+    private lateinit var dialog: Dialog
     private var lastSessionString: String = ""
     override val viewModel: MessageViewModel by viewModels()
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        dialog = arguments?.getParcelableCompat<Dialog>(ARG_DIALOG) ?: Dialog(0, null,
+            User(0, "", ""), LastMessage(null, null, null),
+            0, 0, false, canDelete = false, 0)
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         viewModel.setInfo(dialog.otherUser.id)
@@ -75,7 +81,7 @@ class MessageFragment(
         parentFragmentManager.beginTransaction()
             .replace(
                 R.id.fragmentContainer,
-                DialogInfoFragment(dialog, lastSessionString),
+                DialogInfoFragment.newInstance(dialog, lastSessionString),
                 "DIALOG_INFO_FRAGMENT_TAG"
             )
             .addToBackStack(null)
@@ -104,4 +110,16 @@ class MessageFragment(
     override fun canDelete(): Boolean = dialog.canDelete
 
     override fun getUnreadCount(): Int = dialog.unreadCount
+
+    companion object {
+        private const val ARG_DIALOG = "arg_dialog"
+
+        fun newInstance(dialog: Dialog, currentUser: User, isFromNotification: Boolean) = MessageFragment().apply {
+            arguments = Bundle().apply {
+                putParcelable(ARG_DIALOG, dialog)
+                putParcelable(ARG_USER, currentUser)
+                putBoolean(ARG_FROM_NOTIFICATION, isFromNotification)
+            }
+        }
+    }
 }

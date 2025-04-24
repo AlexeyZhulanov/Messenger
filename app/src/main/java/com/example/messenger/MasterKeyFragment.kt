@@ -27,9 +27,10 @@ import java.util.Arrays
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MasterKeyFragment(private val userId: Int) : Fragment(), OnSaveButtonClickListener {
+class MasterKeyFragment : Fragment(), OnSaveButtonClickListener {
 
     private lateinit var binding: FragmentMasterKeyBinding
+    private var userId: Int? = null
     private var savedMasterKey = ""
     private var wasConnectionError = false
     private var publicKeyString = ""
@@ -37,6 +38,11 @@ class MasterKeyFragment(private val userId: Int) : Fragment(), OnSaveButtonClick
 
     @Inject
     lateinit var retrofitService: RetrofitService
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        userId = arguments?.getInt(ARG_USER_ID)
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentMasterKeyBinding.inflate(inflater, container, false)
@@ -95,7 +101,7 @@ class MasterKeyFragment(private val userId: Int) : Fragment(), OnSaveButtonClick
                 } catch (e: Exception) { false }
             }
             if(success) {
-                keyManager.savePrivateKey(userId, privateKey, certificate)
+                userId?.let { keyManager.savePrivateKey(it, privateKey, certificate) }
                 Arrays.fill(privateKey.encoded, 0.toByte())
                 goToMessengerFragment()
             } else {
@@ -177,6 +183,16 @@ class MasterKeyFragment(private val userId: Int) : Fragment(), OnSaveButtonClick
 
                 override fun afterTextChanged(s: Editable?) {}
             })
+        }
+    }
+
+    companion object {
+        private const val ARG_USER_ID = "user_id"
+
+        fun newInstance(userId: Int) = MasterKeyFragment().apply {
+            arguments = Bundle().apply {
+                putInt(ARG_USER_ID, userId)
+            }
         }
     }
 }

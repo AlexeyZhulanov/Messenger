@@ -28,9 +28,6 @@ import kotlinx.coroutines.runBlocking
 import java.io.File
 import javax.inject.Inject
 
-const val APP_PREFERENCES = "APP_PREFERENCES"
-const val PREF_WALLPAPER = "PREF_WALLPAPER"
-const val PREF_THEME = "PREF_THEME"
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -55,15 +52,14 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val serviceIntent = Intent(this, WebSocketNotificationsService::class.java)
         ContextCompat.startForegroundService(this, serviceIntent)
-        val preferences = getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
-        val themeNumber = preferences.getInt(PREF_THEME, 0)
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        val themeNumber = appSettings.getTheme()
         when (themeNumber) {
             2 -> setTheme(R.style.Theme2)
             3 -> setTheme(R.style.Theme3)
             else -> setTheme(R.style.Theme_Messenger)
         }
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         binding = ActivityMainBinding.inflate(layoutInflater).also { setContentView(it.root) }
         setContentView(binding.root)
 
@@ -92,7 +88,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     if(conv != null && currentUser != null) {
                         supportFragmentManager.beginTransaction()
-                            .replace(R.id.fragmentContainer, GroupMessageFragment(conv.toGroup(), currentUser, true), "GROUP_FRAGMENT_TAG")
+                            .replace(R.id.fragmentContainer, GroupMessageFragment.newInstance(conv.toGroup(), currentUser, true), "GROUP_FRAGMENT_TAG")
                             .commit()
                     } else Toast.makeText(this, "Не удалось открыть групповой чат", Toast.LENGTH_SHORT).show()
                 } else {
@@ -105,7 +101,7 @@ class MainActivity : AppCompatActivity() {
                     if(conv != null && currentUser != null) {
                         Log.d("testClickNotify2", "Trying to open fragment message")
                         supportFragmentManager.beginTransaction()
-                            .replace(R.id.fragmentContainer, MessageFragment(conv.toDialog(), currentUser, true), "MESSAGE_FRAGMENT_TAG")
+                            .replace(R.id.fragmentContainer, MessageFragment.newInstance(conv.toDialog(), currentUser, true), "MESSAGE_FRAGMENT_TAG")
                             .commit()
                     } else Toast.makeText(this, "Не удалось открыть диалог", Toast.LENGTH_SHORT).show()
                 }
@@ -121,7 +117,7 @@ class MainActivity : AppCompatActivity() {
                     } else null
                 } else null
                 supportFragmentManager.beginTransaction()
-                    .replace(R.id.fragmentContainer, NewsFragment(uri, null), "NEWS_FRAGMENT_TAG")
+                    .replace(R.id.fragmentContainer, NewsFragment.newInstance(uri, null), "NEWS_FRAGMENT_TAG")
                     .commit()
             }
             else -> {

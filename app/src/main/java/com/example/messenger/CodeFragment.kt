@@ -21,6 +21,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.amrdeveloper.codeview.Code
 import com.example.messenger.codeview.plugins.CommentManager
@@ -31,18 +32,18 @@ import com.example.messenger.codeview.syntax.LanguageName
 import com.example.messenger.codeview.syntax.ThemeName
 import com.example.messenger.databinding.FragmentCodeBinding
 import com.example.messenger.model.Message
+import com.example.messenger.model.getParcelableCompat
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.regex.Pattern
 
 
-class CodeFragment(
-    private val baseChatViewModel: BaseChatViewModel,
-    private val message: Message? = null,
-) : Fragment() {
+class CodeFragment : Fragment() {
 
     private lateinit var binding: FragmentCodeBinding
+    private var message: Message? = null
+    private val baseChatViewModel: BaseChatViewModel by viewModels()
 
     private var languageManager: LanguageManager? = null
     private var commentManager: CommentManager? = null
@@ -58,7 +59,12 @@ class CodeFragment(
     } else LanguageName.JAVA
     private var currentTheme = ThemeName.MONOKAI
 
-    private val useModernAutoCompleteAdapter = true
+    private val useModernAutoCompleteAdapter = true // todo можно добавить опцию выбора
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        message = arguments?.getParcelableCompat<Message>(ARG_MESSAGE)
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -192,7 +198,7 @@ class CodeFragment(
     }
 
     private fun configLanguageAutoComplete() {
-        if (useModernAutoCompleteAdapter) { // todo что-то одно оставить из этого либо добавить опцию выбора
+        if (useModernAutoCompleteAdapter) {
             // Load the code list (keywords and snippets) for the current language
             val codeList: List<Code?> = languageManager?.getLanguageCodeList(currentLanguage) ?: return
 
@@ -377,5 +383,15 @@ class CodeFragment(
             }
         }
         popupMenu.show()
+    }
+
+    companion object {
+        private const val ARG_MESSAGE = "arg_message"
+
+        fun newInstance(message: Message? = null) = CodeFragment().apply {
+            arguments = Bundle().apply {
+                putParcelable(ARG_MESSAGE, message)
+            }
+        }
     }
 }

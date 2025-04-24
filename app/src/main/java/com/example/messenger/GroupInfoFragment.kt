@@ -10,8 +10,11 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.lifecycle.lifecycleScope
 import com.example.messenger.model.Group
+import com.example.messenger.model.LastMessage
 import com.example.messenger.model.MediaItem
 import com.example.messenger.model.User
+import com.example.messenger.model.getParcelableArrayListCompat
+import com.example.messenger.model.getParcelableCompat
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.async
@@ -19,13 +22,22 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 @AndroidEntryPoint
-class GroupInfoFragment(
-    private val group: Group,
-    private val members: List<User>,
-    private val currentUser: User
-) : BaseInfoFragment() {
+class GroupInfoFragment : BaseInfoFragment() {
+
+    private lateinit var group: Group
+    private lateinit var members: List<User>
+    private lateinit var currentUser: User
 
     private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('А'..'Я') + ('а'..'я') + ('!') + ('$') + (' ')
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        group = arguments?.getParcelableCompat<Group>(ARG_GROUP) ?: Group(0, null, "",
+            0, null, LastMessage(null, null, null), 0,
+            0, false, canDelete = false, 0)
+        members = arguments?.getParcelableArrayListCompat<User>(ARG_MEMBERS) ?: emptyList()
+        currentUser = arguments?.getParcelableCompat<User>(ARG_CURRENT_USER) ?: User(0, "", "")
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         viewModel.setConvInfo(group.id, 1)
@@ -231,5 +243,19 @@ class GroupInfoFragment(
             .create()
 
         dialog.show()
+    }
+
+    companion object {
+        private const val ARG_GROUP = "arg_group"
+        private const val ARG_MEMBERS = "arg_members"
+        private const val ARG_CURRENT_USER = "arg_current_user"
+
+        fun newInstance(group: Group, members: List<User>, currentUser: User) = GroupInfoFragment().apply {
+            arguments = Bundle().apply {
+                putParcelable(ARG_GROUP, group)
+                putParcelableArrayList(ARG_MEMBERS, ArrayList(members)) // List -> ArrayList
+                putParcelable(ARG_CURRENT_USER, currentUser)
+            }
+        }
     }
 }

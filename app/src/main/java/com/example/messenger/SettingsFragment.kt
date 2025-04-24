@@ -25,6 +25,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentSettingsBinding
 import com.example.messenger.model.User
+import com.example.messenger.model.getParcelableCompat
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
@@ -38,9 +39,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 @AndroidEntryPoint
-class SettingsFragment(
-    private val initialUser: User
-) : Fragment() {
+class SettingsFragment : Fragment() {
     private lateinit var binding: FragmentSettingsBinding
     private lateinit var adapterWallpaper: WallpaperAdapter
     private lateinit var adapterColorTheme: ColorThemeMenuAdapter
@@ -48,6 +47,8 @@ class SettingsFragment(
     private var fileUpdate: File? = null
     private var currentUser: User? = null
     private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('А'..'Я') + ('а'..'я') + ('!') + ('$') + (' ')
+
+    private var isDark = true
 
     private val colorThemeItems = listOf(
         ColorThemeMenuItem(R.color.colorPrimary, R.color.colorMessageSenderBack, 1, false),
@@ -65,27 +66,33 @@ class SettingsFragment(
         WallpaperMenuItem(R.drawable.wallpaper1, "wallpaper1", 2, false)
     )
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        viewModel.setUser(arguments?.getParcelableCompat<User>(ARG_USER) ?: User(0, "", ""))
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
         requireActivity().window.navigationBarColor = ContextCompat.getColor(requireContext(), R.color.navigation_bar_color)
-        viewModel.wallpaper.observe(viewLifecycleOwner) { wallpaper ->
-            if(isDarkTheme(requireContext())) {
+        if(isDark) {
+            viewModel.wallpaperDark.observe(viewLifecycleOwner) { wallpaper ->
                 wallpaperDarkItems.forEach {
                     it.isChecked = wallpaper == it.wallpaperName
                 }
                 adapterWallpaper.items = wallpaperDarkItems
-            } else {
+                setBackgroundWallpaper(wallpaper)
+            }
+        } else {
+            viewModel.wallpaperLight.observe(viewLifecycleOwner) { wallpaper ->
                 wallpaperLightItems.forEach {
                     it.isChecked = wallpaper == it.wallpaperName
                 }
                 adapterWallpaper.items = wallpaperLightItems
+                setBackgroundWallpaper(wallpaper)
             }
-            if (wallpaper != "") {
-                val resId = WALLPAPER_MAP[wallpaper] ?: -1
-                if (resId != -1) binding.settingsLayout.background = ContextCompat.getDrawable(requireContext(), resId)
-            } else binding.settingsLayout.background = null
         }
+
         viewModel.themeNumber.observe(viewLifecycleOwner) { themeNumber ->
             colorThemeItems.forEach { it.isChecked = false }
             val idx = if(themeNumber == 0) 0 else (themeNumber - 1)
@@ -148,7 +155,7 @@ class SettingsFragment(
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentSettingsBinding.inflate(inflater, container, false)
-        viewModel.setUser(initialUser)
+        isDark = isDarkTheme(requireContext())
         val filePickerManager = FilePickerManager(fragment2 = this)
 
         binding.editPhotoButton.setOnClickListener {
@@ -159,13 +166,13 @@ class SettingsFragment(
             openPictureSelector(filePickerManager, viewModel.fileToLocalMedia(fileUpdate))
         }
         binding.changePassword.setOnClickListener {
-            BottomSheetPasswordFragment(viewModel, object : BottomSheetListener {
+            val bottomSheetPasswordFragment = BottomSheetPasswordFragment()
+            bottomSheetPasswordFragment.setListener(object : BottomSheetListener {
                 override fun onChangePassword() {
-                    Toast.makeText(requireContext(), "Пароль успешно обновлен", Toast.LENGTH_SHORT)
-                        .show()
+                    Toast.makeText(requireContext(), "Пароль успешно обновлен", Toast.LENGTH_SHORT).show()
                 }
-            }).show(childFragmentManager, "PasswordChange")
-
+            })
+            bottomSheetPasswordFragment.show(childFragmentManager, "PasswordChangeTag")
         }
         binding.clearFiles.setOnClickListener {
             showConfirmClearFilesDialog()
@@ -187,15 +194,24 @@ class SettingsFragment(
         return binding.root
     }
 
+    private fun setBackgroundWallpaper(wallpaper: String) {
+        if (wallpaper != "") {
+            val resId = WALLPAPER_MAP[wallpaper] ?: -1
+            if (resId != -1) binding.settingsLayout.background = ContextCompat.getDrawable(requireContext(), resId)
+        } else binding.settingsLayout.background = null
+    }
+
     private fun setupColorThemeAdapter() {
         adapterColorTheme = ColorThemeMenuAdapter { item ->
             viewModel.updateTheme(item.themeNumber)
+            requireActivity().recreate()
         }
     }
 
     private fun setupWallpaperAdapter() {
         adapterWallpaper = WallpaperAdapter { item ->
-            viewModel.updateWallpaper(item.wallpaperName)
+            if(isDark) viewModel.updateDarkWallpaper(item.wallpaperName)
+            else viewModel.updateLightWallpaper(item.wallpaperName)
         }
     }
 
@@ -369,6 +385,16 @@ class SettingsFragment(
     }
 
     companion object {
+        private const val ARG_USER = "user"
+
+        fun newInstance(user: User): SettingsFragment {
+            return SettingsFragment().apply {
+                arguments = Bundle().apply {
+                    putParcelable(ARG_USER, user)
+                }
+            }
+        }
+
         private val WALLPAPER_MAP = mapOf(
             "wallpaper1" to R.drawable.wallpaper1,
             "wallpaper2" to R.drawable.wallpaper2,

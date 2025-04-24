@@ -26,13 +26,19 @@ import java.util.Arrays
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MasterKeyEnterFragment(private val userId: Int) : Fragment() {
+class MasterKeyEnterFragment : Fragment() {
 
     private lateinit var binding: FragmentMasterKeyEnterBinding
+    private var userId: Int? = null
     private var pair: Pair<String?, String?> = null to null
 
     @Inject
     lateinit var retrofitService: RetrofitService
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        userId = arguments?.getInt(ARG_USER_ID)
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentMasterKeyEnterBinding.inflate(inflater, container, false)
@@ -59,7 +65,7 @@ class MasterKeyEnterFragment(private val userId: Int) : Fragment() {
                         val publicKey = getPublicKey(publicKeyString)
                         val privateKey = encryptor.decryptPrivateKey(privateKeyEncryptedString)
                         val certificate = BouncyCastleHelper().createSelfSignedCertificate(KeyPair(publicKey, privateKey))
-                        keyManager.savePrivateKey(userId, privateKey, certificate)
+                        userId?.let { keyManager.savePrivateKey(it, privateKey, certificate) }
                         Arrays.fill(privateKey.encoded, 0.toByte())
                         goToMessengerFragment()
                     } catch (e: Exception) {
@@ -153,6 +159,16 @@ class MasterKeyEnterFragment(private val userId: Int) : Fragment() {
 
                 override fun afterTextChanged(s: Editable?) {}
             })
+        }
+    }
+
+    companion object {
+        private const val ARG_USER_ID = "user_id"
+
+        fun newInstance(userId: Int) = MasterKeyEnterFragment().apply {
+            arguments = Bundle().apply {
+                putInt(ARG_USER_ID, userId)
+            }
         }
     }
 }

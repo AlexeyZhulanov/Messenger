@@ -25,7 +25,9 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentNewsBinding
 import com.example.messenger.model.News
+import com.example.messenger.model.ParcelableFile
 import com.example.messenger.model.User
+import com.example.messenger.model.getParcelableCompat
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
@@ -39,10 +41,10 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 @AndroidEntryPoint
-class NewsFragment(
-    private val currentUserUri: Uri?,
-    private val currentUser: User?
-) : Fragment() {
+class NewsFragment : Fragment() {
+
+    private var currentUserUri: Uri? = null
+    private var currentUser: User? = null
 
     private lateinit var binding: FragmentNewsBinding
     private lateinit var adapter: NewsAdapter
@@ -55,6 +57,12 @@ class NewsFragment(
             binding.recyclerview.scrollToPosition(0)
             binding.recyclerview.adapter?.unregisterAdapterDataObserver(this)
         }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        currentUserUri = arguments?.getParcelableCompat<Uri>(ARG_USER_URI)
+        currentUser = arguments?.getParcelableCompat<User>(ARG_USER)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -101,7 +109,7 @@ class NewsFragment(
             if(permission == 1) {
                 binding.floatingActionButtonAdd.visibility = View.VISIBLE
                 binding.floatingActionButtonAdd.setOnClickListener {
-                    BottomSheetNewsFragment(viewModel, null, null, object : BottomSheetNewsListener {
+                    BottomSheetNewsFragment.newInstance(null, null, object : BottomSheetNewsListener {
                         override fun onPostSent() {
                             viewModel.refresh()
                         }
@@ -125,14 +133,17 @@ class NewsFragment(
         }
         binding.button4.setOnClickListener {
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, GitlabFragment(currentUserUri, currentUser), "GITLAB_FRAGMENT_TAG")
+                .replace(R.id.fragmentContainer, GitlabFragment.newInstance(currentUserUri, currentUser), "GITLAB_FRAGMENT_TAG")
                 .addToBackStack(null)
                 .commit()
         }
         filePickerManager = FilePickerManager(fragment4 = this)
         adapter = NewsAdapter(object: NewsActionListener {
             override fun onEditItem(news: News, triple: Triple<ArrayList<LocalMedia>, List<File>, List<File>>) {
-                BottomSheetNewsFragment(viewModel, news, triple, object : BottomSheetNewsListener {
+                val triple2 = triple.second.map { ParcelableFile(it.absolutePath) }
+                val triple3 = triple.third.map { ParcelableFile(it.absolutePath) }
+                val tripleForBundle = Triple(triple.first, triple2, triple3)
+                BottomSheetNewsFragment.newInstance(news, tripleForBundle, object : BottomSheetNewsListener {
                     override fun onPostSent() {
                         viewModel.refresh()
                     }
@@ -199,7 +210,7 @@ class NewsFragment(
 
     private fun goToSettingsFragment() {
         parentFragmentManager.beginTransaction()
-            .replace(R.id.fragmentContainer, SettingsFragment(currentUser ?: User(0, "", "")), "SETTINGS_FRAGMENT_TAG2")
+            .replace(R.id.fragmentContainer, SettingsFragment.newInstance(currentUser ?: User(0, "", "")), "SETTINGS_FRAGMENT_TAG2")
             .addToBackStack(null)
             .commit()
     }
@@ -207,6 +218,18 @@ class NewsFragment(
     class SpacingItemDecorator(private val space: Int) : RecyclerView.ItemDecoration() {
         override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
             outRect.bottom = space
+        }
+    }
+
+    companion object {
+        private const val ARG_USER_URI = "currentUserUri"
+        private const val ARG_USER = "currentUser"
+
+        fun newInstance(currentUserUri: Uri? = null, currentUser: User? = null) = NewsFragment().apply {
+            arguments = Bundle().apply {
+                putParcelable(ARG_USER_URI, currentUserUri)
+                putParcelable(ARG_USER, currentUser)
+            }
         }
     }
 }

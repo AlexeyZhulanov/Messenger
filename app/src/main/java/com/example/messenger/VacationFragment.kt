@@ -9,14 +9,14 @@ import com.example.messenger.databinding.FragmentVacationBinding
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-class VacationFragment(
-    private val start: String,
-    private val end: String) : Fragment() {
+class VacationFragment : Fragment() {
 
     private lateinit var binding: FragmentVacationBinding
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentVacationBinding.inflate(inflater, container, false)
+        val start = arguments?.getString(ARG_START) ?: "Unknown"
+        val end = arguments?.getString(ARG_END) ?: "Unknown"
         binding.startDateTextView.text = formatVacationDate(start)
         binding.endDateTextView.text = formatVacationDate(end)
         return binding.root
@@ -35,6 +35,18 @@ class VacationFragment(
         } catch (e: Exception) {
             e.printStackTrace()
             null // Возвращаем null в случае ошибки
+        }
+    }
+
+    companion object {
+        private const val ARG_START = "arg_start"
+        private const val ARG_END = "arg_end"
+
+        fun newInstance(start: String, end: String) = VacationFragment().apply {
+            arguments = Bundle().apply {
+                putString(ARG_START, start)
+                putString(ARG_END, end)
+            }
         }
     }
 }

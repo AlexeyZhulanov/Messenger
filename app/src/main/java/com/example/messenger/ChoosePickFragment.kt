@@ -13,12 +13,16 @@ interface ChoosePickListener {
     fun onCodeClick()
 }
 
-class ChoosePickFragment(
-    private val choosePickListener: ChoosePickListener
-) : BottomSheetDialogFragment() {
+class ChoosePickFragment : BottomSheetDialogFragment() {
 
     private lateinit var binding: FragmentChoosePickBinding
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    private lateinit var choosePickListener: ChoosePickListener
+
+    fun setListener(choosePickListener: ChoosePickListener) {
+        this.choosePickListener = choosePickListener
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentChoosePickBinding.inflate(inflater, container, false)
         binding.imagePick.setOnClickListener {
             choosePickListener.onGalleryClick()

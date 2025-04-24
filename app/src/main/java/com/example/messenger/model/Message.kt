@@ -26,8 +26,9 @@ data class Message(
     var localFilePaths: List<String>? = null
 ) : Parcelable
 
+@Parcelize
 data class LastMessage(
     val text: String? = null,
     val timestamp: Long? = null,
     val isRead: Boolean? = null
-)
+) : Parcelable

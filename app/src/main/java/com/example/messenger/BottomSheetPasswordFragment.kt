@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.EditText
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.viewModels
 import com.example.messenger.databinding.FragmentBottomSheetPasswordBinding
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
@@ -20,15 +21,18 @@ interface BottomSheetListener {
 }
 
 @AndroidEntryPoint
-class BottomSheetPasswordFragment(
-    private val settingsViewModel: SettingsViewModel,
-    private val bottomSheetListener: BottomSheetListener
-) : BottomSheetDialogFragment() {
+class BottomSheetPasswordFragment : BottomSheetDialogFragment() {
     private lateinit var binding: FragmentBottomSheetPasswordBinding
+    private lateinit var bottomSheetListener: BottomSheetListener
+    private val settingsViewModel: SettingsViewModel by viewModels()
     private var drawableStart : Drawable? = null
     private var drawableEnd : Drawable? = null
     private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('!') + ('$')
 
+    fun setListener(bottomSheetListener: BottomSheetListener) {
+        this.bottomSheetListener = bottomSheetListener
+    }
+    
     @Suppress("DEPRECATION")
     override fun onStart() {
         super.onStart()

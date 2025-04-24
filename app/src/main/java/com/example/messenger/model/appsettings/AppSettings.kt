@@ -33,4 +33,16 @@ interface AppSettings {
     fun getFCMToken(): String?
 
     fun setFCMToken(token: String?)
+
+    fun getTheme(): Int
+
+    fun setTheme(themeNumber: Int)
+
+    fun getLightWallpaper(): String
+
+    fun setLightWallpaper(wallpaper: String)
+
+    fun getDarkWallpaper(): String
+
+    fun setDarkWallpaper(wallpaper: String)
 }

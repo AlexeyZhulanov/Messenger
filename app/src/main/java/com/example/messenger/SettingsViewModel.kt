@@ -38,8 +38,11 @@ class SettingsViewModel @Inject constructor(
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
-    private val _wallpaper = MutableLiveData<String>()
-    val wallpaper: LiveData<String> get() = _wallpaper
+    private val _wallpaperLight = MutableLiveData<String>()
+    val wallpaperLight: LiveData<String> get() = _wallpaperLight
+
+    private val _wallpaperDark = MutableLiveData<String>()
+    val wallpaperDark: LiveData<String> get() = _wallpaperDark
 
     private val _themeNumber = MutableLiveData<Int>()
     val themeNumber: LiveData<Int> get() = _themeNumber
@@ -53,18 +56,24 @@ class SettingsViewModel @Inject constructor(
 
     private fun loadSettings() {
         viewModelScope.launch {
-            _wallpaper.value = prefs.getString(PREF_WALLPAPER, "")
-            _themeNumber.value = prefs.getInt(PREF_THEME, 0)
+            _wallpaperLight.value = appSettings.getLightWallpaper()
+            _wallpaperDark.value = appSettings.getDarkWallpaper()
+            _themeNumber.value = appSettings.getTheme()
         }
     }
 
-    fun updateWallpaper(wallpaper: String) {
-        prefs.edit().putString(PREF_WALLPAPER, wallpaper).apply()
-        _wallpaper.value = wallpaper
+    fun updateLightWallpaper(wallpaper: String) {
+        appSettings.setLightWallpaper(wallpaper)
+        _wallpaperLight.value = wallpaper
+    }
+
+    fun updateDarkWallpaper(wallpaper: String) {
+        appSettings.setDarkWallpaper(wallpaper)
+        _wallpaperDark.value = wallpaper
     }
 
     fun updateTheme(themeNumber: Int) {
-        prefs.edit().putInt(PREF_THEME, themeNumber).apply()
+        appSettings.setTheme(themeNumber)
         _themeNumber.value = themeNumber
     }
 

@@ -4,7 +4,7 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
@@ -38,6 +38,7 @@ import com.example.messenger.databinding.FragmentMessageBinding
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
 import com.example.messenger.model.chunkedFlowLast
+import com.example.messenger.model.getParcelableCompat
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
@@ -61,15 +62,14 @@ import java.io.File
 import java.io.PrintWriter
 
 @AndroidEntryPoint
-abstract class BaseChatFragment(
-    protected val currentUser: User,
-    private val isFromNotification: Boolean
-) : Fragment(), AudioRecordView.Callback {
+abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
+
+    protected lateinit var currentUser: User
+    private var isFromNotification: Boolean = false
 
     protected lateinit var binding: FragmentMessageBinding
     protected lateinit var adapter: MessageAdapter
     private lateinit var imageAdapter: ImageAdapter
-    private lateinit var preferences: SharedPreferences
     private lateinit var pickFileLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var filePickerManager: FilePickerManager
     private var audioRecord: AudioRecorder? = null
@@ -152,6 +152,9 @@ abstract class BaseChatFragment(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        currentUser = arguments?.getParcelableCompat<User>(ARG_USER) ?: User(0, "", "")
+        isFromNotification = requireArguments().getBoolean(ARG_FROM_NOTIFICATION)
+
         pickFileLauncher = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri>? ->
             if (uris != null) {
                 if (uris.size > 5) {
@@ -301,8 +304,7 @@ abstract class BaseChatFragment(
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         binding = FragmentMessageBinding.inflate(inflater, container, false)
-        preferences = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
-        val wallpaper = preferences.getString(PREF_WALLPAPER, "")
+        val wallpaper = viewModel.getWallpaper(isDarkTheme(requireContext()))
         if (wallpaper != "") {
             val resId = WALLPAPER_MAP[wallpaper] ?: -1
             if(resId != -1)
@@ -471,7 +473,9 @@ abstract class BaseChatFragment(
             }
         }
         binding.attachButton.setOnLongClickListener {
-            ChoosePickFragment(object: ChoosePickListener {
+            val fragmentChoosePick = ChoosePickFragment()
+
+            fragmentChoosePick.setListener(object: ChoosePickListener {
                 override fun onGalleryClick() {
                     lifecycleScope.launch {
                         try {
@@ -493,11 +497,12 @@ abstract class BaseChatFragment(
                 }
                 override fun onCodeClick() {
                     parentFragmentManager.beginTransaction()
-                        .replace(R.id.fragmentContainer, CodeFragment(viewModel), "CODE_FRAGMENT_TAG")
+                        .replace(R.id.fragmentContainer, CodeFragment.newInstance(), "CODE_FRAGMENT_TAG")
                         .addToBackStack(null)
                         .commit()
                 }
-            }).show(childFragmentManager, "ChoosePickTag")
+            })
+            fragmentChoosePick.show(childFragmentManager, "ChoosePickTag")
             true
         }
         binding.emojiButton.setOnClickListener {
@@ -863,7 +868,7 @@ abstract class BaseChatFragment(
                 val code = message.code
                 val lang = message.codeLanguage
                 if(code != null && lang != null) {
-                    val dialog = CodePreviewDialogFragment(code, lang)
+                    val dialog = CodePreviewDialogFragment.newInstance(code, lang)
                     dialog.show(parentFragmentManager, "CodePreviewDialogFragment")
                 }
             }
@@ -1121,7 +1126,7 @@ abstract class BaseChatFragment(
                     if (message.voice.isNullOrEmpty() && message.file.isNullOrEmpty()) {
                         if(!message.codeLanguage.isNullOrEmpty()) {
                             parentFragmentManager.beginTransaction()
-                                .replace(R.id.fragmentContainer, CodeFragment(viewModel, message), "CODE_FRAGMENT_TAG2")
+                                .replace(R.id.fragmentContainer, CodeFragment.newInstance(message), "CODE_FRAGMENT_TAG2")
                                 .addToBackStack(null)
                                 .commit()
                         }
@@ -1351,7 +1356,18 @@ abstract class BaseChatFragment(
         }
     }
 
+    private fun isDarkTheme(context: Context): Boolean {
+        return when (context.resources.configuration.uiMode and
+                Configuration.UI_MODE_NIGHT_MASK) {
+            Configuration.UI_MODE_NIGHT_YES -> true
+            else -> false
+        }
+    }
+
     companion object {
+        const val ARG_USER = "arg_user"
+        const val ARG_FROM_NOTIFICATION = "arg_from_notification"
+
         private val WALLPAPER_MAP = mapOf(
             "wallpaper1" to R.drawable.wallpaper1,
             "wallpaper2" to R.drawable.wallpaper2,

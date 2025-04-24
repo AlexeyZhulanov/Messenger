@@ -716,6 +716,10 @@ abstract class BaseChatViewModel(
         return list
     }
 
+    fun getWallpaper(isDark: Boolean): String {
+        return if(isDark) appSettings.getDarkWallpaper() else appSettings.getLightWallpaper()
+    }
+
     fun avatarSet(avatar: String, imageView: ImageView, context: Context) {
         if (avatar != "") {
             viewModelScope.launch {
