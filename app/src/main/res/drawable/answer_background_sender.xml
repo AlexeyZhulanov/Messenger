@@ -4,7 +4,7 @@
     <!-- Полупрозрачный светло-серый фон -->
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="?attr/colorAccent" /> <!-- общий цвет -->
+            <solid android:color="?attr/colorControlHighlight" /> <!-- общий цвет -->
             <corners android:radius="8dp" />
         </shape>
     </item>
@@ -12,7 +12,7 @@
     <!-- Толстая рамка слева -->
     <item android:left="3.5dp">
         <shape android:shape="rectangle">
-            <solid android:color="@color/colorMessageReceiverHighlight" /> <!-- цвет внутри -->
+            <solid android:color="?attr/chatHighlightColor" /> <!-- цвет внутри -->
             <corners android:radius="5dp" />
         </shape>
     </item>

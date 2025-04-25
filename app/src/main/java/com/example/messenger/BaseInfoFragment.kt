@@ -68,6 +68,17 @@ abstract class BaseInfoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        lifecycleScope.launch {
+            binding.switchNotifications.isChecked = viewModel.isNotificationsEnabled()
+            binding.switchNotifications.setOnCheckedChangeListener { _, _ ->
+                binding.switchNotifications.isEnabled = false
+                lifecycleScope.launch {
+                    viewModel.turnNotifications()
+                    delay(5000)
+                    binding.switchNotifications.isEnabled = true
+                }
+            }
+        }
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.toolbar_info, toolbarContainer, false)
@@ -131,11 +142,10 @@ abstract class BaseInfoFragment : Fragment() {
             }
         }
         binding.userNameTextView.text = getUpperName()
-        lifecycleScope.launch {
-            binding.switchNotifications.isChecked = viewModel.isNotificationsEnabled()
-        }
+        binding.switchDelete.isChecked = getCanDelete()
         if(getIsOwner()) {
-            binding.switchDelete.setOnClickListener {
+            binding.switchOverlay.visibility = View.GONE
+            binding.switchDelete.setOnCheckedChangeListener { _, _ ->
                 binding.switchDelete.isEnabled = false
                 lifecycleScope.launch {
                     viewModel.toggleCanDeleteDialog()
@@ -143,14 +153,11 @@ abstract class BaseInfoFragment : Fragment() {
                     binding.switchDelete.isEnabled = true
                 }
             }
-        } else binding.switchDelete.isEnabled = false
-        binding.switchDelete.isChecked = getCanDelete()
-        binding.switchNotifications.setOnClickListener {
-            binding.switchNotifications.isEnabled = false
-            lifecycleScope.launch {
-                viewModel.turnNotifications()
-                delay(5000)
-                binding.switchNotifications.isEnabled = true
+        } else {
+            binding.switchDelete.isEnabled = false
+            binding.switchOverlay.visibility = View.VISIBLE
+            binding.switchOverlay.setOnClickListener {
+                Toast.makeText(requireContext(), "Ошибка: вы не создатель чата", Toast.LENGTH_SHORT).show()
             }
         }
         binding.loadButton.setOnClickListener {

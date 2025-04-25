@@ -265,6 +265,18 @@
             android:layout_marginTop="-3dp"
             app:thumbTint="@color/switch_thumb_tint" />
 
+        <View
+            android:id="@+id/switchOverlay"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintStart_toStartOf="@id/switch_delete"
+            app:layout_constraintEnd_toEndOf="@id/switch_delete"
+            app:layout_constraintTop_toTopOf="@id/switch_delete"
+            app:layout_constraintBottom_toBottomOf="@id/switch_delete"
+            android:visibility="gone"
+            />
+
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/midGuideLine"
             android:layout_width="wrap_content"

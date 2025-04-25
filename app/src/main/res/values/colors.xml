@@ -11,6 +11,7 @@
     <color name="navigation_bar_color">#F5F5F5</color>
     <color name="colorMessageSenderBack">#E7F0F9</color>
     <color name="colorMessageReceiverBack">#A6CAF0</color>"
+    <color name="colorMessageReceiverHighlight">#C1DCFA</color>
     <color name="colorTransparent">#CCFFFFFF</color>
     <color name="colorTransparent2">#CCFFFFFF</color>
     <color name="purple_200">#FFBB86FC</color>
