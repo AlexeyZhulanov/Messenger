@@ -7,6 +7,7 @@ import android.content.res.Configuration
 import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -58,12 +59,22 @@ class SettingsFragment : Fragment() {
 
     private val wallpaperLightItems = listOf(
         WallpaperMenuItem(R.color.colorDefault2, "", 1, false),
-        WallpaperMenuItem(R.drawable.wallpaper6, "wallpaper6", 2, false)
+        WallpaperMenuItem(R.drawable.wallpaper3, "wallpaper3", 2, false),
+        WallpaperMenuItem(R.drawable.wallpaper8, "wallpaper8", 3, false),
+        WallpaperMenuItem(R.drawable.wallpaper9, "wallpaper9", 4, false),
+        WallpaperMenuItem(R.drawable.wallpaper11, "wallpaper11", 5, false),
+        WallpaperMenuItem(R.drawable.wallpaper12, "wallpaper12", 6, false)
     )
 
     private val wallpaperDarkItems = listOf(
         WallpaperMenuItem(R.color.colorDefault2, "", 1, false),
-        WallpaperMenuItem(R.drawable.wallpaper1, "wallpaper1", 2, false)
+        WallpaperMenuItem(R.drawable.wallpaper1, "wallpaper1", 2, false),
+        WallpaperMenuItem(R.drawable.wallpaper2, "wallpaper2", 3, false),
+        WallpaperMenuItem(R.drawable.wallpaper4, "wallpaper4", 4, false),
+        WallpaperMenuItem(R.drawable.wallpaper5, "wallpaper5", 5, false),
+        WallpaperMenuItem(R.drawable.wallpaper6, "wallpaper6", 6, false),
+        WallpaperMenuItem(R.drawable.wallpaper7, "wallpaper7", 7, false),
+        WallpaperMenuItem(R.drawable.wallpaper10, "wallpaper10", 8, false)
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,7 +84,10 @@ class SettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        val typedValue = TypedValue()
+        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
+        val colorBar = typedValue.data
+        requireActivity().window.statusBarColor = colorBar
         requireActivity().window.navigationBarColor = ContextCompat.getColor(requireContext(), R.color.navigation_bar_color)
         if(isDark) {
             viewModel.wallpaperDark.observe(viewLifecycleOwner) { wallpaper ->
@@ -399,8 +413,15 @@ class SettingsFragment : Fragment() {
             "wallpaper1" to R.drawable.wallpaper1,
             "wallpaper2" to R.drawable.wallpaper2,
             "wallpaper3" to R.drawable.wallpaper3,
+            "wallpaper4" to R.drawable.wallpaper4,
             "wallpaper5" to R.drawable.wallpaper5,
             "wallpaper6" to R.drawable.wallpaper6,
+            "wallpaper7" to R.drawable.wallpaper7,
+            "wallpaper8" to R.drawable.wallpaper8,
+            "wallpaper9" to R.drawable.wallpaper9,
+            "wallpaper10" to R.drawable.wallpaper10,
+            "wallpaper11" to R.drawable.wallpaper11,
+            "wallpaper12" to R.drawable.wallpaper12
         )
     }
 

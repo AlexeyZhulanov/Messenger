@@ -8,4 +8,5 @@
     <attr name="colorDayNightAttr" format="color|reference" />
     <attr name="colorDayNightAttrReversed" format="color|reference" />
     <attr name="colorDayNightAttr2" format="color|reference" />
+    <attr name="colorBar" format="color|reference" />
 </resources>

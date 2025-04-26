@@ -14,6 +14,7 @@ import android.os.ParcelFileDescriptor
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -239,8 +240,10 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         }
 
         registerArrowScrollListener()
-
-        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        val typedValue = TypedValue()
+        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
+        val colorBar = typedValue.data
+        requireActivity().window.statusBarColor = colorBar
         requireActivity().window.navigationBarColor = ContextCompat.getColor(requireContext(), R.color.navigation_bar_color)
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
@@ -497,7 +500,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                 }
                 override fun onCodeClick() {
                     parentFragmentManager.beginTransaction()
-                        .replace(R.id.fragmentContainer, CodeFragment.newInstance(), "CODE_FRAGMENT_TAG")
+                        .replace(R.id.fragmentContainer, CodeFragment.newInstance(viewModel), "CODE_FRAGMENT_TAG")
                         .addToBackStack(null)
                         .commit()
                 }
@@ -1126,7 +1129,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     if (message.voice.isNullOrEmpty() && message.file.isNullOrEmpty()) {
                         if(!message.codeLanguage.isNullOrEmpty()) {
                             parentFragmentManager.beginTransaction()
-                                .replace(R.id.fragmentContainer, CodeFragment.newInstance(message), "CODE_FRAGMENT_TAG2")
+                                .replace(R.id.fragmentContainer, CodeFragment.newInstance(viewModel, message), "CODE_FRAGMENT_TAG2")
                                 .addToBackStack(null)
                                 .commit()
                         }
@@ -1372,8 +1375,15 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
             "wallpaper1" to R.drawable.wallpaper1,
             "wallpaper2" to R.drawable.wallpaper2,
             "wallpaper3" to R.drawable.wallpaper3,
+            "wallpaper4" to R.drawable.wallpaper4,
             "wallpaper5" to R.drawable.wallpaper5,
             "wallpaper6" to R.drawable.wallpaper6,
+            "wallpaper7" to R.drawable.wallpaper7,
+            "wallpaper8" to R.drawable.wallpaper8,
+            "wallpaper9" to R.drawable.wallpaper9,
+            "wallpaper10" to R.drawable.wallpaper10,
+            "wallpaper11" to R.drawable.wallpaper11,
+            "wallpaper12" to R.drawable.wallpaper12
         )
     }
 }

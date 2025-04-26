@@ -15,7 +15,6 @@ import android.widget.ImageView
 import android.widget.NumberPicker
 import android.widget.Toast
 import androidx.appcompat.widget.PopupMenu
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -67,7 +66,10 @@ abstract class BaseInfoFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        val typedValue = TypedValue()
+        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
+        val colorBar = typedValue.data
+        requireActivity().window.statusBarColor = colorBar
         lifecycleScope.launch {
             binding.switchNotifications.isChecked = viewModel.isNotificationsEnabled()
             binding.switchNotifications.setOnCheckedChangeListener { _, _ ->

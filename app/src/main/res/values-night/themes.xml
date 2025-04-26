@@ -15,6 +15,7 @@
         <item name="colorDayNightAttr">@color/colorPrimaryDark</item>
         <item name="colorDayNightAttrReversed">@color/colorPrimary</item>
         <item name="colorDayNightAttr2">@color/colorAccent</item>
+        <item name="colorBar">@color/colorBar</item>
     </style>
 
     <!-- Theme 2 -->
@@ -31,6 +32,7 @@
         <item name="colorDayNightAttr">@color/colorPrimaryDark</item>
         <item name="colorDayNightAttrReversed">@color/colorPrimary2</item>
         <item name="colorDayNightAttr2">@color/colorAccent</item>
+        <item name="colorBar">@color/colorBar</item>
     </style>
 
     <!-- Theme 3 -->
@@ -47,6 +49,7 @@
         <item name="colorDayNightAttr">@color/colorPrimaryDark</item>
         <item name="colorDayNightAttrReversed">@color/colorPrimary3</item>
         <item name="colorDayNightAttr2">@color/colorAccent</item>
+        <item name="colorBar">@color/colorBar</item>
     </style>
 
 </resources>

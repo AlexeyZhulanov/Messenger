@@ -17,11 +17,11 @@
     <color name="colorPrimary2">#49B5EA</color>
     <color name="colorPrimaryHighlight2">#90CAF9</color>
     <color name="chatColor2">#6C5EE5</color>
-    <color name="chatColorHighlight2">#B39DDB</color>
+    <color name="chatColorHighlight2">#7668F0</color>
     <color name="colorPrimary3">#C288EE</color>
     <color name="colorPrimaryHighlight3">#D1A4F2</color>
     <color name="chatColor3">#3286A0</color>
-    <color name="chatColorHighlight3">#A7FFEB</color>
+    <color name="chatColorHighlight3">#3794B1</color>
     <color name="colorPrimaryHighlight">#81C784</color>
-    <color name="chatColorHighlight">#80CBC4</color>
+    <color name="chatColorHighlight">#007A47</color>
 </resources>

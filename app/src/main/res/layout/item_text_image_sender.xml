@@ -87,7 +87,7 @@
                 android:id="@+id/senderImageView"
                 android:layout_width="0dp"
                 android:layout_height="325dp"
-                tools:src="@drawable/wallpaper6"
+                tools:src="@drawable/wallpaper3"
                 android:scaleType="centerCrop"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"

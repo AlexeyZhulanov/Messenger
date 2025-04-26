@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,7 +16,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -59,7 +59,10 @@ class MessengerFragment : Fragment() {
             forwardUsernames = usernames
             forwardFlag = true
         }
-        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        val typedValue = TypedValue()
+        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
+        val colorBar = typedValue.data
+        requireActivity().window.statusBarColor = colorBar
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.toolbar_custom, toolbarContainer, false)
