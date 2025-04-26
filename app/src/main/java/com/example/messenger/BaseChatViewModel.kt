@@ -61,8 +61,8 @@ abstract class BaseChatViewModel(
 ) : ViewModel() {
     protected var convId: Int = -1
     private var isGroup: Int = 0
-    private var disableRefresh: Boolean = false
-    private var pendingRefresh: Boolean = false
+    protected var disableRefresh: Boolean = false
+    protected var pendingRefresh: Boolean = false
     @SuppressLint("StaticFieldLeak")
     protected lateinit var recyclerView: RecyclerView
     protected var lastMessageDate: String = ""

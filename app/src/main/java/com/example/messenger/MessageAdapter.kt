@@ -98,6 +98,7 @@ class MessageAdapter(
     var membersFull: List<User> = listOf()
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
+    private var checkedMessageIds: MutableSet<Int> = mutableSetOf()
     private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
     private var highlightedPosition: Int? = null
     private val uiScopeMain = CoroutineScope(Dispatchers.Main)
@@ -161,16 +162,7 @@ class MessageAdapter(
         return getItem(position).first.id.toLong()
     }
 
-    fun getDeleteList(): List<Int> {
-        val list = mutableListOf<Int>()
-        checkedPositions.forEach { idx ->
-            val message = getItem(idx)?.first
-            if(message != null) {
-                list.add(message.id)
-            }
-        }
-        return list
-    }
+    fun getDeleteList(): List<Int> = checkedMessageIds.toList()
 
     fun getForwardList(): List<Pair<Message, Boolean>> {
         val list = mutableListOf<Pair<Message, Boolean>>()
@@ -202,6 +194,8 @@ class MessageAdapter(
     fun clearPositions() {
         canLongClick = true
         checkedPositions.clear()
+        checkedMessageIds.clear()
+        mapPositions.clear()
         notifyDataSetChanged()
     }
 
@@ -211,10 +205,12 @@ class MessageAdapter(
 
     private fun savePosition(messageId: Int, isSender: Boolean) {
         val position = getItemPositionWithId(messageId)
-        if (position in checkedPositions) {
+        if (messageId in checkedMessageIds) {
+            checkedMessageIds.remove(messageId)
             checkedPositions.remove(position)
             mapPositions.remove(position)
         } else {
+            checkedMessageIds.add(messageId)
             checkedPositions.add(position)
             mapPositions[position] = isSender
         }

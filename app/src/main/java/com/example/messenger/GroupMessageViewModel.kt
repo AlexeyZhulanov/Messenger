@@ -67,33 +67,39 @@ class GroupMessageViewModel @Inject constructor(
             }
             viewModelScope.launch {
                 webSocketService.newMessageFlow.collect { message ->
-                    message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
-                    Log.d("testSocketsMessage", "New Message: $message")
-                    val newMessageTriple =
-                        if(lastMessageDate == "") Triple(message,"", formatMessageTime(message.timestamp))
-                        else Triple(message,formatMessageDate(message.timestamp), formatMessageTime(message.timestamp))
-                    _newMessageFlow.tryEmit(newMessageTriple)
-                    updateLastDate(message.timestamp)
+                    if(!disableRefresh) {
+                        message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
+                        Log.d("testSocketsMessage", "New Message: $message")
+                        val newMessageTriple =
+                            if(lastMessageDate == "") Triple(message,"", formatMessageTime(message.timestamp))
+                            else Triple(message,formatMessageDate(message.timestamp), formatMessageTime(message.timestamp))
+                        _newMessageFlow.tryEmit(newMessageTriple)
+                        updateLastDate(message.timestamp)
+                    } else pendingRefresh = true
                 }
             }
             viewModelScope.launch {
                 webSocketService.editMessageFlow.collect { message ->
-                    message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
-                    Log.d("testSocketsMessage", "Edited Message: $message")
-                    _editMessageFlow.value = message
+                    if(!disableRefresh) {
+                        message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
+                        Log.d("testSocketsMessage", "Edited Message: $message")
+                        _editMessageFlow.value = message
+                    } else pendingRefresh = true
                 }
             }
             viewModelScope.launch {
                 webSocketService.deleteMessageFlow.collect {
-                    Log.d("testSocketsMessage", "Deleted messages ids: ${it.deletedMessagesIds}")
-                    val adapter = recyclerView.adapter
-                    if(adapter is MessageAdapter) adapter.clearPositions()
-                    refresh()
-                    recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-                        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                            recyclerView.scrollToPosition(0)
-                        }
-                    })
+                    if(!disableRefresh) {
+                        Log.d("testSocketsMessage", "Deleted messages ids: ${it.deletedMessagesIds}")
+                        val adapter = recyclerView.adapter
+                        if(adapter is MessageAdapter) adapter.clearPositions()
+                        refresh()
+                        recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+                            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                                recyclerView.scrollToPosition(0)
+                            }
+                        })
+                    } else pendingRefresh = true
                 }
             }
             viewModelScope.launch {

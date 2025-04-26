@@ -63,6 +63,8 @@ class GroupInfoFragment : BaseInfoFragment() {
             buttonMedia.setTextColor(colorAccent)
             buttonMembers.setOnClickListener {
                 if(selectedType != MediaItem.TYPE_USER) {
+                    it.isEnabled = false
+                    it.alpha = 0.5f
                     loadMoreMediaItems(3, 0) { success ->
                         if (success) {
                             buttonMedia.setTextColor(colorAccent)
@@ -74,6 +76,10 @@ class GroupInfoFragment : BaseInfoFragment() {
                             isCanDoPagination = false
                         }
                     }
+                    it.postDelayed({
+                        it.isEnabled = true
+                        it.alpha = 1f
+                    }, 5000)
                 }
             }
             floatingActionButtonOptions.setOnClickListener {

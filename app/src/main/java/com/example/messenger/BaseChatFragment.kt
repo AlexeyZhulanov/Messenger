@@ -790,6 +790,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                                     backPressed()
                                 }
                                 viewModel.startRefresh()
+                                registerScrollObserver()
                             }
                         })
                     binding.floatingActionButtonDelete.setOnClickListener {
@@ -936,16 +937,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
             print("")
             close()
         }
-    }
-
-    override fun onDestroyView() {
-        viewModel.stopRefresh()
-        super.onDestroyView()
-    }
-
-    override fun onPause() {
-        viewModel.stopRefresh()
-        super.onPause()
     }
 
     private fun handleFileUri(uri: Uri) {
@@ -1136,7 +1127,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                                         remove()
                                         backPressed()
                                     }
-                                    viewModel.startRefresh()
                                 }
                             })
 
@@ -1164,7 +1154,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                         binding.editButton.setOnClickListener {
                             lifecycleScope.launch {
                                 try {
-                                    viewModel.stopRefresh()
                                     val tempItems = imageAdapter.getData()
                                     val (text, isLink) = prepareTextForSend(binding.enterMessage.text.toString())
                                     if (tempItems.isNotEmpty()) {
@@ -1217,7 +1206,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                                         binding.enterMessage.setText("")
                                         binding.editButton.visibility = View.GONE
                                         binding.recordView.visibility = View.VISIBLE
-                                        viewModel.startRefresh()
                                         if (!f) Toast.makeText(requireContext(), "Не удалось редактировать", Toast.LENGTH_SHORT).show()
                                     } else {
                                         if (text.isNotEmpty()) {
@@ -1230,7 +1218,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                                             binding.enterMessage.setText("")
                                             binding.editButton.visibility = View.GONE
                                             binding.recordView.visibility = View.VISIBLE
-                                            viewModel.startRefresh()
                                             if(!f) Toast.makeText(requireContext(), "Не удалось редактировать", Toast.LENGTH_SHORT).show()
                                         } else Toast.makeText(requireContext(), "Сообщение не должно быть пустым", Toast.LENGTH_SHORT).show()
                                     }

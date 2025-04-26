@@ -167,6 +167,8 @@ abstract class BaseInfoFragment : Fragment() {
         }
         binding.buttonMedia.setOnClickListener {
             if(selectedType != MediaItem.TYPE_MEDIA) {
+                it.isEnabled = false
+                it.alpha = 0.5f
                 loadMoreMediaItems(0, 0) { success ->
                     if(success) {
                         binding.buttonMedia.setTextColor(colorPrimary)
@@ -178,12 +180,18 @@ abstract class BaseInfoFragment : Fragment() {
                         isCanDoPagination = true
                     }
                 }
+                it.postDelayed({
+                    it.isEnabled = true
+                    it.alpha = 1f
+                }, 5000)
             }
         }
         binding.buttonFiles.setOnClickListener {
-            loadMoreMediaItems(1, 0) { success ->
-                if(success) {
-                    if(selectedType != MediaItem.TYPE_FILE) {
+            if(selectedType != MediaItem.TYPE_FILE) {
+                it.isEnabled = false
+                it.alpha = 0.5f
+                loadMoreMediaItems(1, 0) { success ->
+                    if(success) {
                         binding.buttonMedia.setTextColor(colorAccent)
                         binding.buttonFiles.setTextColor(colorPrimary)
                         binding.buttonAudio.setTextColor(colorAccent)
@@ -193,10 +201,16 @@ abstract class BaseInfoFragment : Fragment() {
                         isCanDoPagination = true
                     }
                 }
+                it.postDelayed({
+                    it.isEnabled = true
+                    it.alpha = 1f
+                }, 5000)
             }
         }
         binding.buttonAudio.setOnClickListener {
             if(selectedType != MediaItem.TYPE_AUDIO) {
+                it.isEnabled = false
+                it.alpha = 0.5f
                 loadMoreMediaItems(2, 0) { success ->
                     if(success) {
                         binding.buttonMedia.setTextColor(colorAccent)
@@ -208,6 +222,10 @@ abstract class BaseInfoFragment : Fragment() {
                         isCanDoPagination = true
                     }
                 }
+                it.postDelayed({
+                    it.isEnabled = true
+                    it.alpha = 1f
+                }, 5000)
             }
         }
         binding.photoImageView.setOnClickListener {
@@ -313,6 +331,7 @@ abstract class BaseInfoFragment : Fragment() {
                 lifecycleScope.launch {
                     val list = viewModel.getFiles(page)
                     if(!list.isNullOrEmpty()) {
+                        binding.loadButton.visibility = View.GONE
                         adapter.addMediaItems(MediaItem.TYPE_FILE, list.map { MediaItem(type, it) })
                         currentPage++
                         callback(true)
@@ -321,13 +340,13 @@ abstract class BaseInfoFragment : Fragment() {
                         else Toast.makeText(requireContext(), "Файлов нет", Toast.LENGTH_SHORT).show()
                         if(currentPage == 0) callback(false) else isCanDoPagination = false
                     }
-                    binding.loadButton.visibility = View.GONE
                 }
             }
             MediaItem.TYPE_AUDIO -> {
                 lifecycleScope.launch {
                     val list = viewModel.getAudios(page)
                     if(!list.isNullOrEmpty()) {
+                        binding.loadButton.visibility = View.GONE
                         adapter.addMediaItems(MediaItem.TYPE_AUDIO, list.map { MediaItem(type, it) })
                         currentPage++
                         callback(true)
@@ -336,7 +355,6 @@ abstract class BaseInfoFragment : Fragment() {
                         else Toast.makeText(requireContext(), "Голосовых нет", Toast.LENGTH_SHORT).show()
                         if(currentPage == 0) callback(false) else isCanDoPagination = false
                     }
-                    binding.loadButton.visibility = View.GONE
                 }
             }
             MediaItem.TYPE_USER -> {
