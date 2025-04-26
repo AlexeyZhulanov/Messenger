@@ -1,6 +1,5 @@
 package com.example.messenger.model
 
-import android.util.Log
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.example.messenger.security.TinkAesGcmHelper
@@ -17,7 +16,6 @@ class NewsPagingSource(
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, News> {
         return try {
-            Log.d("testLoadNews", "OK")
             val pageIndex = params.key ?: 1
             val news = try {
                     retrofitService.getNews(pageIndex, params.loadSize)
@@ -34,7 +32,6 @@ class NewsPagingSource(
                 }
             }
             if(pageIndex == 1 && flag) messengerService.replaceNews(news, fileManager)
-
             LoadResult.Page(
                 data = news,
                 prevKey = if (pageIndex == 1) null else pageIndex - 1,

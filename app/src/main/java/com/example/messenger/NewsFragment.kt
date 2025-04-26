@@ -5,6 +5,7 @@ import android.content.Intent
 import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,7 +14,6 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
-import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -78,7 +78,10 @@ class NewsFragment : Fragment() {
                 adapter.submitData(pagingData)
             }
         }
-        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        val typedValue = TypedValue()
+        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
+        val colorBar = typedValue.data
+        requireActivity().window.statusBarColor = colorBar
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.toolbar_news, toolbarContainer, false)
@@ -104,20 +107,6 @@ class NewsFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentNewsBinding.inflate(inflater, container, false)
         viewModel.setEncryptHelper(currentUser?.id)
-        lifecycleScope.launch {
-            permission = viewModel.getPermission()
-            if(permission == 1) {
-                binding.floatingActionButtonAdd.visibility = View.VISIBLE
-                binding.floatingActionButtonAdd.setOnClickListener {
-                    BottomSheetNewsFragment.newInstance(null, null, object : BottomSheetNewsListener {
-                        override fun onPostSent() {
-                            viewModel.refresh()
-                        }
-                    }).show(childFragmentManager, "NewPostTag")
-                }
-                adapter.setPermission(permission)
-            }
-        }
         requireActivity().onBackPressedDispatcher.addCallback(
             viewLifecycleOwner,
             object : OnBackPressedCallback(true) {
@@ -143,7 +132,7 @@ class NewsFragment : Fragment() {
                 val triple2 = triple.second.map { ParcelableFile(it.absolutePath) }
                 val triple3 = triple.third.map { ParcelableFile(it.absolutePath) }
                 val tripleForBundle = Triple(triple.first, triple2, triple3)
-                BottomSheetNewsFragment.newInstance(news, tripleForBundle, object : BottomSheetNewsListener {
+                BottomSheetNewsFragment.newInstance(news, currentUser?.id ?: -1, tripleForBundle, object : BottomSheetNewsListener {
                     override fun onPostSent() {
                         viewModel.refresh()
                     }
@@ -199,6 +188,20 @@ class NewsFragment : Fragment() {
         binding.recyclerview.adapter = adapter
         binding.recyclerview.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerview.addItemDecoration(SpacingItemDecorator(20))
+        lifecycleScope.launch {
+            permission = viewModel.getPermission()
+            if(permission == 1) {
+                binding.floatingActionButtonAdd.visibility = View.VISIBLE
+                binding.floatingActionButtonAdd.setOnClickListener {
+                    BottomSheetNewsFragment.newInstance(null, currentUser?.id ?: -1, null, object : BottomSheetNewsListener {
+                        override fun onPostSent() {
+                            viewModel.refresh()
+                        }
+                    }).show(childFragmentManager, "NewPostTag")
+                }
+                adapter.setPermission(permission)
+            }
+        }
         return binding.root
     }
 
