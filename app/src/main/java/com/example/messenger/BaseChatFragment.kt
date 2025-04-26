@@ -237,6 +237,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         binding.floatingActionButtonArrowDown.setOnClickListener {
             binding.recyclerview.smoothScrollToPosition(0)
             binding.floatingActionButtonArrowDown.visibility = View.GONE
+            binding.countNewMsgTextView.visibility = View.GONE
         }
 
         registerArrowScrollListener()
