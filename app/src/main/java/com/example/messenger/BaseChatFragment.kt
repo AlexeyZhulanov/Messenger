@@ -299,9 +299,9 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     }
                 }
         }
-        val options: ImageView = view.findViewById(R.id.ic_options)
-        options.setOnClickListener {
-            showPopupMenu(it, R.menu.popup_menu_dialog)
+        val icSearch: ImageView = view.findViewById(R.id.ic_search)
+        icSearch.setOnClickListener {
+            showSearchToolbar()
         }
     }
 
@@ -974,43 +974,29 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         } else Toast.makeText(requireContext(), "Что-то не так с файлом", Toast.LENGTH_SHORT).show()
     }
 
-    private fun showPopupMenu(view: View, menuRes: Int) {
-        val popupMenu = PopupMenu(requireContext(), view)
-        popupMenu.menuInflater.inflate(menuRes, popupMenu.menu)
-        popupMenu.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.item_search -> {
-                    val toolbarContainer: FrameLayout =
-                        requireView().findViewById(R.id.toolbar_container)
-                    val alternateToolbar = LayoutInflater.from(context)
-                        .inflate(R.layout.search_acton_bar, toolbarContainer, false)
-                    toolbarContainer.addView(alternateToolbar)
-                    val backArrow: ImageView = requireView().findViewById(R.id.back_arrow)
-                    backArrow.setOnClickListener {
-                        getBackFromSearch(alternateToolbar)
-                    }
-                    val icClear: ImageView = requireView().findViewById(R.id.ic_clear)
-                    icClear.setOnClickListener {
-                        val searchEditText: EditText =
-                            requireView().findViewById(R.id.searchEditText)
-                        searchEditText.setText("")
-                    }
-                    val searchEditText: EditText = requireView().findViewById(R.id.searchEditText)
-                    searchEditText.addTextChangedListener(object : TextWatcher {
-                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
-                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                            searchMessages(s)
-                        }
-
-                        override fun afterTextChanged(s: Editable?) {}
-                    })
-                    true
-                }
-                else -> false
-            }
+    private fun showSearchToolbar() {
+        val toolbarContainer: FrameLayout = requireView().findViewById(R.id.toolbar_container)
+        val alternateToolbar = LayoutInflater.from(context).inflate(R.layout.search_acton_bar, toolbarContainer, false)
+        toolbarContainer.addView(alternateToolbar)
+        val backArrow: ImageView = requireView().findViewById(R.id.back_arrow_search)
+        backArrow.setOnClickListener {
+            getBackFromSearch(alternateToolbar)
         }
-        popupMenu.show()
+        val icClear: ImageView = requireView().findViewById(R.id.ic_clear)
+        icClear.setOnClickListener {
+            val searchEditText: EditText = requireView().findViewById(R.id.searchEditText)
+            searchEditText.setText("")
+        }
+        val searchEditText: EditText = requireView().findViewById(R.id.searchEditText)
+        searchEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                searchMessages(s)
+            }
+
+            override fun afterTextChanged(s: Editable?) {}
+        })
     }
 
     private fun showPopupMenuUnsent(view: View, menuRes: Int, message: Message) {
@@ -1320,12 +1306,14 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         val toolbarContainer: FrameLayout = requireView().findViewById(R.id.toolbar_container)
         toolbarContainer.removeView(view)
         viewModel.refresh()
+        registerScrollObserver()
     }
 
     private fun searchMessages(query: CharSequence?) {
         lifecycleScope.launch {
             if (query.isNullOrEmpty()) {
                 viewModel.refresh()
+                registerScrollObserver()
             }
             else if(query.length <= 1) return@launch
             else {

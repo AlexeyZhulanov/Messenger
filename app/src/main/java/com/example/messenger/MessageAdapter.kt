@@ -1712,9 +1712,17 @@ class MessageAdapter(
         }
 
         fun updateReadStatus() {
-            binding.icCheck.visibility = View.INVISIBLE
-            binding.icCheck2.visibility = View.VISIBLE
-            binding.icCheck2.bringToFront()
+            with(binding) {
+                if(timeLayout.isVisible) {
+                    icCheckImage.visibility = View.INVISIBLE
+                    icCheck2Image.visibility = View.VISIBLE
+                    icCheck2Image.bringToFront()
+                } else {
+                    icCheck.visibility = View.INVISIBLE
+                    icCheck2.visibility = View.VISIBLE
+                    icCheck2.bringToFront()
+                }
+            }
         }
 
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
@@ -2069,9 +2077,17 @@ class MessageAdapter(
         }
 
         fun updateReadStatus() {
-            binding.icCheck.visibility = View.INVISIBLE
-            binding.icCheck2.visibility = View.VISIBLE
-            binding.icCheck2.bringToFront()
+            with(binding) {
+                if(timeLayout.isVisible) {
+                    icCheckImage.visibility = View.INVISIBLE
+                    icCheck2Image.visibility = View.VISIBLE
+                    icCheck2Image.bringToFront()
+                } else {
+                    icCheck.visibility = View.INVISIBLE
+                    icCheck2.visibility = View.VISIBLE
+                    icCheck2.bringToFront()
+                }
+            }
         }
 
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
