@@ -112,7 +112,7 @@
                     android:textStyle="italic"
                     android:text="изменено"
                     android:visibility="gone"
-                    android:textColor="@color/colorDayNightAttr"
+                    android:textColor="?attr/colorDayNightAttr"
                     android:layout_marginEnd="5dp" />
 
                 <TextView
@@ -123,21 +123,21 @@
                     android:textSize="12sp"
                     android:maxLines="1"
                     android:textStyle="italic"
-                    android:textColor="@color/colorDayNightAttr" />
+                    android:textColor="?attr/colorDayNightAttr" />
 
                 <ImageView
                     android:id="@+id/ic_check"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:src="@drawable/ic_check"
-                    app:tint="@color/colorDayNightAttr" />
+                    app:tint="?attr/colorDayNightAttr" />
 
                 <ImageView
                     android:id="@+id/ic_check2"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:src="@drawable/ic_check_two"
-                    app:tint="@color/colorDayNightAttr"
+                    app:tint="?attr/colorDayNightAttr"
                     android:paddingEnd="3dp"
                     android:visibility="invisible"
                     />

@@ -180,7 +180,6 @@
                 app:wave_padding_Bottom="2dp"
                 app:wave_padding_right="2dp"
                 app:wave_padding_left="2dp"
-                app:wave_visible_progress="50"
                 app:marker_color="@color/purple_500"
                 app:marker_width="1dp"
                 app:marker_text_color="@color/colorAccent"

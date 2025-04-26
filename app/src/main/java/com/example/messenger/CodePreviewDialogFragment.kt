@@ -5,8 +5,6 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
-import android.text.InputType
-import android.text.method.ScrollingMovementMethod
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -18,21 +16,13 @@ import com.example.messenger.codeview.syntax.LanguageName
 import com.example.messenger.codeview.syntax.ThemeName
 import com.example.messenger.databinding.DialogCodePreviewBinding
 
-class CodePreviewDialogFragment(
-    private val code: String,
-    private val language: String
-) : DialogFragment() {
+class CodePreviewDialogFragment : DialogFragment() {
 
     private lateinit var binding: DialogCodePreviewBinding
 
     private var languageManager: LanguageManager? = null
 
-    private val currentLanguage = when(language) {
-        "java" -> LanguageName.JAVA
-        "python" -> LanguageName.PYTHON
-        "go" -> LanguageName.GO_LANG
-        else -> null
-    }
+    private var currentLanguage: LanguageName? = null
 
     override fun onStart() {
         super.onStart()
@@ -44,7 +34,15 @@ class CodePreviewDialogFragment(
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = DialogCodePreviewBinding.inflate(inflater, container, false)
-        configCodeView()
+        val code = requireArguments().getString(ARG_CODE)
+        val language = requireArguments().getString(ARG_LANGUAGE) ?: ""
+        currentLanguage = when(language) {
+            "java" -> LanguageName.JAVA
+            "python" -> LanguageName.PYTHON
+            "go" -> LanguageName.GO_LANG
+            else -> null
+        }
+        configCodeView(code)
         with(binding) {
             languageNameTxt.text = language
             icClose.setOnClickListener {
@@ -80,7 +78,7 @@ class CodePreviewDialogFragment(
         }
     }
 
-    private fun configCodeView() {
+    private fun configCodeView(code: String?) {
         val jetBrainsMono: Typeface? = ResourcesCompat.getFont(requireContext(), R.font.jetbrains_mono_medium)
         binding.codeView.apply {
             setTypeface(jetBrainsMono)
@@ -108,6 +106,18 @@ class CodePreviewDialogFragment(
         languageManager?.let {
             binding.codeView.setIndentationStarts(it.getLanguageIndentationStarts(currentLanguage))
             binding.codeView.setIndentationEnds(it.getLanguageIndentationEnds(currentLanguage))
+        }
+    }
+
+    companion object {
+        private const val ARG_CODE = "code"
+        private const val ARG_LANGUAGE = "language"
+
+        fun newInstance(code: String, language: String) = CodePreviewDialogFragment().apply {
+            arguments = Bundle().apply {
+                putString(ARG_CODE, code)
+                putString(ARG_LANGUAGE, language)
+            }
         }
     }
 }

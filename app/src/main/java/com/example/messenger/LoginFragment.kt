@@ -29,11 +29,11 @@ class LoginFragment : Fragment() {
                             .commit()
                     } else if(isNeedGenerate) {
                         parentFragmentManager.beginTransaction()
-                            .replace(R.id.fragmentContainer, MasterKeyFragment(userId), "MASTER_KEY_FRAGMENT_TAG")
+                            .replace(R.id.fragmentContainer, MasterKeyFragment.newInstance(userId), "MASTER_KEY_FRAGMENT_TAG")
                             .commit()
                     } else {
                         parentFragmentManager.beginTransaction()
-                            .replace(R.id.fragmentContainer, MasterKeyEnterFragment(userId), "MASTER_KEY_ENTER_FRAGMENT_TAG")
+                            .replace(R.id.fragmentContainer, MasterKeyEnterFragment.newInstance(userId), "MASTER_KEY_ENTER_FRAGMENT_TAG")
                             .commit()
                     }
                 }, { errorMessage ->

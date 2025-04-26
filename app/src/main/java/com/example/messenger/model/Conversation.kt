@@ -1,5 +1,8 @@
 package com.example.messenger.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
 data class Conversation(
     val type: String,
     val id: Int,
@@ -23,6 +26,8 @@ data class Conversation(
         id = id, key = key, name = name!!, createdBy = createdBy!!, avatar = avatar, lastMessage = lastMessage,
         countMsg = countMsg, unreadCount = unreadCount, isOwner = isOwner, canDelete = canDelete, autoDeleteInterval = autoDeleteInterval)
 }
+
+@Parcelize
 data class Dialog(
     val id: Int,
     val key: String? = null,
@@ -33,8 +38,9 @@ data class Dialog(
     val isOwner: Boolean,
     val canDelete: Boolean,
     val autoDeleteInterval: Int
-)
+) : Parcelable
 
+@Parcelize
 data class Group(
     val id: Int,
     val key: String? = null,
@@ -47,4 +53,4 @@ data class Group(
     val isOwner: Boolean,
     val canDelete: Boolean,
     val autoDeleteInterval: Int
-)
+) : Parcelable

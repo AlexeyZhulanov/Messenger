@@ -2,7 +2,6 @@ package com.example.messenger
 
 import android.app.AlertDialog
 import android.content.Context
-import android.content.SharedPreferences
 import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
@@ -16,7 +15,6 @@ import android.widget.ImageView
 import android.widget.NumberPicker
 import android.widget.Toast
 import androidx.appcompat.widget.PopupMenu
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -29,7 +27,6 @@ import com.example.messenger.databinding.FragmentDialogInfoBinding
 import com.example.messenger.model.MediaItem
 import com.example.messenger.model.User
 import com.example.messenger.picker.CustomPreviewFragment
-import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
 import com.luck.picture.lib.basic.PictureSelector
@@ -45,7 +42,6 @@ import java.io.File
 @AndroidEntryPoint
 abstract class BaseInfoFragment : Fragment() {
     protected lateinit var binding: FragmentDialogInfoBinding
-    private lateinit var preferences: SharedPreferences
     private lateinit var adapter: DialogInfoAdapter
     protected lateinit var filePickerManager: FilePickerManager
     protected var selectedType: Int = 0
@@ -70,7 +66,21 @@ abstract class BaseInfoFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        val typedValue = TypedValue()
+        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
+        val colorBar = typedValue.data
+        requireActivity().window.statusBarColor = colorBar
+        lifecycleScope.launch {
+            binding.switchNotifications.isChecked = viewModel.isNotificationsEnabled()
+            binding.switchNotifications.setOnCheckedChangeListener { _, _ ->
+                binding.switchNotifications.isEnabled = false
+                lifecycleScope.launch {
+                    viewModel.turnNotifications()
+                    delay(5000)
+                    binding.switchNotifications.isEnabled = true
+                }
+            }
+        }
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.toolbar_info, toolbarContainer, false)
@@ -87,13 +97,6 @@ abstract class BaseInfoFragment : Fragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentDialogInfoBinding.inflate(inflater, container, false)
-        preferences = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
-        val wallpaper = preferences.getString(PREF_WALLPAPER, "")
-        if(wallpaper != "") {
-            val resId = resources.getIdentifier(wallpaper, "drawable", requireContext().packageName)
-            if(resId != 0)
-                binding.dialogInfoLayout.background = ContextCompat.getDrawable(requireContext(), resId)
-        }
         filePickerManager = FilePickerManager(fragment3 =  this)
         val typedValue = TypedValue()
         context?.theme?.resolveAttribute(android.R.attr.colorAccent, typedValue, true)
@@ -141,11 +144,10 @@ abstract class BaseInfoFragment : Fragment() {
             }
         }
         binding.userNameTextView.text = getUpperName()
-        lifecycleScope.launch {
-            binding.switchNotifications.isChecked = viewModel.isNotificationsEnabled()
-        }
+        binding.switchDelete.isChecked = getCanDelete()
         if(getIsOwner()) {
-            binding.switchDelete.setOnClickListener {
+            binding.switchOverlay.visibility = View.GONE
+            binding.switchDelete.setOnCheckedChangeListener { _, _ ->
                 binding.switchDelete.isEnabled = false
                 lifecycleScope.launch {
                     viewModel.toggleCanDeleteDialog()
@@ -153,14 +155,11 @@ abstract class BaseInfoFragment : Fragment() {
                     binding.switchDelete.isEnabled = true
                 }
             }
-        } else binding.switchDelete.isEnabled = false
-        binding.switchDelete.isChecked = getCanDelete()
-        binding.switchNotifications.setOnClickListener {
-            binding.switchNotifications.isEnabled = false
-            lifecycleScope.launch {
-                viewModel.turnNotifications()
-                delay(5000)
-                binding.switchNotifications.isEnabled = true
+        } else {
+            binding.switchDelete.isEnabled = false
+            binding.switchOverlay.visibility = View.VISIBLE
+            binding.switchOverlay.setOnClickListener {
+                Toast.makeText(requireContext(), "Ошибка: вы не создатель чата", Toast.LENGTH_SHORT).show()
             }
         }
         binding.loadButton.setOnClickListener {
@@ -168,6 +167,8 @@ abstract class BaseInfoFragment : Fragment() {
         }
         binding.buttonMedia.setOnClickListener {
             if(selectedType != MediaItem.TYPE_MEDIA) {
+                it.isEnabled = false
+                it.alpha = 0.5f
                 loadMoreMediaItems(0, 0) { success ->
                     if(success) {
                         binding.buttonMedia.setTextColor(colorPrimary)
@@ -179,12 +180,18 @@ abstract class BaseInfoFragment : Fragment() {
                         isCanDoPagination = true
                     }
                 }
+                it.postDelayed({
+                    it.isEnabled = true
+                    it.alpha = 1f
+                }, 5000)
             }
         }
         binding.buttonFiles.setOnClickListener {
-            loadMoreMediaItems(1, 0) { success ->
-                if(success) {
-                    if(selectedType != MediaItem.TYPE_FILE) {
+            if(selectedType != MediaItem.TYPE_FILE) {
+                it.isEnabled = false
+                it.alpha = 0.5f
+                loadMoreMediaItems(1, 0) { success ->
+                    if(success) {
                         binding.buttonMedia.setTextColor(colorAccent)
                         binding.buttonFiles.setTextColor(colorPrimary)
                         binding.buttonAudio.setTextColor(colorAccent)
@@ -194,10 +201,16 @@ abstract class BaseInfoFragment : Fragment() {
                         isCanDoPagination = true
                     }
                 }
+                it.postDelayed({
+                    it.isEnabled = true
+                    it.alpha = 1f
+                }, 5000)
             }
         }
         binding.buttonAudio.setOnClickListener {
             if(selectedType != MediaItem.TYPE_AUDIO) {
+                it.isEnabled = false
+                it.alpha = 0.5f
                 loadMoreMediaItems(2, 0) { success ->
                     if(success) {
                         binding.buttonMedia.setTextColor(colorAccent)
@@ -209,6 +222,10 @@ abstract class BaseInfoFragment : Fragment() {
                         isCanDoPagination = true
                     }
                 }
+                it.postDelayed({
+                    it.isEnabled = true
+                    it.alpha = 1f
+                }, 5000)
             }
         }
         binding.photoImageView.setOnClickListener {
@@ -314,6 +331,7 @@ abstract class BaseInfoFragment : Fragment() {
                 lifecycleScope.launch {
                     val list = viewModel.getFiles(page)
                     if(!list.isNullOrEmpty()) {
+                        binding.loadButton.visibility = View.GONE
                         adapter.addMediaItems(MediaItem.TYPE_FILE, list.map { MediaItem(type, it) })
                         currentPage++
                         callback(true)
@@ -322,13 +340,13 @@ abstract class BaseInfoFragment : Fragment() {
                         else Toast.makeText(requireContext(), "Файлов нет", Toast.LENGTH_SHORT).show()
                         if(currentPage == 0) callback(false) else isCanDoPagination = false
                     }
-                    binding.loadButton.visibility = View.GONE
                 }
             }
             MediaItem.TYPE_AUDIO -> {
                 lifecycleScope.launch {
                     val list = viewModel.getAudios(page)
                     if(!list.isNullOrEmpty()) {
+                        binding.loadButton.visibility = View.GONE
                         adapter.addMediaItems(MediaItem.TYPE_AUDIO, list.map { MediaItem(type, it) })
                         currentPage++
                         callback(true)
@@ -337,7 +355,6 @@ abstract class BaseInfoFragment : Fragment() {
                         else Toast.makeText(requireContext(), "Голосовых нет", Toast.LENGTH_SHORT).show()
                         if(currentPage == 0) callback(false) else isCanDoPagination = false
                     }
-                    binding.loadButton.visibility = View.GONE
                 }
             }
             MediaItem.TYPE_USER -> {
@@ -388,28 +405,58 @@ abstract class BaseInfoFragment : Fragment() {
                     true
                 }
                 R.id.delete_all_messages -> {
-                    lifecycleScope.launch {
-                        val success = viewModel.deleteAllMessages()
-                        if(success) requireActivity().onBackPressedDispatcher.onBackPressed()
-                        else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
-                    }
+                    showConfirmDeleteMessagesDialog()
                     true
                 }
                 R.id.delete_dialog -> {
-                    lifecycleScope.launch {
-                        val (success, message) = viewModel.deleteConv()
-                        if(success) {
-                            parentFragmentManager.beginTransaction()
-                                .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_FROM_DIALOG_TAG")
-                                .commit()
-                        } else Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-                    }
+                    showConfirmDeleteChatDialog()
                     true
                 }
                 else -> false
             }
         }
         popupMenu.show()
+    }
+
+    private fun showConfirmDeleteMessagesDialog() {
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Вы уверены, что хотите удалить все сообщения?")
+            .setPositiveButton("Удалить") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+                lifecycleScope.launch {
+                    val success = viewModel.deleteAllMessages()
+                    if(success) requireActivity().onBackPressedDispatcher.onBackPressed()
+                    else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Назад") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+            }
+            .create()
+
+        dialog.show()
+    }
+
+    private fun showConfirmDeleteChatDialog() {
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Вы уверены, что хотите удалить этот чат?")
+            .setPositiveButton("Удалить") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+                lifecycleScope.launch {
+                    val (success, message) = viewModel.deleteConv()
+                    if(success) {
+                        parentFragmentManager.beginTransaction()
+                            .replace(R.id.fragmentContainer, MessengerFragment(), "MESSENGER_FRAGMENT_FROM_DIALOG_TAG")
+                            .commit()
+                    } else Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Назад") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+            }
+            .create()
+
+        dialog.show()
     }
 
     private fun showNumberPickerDialog() {

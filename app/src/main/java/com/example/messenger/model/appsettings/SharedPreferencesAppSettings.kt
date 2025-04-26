@@ -80,7 +80,27 @@ class SharedPreferencesAppSettings(
         editor.apply()
     }
 
+    override fun getTheme(): Int = sharedPreferences.getInt(PREF_THEME, 0)
+
+    override fun setTheme(themeNumber: Int) {
+        sharedPreferences.edit().putInt(PREF_THEME, themeNumber).apply()
+    }
+
+    override fun getLightWallpaper(): String = sharedPreferences.getString(PREF_WALLPAPER_LIGHT, "") ?: ""
+
+
+    override fun setLightWallpaper(wallpaper: String) {
+        sharedPreferences.edit().putString(PREF_WALLPAPER_LIGHT, wallpaper).apply()
+    }
+
+    override fun getDarkWallpaper(): String = sharedPreferences.getString(PREF_WALLPAPER_DARK, "") ?: ""
+
+    override fun setDarkWallpaper(wallpaper: String) {
+        sharedPreferences.edit().putString(PREF_WALLPAPER_DARK, wallpaper).apply()
+    }
+
     companion object {
+        const val APP_PREFERENCES = "APP_PREFERENCES"
         private const val PREF_CURRENT_ACCESS_TOKEN = "accessToken"
         private const val PREF_CURRENT_REFRESH_TOKEN = "refreshToken"
         private const val PREF_CURRENT_GITLAB_TOKEN = "gitlabToken"
@@ -88,5 +108,8 @@ class SharedPreferencesAppSettings(
         private const val PREF_IS_REFRESHING = "isTokenRefreshing"
         private const val PREF_SETTINGS = "settings"
         private const val PREF_FCM_TOKEN = "fcmToken"
+        private const val PREF_THEME = "PREF_THEME"
+        private const val PREF_WALLPAPER_LIGHT = "PREF_WALLPAPER_LIGHT"
+        private const val PREF_WALLPAPER_DARK = "PREF_WALLPAPER_DARK"
     }
 }

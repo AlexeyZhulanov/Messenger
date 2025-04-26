@@ -11,14 +11,12 @@ import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.widget.PopupMenu
-import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -31,50 +29,44 @@ import com.example.messenger.codeview.syntax.LanguageName
 import com.example.messenger.codeview.syntax.ThemeName
 import com.example.messenger.databinding.FragmentCodeBinding
 import com.example.messenger.model.Message
+import com.example.messenger.model.getParcelableCompat
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.regex.Pattern
 
-
-class CodeFragment(
-    private val baseChatViewModel: BaseChatViewModel,
-    private val message: Message? = null,
-) : Fragment() {
+class CodeFragment : Fragment() {
 
     private lateinit var binding: FragmentCodeBinding
+    private var message: Message? = null
+    private var baseChatViewModel: BaseChatViewModel? = null
 
     private var languageManager: LanguageManager? = null
     private var commentManager: CommentManager? = null
     private var undoRedoManager: UndoRedoManager? = null
 
-    private val isEdit = message != null
-    private var currentLanguage = if(isEdit) {
-        when(message?.codeLanguage) {
-            "python" -> LanguageName.PYTHON
-            "go" -> LanguageName.GO_LANG
-            else -> LanguageName.JAVA
-        }
-    } else LanguageName.JAVA
+    private var currentLanguage = LanguageName.JAVA
     private var currentTheme = ThemeName.MONOKAI
 
-    private val useModernAutoCompleteAdapter = true
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        message = arguments?.getParcelableCompat<Message>(ARG_MESSAGE)
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        val typedValue = TypedValue()
+        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
+        val colorBar = typedValue.data
+        requireActivity().window.statusBarColor = colorBar
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.toolbar_code, toolbarContainer, false)
         toolbarContainer.addView(defaultToolbar)
 
-        val langStr = when(currentLanguage) {
-            LanguageName.JAVA -> "java"
-            LanguageName.PYTHON -> "python"
-            LanguageName.GO_LANG -> "go"
-        }
         val icSend: ImageView = view.findViewById(R.id.ic_send)
-        if(isEdit) {
+        if(message != null) {
             icSend.visibility = View.INVISIBLE
             val icEdit: ImageView = view.findViewById(R.id.ic_edit)
             icEdit.visibility = View.VISIBLE
@@ -82,19 +74,29 @@ class CodeFragment(
                 val code = binding.codeView.text.toString()
                 message?.let {
                     lifecycleScope.launch {
-                        val success = baseChatViewModel.editMessage(it.id, null,
+                        val langStr = when(currentLanguage) {
+                            LanguageName.JAVA -> "java"
+                            LanguageName.PYTHON -> "python"
+                            LanguageName.GO_LANG -> "go"
+                        }
+                        val success = baseChatViewModel?.editMessage(it.id, null,
                             null, null, null, code, langStr, null)
 
-                        if(success) requireActivity().onBackPressedDispatcher.onBackPressed() // return to chat fragment
+                        if(success == true) requireActivity().onBackPressedDispatcher.onBackPressed() // return to chat fragment
                         else Toast.makeText(requireContext(), "Не удалось редактировать код", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         } else {
             icSend.setOnClickListener {
+                val langStr = when(currentLanguage) {
+                    LanguageName.JAVA -> "java"
+                    LanguageName.PYTHON -> "python"
+                    LanguageName.GO_LANG -> "go"
+                }
                 val code = binding.codeView.text.toString()
 
-                 baseChatViewModel.sendMessage(null, null, null, null, code,
+                 baseChatViewModel?.sendMessage(null, null, null, null, code,
                      langStr, null, false, null, null, null)
 
                 requireActivity().onBackPressedDispatcher.onBackPressed() // return to chat fragment
@@ -182,6 +184,13 @@ class CodeFragment(
         message?.code?.let {
             binding.codeView.setText(it)
         }
+        if(message != null) {
+            currentLanguage = when(message?.codeLanguage) {
+                "python" -> LanguageName.PYTHON
+                "go" -> LanguageName.GO_LANG
+                else -> LanguageName.JAVA
+            }
+        }
         // Setup the language and theme with SyntaxManager helper class
         languageManager = LanguageManager(requireContext(), binding.codeView).apply {
             applyTheme(currentLanguage, currentTheme)
@@ -192,28 +201,14 @@ class CodeFragment(
     }
 
     private fun configLanguageAutoComplete() {
-        if (useModernAutoCompleteAdapter) { // todo что-то одно оставить из этого либо добавить опцию выбора
-            // Load the code list (keywords and snippets) for the current language
-            val codeList: List<Code?> = languageManager?.getLanguageCodeList(currentLanguage) ?: return
+        // Load the code list (keywords and snippets) for the current language
+        val codeList: List<Code?> = languageManager?.getLanguageCodeList(currentLanguage) ?: return
 
-            // Use CodeViewAdapter or custom one
-            val adapter = CustomCodeViewAdapter(requireContext(), codeList)
+        // Use CodeViewAdapter or custom one
+        val adapter = CustomCodeViewAdapter(requireContext(), codeList)
 
-            // Add the odeViewAdapter to the CodeView
-            binding.codeView.setAdapter(adapter)
-        } else {
-            val languageKeywords = languageManager?.getLanguageKeywords(currentLanguage) ?: return
-
-            // Custom list item xml layout
-            val layoutId: Int = R.layout.item_code_suggestion
-
-            // TextView id to put suggestion on it
-            val viewId: Int = R.id.suggestItemTextView
-            val adapter: ArrayAdapter<String> = ArrayAdapter(requireContext(), layoutId, viewId, languageKeywords)
-
-            // Add the ArrayAdapter to the CodeView
-            binding.codeView.setAdapter(adapter)
-        }
+        // Add the odeViewAdapter to the CodeView
+        binding.codeView.setAdapter(adapter)
     }
 
     private fun configLanguageAutoIndentation() {
@@ -377,5 +372,16 @@ class CodeFragment(
             }
         }
         popupMenu.show()
+    }
+
+    companion object {
+        private const val ARG_MESSAGE = "arg_message"
+
+        fun newInstance(viewModel: BaseChatViewModel, message: Message? = null) = CodeFragment().apply {
+            arguments = Bundle().apply {
+                putParcelable(ARG_MESSAGE, message)
+            }
+            this.baseChatViewModel = viewModel
+        }
     }
 }

@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,7 +16,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -59,7 +59,10 @@ class MessengerFragment : Fragment() {
             forwardUsernames = usernames
             forwardFlag = true
         }
-        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        val typedValue = TypedValue()
+        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
+        val colorBar = typedValue.data
+        requireActivity().window.statusBarColor = colorBar
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.toolbar_custom, toolbarContainer, false)
@@ -123,13 +126,13 @@ class MessengerFragment : Fragment() {
 
         binding.button.setOnClickListener {
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, NewsFragment(uriGlobal, currentUser), "NEWS_FRAGMENT_TAG")
+                .replace(R.id.fragmentContainer, NewsFragment.newInstance(uriGlobal, currentUser), "NEWS_FRAGMENT_TAG")
                 .addToBackStack(null)
                 .commit()
         }
         binding.button4.setOnClickListener {
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, GitlabFragment(uriGlobal, currentUser), "GITLAB_FRAGMENT_TAG")
+                .replace(R.id.fragmentContainer, GitlabFragment.newInstance(uriGlobal, currentUser), "GITLAB_FRAGMENT_TAG")
                 .addToBackStack(null)
                 .commit()
         }
@@ -149,7 +152,7 @@ class MessengerFragment : Fragment() {
         messengerViewModel.vacation.observe(viewLifecycleOwner) { vacation ->
             if(vacation != null) {
                 parentFragmentManager.beginTransaction()
-                    .replace(R.id.fragmentContainer, VacationFragment(vacation.first, vacation.second), "VACATION_FRAGMENT_TAG")
+                    .replace(R.id.fragmentContainer, VacationFragment.newInstance(vacation.first, vacation.second), "VACATION_FRAGMENT_TAG")
                     .commit()
             }
         }
@@ -176,7 +179,7 @@ class MessengerFragment : Fragment() {
                     "dialog" -> {
                         if (!forwardFlag) {
                             parentFragmentManager.beginTransaction()
-                                .replace(R.id.fragmentContainer, MessageFragment(conversation.toDialog(), currentUser ?: User(0, "", ""), false), "MESSAGE_FRAGMENT_TAG")
+                                .replace(R.id.fragmentContainer, MessageFragment.newInstance(conversation.toDialog(), currentUser ?: User(0, "", ""), false), "MESSAGE_FRAGMENT_TAG")
                                 .addToBackStack(null)
                                 .commit()
                         } else {
@@ -194,7 +197,7 @@ class MessengerFragment : Fragment() {
                     "group" -> {
                         if (!forwardFlag) {
                             parentFragmentManager.beginTransaction()
-                                .replace(R.id.fragmentContainer, GroupMessageFragment(conversation.toGroup(), currentUser ?: User(0, "", ""), false), "GROUP_FRAGMENT_TAG")
+                                .replace(R.id.fragmentContainer, GroupMessageFragment.newInstance(conversation.toGroup(), currentUser ?: User(0, "", ""), false), "GROUP_FRAGMENT_TAG")
                                 .addToBackStack(null)
                                 .commit()
                         } else {
@@ -252,7 +255,7 @@ class MessengerFragment : Fragment() {
 
     private fun goToSettingsFragment() {
         parentFragmentManager.beginTransaction()
-            .replace(R.id.fragmentContainer, SettingsFragment(currentUser ?: User(0, "", "")), "SETTINGS_FRAGMENT_TAG")
+            .replace(R.id.fragmentContainer, SettingsFragment.newInstance(currentUser ?: User(0, "", "")), "SETTINGS_FRAGMENT_TAG")
             .addToBackStack(null)
             .commit()
     }

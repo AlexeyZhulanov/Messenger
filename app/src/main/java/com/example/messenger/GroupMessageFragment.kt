@@ -9,21 +9,26 @@ import android.widget.TextView
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.example.messenger.model.Group
+import com.example.messenger.model.LastMessage
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
+import com.example.messenger.model.getParcelableCompat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class GroupMessageFragment(
-    private val group: Group,
-    currentUser: User,
-    isFromNotification: Boolean
-) : BaseChatFragment(currentUser, isFromNotification) {
+class GroupMessageFragment : BaseChatFragment() {
 
+    private lateinit var group: Group
     override val viewModel: GroupMessageViewModel by viewModels()
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        group = arguments?.getParcelableCompat<Group>(ARG_GROUP) ?: Group(0, null, "",
+            0, null, LastMessage(null, null, null), 0,
+            0, false, canDelete = false, 0)
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val list = viewModel.fetchMembersList()
@@ -115,11 +120,22 @@ class GroupMessageFragment(
         parentFragmentManager.beginTransaction()
             .replace(
                 R.id.fragmentContainer,
-                GroupInfoFragment(group, viewModel.currentMemberList, currentUser),
+                GroupInfoFragment.newInstance(group, viewModel.currentMemberList, currentUser),
                 "GROUP_INFO_FRAGMENT_TAG"
             )
             .addToBackStack(null)
             .commit()
     }
 
+   companion object {
+       private const val ARG_GROUP = "arg_group"
+
+       fun newInstance(group: Group, currentUser: User, isFromNotification: Boolean) = GroupMessageFragment().apply {
+           arguments = Bundle().apply {
+               putParcelable(ARG_GROUP, group)
+               putParcelable(ARG_USER, currentUser)
+               putBoolean(ARG_FROM_NOTIFICATION, isFromNotification)
+           }
+       }
+   }
 }

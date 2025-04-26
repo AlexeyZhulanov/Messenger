@@ -4,7 +4,7 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
@@ -14,6 +14,7 @@ import android.os.ParcelFileDescriptor
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -38,6 +39,7 @@ import com.example.messenger.databinding.FragmentMessageBinding
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
 import com.example.messenger.model.chunkedFlowLast
+import com.example.messenger.model.getParcelableCompat
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
@@ -61,15 +63,14 @@ import java.io.File
 import java.io.PrintWriter
 
 @AndroidEntryPoint
-abstract class BaseChatFragment(
-    protected val currentUser: User,
-    private val isFromNotification: Boolean
-) : Fragment(), AudioRecordView.Callback {
+abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
+
+    protected lateinit var currentUser: User
+    private var isFromNotification: Boolean = false
 
     protected lateinit var binding: FragmentMessageBinding
     protected lateinit var adapter: MessageAdapter
     private lateinit var imageAdapter: ImageAdapter
-    private lateinit var preferences: SharedPreferences
     private lateinit var pickFileLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var filePickerManager: FilePickerManager
     private var audioRecord: AudioRecorder? = null
@@ -152,6 +153,9 @@ abstract class BaseChatFragment(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        currentUser = arguments?.getParcelableCompat<User>(ARG_USER) ?: User(0, "", "")
+        isFromNotification = requireArguments().getBoolean(ARG_FROM_NOTIFICATION)
+
         pickFileLauncher = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri>? ->
             if (uris != null) {
                 if (uris.size > 5) {
@@ -233,11 +237,14 @@ abstract class BaseChatFragment(
         binding.floatingActionButtonArrowDown.setOnClickListener {
             binding.recyclerview.smoothScrollToPosition(0)
             binding.floatingActionButtonArrowDown.visibility = View.GONE
+            binding.countNewMsgTextView.visibility = View.GONE
         }
 
         registerArrowScrollListener()
-
-        requireActivity().window.statusBarColor = ContextCompat.getColor(requireContext(), R.color.colorBar)
+        val typedValue = TypedValue()
+        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
+        val colorBar = typedValue.data
+        requireActivity().window.statusBarColor = colorBar
         requireActivity().window.navigationBarColor = ContextCompat.getColor(requireContext(), R.color.navigation_bar_color)
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
@@ -293,16 +300,15 @@ abstract class BaseChatFragment(
                     }
                 }
         }
-        val options: ImageView = view.findViewById(R.id.ic_options)
-        options.setOnClickListener {
-            showPopupMenu(it, R.menu.popup_menu_dialog)
+        val icSearch: ImageView = view.findViewById(R.id.ic_search)
+        icSearch.setOnClickListener {
+            showSearchToolbar()
         }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         binding = FragmentMessageBinding.inflate(inflater, container, false)
-        preferences = requireContext().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE)
-        val wallpaper = preferences.getString(PREF_WALLPAPER, "")
+        val wallpaper = viewModel.getWallpaper(isDarkTheme(requireContext()))
         if (wallpaper != "") {
             val resId = WALLPAPER_MAP[wallpaper] ?: -1
             if(resId != -1)
@@ -471,7 +477,9 @@ abstract class BaseChatFragment(
             }
         }
         binding.attachButton.setOnLongClickListener {
-            ChoosePickFragment(object: ChoosePickListener {
+            val fragmentChoosePick = ChoosePickFragment()
+
+            fragmentChoosePick.setListener(object: ChoosePickListener {
                 override fun onGalleryClick() {
                     lifecycleScope.launch {
                         try {
@@ -493,11 +501,12 @@ abstract class BaseChatFragment(
                 }
                 override fun onCodeClick() {
                     parentFragmentManager.beginTransaction()
-                        .replace(R.id.fragmentContainer, CodeFragment(viewModel), "CODE_FRAGMENT_TAG")
+                        .replace(R.id.fragmentContainer, CodeFragment.newInstance(viewModel), "CODE_FRAGMENT_TAG")
                         .addToBackStack(null)
                         .commit()
                 }
-            }).show(childFragmentManager, "ChoosePickTag")
+            })
+            fragmentChoosePick.show(childFragmentManager, "ChoosePickTag")
             true
         }
         binding.emojiButton.setOnClickListener {
@@ -782,6 +791,7 @@ abstract class BaseChatFragment(
                                     backPressed()
                                 }
                                 viewModel.startRefresh()
+                                registerScrollObserver()
                             }
                         })
                     binding.floatingActionButtonDelete.setOnClickListener {
@@ -863,7 +873,7 @@ abstract class BaseChatFragment(
                 val code = message.code
                 val lang = message.codeLanguage
                 if(code != null && lang != null) {
-                    val dialog = CodePreviewDialogFragment(code, lang)
+                    val dialog = CodePreviewDialogFragment.newInstance(code, lang)
                     dialog.show(parentFragmentManager, "CodePreviewDialogFragment")
                 }
             }
@@ -930,16 +940,6 @@ abstract class BaseChatFragment(
         }
     }
 
-    override fun onDestroyView() {
-        viewModel.stopRefresh()
-        super.onDestroyView()
-    }
-
-    override fun onPause() {
-        viewModel.stopRefresh()
-        super.onPause()
-    }
-
     private fun handleFileUri(uri: Uri) {
         val file = viewModel.uriToFile(uri, requireContext())
         if(file != null) {
@@ -966,43 +966,29 @@ abstract class BaseChatFragment(
         } else Toast.makeText(requireContext(), "Что-то не так с файлом", Toast.LENGTH_SHORT).show()
     }
 
-    private fun showPopupMenu(view: View, menuRes: Int) {
-        val popupMenu = PopupMenu(requireContext(), view)
-        popupMenu.menuInflater.inflate(menuRes, popupMenu.menu)
-        popupMenu.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.item_search -> {
-                    val toolbarContainer: FrameLayout =
-                        requireView().findViewById(R.id.toolbar_container)
-                    val alternateToolbar = LayoutInflater.from(context)
-                        .inflate(R.layout.search_acton_bar, toolbarContainer, false)
-                    toolbarContainer.addView(alternateToolbar)
-                    val backArrow: ImageView = requireView().findViewById(R.id.back_arrow)
-                    backArrow.setOnClickListener {
-                        getBackFromSearch(alternateToolbar)
-                    }
-                    val icClear: ImageView = requireView().findViewById(R.id.ic_clear)
-                    icClear.setOnClickListener {
-                        val searchEditText: EditText =
-                            requireView().findViewById(R.id.searchEditText)
-                        searchEditText.setText("")
-                    }
-                    val searchEditText: EditText = requireView().findViewById(R.id.searchEditText)
-                    searchEditText.addTextChangedListener(object : TextWatcher {
-                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
-                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                            searchMessages(s)
-                        }
-
-                        override fun afterTextChanged(s: Editable?) {}
-                    })
-                    true
-                }
-                else -> false
-            }
+    private fun showSearchToolbar() {
+        val toolbarContainer: FrameLayout = requireView().findViewById(R.id.toolbar_container)
+        val alternateToolbar = LayoutInflater.from(context).inflate(R.layout.search_acton_bar, toolbarContainer, false)
+        toolbarContainer.addView(alternateToolbar)
+        val backArrow: ImageView = requireView().findViewById(R.id.back_arrow_search)
+        backArrow.setOnClickListener {
+            getBackFromSearch(alternateToolbar)
         }
-        popupMenu.show()
+        val icClear: ImageView = requireView().findViewById(R.id.ic_clear)
+        icClear.setOnClickListener {
+            val searchEditText: EditText = requireView().findViewById(R.id.searchEditText)
+            searchEditText.setText("")
+        }
+        val searchEditText: EditText = requireView().findViewById(R.id.searchEditText)
+        searchEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                searchMessages(s)
+            }
+
+            override fun afterTextChanged(s: Editable?) {}
+        })
     }
 
     private fun showPopupMenuUnsent(view: View, menuRes: Int, message: Message) {
@@ -1121,7 +1107,7 @@ abstract class BaseChatFragment(
                     if (message.voice.isNullOrEmpty() && message.file.isNullOrEmpty()) {
                         if(!message.codeLanguage.isNullOrEmpty()) {
                             parentFragmentManager.beginTransaction()
-                                .replace(R.id.fragmentContainer, CodeFragment(viewModel, message), "CODE_FRAGMENT_TAG2")
+                                .replace(R.id.fragmentContainer, CodeFragment.newInstance(viewModel, message), "CODE_FRAGMENT_TAG2")
                                 .addToBackStack(null)
                                 .commit()
                         }
@@ -1142,7 +1128,6 @@ abstract class BaseChatFragment(
                                         remove()
                                         backPressed()
                                     }
-                                    viewModel.startRefresh()
                                 }
                             })
 
@@ -1170,7 +1155,6 @@ abstract class BaseChatFragment(
                         binding.editButton.setOnClickListener {
                             lifecycleScope.launch {
                                 try {
-                                    viewModel.stopRefresh()
                                     val tempItems = imageAdapter.getData()
                                     val (text, isLink) = prepareTextForSend(binding.enterMessage.text.toString())
                                     if (tempItems.isNotEmpty()) {
@@ -1223,7 +1207,6 @@ abstract class BaseChatFragment(
                                         binding.enterMessage.setText("")
                                         binding.editButton.visibility = View.GONE
                                         binding.recordView.visibility = View.VISIBLE
-                                        viewModel.startRefresh()
                                         if (!f) Toast.makeText(requireContext(), "Не удалось редактировать", Toast.LENGTH_SHORT).show()
                                     } else {
                                         if (text.isNotEmpty()) {
@@ -1236,7 +1219,6 @@ abstract class BaseChatFragment(
                                             binding.enterMessage.setText("")
                                             binding.editButton.visibility = View.GONE
                                             binding.recordView.visibility = View.VISIBLE
-                                            viewModel.startRefresh()
                                             if(!f) Toast.makeText(requireContext(), "Не удалось редактировать", Toast.LENGTH_SHORT).show()
                                         } else Toast.makeText(requireContext(), "Сообщение не должно быть пустым", Toast.LENGTH_SHORT).show()
                                     }
@@ -1312,12 +1294,14 @@ abstract class BaseChatFragment(
         val toolbarContainer: FrameLayout = requireView().findViewById(R.id.toolbar_container)
         toolbarContainer.removeView(view)
         viewModel.refresh()
+        registerScrollObserver()
     }
 
     private fun searchMessages(query: CharSequence?) {
         lifecycleScope.launch {
             if (query.isNullOrEmpty()) {
                 viewModel.refresh()
+                registerScrollObserver()
             }
             else if(query.length <= 1) return@launch
             else {
@@ -1351,7 +1335,18 @@ abstract class BaseChatFragment(
         }
     }
 
+    private fun isDarkTheme(context: Context): Boolean {
+        return when (context.resources.configuration.uiMode and
+                Configuration.UI_MODE_NIGHT_MASK) {
+            Configuration.UI_MODE_NIGHT_YES -> true
+            else -> false
+        }
+    }
+
     companion object {
+        const val ARG_USER = "arg_user"
+        const val ARG_FROM_NOTIFICATION = "arg_from_notification"
+
         private val WALLPAPER_MAP = mapOf(
             "wallpaper1" to R.drawable.wallpaper1,
             "wallpaper2" to R.drawable.wallpaper2,
@@ -1362,7 +1357,9 @@ abstract class BaseChatFragment(
             "wallpaper7" to R.drawable.wallpaper7,
             "wallpaper8" to R.drawable.wallpaper8,
             "wallpaper9" to R.drawable.wallpaper9,
-            "wallpaper10" to R.drawable.wallpaper10
+            "wallpaper10" to R.drawable.wallpaper10,
+            "wallpaper11" to R.drawable.wallpaper11,
+            "wallpaper12" to R.drawable.wallpaper12
         )
     }
 }

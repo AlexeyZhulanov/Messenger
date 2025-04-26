@@ -5,64 +5,51 @@
     <style name="Theme.Messenger" parent="Theme.MaterialComponents.DayNight.NoActionBar" >
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorSecondary">@color/colorAccent</item>
         <item name="colorAccent">@color/colorAccent</item>
         <item name="colorControlActivated">@color/colorPrimary</item>
-    </style>
-
-    <!-- Theme 1 -->
-    <style name="Theme1" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/color1_main</item>
-        <item name="colorPrimaryDark">@color/color1_main</item>
-        <item name="colorAccent">@color/color1_secondary</item>
+        <item name="colorControlNormal">@color/colorAccent</item>
+        <item name="colorControlHighlight">@color/colorPrimaryHighlight</item>
+        <item name="chatColor">@color/colorMessageSenderBack</item>
+        <item name="chatHighlightColor">@color/chatColorHighlight</item>
+        <item name="colorDayNightAttr">@color/colorPrimary</item>
+        <item name="colorDayNightAttrReversed">@color/colorPrimaryDark</item>
+        <item name="colorDayNightAttr2">@color/colorPrimary</item>
+        <item name="colorBar">@color/colorBar</item>
     </style>
 
     <!-- Theme 2 -->
     <style name="Theme2" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/color2_main</item>
-        <item name="colorPrimaryDark">@color/color2_main</item>
-        <item name="colorAccent">@color/color2_secondary</item>
+        <item name="colorPrimary">@color/colorPrimary2</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorSecondary">@color/colorAccent</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="colorControlActivated">@color/colorPrimary2</item>
+        <item name="colorControlNormal">@color/colorAccent</item>
+        <item name="colorControlHighlight">@color/colorPrimaryHighlight2</item>
+        <item name="chatColor">@color/chatColor2</item>
+        <item name="chatHighlightColor">@color/chatColorHighlight2</item>
+        <item name="colorDayNightAttr">@color/colorPrimary2</item>
+        <item name="colorDayNightAttrReversed">@color/colorPrimaryDark</item>
+        <item name="colorDayNightAttr2">@color/colorPrimary2</item>
+        <item name="colorBar">@color/colorBar2</item>
     </style>
 
     <!-- Theme 3 -->
     <style name="Theme3" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/color3_main</item>
-        <item name="colorPrimaryDark">@color/color3_main</item>
-        <item name="colorAccent">@color/color3_secondary</item>
-    </style>
-
-    <!-- Theme 4 -->
-    <style name="Theme4" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/color4_main</item>
-        <item name="colorPrimaryDark">@color/color4_main</item>
-        <item name="colorAccent">@color/color4_secondary</item>
-    </style>
-
-    <!-- Theme 5 -->
-    <style name="Theme5" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/color5_main</item>
-        <item name="colorPrimaryDark">@color/color5_main</item>
-        <item name="colorAccent">@color/color5_secondary</item>
-    </style>
-
-    <!-- Theme 6 -->
-    <style name="Theme6" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/color6_main</item>
-        <item name="colorPrimaryDark">@color/color6_main</item>
-        <item name="colorAccent">@color/color6_secondary</item>
-    </style>
-
-    <!-- Theme 7 -->
-    <style name="Theme7" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/color7_main</item>
-        <item name="colorPrimaryDark">@color/color7_main</item>
-        <item name="colorAccent">@color/color7_secondary</item>
-    </style>
-
-    <!-- Theme 8 -->
-    <style name="Theme8" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/color8_main</item>
-        <item name="colorPrimaryDark">@color/color8_main</item>
-        <item name="colorAccent">@color/color8_secondary</item>
+        <item name="colorPrimary">@color/colorPrimary3</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorSecondary">@color/colorAccent</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="colorControlActivated">@color/colorPrimary3</item>
+        <item name="colorControlNormal">@color/colorAccent</item>
+        <item name="colorControlHighlight">@color/colorPrimaryHighlight3</item>
+        <item name="chatColor">@color/chatColor3</item>
+        <item name="chatHighlightColor">@color/chatColorHighlight3</item>
+        <item name="colorDayNightAttr">@color/colorPrimary3</item>
+        <item name="colorDayNightAttrReversed">@color/colorPrimaryDark</item>
+        <item name="colorDayNightAttr2">@color/colorPrimary3</item>
+        <item name="colorBar">@color/colorBar3</item>
     </style>
 
 </resources>

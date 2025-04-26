@@ -19,4 +19,7 @@
         <item name="cornerSizeBottomLeft">0dp</item>
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
+    <style name="BlueLayoutStyle">
+        <item name="android:background">#A6CAF0</item>
+    </style>
 </resources>

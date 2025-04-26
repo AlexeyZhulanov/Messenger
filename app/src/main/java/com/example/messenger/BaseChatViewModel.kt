@@ -61,8 +61,8 @@ abstract class BaseChatViewModel(
 ) : ViewModel() {
     protected var convId: Int = -1
     private var isGroup: Int = 0
-    private var disableRefresh: Boolean = false
-    private var pendingRefresh: Boolean = false
+    protected var disableRefresh: Boolean = false
+    protected var pendingRefresh: Boolean = false
     @SuppressLint("StaticFieldLeak")
     protected lateinit var recyclerView: RecyclerView
     protected var lastMessageDate: String = ""
@@ -714,6 +714,10 @@ abstract class BaseChatViewModel(
             }
         }
         return list
+    }
+
+    fun getWallpaper(isDark: Boolean): String {
+        return if(isDark) appSettings.getDarkWallpaper() else appSettings.getLightWallpaper()
     }
 
     fun avatarSet(avatar: String, imageView: ImageView, context: Context) {

@@ -3,7 +3,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:background="@color/colorBar"
+    android:background="?attr/colorBar"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -56,7 +56,7 @@
         tools:text="был в сети час назад"
         app:layout_constraintTop_toBottomOf="@id/userNameTextView"
         app:layout_constraintStart_toStartOf="@id/userNameTextView"
-        app:layout_constraintEnd_toStartOf="@id/ic_options"/>
+        app:layout_constraintEnd_toStartOf="@id/ic_search"/>
 
     <TextView
         android:id="@+id/typingText"
@@ -125,11 +125,13 @@
         app:layout_constraintStart_toEndOf="@id/userNameTextView"/>
 
     <ImageView
-        android:id="@+id/ic_options"
+        android:id="@+id/ic_search"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        android:src="@drawable/ic_more"
-        android:padding="8dp"
+        android:src="@drawable/ic_search"
+        android:padding="3dp"
+        android:layout_marginEnd="3dp"
+        android:layout_marginTop="5dp"
         app:tint="?attr/colorPrimary"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         app:layout_constraintTop_toTopOf="parent"

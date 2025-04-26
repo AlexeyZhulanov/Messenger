@@ -5,8 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:maxWidth="170dp"
-    android:background="@drawable/answer_background">
+    android:maxWidth="170dp">
 
     <TextView
         android:id="@+id/forwardText"
@@ -15,10 +14,11 @@
         android:text="Forwarded from"
         android:textColor="?attr/colorPrimaryDark"
         android:textSize="10sp"
-        android:textStyle="bold|italic"
+        android:textStyle="bold"
         android:layout_marginTop="3dp"
         android:layout_marginStart="10dp"
         android:paddingEnd="7dp"
+        android:fontFamily="@font/roboto_italic"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"/>
 
@@ -29,10 +29,11 @@
         tools:text="Алексей"
         android:textColor="?attr/colorPrimaryDark"
         android:textSize="12sp"
-        android:textStyle="bold|italic"
+        android:textStyle="bold"
         android:layout_marginStart="12dp"
         android:paddingEnd="7dp"
         android:paddingBottom="3dp"
+        android:fontFamily="@font/roboto_italic"
         app:layout_constraintTop_toBottomOf="@id/forwardText"
         app:layout_constraintStart_toStartOf="parent"/>
 

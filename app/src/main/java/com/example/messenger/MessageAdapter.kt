@@ -21,6 +21,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
@@ -97,6 +98,7 @@ class MessageAdapter(
     var membersFull: List<User> = listOf()
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
+    private var checkedMessageIds: MutableSet<Int> = mutableSetOf()
     private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
     private var highlightedPosition: Int? = null
     private val uiScopeMain = CoroutineScope(Dispatchers.Main)
@@ -160,16 +162,7 @@ class MessageAdapter(
         return getItem(position).first.id.toLong()
     }
 
-    fun getDeleteList(): List<Int> {
-        val list = mutableListOf<Int>()
-        checkedPositions.forEach { idx ->
-            val message = getItem(idx)?.first
-            if(message != null) {
-                list.add(message.id)
-            }
-        }
-        return list
-    }
+    fun getDeleteList(): List<Int> = checkedMessageIds.toList()
 
     fun getForwardList(): List<Pair<Message, Boolean>> {
         val list = mutableListOf<Pair<Message, Boolean>>()
@@ -201,6 +194,8 @@ class MessageAdapter(
     fun clearPositions() {
         canLongClick = true
         checkedPositions.clear()
+        checkedMessageIds.clear()
+        mapPositions.clear()
         notifyDataSetChanged()
     }
 
@@ -210,10 +205,12 @@ class MessageAdapter(
 
     private fun savePosition(messageId: Int, isSender: Boolean) {
         val position = getItemPositionWithId(messageId)
-        if (position in checkedPositions) {
+        if (messageId in checkedMessageIds) {
+            checkedMessageIds.remove(messageId)
             checkedPositions.remove(position)
             mapPositions.remove(position)
         } else {
+            checkedMessageIds.add(messageId)
             checkedPositions.add(position)
             mapPositions[position] = isSender
         }
@@ -362,7 +359,7 @@ class MessageAdapter(
         val isInLast30 = position >= itemCount - 30
         val isAnswer = message.referenceToMessageId != null
         if (position == highlightedPosition) {
-            holder.itemView.setBackgroundColor(Color.YELLOW)
+            holder.itemView.setBackgroundColor(ContextCompat.getColor(context, R.color.chatAnswerHighlight))
             // Убираем подсветку через 1 секунду
             holder.itemView.postDelayed({
                 holder.itemView.setBackgroundColor(Color.TRANSPARENT)
@@ -401,7 +398,7 @@ class MessageAdapter(
         notifyItemChanged(position)
     }
 
-    private inline fun <reified T : ViewBinding> handleAnswerLayout(binder: T, message: Message): Int {
+    private inline fun <reified T : ViewBinding> handleAnswerLayout(binder: T, message: Message, isSender: Boolean): Int {
         // choose viewHolder type
         val binding = when(binder) {
             is ItemMessageReceiverBinding -> binder.answerLayout
@@ -417,6 +414,7 @@ class MessageAdapter(
             else -> throw IllegalArgumentException("Unknown binding type")
         }
         binding.root.visibility = View.VISIBLE
+        if(isSender) binding.root.setBackgroundResource(R.drawable.answer_background_sender) else binding.root.setBackgroundResource(R.drawable.answer_background)
         binding.answerUsername.text = message.usernameAuthorOriginal
         val tmpId = message.referenceToMessageId
         return if(tmpId == null) {
@@ -571,7 +569,7 @@ class MessageAdapter(
             } else binding.checkbox.visibility = View.GONE
 
             if(isAnswer) {
-                val ansSize = handleAnswerLayout(binding, message)
+                val ansSize = handleAnswerLayout(binding, message, false)
                 val textLen = message.text?.length ?: 0
                 if(textLen < 10 && ansSize > 10) {
                     val layoutParams = binding.customMessageLayout.layoutParams as ConstraintLayout.LayoutParams
@@ -582,6 +580,7 @@ class MessageAdapter(
 
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.root.setBackgroundResource(R.drawable.answer_background)
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
                 val textLen = message.text?.length ?: 0
                 val fwdLen = message.usernameAuthorOriginal?.length ?: 0
@@ -679,7 +678,7 @@ class MessageAdapter(
             messageSave = message
 
             if(isAnswer) {
-                val ansSize = handleAnswerLayout(binding, message)
+                val ansSize = handleAnswerLayout(binding, message, true)
                 val textLen = message.text?.length ?: 0
                 if(textLen < 10 && ansSize > 10) {
                     val layoutParams = binding.customMessageLayout.layoutParams as ConstraintLayout.LayoutParams
@@ -690,6 +689,7 @@ class MessageAdapter(
 
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
                 val textLen = message.text?.length ?: 0
                 val fwdLen = message.usernameAuthorOriginal?.length ?: 0
@@ -983,11 +983,12 @@ class MessageAdapter(
                 binding.checkbox.isChecked = position in checkedPositions
             } else binding.checkbox.visibility = View.GONE
 
-            if(isAnswer) handleAnswerLayout(binding, message)
+            if(isAnswer) handleAnswerLayout(binding, message, false)
             else binding.answerLayout.root.visibility = View.GONE
 
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.root.setBackgroundResource(R.drawable.answer_background)
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
             } else binding.forwardLayout.root.visibility = View.GONE
 
@@ -1149,11 +1150,12 @@ class MessageAdapter(
 
             binding.playButton.visibility = View.VISIBLE
 
-            if(isAnswer) handleAnswerLayout(binding, message)
+            if(isAnswer) handleAnswerLayout(binding, message, true)
             else binding.answerLayout.root.visibility = View.GONE
 
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
             } else binding.forwardLayout.root.visibility = View.GONE
 
@@ -1294,11 +1296,12 @@ class MessageAdapter(
             }
             else binding.checkbox.visibility = View.GONE
 
-            if(isAnswer) handleAnswerLayout(binding, message)
+            if(isAnswer) handleAnswerLayout(binding, message, false)
             else binding.answerLayout.root.visibility = View.GONE
 
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.root.setBackgroundResource(R.drawable.answer_background)
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
             } else binding.forwardLayout.root.visibility = View.GONE
 
@@ -1427,11 +1430,12 @@ class MessageAdapter(
         fun bind(message: Message, date: String, time: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
 
-            if(isAnswer) handleAnswerLayout(binding, message)
+            if(isAnswer) handleAnswerLayout(binding, message, true)
             else binding.answerLayout.root.visibility = View.GONE
 
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
             } else binding.forwardLayout.root.visibility = View.GONE
 
@@ -1543,11 +1547,12 @@ class MessageAdapter(
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
 
-            if(isAnswer) handleAnswerLayout(binding, message)
+            if(isAnswer) handleAnswerLayout(binding, message, false)
             else binding.answerLayout.root.visibility = View.GONE
 
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.root.setBackgroundResource(R.drawable.answer_background)
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
             } else binding.forwardLayout.root.visibility = View.GONE
 
@@ -1703,19 +1708,28 @@ class MessageAdapter(
         }
 
         fun updateReadStatus() {
-            binding.icCheck.visibility = View.INVISIBLE
-            binding.icCheck2.visibility = View.VISIBLE
-            binding.icCheck2.bringToFront()
+            with(binding) {
+                if(timeLayout.isVisible) {
+                    icCheckImage.visibility = View.INVISIBLE
+                    icCheck2Image.visibility = View.VISIBLE
+                    icCheck2Image.bringToFront()
+                } else {
+                    icCheck.visibility = View.INVISIBLE
+                    icCheck2.visibility = View.VISIBLE
+                    icCheck2.bringToFront()
+                }
+            }
         }
 
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
 
-            if(isAnswer) handleAnswerLayout(binding, message)
+            if(isAnswer) handleAnswerLayout(binding, message, true)
             else binding.answerLayout.root.visibility = View.GONE
 
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
             } else binding.forwardLayout.root.visibility = View.GONE
 
@@ -1890,11 +1904,12 @@ class MessageAdapter(
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
 
-            if(isAnswer) handleAnswerLayout(binding, message)
+            if(isAnswer) handleAnswerLayout(binding, message, false)
             else binding.answerLayout.root.visibility = View.GONE
 
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.root.setBackgroundResource(R.drawable.answer_background)
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
             } else binding.forwardLayout.root.visibility = View.GONE
 
@@ -2058,19 +2073,28 @@ class MessageAdapter(
         }
 
         fun updateReadStatus() {
-            binding.icCheck.visibility = View.INVISIBLE
-            binding.icCheck2.visibility = View.VISIBLE
-            binding.icCheck2.bringToFront()
+            with(binding) {
+                if(timeLayout.isVisible) {
+                    icCheckImage.visibility = View.INVISIBLE
+                    icCheck2Image.visibility = View.VISIBLE
+                    icCheck2Image.bringToFront()
+                } else {
+                    icCheck.visibility = View.INVISIBLE
+                    icCheck2.visibility = View.VISIBLE
+                    icCheck2.bringToFront()
+                }
+            }
         }
 
         fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
             messageSave = message
 
-            if(isAnswer) handleAnswerLayout(binding, message)
+            if(isAnswer) handleAnswerLayout(binding, message, true)
             else binding.answerLayout.root.visibility = View.GONE
 
             if(message.isForwarded) {
                 binding.forwardLayout.root.visibility = View.VISIBLE
+                binding.forwardLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
                 binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
             } else binding.forwardLayout.root.visibility = View.GONE
 
