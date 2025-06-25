@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.Conversation
+import com.example.messenger.model.DialogAlreadyExistsException
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
@@ -193,7 +194,10 @@ class MessengerViewModel @Inject constructor(
                     Arrays.fill(symmetricKey.encoded, 0.toByte())
                     _conversations.postValue(retrofitService.getConversations())
                 } else onError("Ошибка: Пользователь ещё ни разу не заходил в мессенджер, создать диалог с ним нельзя!")
-            } catch (e: Exception) {
+            } catch(e: DialogAlreadyExistsException) {
+                onError("Ошибка: диалог с данным пользователем уже создан")
+            }
+            catch (e: Exception) {
                 Log.d("testErrorCreateDialog", e.message.toString())
                 onError("Ошибка: Нет сети!")
             }
