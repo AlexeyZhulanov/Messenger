@@ -150,7 +150,7 @@
             tools:text="user123"
             android:layout_marginTop="10dp"
             android:textColor="?attr/colorPrimaryDark"
-            android:textSize="20sp"
+            android:textSize="18sp"
             android:padding="2dp"
             android:fontFamily="@font/roboto_italic"
             android:textStyle="bold"/>

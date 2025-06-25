@@ -67,18 +67,23 @@
         android:fontFamily="@font/roboto_italic"
         app:layout_constraintStart_toEndOf="@id/photoImageView"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/edit_username_button"
+        app:layout_constraintHorizontal_chainStyle="packed"
+        app:layout_constraintHorizontal_bias="0"
+        app:layout_constrainedWidth="true"
         tools:text="Alexey" />
 
     <ImageView
         android:id="@+id/edit_username_button"
         android:layout_width="25dp"
         android:layout_height="25dp"
-        android:layout_marginStart="5dp"
+        android:layout_marginHorizontal="5dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         android:src="@drawable/ic_edit"
         app:layout_constraintBottom_toBottomOf="@id/usernameTextView"
         app:layout_constraintStart_toEndOf="@id/usernameTextView"
         app:layout_constraintTop_toTopOf="@id/usernameTextView"
+        app:layout_constraintEnd_toEndOf="parent"
         app:tint="?attr/colorPrimary" />
 
     <TextView
@@ -95,18 +100,23 @@
         android:fontFamily="@font/roboto_italic"
         app:layout_constraintStart_toEndOf="@id/photoImageView"
         app:layout_constraintTop_toBottomOf="@id/usernameTextView"
+        app:layout_constraintEnd_toStartOf="@id/copy_name_button"
+        app:layout_constrainedWidth="true"
+        app:layout_constraintHorizontal_chainStyle="packed"
+        app:layout_constraintHorizontal_bias="0"
         tools:text="Leha.Zhulanov.03@mail.ru" />
 
     <ImageView
         android:id="@+id/copy_name_button"
         android:layout_width="25dp"
         android:layout_height="25dp"
-        android:layout_marginStart="5dp"
+        android:layout_marginHorizontal="5dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         android:src="@drawable/ic_copy"
         app:layout_constraintBottom_toBottomOf="@id/nameTextView"
         app:layout_constraintStart_toEndOf="@id/nameTextView"
         app:layout_constraintTop_toTopOf="@id/nameTextView"
+        app:layout_constraintEnd_toEndOf="parent"
         app:tint="?attr/colorPrimary" />
 
     <TextView

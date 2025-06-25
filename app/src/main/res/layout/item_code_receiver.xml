@@ -138,18 +138,28 @@
                 android:id="@+id/codeView"
                 android:layout_width="200dp"
                 android:layout_height="100dp"
-                android:background="@drawable/code_background_message"
+                android:background="@color/code_background"
                 android:dropDownWidth="150dp"
                 android:dropDownHorizontalOffset="0dp"
                 android:dropDownSelector="#272822"
                 android:gravity="top|start"
-                android:textSize="16sp"
+                android:textSize="12sp"
                 tools:text="package main;\n\nint a = 5;\nfloat b = 1.2;"
                 android:paddingHorizontal="8dp"
                 android:textDirection="firstStrong"
                 android:enabled="false"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/headLayout" />
+
+            <FrameLayout
+                android:id="@+id/spaceRounded"
+                android:layout_width="0dp"
+                android:layout_height="10dp"
+                app:layout_constraintTop_toBottomOf="@id/codeView"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:background="@drawable/code_background_message"
+                />
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/timeLayout"
@@ -158,7 +168,7 @@
                 android:layout_marginEnd="5dp"
                 android:layout_marginBottom="5dp"
                 android:background="@drawable/messenger_item_transparent_background"
-                app:layout_constraintBottom_toBottomOf="@id/codeView"
+                app:layout_constraintBottom_toBottomOf="@id/spaceRounded"
                 app:layout_constraintEnd_toEndOf="parent"
                 >
 

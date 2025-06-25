@@ -20,7 +20,8 @@ class RegisterFragment : Fragment() {
     private lateinit var binding: FragmentRegisterBinding
     private var drawableStart : Drawable? = null
     private var drawableEnd : Drawable? = null
-    private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + ('!') + ('$') + ('@') + ('.')
+    private val alf = ('a'..'z') + ('A'..'Z') + ('0'..'9') + '!' + '$' + '@' + '.'
+    private val alf2 = ('А'..'Я') + ('а'..'я') + alf + ' '
     private val viewModel: RegisterViewModel by viewModels()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -62,7 +63,7 @@ class RegisterFragment : Fragment() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                checkCharSequence(s, binding.name2)
+                checkCharSequence(s, binding.name2, alf)
             }
 
             override fun afterTextChanged(s: Editable?) {}
@@ -72,7 +73,7 @@ class RegisterFragment : Fragment() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                checkCharSequence(s, binding.username2)
+                checkCharSequence(s, binding.username2, alf2)
             }
 
             override fun afterTextChanged(s: Editable?) {}
@@ -82,7 +83,7 @@ class RegisterFragment : Fragment() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                checkCharSequence(s, binding.password2)
+                checkCharSequence(s, binding.password2, alf)
             }
 
             override fun afterTextChanged(s: Editable?) {}
@@ -92,7 +93,7 @@ class RegisterFragment : Fragment() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                checkCharSequence(s, binding.passwordRepeat)
+                checkCharSequence(s, binding.passwordRepeat, alf)
             }
 
             override fun afterTextChanged(s: Editable?) {}
@@ -123,19 +124,19 @@ class RegisterFragment : Fragment() {
                 binding.errorTextView.text = "Ошибка: Пароли не совпадают"
                 false
             }
-            isInvalid(binding.name2.text.toString()) -> {
+            isInvalid(binding.name2.text.toString(), alf) -> {
                 binding.errorTextView.text = "Ошибка: Недопустимые символы в первой строке"
                 false
             }
-            isInvalid(binding.username2.text.toString()) -> {
+            isInvalid(binding.username2.text.toString(), alf2) -> {
                 binding.errorTextView.text = "Ошибка: Недопустимые символы во второй строке"
                 false
             }
-            isInvalid(binding.password2.text.toString()) -> {
+            isInvalid(binding.password2.text.toString(), alf) -> {
                 binding.errorTextView.text = "Ошибка: Недопустимые символы в третьей строке"
                 false
             }
-            isInvalid(binding.passwordRepeat.text.toString()) -> {
+            isInvalid(binding.passwordRepeat.text.toString(), alf) -> {
                 binding.errorTextView.text = "Ошибка: Недопустимые символы в четвертой строке"
                 false
             }
@@ -143,20 +144,20 @@ class RegisterFragment : Fragment() {
         }.also { binding.errorTextView.visibility = if (it) View.INVISIBLE else View.VISIBLE }
     }
 
-    private fun isInvalid(text: String): Boolean {
+    private fun isInvalid(text: String, list: List<Char>): Boolean {
         text.forEach {
-            if(it !in alf) return true
+            if(it !in list) return true
         }
         return false
     }
 
-    private fun checkCharSequence(s: CharSequence?, editText: EditText) {
+    private fun checkCharSequence(s: CharSequence?, editText: EditText, list: List<Char>) {
         if(s.isNullOrEmpty()) {
             hideDrawableEnd(editText)
         } else {
             var bool = true
             for(it in s) {
-                if(it !in alf) {
+                if(it !in list) {
                     hideDrawableEnd(editText)
                     bool = false
                     break
