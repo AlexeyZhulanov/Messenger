@@ -26,6 +26,7 @@ import com.example.messenger.model.getParcelableCompat
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
+import com.example.messenger.recorderview.AudioRecordView
 import com.example.messenger.voicerecorder.AudioConverter
 import com.example.messenger.voicerecorder.AudioRecorder
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -35,7 +36,6 @@ import com.luck.picture.lib.config.InjectResourceSource
 import com.luck.picture.lib.entity.LocalMedia
 import com.luck.picture.lib.interfaces.OnExternalPreviewEventListener
 import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
-import com.tougee.recorderview.AudioRecordView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch

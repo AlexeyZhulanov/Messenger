@@ -66,63 +66,60 @@ public class AudioRecorder {
         }
         mAlive = true;
         mThread =
-                new Thread() {
-                    @Override
-                    public void run() {
-                        setThreadPriority(THREAD_PRIORITY_AUDIO);
+                new Thread(() -> {
+                    setThreadPriority(THREAD_PRIORITY_AUDIO);
 
-                        Buffer buffer = new Buffer();
-                        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                            // TODO: Consider calling
-                            //    ActivityCompat#requestPermissions
-                            // here to request the missing permissions, and then overriding
-                            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                            //                                          int[] grantResults)
-                            // to handle the case where the user grants the permission. See the documentation
-                            // for ActivityCompat#requestPermissions for more details.
-                            return;
-                        }
-                        AudioRecord record =
-                                new AudioRecord(
-                                        MediaRecorder.AudioSource.VOICE_COMMUNICATION,
-                                        buffer.sampleRate,
-                                        AudioFormat.CHANNEL_IN_MONO,
-                                        AudioFormat.ENCODING_PCM_16BIT,
-                                        buffer.size);
-
-                        if (record.getState() != AudioRecord.STATE_INITIALIZED) {
-                            Log.w(TAG, "Failed to start recording");
-                            mAlive = false;
-                            return;
-                        }
-
-                        record.startRecording();
-
-                        // While we're running, we'll read the bytes from the AudioRecord and write them
-                        // to our output stream.
-                        try {
-                            while (isRecording()) {
-                                int len = record.read(buffer.data, 0, buffer.size);
-                                if (len >= 0 && len <= buffer.size) {
-                                    mOutputStream.write(buffer.data, 0, len);
-                                    mOutputStream.flush();
-                                } else {
-                                    Log.w(TAG, "Unexpected length returned: " + len);
-                                }
-                            }
-                        } catch (IOException e) {
-                            Log.e(TAG, "Exception with recording stream", e);
-                        } finally {
-                            stopInternal();
-                            try {
-                                record.stop();
-                            } catch (IllegalStateException e) {
-                                Log.e(TAG, "Failed to stop AudioRecord", e);
-                            }
-                            record.release();
-                        }
+                    Buffer buffer = new Buffer();
+                    if (ActivityCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                        // TODO: Consider calling
+                        //    ActivityCompat#requestPermissions
+                        // here to request the missing permissions, and then overriding
+                        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                        //                                          int[] grantResults)
+                        // to handle the case where the user grants the permission. See the documentation
+                        // for ActivityCompat#requestPermissions for more details.
+                        return;
                     }
-                };
+                    AudioRecord record =
+                            new AudioRecord(
+                                    MediaRecorder.AudioSource.VOICE_COMMUNICATION,
+                                    buffer.sampleRate,
+                                    AudioFormat.CHANNEL_IN_MONO,
+                                    AudioFormat.ENCODING_PCM_16BIT,
+                                    buffer.size);
+
+                    if (record.getState() != AudioRecord.STATE_INITIALIZED) {
+                        Log.w(TAG, "Failed to start recording");
+                        mAlive = false;
+                        return;
+                    }
+
+                    record.startRecording();
+
+                    // While we're running, we'll read the bytes from the AudioRecord and write them
+                    // to our output stream.
+                    try {
+                        while (isRecording()) {
+                            int len = record.read(buffer.data, 0, buffer.size);
+                            if (len >= 0 && len <= buffer.size) {
+                                mOutputStream.write(buffer.data, 0, len);
+                                mOutputStream.flush();
+                            } else {
+                                Log.w(TAG, "Unexpected length returned: " + len);
+                            }
+                        }
+                    } catch (IOException e) {
+                        Log.e(TAG, "Exception with recording stream", e);
+                    } finally {
+                        stopInternal();
+                        try {
+                            record.stop();
+                        } catch (IllegalStateException e) {
+                            Log.e(TAG, "Failed to stop AudioRecord", e);
+                        }
+                        record.release();
+                    }
+                });
         mThread.start();
     }
 

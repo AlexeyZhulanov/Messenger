@@ -9,8 +9,8 @@ public abstract class AudioBuffer {
     final byte[] data;
 
     protected AudioBuffer() {
-        int size = -1;
-        int sampleRate = -1;
+        int size;
+        int sampleRate;
 
         // Iterate over all possible sample rates, and try to find the shortest one. The shorter
         // it is, the faster it'll stream.

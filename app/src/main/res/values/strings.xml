@@ -81,4 +81,8 @@
     <string name="ps_select_no_support">не поддерживается тип выделения</string>
     <string name="audioGroupText">Голосо\nвые</string>
     <string name="source_position">%1$d:%2$d</string>
+    <string name="slide_to_cancel">Slide to Cancel</string>
+    <string name="cancel">Cancel</string>
+    <string name="time">%d\'</string>
+    <string name="hold_to_record_audio">Hold to record, release to send</string>
 </resources>

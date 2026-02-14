@@ -43,6 +43,7 @@ import com.example.messenger.model.getParcelableCompat
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
+import com.example.messenger.recorderview.AudioRecordView
 import com.example.messenger.voicerecorder.AudioConverter
 import com.example.messenger.voicerecorder.AudioRecorder
 import com.luck.picture.lib.basic.PictureSelector
@@ -50,7 +51,6 @@ import com.luck.picture.lib.config.InjectResourceSource
 import com.luck.picture.lib.entity.LocalMedia
 import com.luck.picture.lib.interfaces.OnExternalPreviewEventListener
 import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
-import com.tougee.recorderview.AudioRecordView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
@@ -898,7 +898,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         val fileOgg = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.ogg")
         if(fileOgg.exists()) fileOgg.delete()
         val converter = AudioConverter()
-        converter.convertPcmToOgg(file.path, fileOgg.path) {success, _ ->
+        converter.convertPcmToOgg(file.path, fileOgg.path) { success, _ ->
             if(success) {
                 lifecycleScope.launch {
                     val response = async {
