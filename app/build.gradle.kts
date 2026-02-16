@@ -1,32 +1,29 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("kotlin-kapt")
-    id("com.google.devtools.ksp")
-    id("kotlin-parcelize")
-    id("dagger.hilt.android.plugin")
-    id("com.google.gms.google-services")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.parcelize)
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.google.services)
 }
 
 android {
     namespace = "com.example.messenger"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.messenger"
         minSdk = 28
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
-        }
-        kapt {
-            arguments {
-                arg("room.schemaLocation", "$projectDir/schemas")
-            }
         }
     }
 
@@ -40,22 +37,22 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_19
-        targetCompatibility = JavaVersion.VERSION_19
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
-    kotlinOptions {
-        jvmTarget = "19"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_21)
+        }
     }
     buildFeatures {
         compose = true
         viewBinding = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15"
-    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
     }
 }
@@ -80,44 +77,43 @@ dependencies {
     implementation(libs.androidx.legacy.support.v4)
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.room.runtime)
-    kapt(libs.androidx.room.compiler)
+    ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
     implementation(libs.hilt.android)
-    kapt(libs.hilt.android.compiler)
-    implementation("com.squareup.okhttp3:okhttp:4.9.3")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-moshi:2.9.0")
-    implementation("com.squareup.moshi:moshi-kotlin:1.12.0")
-    implementation ("io.github.lucksiege:pictureselector:v3.11.2")
-    implementation ("io.github.lucksiege:compress:v3.11.2")
-    implementation ("io.github.lucksiege:ucrop:v3.11.2")
-    implementation ("io.github.lucksiege:camerax:v3.11.2")
-    implementation ("com.github.bumptech.glide:glide:4.15.1")
-    implementation ("com.google.android.exoplayer:exoplayer-core:2.18.5")
-    implementation ("com.google.android.exoplayer:exoplayer-ui:2.18.5")
-    implementation ("com.github.tougee:audiorecorderview:1.0.4")
-    implementation ("androidx.emoji2:emoji2-views:1.4.0")
-    implementation ("androidx.emoji2:emoji2-bundled:1.4.0")
-    implementation ("androidx.emoji2:emoji2-emojipicker:1.4.0")
-    implementation ("com.github.massoudss:waveformSeekBar:5.0.2")
-    implementation ("com.github.lincollincol:amplituda:2.2.2")
-    implementation ("com.arthenica:mobile-ffmpeg-full:4.4.LTS")
-    implementation ("androidx.paging:paging-runtime:3.3.6")
-    implementation ("androidx.paging:paging-common-ktx:3.3.6")
-    implementation ("io.socket:socket.io-client:2.0.0")
-    implementation ("com.davemorrissey.labs:subsampling-scale-image-view:3.10.0")
-    implementation ("com.google.firebase:firebase-messaging:24.1.1")
-    implementation("com.google.crypto.tink:tink-android:1.16.0")
-    implementation("org.bouncycastle:bcprov-jdk15on:1.70")
-    implementation("org.bouncycastle:bcpkix-jdk15on:1.70")
-    implementation("io.github.amrdeveloper:codeview:1.3.9")
+    ksp(libs.hilt.android.compiler)
+    ksp(libs.kotlin.metadata.jvm)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.moshi)
+    implementation(libs.moshi.kotlin)
+    implementation(libs.picture.selector)
+    implementation(libs.picture.selector.compress)
+    implementation(libs.picture.selector.ucrop)
+    implementation(libs.picture.selector.camerax)
+    implementation(libs.glide)
+    implementation(libs.exoplayer.core)
+    implementation(libs.exoplayer.ui)
+    implementation(libs.emoji2.views)
+    implementation(libs.emoji2.bundled)
+    implementation(libs.emoji2.emojipicker)
+    implementation(libs.waveform.seekbar)
+    implementation(libs.amplituda)
+    implementation(libs.paging.runtime)
+    implementation(libs.paging.common.ktx)
+    implementation(libs.socket.io.client)
+    implementation(libs.subsampling.scale.image.view)
+    implementation(libs.firebase.messaging)
+    implementation(libs.tink.android)
+    implementation(libs.bouncycastle.prov)
+    implementation(libs.bouncycastle.pkix)
+    implementation(libs.codeview)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
 java {
-    sourceCompatibility = JavaVersion.VERSION_19
-    targetCompatibility = JavaVersion.VERSION_19
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }

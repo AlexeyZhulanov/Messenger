@@ -98,7 +98,7 @@ class MasterKeyFragment : Fragment(), OnSaveButtonClickListener {
             val success = withContext(NonCancellable) {
                 return@withContext try {
                     retrofitService.saveUserKeys(publicKeyString, encryptedPrivateKey)
-                } catch (e: Exception) { false }
+                } catch (_: Exception) { false }
             }
             if(success) {
                 userId?.let { keyManager.savePrivateKey(it, privateKey, certificate) }

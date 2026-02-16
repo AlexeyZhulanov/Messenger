@@ -22,6 +22,7 @@ import com.example.messenger.databinding.ItemMemberBinding
 import com.example.messenger.databinding.ItemVoiceBinding
 import com.example.messenger.model.MediaItem
 import com.example.messenger.model.User
+import com.example.messenger.model.takeSample
 import com.luck.picture.lib.entity.LocalMedia
 import com.masoudss.lib.SeekBarOnProgressChanged
 import com.masoudss.lib.WaveformSeekBar
@@ -154,7 +155,7 @@ class DialogInfoAdapter(
                     } else {
                         try {
                             return@async Pair(viewModel.downloadFile(context, "files", content), true)
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             return@async Pair(null, false)
                         }
                     }
@@ -205,7 +206,7 @@ class DialogInfoAdapter(
                     } else {
                         try {
                             return@async Pair(viewModel.downloadFile(context, "audio", content), true)
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             return@async Pair(null, false)
                         }
                     }
@@ -223,7 +224,8 @@ class DialogInfoAdapter(
                             prepare()
                         }
                         val duration = mediaPlayer.duration
-                        binding.waveformSeekBar.setSampleFrom(file)
+                        val intArray = takeSample(context, file.path)
+                        binding.waveformSeekBar.setSampleFrom(intArray)
                         binding.waveformSeekBar.maxProgress = duration.toFloat()
                         binding.timeVoiceTextView.text = viewModel.formatTime(duration.toLong())
 
@@ -293,7 +295,7 @@ class DialogInfoAdapter(
                             } else {
                                 try {
                                     return@async Pair(viewModel.downloadAvatar(context, avatar), false)
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                     return@async Pair(null, true)
                                 }
                             }

@@ -428,7 +428,7 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <com.tougee.recorderview.AudioRecordView
+    <com.example.messenger.recorderview.AudioRecordView
         android:id="@+id/recordView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

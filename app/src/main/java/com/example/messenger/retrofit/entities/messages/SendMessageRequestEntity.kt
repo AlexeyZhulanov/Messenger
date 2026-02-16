@@ -10,9 +10,10 @@ data class SendMessageRequestEntity(
     val file: String? = null,
     val voice: String? = null,
     val code: String? = null,
-    @Json(name = "code_language") val codeLanguage: String? = null,
-    @Json(name = "reference_to_message_id") val referenceToMessageId: Int? = null,
-    @Json(name = "is_forwarded") val isForwarded: Boolean? = false,
-    @Json(name = "is_url") var isUrl: Boolean? = false,
-    @Json(name = "username_author_original") val usernameAuthorOriginal: String? = null
+    @param:Json(name = "code_language") val codeLanguage: String? = null,
+    @param:Json(name = "reference_to_message_id") val referenceToMessageId: Int? = null,
+    @param:Json(name = "is_forwarded") val isForwarded: Boolean? = false,
+    @param:Json(name = "is_url") var isUrl: Boolean? = false,
+    @param:Json(name = "username_author_original") val usernameAuthorOriginal: String? = null,
+    val waveform: List<Int>? = null
 )

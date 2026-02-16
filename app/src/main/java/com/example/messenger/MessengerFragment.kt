@@ -94,7 +94,7 @@ class MessengerFragment : Fragment() {
                         } else {
                             try {
                                 return@async Pair(messengerViewModel.downloadAvatar(requireContext(), avatar), false)
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 return@async Pair(null, true)
                             }
                         }

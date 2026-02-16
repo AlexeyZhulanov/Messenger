@@ -1,6 +1,7 @@
 package com.example.messenger
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
@@ -8,12 +9,14 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.databinding.ItemVoiceBinding
+import com.example.messenger.model.takeSample
 import com.masoudss.lib.SeekBarOnProgressChanged
 import com.masoudss.lib.WaveformSeekBar
 import java.io.File
 
 class VoicesAdapter(
-    private val newsViewModel: NewsViewModel
+    private val newsViewModel: NewsViewModel,
+    private val context: Context
 ) : RecyclerView.Adapter<VoicesAdapter.VoicesViewHolder>() {
 
     private var isPlaying: Boolean = false
@@ -43,7 +46,8 @@ class VoicesAdapter(
                 prepare()
             }
             val duration = mediaPlayer.duration
-            waveformSeekBar.setSampleFrom(file)
+            val intArray = takeSample(context, file.path)
+            waveformSeekBar.setSampleFrom(intArray)
             waveformSeekBar.maxProgress = duration.toFloat()
             timeVoiceTextView.text = newsViewModel.formatTime(duration.toLong())
 

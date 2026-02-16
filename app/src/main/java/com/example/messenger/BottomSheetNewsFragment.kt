@@ -5,7 +5,6 @@ import android.graphics.PorterDuff
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Bundle
-import android.os.ParcelFileDescriptor
 import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
@@ -26,8 +25,8 @@ import com.example.messenger.model.getParcelableCompat
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
-import com.example.messenger.voicerecorder.AudioConverter
-import com.example.messenger.voicerecorder.AudioRecorder
+import com.example.messenger.recorderview.AudioRecordView
+import com.example.messenger.voicerecorder.VoiceRecorder
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.luck.picture.lib.basic.PictureSelector
@@ -35,13 +34,13 @@ import com.luck.picture.lib.config.InjectResourceSource
 import com.luck.picture.lib.entity.LocalMedia
 import com.luck.picture.lib.interfaces.OnExternalPreviewEventListener
 import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
-import com.tougee.recorderview.AudioRecordView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.PrintWriter
 import kotlin.coroutines.cancellation.CancellationException
+import androidx.core.view.isVisible
+import androidx.core.net.toUri
 
 interface BottomSheetNewsListener {
     fun onPostSent()
@@ -61,29 +60,13 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
     private lateinit var recAdapterFiles: NewsRecAdapter
     private lateinit var recAdapterVoices: NewsRecAdapter
     private lateinit var filePickerManager: FilePickerManager
-    private var audioRecord: AudioRecorder? = null
+    private var recorder: VoiceRecorder? = null
+    private var outputFile: File? = null
     private lateinit var pickFileLauncher: ActivityResultLauncher<Array<String>>
     private var filesList: MutableList<File> = mutableListOf()
     private var voicesList: MutableList<File> = mutableListOf()
     private var canDrag: Boolean = true
     private var isEmojiOffDrag: Boolean = false
-
-
-    private val file: File by lazy {
-        val f = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.pcm")
-        if (!f.exists()) {
-            f.createNewFile()
-        }
-        f
-    }
-
-    private val tmpFile: File by lazy {
-        val f = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}tmp.pcm")
-        if (!f.exists()) {
-            f.createNewFile()
-        }
-        f
-    }
 
     override fun onStart() {
         super.onStart()
@@ -224,9 +207,9 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
                         if(canDrag) disableBottomSheetDrag()
                     }
                     Log.d("testImagesAdapterNewsCreate", imageAdapter.getData().toString())
-                } catch (e: CancellationException) {
+                } catch (_: CancellationException) {
                     Toast.makeText(requireContext(), "Выходим...", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     Toast.makeText(requireContext(), "Неизвестная ошибка", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -237,7 +220,7 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
 
         binding.emojiButton.setOnClickListener {
             // Если текстовый контейнер пустой, то смайлы будут добавляться в заголовок
-            if(binding.emojiPicker.visibility == View.VISIBLE) {
+            if(binding.emojiPicker.isVisible) {
                 binding.emojiPicker.visibility = View.GONE
                 if(isEmojiOffDrag) {
                     enableBottomSheetDrag()
@@ -277,7 +260,8 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
                         val list = mutableListOf<String>()
                         for (item1 in photos) {
                             val file = if (item1.duration > 0) {
-                                newsViewModel.getFileFromContentUri(requireContext(), Uri.parse(item1.availablePath))
+                                newsViewModel.getFileFromContentUri(requireContext(),
+                                    item1.availablePath.toUri())
                             } else {
                                 File(item1.availablePath)
                             } ?: continue
@@ -310,48 +294,53 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
                 }
             }
         }
+        recorder = VoiceRecorder(requireContext())
         return binding.root
+    }
+
+    private fun createVoiceFile(): File {
+        val dir = requireContext().externalCacheDir ?: requireContext().cacheDir
+        return File(dir, "voice_${System.currentTimeMillis()}.m4a")
+    }
+
+    override fun onRecordStart() {
+        outputFile = createVoiceFile()
+        outputFile?.let { file ->
+            recorder?.start(
+                file = file,
+                scope = lifecycleScope,
+                onError = { Log.e("testVoiceRecorder", it) }
+            )
+        }
     }
 
     override fun isReady(): Boolean = true
 
-    override fun onRecordStart() {
-        clearFile(tmpFile)
-
-        audioRecord = AudioRecorder(ParcelFileDescriptor.open(tmpFile, ParcelFileDescriptor.MODE_READ_WRITE))
-        audioRecord?.start(null, this)
-    }
-
-    private fun clearFile(f: File) {
-        PrintWriter(f).run {
-            print("")
-            close()
+    override fun onRecordCancel() {
+        lifecycleScope.launch {
+            recorder?.stop()
+            outputFile?.delete()
         }
     }
 
     override fun onRecordEnd() {
-        audioRecord?.stop()
-        tmpFile.copyTo(file, true)
-
-        val fileOgg = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.ogg")
-        if (fileOgg.exists()) fileOgg.delete()
-        val converter = AudioConverter()
-        converter.convertPcmToOgg(file.path, fileOgg.path) { success, _ ->
-            if (success) {
-                val retriever = MediaMetadataRetriever()
-                retriever.setDataSource(fileOgg.absolutePath)
-                val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
-                retriever.release()
-                val str = "Гс ${duration/1000} сек"
-                if(canDrag) disableBottomSheetDrag()
-                voicesList.add(fileOgg)
-                recAdapterVoices.addItem(str)
+        lifecycleScope.launch {
+            val result = recorder?.stop() ?: return@launch
+            val file = result.file
+            if (result.durationMs < 300) { // Ошибочное аудио (миссклик)
+                file.delete()
+                return@launch
             }
-        }
-    }
 
-    override fun onRecordCancel() {
-        audioRecord?.stop()
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(file.absolutePath)
+            val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+            retriever.release()
+            val str = "Гс ${duration/1000} сек"
+            if(canDrag) disableBottomSheetDrag()
+            voicesList.add(file)
+            recAdapterVoices.addItem(str)
+        }
     }
 
     private fun handleFileUri(uri: Uri) {

@@ -28,11 +28,11 @@ class RetrofitGroupsSource(
     override suspend fun sendGroupMessage(groupId: Int, text: String?, images: List<String>?,
                      voice: String?, file: String?, code: String?, codeLanguage: String?,
                      referenceToMessageId: Int?, isForwarded: Boolean, isUrl: Boolean?,
-                     usernameAuthorOriginal: String?): String = wrapRetrofitExceptions {
+                     usernameAuthorOriginal: String?, waveform: List<Int>?): String = wrapRetrofitExceptions {
         val sendGroupMessageRequestEntity = SendMessageRequestEntity(text = text,
             images = images, voice = voice, file = file, code = code, codeLanguage = codeLanguage,
             referenceToMessageId = referenceToMessageId, isForwarded = isForwarded, isUrl = isUrl,
-            usernameAuthorOriginal = usernameAuthorOriginal)
+            usernameAuthorOriginal = usernameAuthorOriginal, waveform = waveform)
         groupsApi.sendGroupMessage(groupId, sendGroupMessageRequestEntity).message
     }
 
@@ -48,7 +48,7 @@ class RetrofitGroupsSource(
 
     override suspend fun editGroupMessage(groupId: Int, messageId: Int, text: String?, images: List<String>?,
                          voice: String?, file: String?, code: String?, codeLanguage: String?,
-                                          isUrl: Boolean?): String = wrapRetrofitExceptions {
+                         isUrl: Boolean?): String = wrapRetrofitExceptions {
         val sendGroupMessageRequestEntity = SendMessageRequestEntity(text = text, images = images,
             voice = voice, file = file, code = code, codeLanguage = codeLanguage, isUrl = isUrl)
         groupsApi.editGroupMessage(messageId, groupId, sendGroupMessageRequestEntity).message

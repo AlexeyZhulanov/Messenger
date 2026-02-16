@@ -46,8 +46,8 @@ class NewsViewModel @Inject constructor(
     private val messengerService: MessengerService,
     private val retrofitService: RetrofitService,
     private val fileManager: FileManager,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-    @MainDispatcher private val mainDispatcher: CoroutineDispatcher
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    @param:MainDispatcher private val mainDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
     private var tinkAesGcmHelper: TinkAesGcmHelper? = null
@@ -82,7 +82,7 @@ class NewsViewModel @Inject constructor(
                     Log.d("testErrorTinkInit", "News key is null")
                     return@launch
                 }
-            } catch (e: Exception) { return@launch }
+            } catch (_: Exception) { return@launch }
             val wrappedKey = Base64.decode(wrappedKeyString, Base64.NO_WRAP)
 
             val id = userId ?: messengerService.getUser()?.id ?: run {
@@ -103,7 +103,7 @@ class NewsViewModel @Inject constructor(
     suspend fun getPermission() : Int {
         return try {
             retrofitService.getPermission()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             0
         }
     }
@@ -212,7 +212,7 @@ class NewsViewModel @Inject constructor(
     suspend fun downloadNews(context: Context, filename: String): String = withContext(ioDispatcher) {
         val downloadedFilePath = try {
             retrofitService.downloadNews(context, filename)
-        } catch (e: Exception) { return@withContext "" }
+        } catch (_: Exception) { return@withContext "" }
         val downloadedFile = File(downloadedFilePath)
         return@withContext tinkAesGcmHelper?.let {
             it.decryptFile(downloadedFile, downloadedFile)
@@ -230,7 +230,7 @@ class NewsViewModel @Inject constructor(
                 tempFile.delete()
                 pt
             } ?: return@withContext Pair("", false)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return@withContext Pair("", false)
         }
         return@withContext Pair(path, true)
@@ -248,7 +248,7 @@ class NewsViewModel @Inject constructor(
             val bodyText = encryptText(text)
             val headText = encryptText(headerText) ?: "Новая новость"
             retrofitService.sendNews(headText, bodyText, images, voices, files)
-        } catch (e: Exception) { false }
+        } catch (_: Exception) { false }
     }
 
     suspend fun editNews(newsId: Int, headerText: String?, text: String?, images: List<String>?,
@@ -257,13 +257,13 @@ class NewsViewModel @Inject constructor(
             val bodyText = encryptText(text)
             val headText = encryptText(headerText) ?: "Новая новость"
             retrofitService.editNews(newsId, headText, bodyText, images, voices, files)
-        } catch (e: Exception) { false }
+        } catch (_: Exception) { false }
     }
 
     suspend fun deleteNews(newsId: Int): Boolean {
         return try {
             retrofitService.deleteNews(newsId)
-        } catch (e: Exception) { false }
+        } catch (_: Exception) { false }
     }
 
     private fun getFileName(uri: Uri, context: Context): String {

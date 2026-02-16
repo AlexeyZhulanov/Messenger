@@ -43,7 +43,7 @@ class MessengerViewModel @Inject constructor(
     private val fileManager: FileManager,
     private val webSocketService: WebSocketService,
     private val appSettings: AppSettings,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
     private val _conversations = MutableLiveData<List<Conversation>>()
@@ -97,7 +97,7 @@ class MessengerViewModel @Inject constructor(
                     Log.d("testUpdateCurUser", user.toString())
                     messengerService.updateUser(user)
                 }
-            } catch (e: Exception) { return@launch }
+            } catch (_: Exception) { return@launch }
         }
     }
 
@@ -133,7 +133,7 @@ class MessengerViewModel @Inject constructor(
                 _conversations.postValue(decryptedConversations)
                 messengerService.replaceConversations(decryptedConversations)
 
-            } catch (e: Exception) { return@launch }
+            } catch (_: Exception) { return@launch }
         }
     }
 
@@ -161,7 +161,7 @@ class MessengerViewModel @Inject constructor(
                     try {
                         retrofitService.saveFCMToken(token)
                         appSettings.setFCMToken(null)
-                    } catch (e: Exception) { return@launch }
+                    } catch (_: Exception) { return@launch }
                 }
             }
         }
@@ -194,7 +194,7 @@ class MessengerViewModel @Inject constructor(
                     Arrays.fill(symmetricKey.encoded, 0.toByte())
                     _conversations.postValue(retrofitService.getConversations())
                 } else onError("Ошибка: Пользователь ещё ни разу не заходил в мессенджер, создать диалог с ним нельзя!")
-            } catch(e: DialogAlreadyExistsException) {
+            } catch(_: DialogAlreadyExistsException) {
                 onError("Ошибка: диалог с данным пользователем уже создан")
             }
             catch (e: Exception) {
@@ -220,7 +220,7 @@ class MessengerViewModel @Inject constructor(
                     Arrays.fill(symmetricKey.encoded, 0.toByte())
                     _conversations.postValue(retrofitService.getConversations())
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 onError("Ошибка: Нет сети!")
             }
         }
@@ -242,11 +242,11 @@ class MessengerViewModel @Inject constructor(
                     if(message.usernameAuthorOriginal == null) {
                         forwardMessage(id, encryptedText, message.images, message.voice,
                             message.file, message.code, message.codeLanguage, message.isUrl,
-                            message.referenceToMessageId, usernames?.get(index))
+                            message.referenceToMessageId, usernames?.get(index), message.waveform)
                     } else {
                         forwardMessage(id, encryptedText, message.images, message.voice,
                             message.file, message.code, message.codeLanguage, message.isUrl,
-                            message.referenceToMessageId, message.usernameAuthorOriginal)
+                            message.referenceToMessageId, message.usernameAuthorOriginal, message.waveform)
                     }
                 }
                 callback(true)
@@ -256,10 +256,10 @@ class MessengerViewModel @Inject constructor(
 
     private suspend fun forwardMessage(idDialog: Int, text: String?, images: List<String>?,
                             voice: String?, file: String?, code: String?, codeLanguage: String?, isUrl: Boolean?, referenceToMessageId: Int?,
-                            usernameAuthorOriginal: String?) {
+                            usernameAuthorOriginal: String?, waveform: List<Int>?) {
         try {
-            retrofitService.sendMessage(idDialog, text, images, voice, file, code, codeLanguage, referenceToMessageId, true, isUrl, usernameAuthorOriginal)
-        } catch (e: Exception) { return }
+            retrofitService.sendMessage(idDialog, text, images, voice, file, code, codeLanguage, referenceToMessageId, true, isUrl, usernameAuthorOriginal, waveform)
+        } catch (_: Exception) { return }
     }
 
     fun forwardGroupMessages(list: List<Message>?, usernames: List<String>?, id: Int, callback: (Boolean) -> Unit) {
@@ -272,11 +272,11 @@ class MessengerViewModel @Inject constructor(
                     if(message.usernameAuthorOriginal == null) {
                         forwardGroupMessage(id, encryptedText, message.images, message.voice,
                             message.file, message.code, message.codeLanguage, message.isUrl,
-                            message.referenceToMessageId, usernames?.get(index))
+                            message.referenceToMessageId, usernames?.get(index), message.waveform)
                     } else {
                         forwardGroupMessage(id, encryptedText, message.images, message.voice,
                             message.file, message.code, message.codeLanguage, message.isUrl,
-                            message.referenceToMessageId, message.usernameAuthorOriginal)
+                            message.referenceToMessageId, message.usernameAuthorOriginal, message.waveform)
                     }
                 }
                 callback(true)
@@ -286,11 +286,12 @@ class MessengerViewModel @Inject constructor(
 
     private suspend fun forwardGroupMessage(idGroup: Int, text: String?, images: List<String>?,
                          voice: String?, file: String?, code: String?, codeLanguage: String?,
-                         isUrl: Boolean?, referenceToMessageId: Int?, usernameAuthorOriginal: String?) {
+                         isUrl: Boolean?, referenceToMessageId: Int?, usernameAuthorOriginal: String?,
+                                            waveform: List<Int>?) {
         try {
             retrofitService.sendGroupMessage(idGroup, text, images, voice, file, code, codeLanguage,
-                referenceToMessageId, true, isUrl, usernameAuthorOriginal)
-        } catch (e: Exception) { return }
+                referenceToMessageId, true, isUrl, usernameAuthorOriginal, waveform)
+        } catch (_: Exception) { return }
     }
 
     fun fManagerIsExistAvatar(fileName: String): Boolean {
@@ -316,7 +317,7 @@ class MessengerViewModel @Inject constructor(
     suspend fun deleteFCMToken() : Boolean {
         return try {
             retrofitService.deleteFCMToken()
-        } catch (e: Exception) { false }
+        } catch (_: Exception) { false }
     }
 
     fun clearCurrentUser() {

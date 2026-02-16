@@ -61,6 +61,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import java.io.File
+import androidx.core.net.toUri
 
 interface MessageActionListener {
     fun onMessageClick(message: Message, itemView: View, isSender: Boolean)
@@ -521,9 +522,9 @@ class MessageAdapter(
 
     private fun openUrl(url: String) {
         try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            val intent = Intent(Intent.ACTION_VIEW, url.toUri())
             context.startActivity(intent)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Toast.makeText(context, "Невозможно открыть ссылку", Toast.LENGTH_SHORT).show()
         }
     }
@@ -1038,7 +1039,7 @@ class MessageAdapter(
                     } else {
                         try {
                             return@async Pair(messageViewModel.downloadFile(context, "audio", message.voice!!), false)
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             return@async Pair(null, true)
                         }
                     }
@@ -1052,7 +1053,7 @@ class MessageAdapter(
                     mediaPlayer.setDataSource(first)
                     mediaPlayer.prepare()
                     val duration = mediaPlayer.duration
-                    binding.waveformSeekBar.setSampleFrom(file)
+                    binding.waveformSeekBar.setSampleFrom(message.waveform?.toIntArray() ?: intArrayOf())
                     binding.waveformSeekBar.maxProgress = duration.toFloat()
                     binding.timeVoiceTextView.text = messageViewModel.formatTime(duration.toLong())
                 } else {
@@ -1205,7 +1206,7 @@ class MessageAdapter(
                         } else {
                             try {
                                 return@async Pair(messageViewModel.downloadFile(context, "audio", message.voice!!), false)
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 return@async Pair(null, true)
                             }
                         }
@@ -1220,7 +1221,7 @@ class MessageAdapter(
                     mediaPlayer.setDataSource(first)
                     mediaPlayer.prepare()
                     val duration = mediaPlayer.duration
-                    binding.waveformSeekBar.setSampleFrom(file)
+                    binding.waveformSeekBar.setSampleFrom(message.waveform?.toIntArray() ?: intArrayOf())
                     binding.waveformSeekBar.maxProgress = duration.toFloat()
                     binding.timeVoiceTextView.text = messageViewModel.formatTime(duration.toLong())
                 } else {
@@ -1350,7 +1351,7 @@ class MessageAdapter(
                     } else {
                         try {
                             return@async Pair(messageViewModel.downloadFile(context, "files", message.file!!), false)
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             return@async Pair(null, true)
                         }
                     }
@@ -1482,7 +1483,7 @@ class MessageAdapter(
                         } else {
                             try {
                                 return@async Pair(messageViewModel.downloadFile(context, "files", message.file!!), false)
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 return@async Pair(null, true)
                             }
                         }
@@ -1625,7 +1626,7 @@ class MessageAdapter(
                     } else {
                         try {
                             return@async Pair(messageViewModel.downloadFile(context, "photos", message.images!!.first()), false)
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             return@async Pair(null, true)
                         }
                     }
@@ -1798,7 +1799,7 @@ class MessageAdapter(
                         } else {
                             try {
                                 return@async Pair(messageViewModel.downloadFile(context, "photos", message.images!!.first()), false)
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 return@async Pair(null, true)
                             }
                         }
@@ -1989,7 +1990,7 @@ class MessageAdapter(
                                 } else {
                                     try {
                                         Pair(messageViewModel.downloadFile(context, "photos", image), false)
-                                    } catch (e: Exception) {
+                                    } catch (_: Exception) {
                                         Pair(null, true)
                                     }
                                 }
@@ -2170,7 +2171,7 @@ class MessageAdapter(
                                     } else {
                                         try {
                                             Pair(messageViewModel.downloadFile(context, "photos", image), false)
-                                        } catch (e: Exception) {
+                                        } catch (_: Exception) {
                                             Pair(null, true)
                                         }
                                     }
@@ -2256,9 +2257,9 @@ class MessageAdapter(
                     else -> null
                 }
                 binding.codeView.setTypeface(jetBrainsMono)
-                lang?.let {
+                lang?.let { lang ->
                     LanguageManager(context, binding.codeView).apply {
-                        applyTheme(it, ThemeName.MONOKAI)
+                        applyTheme(lang, ThemeName.MONOKAI)
                     }
                 }
                 binding.codeView.setText(shortCode)
@@ -2392,9 +2393,9 @@ class MessageAdapter(
                     else -> null
                 }
                 binding.codeView.setTypeface(jetBrainsMono)
-                lang?.let {
+                lang?.let { lang ->
                     LanguageManager(context, binding.codeView).apply {
-                        applyTheme(it, ThemeName.MONOKAI)
+                        applyTheme(lang, ThemeName.MONOKAI)
                     }
                 }
                 binding.codeView.setText(shortCode)

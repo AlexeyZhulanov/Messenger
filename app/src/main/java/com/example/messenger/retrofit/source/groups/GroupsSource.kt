@@ -12,7 +12,8 @@ interface GroupsSource {
                     images: List<String>? = null, voice: String? = null,
                     file: String? = null, code: String? = null, codeLanguage: String? = null,
                     referenceToMessageId: Int? = null, isForwarded: Boolean = false,
-                    isUrl: Boolean? = null, usernameAuthorOriginal: String? = null) : String
+                    isUrl: Boolean? = null, usernameAuthorOriginal: String? = null,
+                                 waveform: List<Int>? = null) : String
 
     suspend fun getGroupMessages(groupId: Int, pageIndex: Int, pageSize: Int) : List<Message>
 
