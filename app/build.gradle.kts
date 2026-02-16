@@ -52,6 +52,7 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
     }
 }
@@ -98,7 +99,6 @@ dependencies {
     implementation(libs.emoji2.emojipicker)
     implementation(libs.waveform.seekbar)
     implementation(libs.amplituda)
-    implementation(libs.mobile.ffmpeg)
     implementation(libs.paging.runtime)
     implementation(libs.paging.common.ktx)
     implementation(libs.socket.io.client)

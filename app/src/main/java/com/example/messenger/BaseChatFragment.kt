@@ -10,7 +10,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.ParcelFileDescriptor
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
@@ -44,8 +43,7 @@ import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
 import com.example.messenger.recorderview.AudioRecordView
-import com.example.messenger.voicerecorder.AudioConverter
-import com.example.messenger.voicerecorder.AudioRecorder
+import com.example.messenger.voicerecorder.VoiceRecorder
 import com.luck.picture.lib.basic.PictureSelector
 import com.luck.picture.lib.config.InjectResourceSource
 import com.luck.picture.lib.entity.LocalMedia
@@ -60,7 +58,9 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.PrintWriter
+import androidx.core.view.isVisible
+import androidx.core.net.toUri
+import androidx.core.view.isGone
 
 @AndroidEntryPoint
 abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
@@ -73,7 +73,8 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     private lateinit var imageAdapter: ImageAdapter
     private lateinit var pickFileLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var filePickerManager: FilePickerManager
-    private var audioRecord: AudioRecorder? = null
+    private var recorder: VoiceRecorder? = null
+    private var outputFile: File? = null
     private var editFlag = false
     private var answerFlag = false
     protected var answerMessage: Pair<Int, String>? = null
@@ -107,22 +108,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     abstract fun isGroup(): Boolean
     abstract fun canDelete(): Boolean
     abstract fun getUnreadCount(): Int
-
-    private val file: File by lazy {
-        val f = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.pcm")
-        if (!f.exists()) {
-            f.createNewFile()
-        }
-        f
-    }
-
-    private val tmpFile: File by lazy {
-        val f = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}tmp.pcm")
-        if (!f.exists()) {
-            f.createNewFile()
-        }
-        f
-    }
 
     private val adapterDataObserver = object : RecyclerView.AdapterDataObserver() {
         override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
@@ -233,7 +218,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                 }
             }
         }
-
+        recorder = VoiceRecorder(requireContext())
         binding.floatingActionButtonArrowDown.setOnClickListener {
             binding.recyclerview.smoothScrollToPosition(0)
             binding.floatingActionButtonArrowDown.visibility = View.GONE
@@ -469,9 +454,9 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                         binding.recordView.visibility = View.INVISIBLE
                         if(!editFlag) binding.enterButton.visibility = View.VISIBLE
                     }
-                } catch (e: CancellationException) {
+                } catch (_: CancellationException) {
                     Toast.makeText(requireContext(), "Выходим...", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     Toast.makeText(requireContext(), "Неизвестная ошибка", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -489,9 +474,9 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                                 binding.recordView.visibility = View.INVISIBLE
                                 binding.enterButton.visibility = View.VISIBLE
                             }
-                        } catch (e: CancellationException) {
+                        } catch (_: CancellationException) {
                             Toast.makeText(requireContext(), "Выходим...", Toast.LENGTH_SHORT).show()
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             Toast.makeText(requireContext(), "Неизвестная ошибка", Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -510,7 +495,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
             true
         }
         binding.emojiButton.setOnClickListener {
-            if(binding.emojiPicker.visibility == View.VISIBLE) binding.emojiPicker.visibility = View.GONE
+            if(binding.emojiPicker.isVisible) binding.emojiPicker.visibility = View.GONE
             else {
                 val enterText: EditText = requireView().findViewById(R.id.enter_message)
                 binding.emojiPicker.visibility = View.VISIBLE
@@ -562,7 +547,8 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                         val localFilePaths = mutableListOf<String>()
                         for (item1 in items) {
                             if (item1.duration > 0) {
-                                val file = viewModel.getFileFromContentUri(requireContext(), Uri.parse(item1.availablePath)) ?: continue
+                                val file = viewModel.getFileFromContentUri(requireContext(),
+                                    item1.availablePath.toUri()) ?: continue
                                 val tmp = async { viewModel.uploadPhoto(file, requireContext(), true) }
                                 val (path, f) = tmp.await()
                                 list += path
@@ -581,7 +567,8 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                             for (item1 in items) {
                                 try {
                                     val file = if (item1.duration > 0) {
-                                        viewModel.getFileFromContentUri(requireContext(), Uri.parse(item1.availablePath)) ?: continue
+                                        viewModel.getFileFromContentUri(requireContext(),
+                                            item1.availablePath.toUri()) ?: continue
                                     } else {
                                         File(item1.availablePath)
                                     }
@@ -600,22 +587,22 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     val (list, localFilePaths) = listik.await()
                     if(text.isNotEmpty()) {
                         if (list.isNotEmpty()) {
-                            if(!answerFlag) viewModel.sendMessage(text, list, null, null, null, null, null, false, isLink, null, localFilePaths)
+                            if(!answerFlag) viewModel.sendMessage(text, list, null, null, null, null, null, false, isLink, null, localFilePaths, null)
                             else {
-                                viewModel.sendMessage(text, list, null, null, null, null, answerMessage?.first, false, isLink, answerMessage?.second, localFilePaths)
+                                viewModel.sendMessage(text, list, null, null, null, null, answerMessage?.first, false, isLink, answerMessage?.second, localFilePaths, null)
                                 disableAnswer()
                             }
                         } else {
-                            if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, null, null, false, isLink, null, null)
+                            if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, null, null, false, isLink, null, null, null)
                             else {
-                                viewModel.sendMessage(text, null, null, null, null, null, answerMessage?.first, false, isLink, answerMessage?.second, null)
+                                viewModel.sendMessage(text, null, null, null, null, null, answerMessage?.first, false, isLink, answerMessage?.second, null, null)
                                 disableAnswer()
                             }
                         }
                     } else if (list.isNotEmpty()) {
-                        if(!answerFlag) viewModel.sendMessage(null, list, null, null, null, null, null, false, null, null, localFilePaths)
+                        if(!answerFlag) viewModel.sendMessage(null, list, null, null, null, null, null, false, null, null, localFilePaths, null)
                         else {
-                            viewModel.sendMessage(null, list, null, null, null, null, answerMessage?.first, false, null, answerMessage?.second, localFilePaths)
+                            viewModel.sendMessage(null, list, null, null, null, null, answerMessage?.first, false, null, answerMessage?.second, localFilePaths, null)
                             disableAnswer()
                         }
                     }
@@ -623,9 +610,9 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     imageAdapter.clearImages()
                 } else {
                     if(text.isNotEmpty()) {
-                        if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, null, null, false, isLink, null, null)
+                        if(!answerFlag) viewModel.sendMessage(text, null, null, null, null, null, null, false, isLink, null, null, null)
                         else {
-                            viewModel.sendMessage(text, null, null, null, null, null, answerMessage?.first, false, isLink, answerMessage?.second, null)
+                            viewModel.sendMessage(text, null, null, null, null, null, answerMessage?.first, false, isLink, answerMessage?.second, null, null)
                             disableAnswer()
                         }
                     }
@@ -641,7 +628,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     private fun registerScrollObserver() {
         try {
             binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterDataObserver)
             binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
         }
@@ -650,7 +637,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     private fun registerArrowObserver() {
         try {
             binding.recyclerview.adapter?.registerAdapterDataObserver(adapterArrowObserver)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterArrowObserver)
             binding.recyclerview.adapter?.registerAdapterDataObserver(adapterArrowObserver)
         }
@@ -659,7 +646,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     protected fun registerInitialListObserver() {
         try {
             binding.recyclerview.adapter?.registerAdapterDataObserver(adapterInitialListObserver)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterInitialListObserver)
             binding.recyclerview.adapter?.registerAdapterDataObserver(adapterInitialListObserver)
         }
@@ -684,22 +671,22 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     }
 
     private fun showArrow() {
-        if(binding.floatingActionButtonArrowDown.visibility == View.GONE) {
+        if(binding.floatingActionButtonArrowDown.isGone) {
             binding.floatingActionButtonArrowDown.visibility = View.VISIBLE
         }
         if(countNewMsg > 0) {
-            if(binding.countNewMsgTextView.visibility == View.GONE) {
+            if (binding.countNewMsgTextView.isGone) {
                 binding.countNewMsgTextView.visibility = View.VISIBLE
             }
             val strCount = countNewMsg.toString()
             binding.countNewMsgTextView.text = strCount
-        } else if(binding.countNewMsgTextView.visibility == View.VISIBLE) {
+        } else if(binding.countNewMsgTextView.isVisible) {
             binding.countNewMsgTextView.visibility = View.GONE
         }
     }
 
     private fun hideArrow() {
-        if(binding.floatingActionButtonArrowDown.visibility == View.VISIBLE) {
+        if(binding.floatingActionButtonArrowDown.isVisible) {
             binding.floatingActionButtonArrowDown.visibility = View.GONE
         }
         binding.countNewMsgTextView.visibility = View.GONE
@@ -885,58 +872,64 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     override val defaultViewModelCreationExtras: CreationExtras
         get() = super.defaultViewModelCreationExtras
 
-    override fun isReady(): Boolean = true
-
-    override fun onRecordCancel() {
-        audioRecord?.stop()
-    }
-
-    override fun onRecordEnd() {
-        audioRecord?.stop()
-        tmpFile.copyTo(file, true)
-
-        val fileOgg = File("${requireContext().externalCacheDir?.absolutePath}${File.separator}audio.ogg")
-        if(fileOgg.exists()) fileOgg.delete()
-        val converter = AudioConverter()
-        converter.convertPcmToOgg(file.path, fileOgg.path) { success, _ ->
-            if(success) {
-                lifecycleScope.launch {
-                    val response = async {
-                        val (path, f) = viewModel.uploadAudio(fileOgg, requireContext())
-                        if(f) {
-                            return@async Pair(path, null)
-                        } else {
-                            val fileName = fileOgg.name
-                            val fileBytes = fileOgg.readBytes()
-                            viewModel.fManagerSaveFileUnsent(fileName, fileBytes)
-                            return@async Pair(fileName, listOf(viewModel.fManagerGetFilePathUnsent(fileName)))
-                        }
-                    }
-                    val(first, second) = response.await()
-                    if(!answerFlag) viewModel.sendMessage(null, null, first, null, null, null, null, false, null, null, second)
-                    else {
-                        viewModel.sendMessage(null, null, first, null, null, null, answerMessage?.first, false, null, answerMessage?.second, second)
-                        disableAnswer()
-                    }
-                    registerScrollObserver()
-                }
-            } else {
-                Log.d("testConvert", "Not OK")
-            }
-        }
+    private fun createVoiceFile(): File {
+        val dir = requireContext().externalCacheDir ?: requireContext().cacheDir
+        return File(dir, "voice_${System.currentTimeMillis()}.m4a")
     }
 
     override fun onRecordStart() {
-        clearFile(tmpFile)
-
-        audioRecord = AudioRecorder(ParcelFileDescriptor.open(tmpFile, ParcelFileDescriptor.MODE_READ_WRITE))
-        audioRecord?.start(this, null)
+        outputFile = createVoiceFile()
+        outputFile?.let { file ->
+            recorder?.start(
+                file = file,
+                scope = lifecycleScope,
+                onError = { Log.e("testVoiceRecorder", it) }
+            )
+        }
     }
 
-    private fun clearFile(f: File) {
-        PrintWriter(f).run {
-            print("")
-            close()
+    override fun isReady(): Boolean = true
+
+    override fun onRecordCancel() {
+        lifecycleScope.launch {
+            recorder?.stop()
+            outputFile?.delete()
+        }
+    }
+
+    override fun onRecordEnd() {
+        lifecycleScope.launch {
+            val result = recorder?.stop() ?: return@launch
+            val file = result.file
+            val waveform = result.waveform.toList()
+
+            if (result.durationMs < 300) { // Ошибочное аудио (миссклик)
+                file.delete()
+                return@launch
+            }
+
+            val response = async {
+                val (path, success) = viewModel.uploadAudio(file, requireContext())
+
+                if (success) {
+                    return@async Pair(path, null)
+                } else {
+                    val fileName = file.name
+                    val fileBytes = file.readBytes()
+                    viewModel.fManagerSaveFileUnsent(fileName, fileBytes)
+                    return@async Pair(
+                        fileName,
+                        listOf(viewModel.fManagerGetFilePathUnsent(fileName))
+                    )
+                }
+            }
+            val (first, second) = response.await()
+            if(!answerFlag) viewModel.sendMessage(null, null, first, null, null, null, null, false, null, null, second, waveform)
+            else {
+                viewModel.sendMessage(null, null, first, null, null, null, answerMessage?.first, false, null, answerMessage?.second, second, waveform)
+                disableAnswer()
+            }
+            registerScrollObserver()
         }
     }
 
@@ -956,9 +949,9 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     }
                 }
                 val(first, second) = response.await()
-                if(!answerFlag) viewModel.sendMessage(null, null, null, first, null, null, null, false, null, null, second)
+                if(!answerFlag) viewModel.sendMessage(null, null, null, first, null, null, null, false, null, null, second, null)
                 else {
-                    viewModel.sendMessage(null, null, file.name, first, null, null, answerMessage?.first, false, null, answerMessage?.second, second)
+                    viewModel.sendMessage(null, null, file.name, first, null, null, answerMessage?.first, false, null, answerMessage?.second, second, null)
                     disableAnswer()
                 }
                 registerScrollObserver()
@@ -1175,7 +1168,8 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                                             val list = mutableListOf<String>()
                                             for (uItem in itemsToUpload) {
                                                 if (uItem.duration > 0) {
-                                                    val file = viewModel.getFileFromContentUri(requireContext(), Uri.parse(uItem.availablePath)) ?: continue
+                                                    val file = viewModel.getFileFromContentUri(requireContext(),
+                                                        uItem.availablePath.toUri()) ?: continue
                                                     val tmp = async {
                                                         viewModel.uploadPhoto(file, requireContext(), true)
                                                     }
@@ -1223,7 +1217,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                                         } else Toast.makeText(requireContext(), "Сообщение не должно быть пустым", Toast.LENGTH_SHORT).show()
                                     }
                                 }
-                                catch (e: Exception) {
+                                catch (_: Exception) {
                                     Toast.makeText(requireContext(), "Не удалось редактировать", Toast.LENGTH_SHORT).show()
                                     binding.enterMessage.setText("")
                                     binding.editButton.visibility = View.GONE

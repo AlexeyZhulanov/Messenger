@@ -24,10 +24,10 @@ class RetrofitMessagesSource(
 
     override suspend fun sendMessage(idDialog: Int, text: String?, images: List<String>?,
             voice: String?, file: String?, code: String?, codeLanguage: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-            isUrl: Boolean?, usernameAuthorOriginal: String?): String = wrapRetrofitExceptions {
+            isUrl: Boolean?, usernameAuthorOriginal: String?, waveform: List<Int>?): String = wrapRetrofitExceptions {
         val sendMessageRequestEntity = SendMessageRequestEntity(text = text, images = images, file = file,
             code = code, codeLanguage = codeLanguage, voice = voice, referenceToMessageId = referenceToMessageId,
-            isForwarded = isForwarded, isUrl = isUrl, usernameAuthorOriginal = usernameAuthorOriginal)
+            isForwarded = isForwarded, isUrl = isUrl, usernameAuthorOriginal = usernameAuthorOriginal, waveform = waveform)
         messagesApi.sendMessage(idDialog, sendMessageRequestEntity).message
     }
 

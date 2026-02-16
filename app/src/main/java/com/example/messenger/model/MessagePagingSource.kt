@@ -51,7 +51,7 @@ class MessagePagingSource(
                         val allMessages = try {
                             if (isDialog) retrofitService.searchMessagesInDialog(convId)
                             else retrofitService.searchMessagesInGroup(convId)
-                        } catch (e: Exception) { emptyList() }
+                        } catch (_: Exception) { emptyList() }
                         allMessages.forEach {
                             it.text = it.text?.let { text -> tinkAesGcmHelper?.decryptText(text) } ?: ""
                         }

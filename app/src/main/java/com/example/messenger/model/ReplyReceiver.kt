@@ -47,11 +47,11 @@ class ReplyReceiver : BroadcastReceiver() {
                     if (isGroup) {
                         retrofitService.sendGroupMessage(chatId, replyText, null, null,
                             null, null, null, messageId, false,
-                            isLink, senderName)
+                            isLink, senderName, null)
                     } else {
                         retrofitService.sendMessage(chatId, replyText, null, null,
                             null, null, null, messageId, false,
-                            isLink, senderName)
+                            isLink, senderName, null)
                     }
                     withContext(Dispatchers.Main) {
                         updateNotification(context, chatId, success = true)

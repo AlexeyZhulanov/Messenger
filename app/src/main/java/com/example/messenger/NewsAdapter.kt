@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import java.io.File
+import androidx.core.view.isGone
 
 
 interface NewsActionListener {
@@ -89,7 +90,7 @@ class NewsAdapter(
             }
         })
 
-        private val adapterVoices = VoicesAdapter(newsViewModel)
+        private val adapterVoices = VoicesAdapter(newsViewModel, context)
 
         private val listVoiceFiles: MutableList<File> = mutableListOf()
 
@@ -106,7 +107,7 @@ class NewsAdapter(
             binding.viewCountTextView.text = strViewsCount
             // Обработка фото (ViewStub)
             if (news.images?.isNotEmpty() == true) {
-                if(binding.nestedLayout.visibility == View.GONE) {
+                if(binding.nestedLayout.isGone) {
                     binding.nestedLayout.visibility = View.VISIBLE
                 }
                 if (photosView == null) {
@@ -130,7 +131,7 @@ class NewsAdapter(
                                     } else {
                                         try {
                                             Pair(newsViewModel.downloadNews(context, photo), false)
-                                        } catch (e: Exception) {
+                                        } catch (_: Exception) {
                                             Pair(null, true)
                                         }
                                     }
@@ -153,7 +154,7 @@ class NewsAdapter(
 
             // Обработка файлов (ViewStub)
             if (news.files?.isNotEmpty() == true) {
-                if(binding.nestedLayout.visibility == View.GONE) {
+                if(binding.nestedLayout.isGone) {
                     binding.nestedLayout.visibility = View.VISIBLE
                 }
                 if (filesView == null) {
@@ -176,7 +177,7 @@ class NewsAdapter(
                                     } else {
                                         try {
                                             Pair(newsViewModel.downloadNews(context, it), false)
-                                        } catch (e: Exception) {
+                                        } catch (_: Exception) {
                                             Pair(null, true)
                                         }
                                     }
@@ -200,7 +201,7 @@ class NewsAdapter(
 
             // Обработка голосовых (ViewStub)
             if (news.voices?.isNotEmpty() == true) {
-                if(binding.nestedLayout.visibility == View.GONE) {
+                if(binding.nestedLayout.isGone) {
                     binding.nestedLayout.visibility = View.VISIBLE
                 }
                 if (voiceView == null) {
@@ -223,7 +224,7 @@ class NewsAdapter(
                                     } else {
                                         try {
                                             Pair(newsViewModel.downloadNews(context, it), false)
-                                        } catch (e: Exception) {
+                                        } catch (_: Exception) {
                                             Pair(null, true)
                                         }
                                     }

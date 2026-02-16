@@ -8,6 +8,7 @@ import com.bumptech.glide.request.RequestOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import androidx.core.graphics.scale
 
 class ImageUtils {
 
@@ -47,7 +48,7 @@ class ImageUtils {
         val previewFile = File(context.cacheDir, previewFileName)
 
         if (bitmap != null) {
-            val scaledBitmap = Bitmap.createScaledBitmap(bitmap, maxWidth, maxHeight, true)
+            val scaledBitmap = bitmap.scale(maxWidth, maxHeight)
 
             previewFile.outputStream().use { outputStream ->
                 scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)

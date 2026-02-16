@@ -71,7 +71,7 @@ class NewsFragment : Fragment() {
             viewModel.pagingFlow.collectLatest { pagingData ->
                 try {
                     binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     binding.recyclerview.adapter?.unregisterAdapterDataObserver(adapterDataObserver)
                     binding.recyclerview.adapter?.registerAdapterDataObserver(adapterDataObserver)
                 }

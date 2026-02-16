@@ -17,7 +17,7 @@ recyclerview = "1.4.0"
 roomVersion = "2.8.4"
 workRuntimeKtx = "2.11.1"
 lifecycleService = "2.10.0"
-androidx-emoji2 = "1.6.0"
+androidx-emoji2 = "1.4.0"
 androidx-paging = "3.4.1"
 hilt = "2.57.2"
 google-services = "4.4.4"
@@ -32,7 +32,6 @@ exoplayer = "2.19.1"
 subsampling-view = "3.10.0"
 waveform-seekbar = "5.0.2"
 amplituda = "2.3.1"
-mobile-ffmpeg = "4.4.LTS"
 tink = "1.20.0"
 bouncycastle = "1.70"
 codeview = "1.3.9"
@@ -87,7 +86,6 @@ paging-runtime = { module = "androidx.paging:paging-runtime", version.ref = "and
 paging-common-ktx = { module = "androidx.paging:paging-common-ktx", version.ref = "androidx-paging" }
 waveform-seekbar = { module = "com.github.massoudss:waveformSeekBar", version.ref = "waveform-seekbar" }
 amplituda = { module = "com.github.lincollincol:amplituda", version.ref = "amplituda" }
-mobile-ffmpeg = { module = "com.arthenica:mobile-ffmpeg-full", version.ref = "mobile-ffmpeg" }
 subsampling-scale-image-view = { module = "com.davemorrissey.labs:subsampling-scale-image-view", version.ref = "subsampling-view" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebase-messaging" }
 tink-android = { module = "com.google.crypto.tink:tink-android", version.ref = "tink" }

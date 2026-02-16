@@ -22,13 +22,14 @@ data class MessageDbEntity(
     val timestamp: Long,
     @ColumnInfo(name = "is_forwarded") val isForwarded: Boolean = false,
     @ColumnInfo(name = "reference_to_message_id") val referenceToMessageId: Int?,
-    @ColumnInfo(name = "username_author_original") val usernameAuthorOriginal: String?
+    @ColumnInfo(name = "username_author_original") val usernameAuthorOriginal: String?,
+    val waveform: List<Int>?
 ) {
     fun toMessage(): Message = Message(
         id = id, idSender = idSender, text = text, images = images, voice = voice, file = file,
         code = code, codeLanguage = codeLanguage, timestamp = timestamp, isRead = isRead, isEdited = isEdited,
         referenceToMessageId = referenceToMessageId, isForwarded = isForwarded, isUrl = isUrl,
-        usernameAuthorOriginal = usernameAuthorOriginal
+        usernameAuthorOriginal = usernameAuthorOriginal, waveform = waveform
     )
     companion object {
         fun fromUserInput(message: Message, idDialog: Int): MessageDbEntity = MessageDbEntity(
@@ -36,8 +37,8 @@ data class MessageDbEntity(
             images = message.images, voice = message.voice, file = message.file, code = message.code,
             codeLanguage = message.codeLanguage, isRead = message.isRead, isEdited = message.isEdited,
             timestamp = message.timestamp, isForwarded = message.isForwarded,
-            referenceToMessageId = message.referenceToMessageId,
-            usernameAuthorOriginal = message.usernameAuthorOriginal, isUrl = message.isUrl
+            referenceToMessageId = message.referenceToMessageId, usernameAuthorOriginal = message.usernameAuthorOriginal,
+            isUrl = message.isUrl, waveform = message.waveform
         )
     }
 }

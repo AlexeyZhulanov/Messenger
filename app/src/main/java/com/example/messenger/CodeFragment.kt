@@ -97,7 +97,7 @@ class CodeFragment : Fragment() {
                 val code = binding.codeView.text.toString()
 
                  baseChatViewModel?.sendMessage(null, null, null, null, code,
-                     langStr, null, false, null, null, null)
+                     langStr, null, false, null, null, null, null)
 
                 requireActivity().onBackPressedDispatcher.onBackPressed() // return to chat fragment
             }

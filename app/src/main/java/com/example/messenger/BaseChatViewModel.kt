@@ -57,7 +57,7 @@ abstract class BaseChatViewModel(
     protected val fileManager: FileManager,
     protected val webSocketService: WebSocketService,
     private val appSettings: AppSettings,
-    @IoDispatcher protected val ioDispatcher: CoroutineDispatcher
+    @param:IoDispatcher protected val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
     protected var convId: Int = -1
     private var isGroup: Int = 0
@@ -179,7 +179,7 @@ abstract class BaseChatViewModel(
             delay(2000)
             try {
                 retrofitService.updateLastSession()
-            } catch (e: Exception) { return@launch }
+            } catch (_: Exception) { return@launch }
         }
     }
 
@@ -259,7 +259,7 @@ abstract class BaseChatViewModel(
         val response = try {
             if(isGroup == 0) retrofitService.deleteMessages(convId, ids)
             else retrofitService.deleteGroupMessages(convId, ids)
-        } catch (e: Exception) { return false }
+        } catch (_: Exception) { return false }
         return response
     }
 
@@ -276,7 +276,8 @@ abstract class BaseChatViewModel(
 
     fun sendMessage(text: String?, images: List<String>?, voice: String?, file: String?, code: String?,
                     codeLanguage: String?, referenceToMessageId: Int?, isForwarded: Boolean,
-                    isUrl: Boolean?, usernameAuthorOriginal: String?, localFilePaths: List<String>?) {
+                    isUrl: Boolean?, usernameAuthorOriginal: String?, localFilePaths: List<String>?,
+                    waveform: List<Int>?) {
         viewModelScope.launch {
             val flag = if (!localFilePaths.isNullOrEmpty()) { false }
             else {
@@ -284,10 +285,10 @@ abstract class BaseChatViewModel(
                     val encryptedText = encryptText(text)
                     val encryptedCode = encryptCode(code)
                     if(isGroup == 0) retrofitService.sendMessage(convId, encryptedText, images, voice,
-                        file, encryptedCode, codeLanguage, referenceToMessageId, isForwarded, isUrl, usernameAuthorOriginal)
+                        file, encryptedCode, codeLanguage, referenceToMessageId, isForwarded, isUrl, usernameAuthorOriginal, waveform)
                     else retrofitService.sendGroupMessage(convId, encryptedText, images, voice, file,
-                        encryptedCode, codeLanguage, referenceToMessageId, isForwarded, isUrl, usernameAuthorOriginal)
-                } catch (e: Exception) { false }
+                        encryptedCode, codeLanguage, referenceToMessageId, isForwarded, isUrl, usernameAuthorOriginal, waveform)
+                } catch (_: Exception) { false }
             }
             if(!flag) {
                 var mes = Message(id = 0, idSender = -5, text = text, images = images, voice = voice,
@@ -310,7 +311,7 @@ abstract class BaseChatViewModel(
             if(isGroup == 0) retrofitService.editMessage(convId, messageId, encryptedText, images, voice, file, encryptedCode, codeLanguage, isUrl)
             else retrofitService.editGroupMessage(convId, messageId, encryptedText, images, voice, file, encryptedCode, codeLanguage, isUrl)
             return true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return false
         }
     }
@@ -319,7 +320,7 @@ abstract class BaseChatViewModel(
         return try {
             if(isGroup == 0) retrofitService.findMessage(idMessage, convId)
             else retrofitService.findGroupMessage(idMessage, convId)
-        } catch (e: Exception) { null }
+        } catch (_: Exception) { null }
     }
 
     suspend fun getUnsentMessages(): List<Message>? {
@@ -338,10 +339,10 @@ abstract class BaseChatViewModel(
             val code = mes.code
             val encryptedCode = encryptCode(code)
             if(isGroup == 0) retrofitService.sendMessage(convId, encryptedText, mes.images, mes.voice,
-                mes.file, encryptedCode, mes.codeLanguage, mes.referenceToMessageId, mes.isForwarded, mes.isUrl, mes.usernameAuthorOriginal)
+                mes.file, encryptedCode, mes.codeLanguage, mes.referenceToMessageId, mes.isForwarded, mes.isUrl, mes.usernameAuthorOriginal, mes.waveform)
             else retrofitService.sendGroupMessage(convId, encryptedText, mes.images, mes.voice,
-                mes.file, encryptedCode, mes.codeLanguage, mes.referenceToMessageId, mes.isForwarded, mes.isUrl, mes.usernameAuthorOriginal)
-        } catch (e: Exception) { false }
+                mes.file, encryptedCode, mes.codeLanguage, mes.referenceToMessageId, mes.isForwarded, mes.isUrl, mes.usernameAuthorOriginal, mes.waveform)
+        } catch (_: Exception) { false }
         return flag
     }
 
@@ -557,7 +558,7 @@ abstract class BaseChatViewModel(
                 } else {
                     try {
                         return@async downloadFile(context, "photos", image)
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         return@async null
                     }
                 }
@@ -738,7 +739,7 @@ abstract class BaseChatViewModel(
                         } else {
                             try {
                                 return@async Pair(downloadAvatar(context, avatar), false)
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 return@async Pair(null, true)
                             }
                         }
