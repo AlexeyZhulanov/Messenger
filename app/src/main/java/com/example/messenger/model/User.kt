@@ -11,7 +11,7 @@ data class User(
     val username: String,
     val avatar: String? = null,
     val lastSession: Long? = 0,
-    @Json(name = "public_key") val publicKey: String? = null
+    @param:Json(name = "public_key") val publicKey: String? = null
 ) : Parcelable
 
 data class UserShort(

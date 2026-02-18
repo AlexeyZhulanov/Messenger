@@ -22,7 +22,8 @@ class RetrofitService(
     private val newsSource: NewsSource,
     private val gitlabSource: GitlabSource,
     private val appSettings: AppSettings,
-    private val ioDispatcher: CoroutineDispatcher
+    private val ioDispatcher: CoroutineDispatcher,
+    private val appContext: Context
 ) : RetrofitRepository {
 
     override suspend fun register(name: String, username: String, password: String) : Boolean = withContext(ioDispatcher) {
@@ -645,10 +646,10 @@ class RetrofitService(
         return@withContext file
     }
 
-    override suspend fun downloadFile(context: Context, folder: String, dialogId: Int,
+    override suspend fun downloadFile(folder: String, dialogId: Int,
                                       filename: String, isGroup: Int?): String = withContext(ioDispatcher) {
         val filePath = try {
-            uploadSource.downloadFile(context, folder, dialogId, filename, isGroup ?: 0)
+            uploadSource.downloadFile(appContext, folder, dialogId, filename, isGroup ?: 0)
         } catch (e: BackendException) {
             if(e.code == 400) throw InvalidCredentialsException(e)
             else throw e
@@ -657,9 +658,9 @@ class RetrofitService(
         return@withContext filePath
     }
 
-    override suspend fun downloadAvatar(context: Context, filename: String): String = withContext(ioDispatcher) {
+    override suspend fun downloadAvatar(filename: String): String = withContext(ioDispatcher) {
         val filePath = try {
-            uploadSource.downloadAvatar(context, filename)
+            uploadSource.downloadAvatar(appContext, filename)
         } catch (e: BackendException) {
             if(e.code == 400) throw InvalidCredentialsException(e)
             else throw e
@@ -707,10 +708,10 @@ class RetrofitService(
         return@withContext files
     }
 
-    override suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String,
+    override suspend fun getMediaPreview(dialogId: Int, filename: String,
                                          isGroup: Int?): String = withContext(ioDispatcher) {
         val preview = try {
-            uploadSource.getMediaPreview(context, dialogId, filename, isGroup ?: 0)
+            uploadSource.getMediaPreview(appContext, dialogId, filename, isGroup ?: 0)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw FileNotFoundException(e)
@@ -822,9 +823,9 @@ class RetrofitService(
         return@withContext file
     }
 
-    override suspend fun downloadNews(context: Context, filename: String): String = withContext(ioDispatcher) {
+    override suspend fun downloadNews(filename: String): String = withContext(ioDispatcher) {
         val filePath = try {
-            uploadSource.downloadNews(context, filename)
+            uploadSource.downloadNews(appContext, filename)
         } catch (e: BackendException) {
             if(e.code == 400) throw InvalidCredentialsException(e)
             else throw e

@@ -1,4 +1,4 @@
-package com.example.messenger.model
+package com.example.messenger.utils
 
 import android.content.Context
 import com.linc.amplituda.Amplituda

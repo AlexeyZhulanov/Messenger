@@ -131,7 +131,8 @@ object MessengerModule {
     fun provideRetrofitService(
         sourcesProvider: SourcesProvider,
         appSettings: AppSettings,
-        @IoDispatcher ioDispatcher: CoroutineDispatcher
+        @IoDispatcher ioDispatcher: CoroutineDispatcher,
+        @ApplicationContext context: Context
     ): RetrofitService {
         val usersSource = sourcesProvider.getUsersSource()
         val messagesSource = sourcesProvider.getMessagesSource()
@@ -148,7 +149,8 @@ object MessengerModule {
             newsSource = newsSource,
             gitlabSource = gitlabSource,
             appSettings = appSettings,
-            ioDispatcher = ioDispatcher
+            ioDispatcher = ioDispatcher,
+            appContext = context
         )
     }
 

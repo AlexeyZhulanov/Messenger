@@ -22,7 +22,7 @@ import com.example.messenger.databinding.ItemMemberBinding
 import com.example.messenger.databinding.ItemVoiceBinding
 import com.example.messenger.model.MediaItem
 import com.example.messenger.model.User
-import com.example.messenger.model.takeSample
+import com.example.messenger.utils.takeSample
 import com.luck.picture.lib.entity.LocalMedia
 import com.masoudss.lib.SeekBarOnProgressChanged
 import com.masoudss.lib.WaveformSeekBar

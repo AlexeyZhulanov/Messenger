@@ -9,18 +9,26 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.FileManager
+import com.example.messenger.model.Message
 import com.example.messenger.model.MessagePagingSource
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.WebSocketService
 import com.example.messenger.model.appsettings.AppSettings
+import com.example.messenger.states.FileState
+import com.example.messenger.states.ImageState
+import com.example.messenger.states.ImagesState
+import com.example.messenger.states.MessageUi
+import com.example.messenger.states.VoiceState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import javax.inject.Inject
@@ -43,18 +51,6 @@ class MessageViewModel @Inject constructor(
 
     private var pagingSource: MessagePagingSource? = null
 
-    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
-    val pagingDataFlow = searchBy.asFlow()
-        .debounce(500)
-        .flatMapLatest { searchQuery ->
-            currentPage.flatMapLatest { page ->
-                flow {
-                    val pageSize = 30
-                    val messages = pagingSource?.loadPage(page, pageSize, searchQuery)
-                    if(messages != null) emit(messages)
-                }
-            }
-        }
 
     init {
         webSocketService.reconnectIfNeeded()
@@ -63,62 +59,35 @@ class MessageViewModel @Inject constructor(
                 pagingSource = MessagePagingSource(retrofitService, messengerService, convId, fileManager, tinkAesGcmHelper, true)
             }
         }
-        viewModelScope.launch {
-            webSocketService.newMessageFlow.collect { message ->
-                if(!disableRefresh) {
-                    message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
-                    Log.d("testSocketsMessage", "New Message: $message")
-                    val newMessageTriple =
-                        if(lastMessageDate == "") Triple(message,"", formatMessageTime(message.timestamp))
-                        else Triple(message,formatMessageDate(message.timestamp), formatMessageTime(message.timestamp))
-                    _newMessageFlow.tryEmit(newMessageTriple)
-                    updateLastDate(message.timestamp)
-                } else pendingRefresh = true
-            }
-        }
-        viewModelScope.launch {
-            webSocketService.editMessageFlow.collect { message ->
-                if(!disableRefresh) {
-                    message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
-                    Log.d("testSocketsMessage", "Edited Message: $message")
-                    _editMessageFlow.value = message
-                } else pendingRefresh = true
-            }
-        }
-        viewModelScope.launch {
-            webSocketService.deleteMessageFlow.collect {
-                if(!disableRefresh) {
-                    Log.d("testSocketsMessage", "Deleted messages ids: ${it.deletedMessagesIds}")
-                    val adapter = recyclerView.adapter
-                    if(adapter is MessageAdapter) adapter.clearPositions()
-                    refresh()
-                    recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-                        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                            recyclerView.scrollToPosition(0)
-                        }
-                    })
-                } else pendingRefresh = true
-            }
-        }
-        viewModelScope.launch {
-            webSocketService.readMessageFlow.collect {
-                Log.d("testSocketsMessage", "Messages read: ${it.messagesReadIds}")
-                _readMessagesFlow.tryEmit(it.messagesReadIds)
-            }
-        }
-        viewModelScope.launch {
-            webSocketService.deleteAllMessageFlow.collect {
-                Log.d("testSocketsMessage", "All messages deleted")
-                _deleteState.value = 1
-                refresh()
-            }
-        }
-        viewModelScope.launch {
-            webSocketService.dialogDeletedFlow.collect {
-                Log.d("testSocketsMessage", "Dialog deleted")
-                _deleteState.value = 2
-            }
-        }
+
+        // Пагинация
+        @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+        searchBy.asFlow()
+            .debounce(500)
+            .flatMapLatest { searchQuery ->
+                currentPage.map { page -> searchQuery to page }
+            }.onEach { (searchQuery, page) ->
+                val pageSize = 30
+                val triples = pagingSource?.loadPage(page, pageSize, searchQuery)
+                if(triples != null) {
+                    val newUi = triples.map { triple -> toMessageUi(triple) }
+                    val endData = if(page == 0) {
+                        val firstMessage = newUi.firstOrNull()?.message
+                        if(firstMessage != null) updateLastDate(firstMessage.timestamp)
+                        val m = getUnsentMessages()
+                        if(m != null) {
+                            val mUi = m.map { toMessageUi(Triple(it, "", "")) }
+                            newUi + mUi
+                        } else newUi
+                    } else {
+                        val processed = processDateDuplicates(_messagesUi.value + newUi)
+                        processed
+                    }
+                    _messagesUi.value = endData
+                    preloadAttachments(endData)
+                }
+            }.launchIn(viewModelScope)
+
         viewModelScope.launch {
             webSocketService.userSessionFlow.collect {
                 if(it.userId == otherUserId && !isOtherUserInChat) {
@@ -147,6 +116,8 @@ class MessageViewModel @Inject constructor(
             }
         }
     }
+
+    override fun applyGroupDisplayInfo(list: List<MessageUi>): List<MessageUi> = list
 
     fun setInfo(otherUserId: Int) {
         this.otherUserId = otherUserId
@@ -209,6 +180,17 @@ class MessageViewModel @Inject constructor(
             webSocketService.send("typing", typingData)
         } else {
             webSocketService.send("stop_typing", typingData)
+        }
+    }
+
+    fun preloadAttachments(list: List<MessageUi>) {
+        list.forEach { ui ->
+            when {
+                ui.voiceState != null -> preloadVoice(ui)
+                ui.fileState != null -> preloadFile(ui)
+                ui.imageState != null -> preloadImage(ui)
+                ui.imagesState != null -> preloadImages(ui)
+            }
         }
     }
 

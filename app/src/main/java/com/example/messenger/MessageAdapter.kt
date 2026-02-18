@@ -47,21 +47,19 @@ import com.example.messenger.databinding.ItemTextImagesSenderBinding
 import com.example.messenger.databinding.ItemVoiceReceiverBinding
 import com.example.messenger.databinding.ItemVoiceSenderBinding
 import com.example.messenger.model.Message
-import com.example.messenger.model.User
 import com.example.messenger.picker.DateUtils
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.config.SelectMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import com.masoudss.lib.SeekBarOnProgressChanged
 import com.masoudss.lib.WaveformSeekBar
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import java.io.File
 import androidx.core.net.toUri
+import com.example.messenger.states.MessageUi
 
 interface MessageActionListener {
     fun onMessageClick(message: Message, itemView: View, isSender: Boolean)
@@ -73,17 +71,17 @@ interface MessageActionListener {
 }
 
 
-class MessageDiffCallback : DiffUtil.ItemCallback<Triple<Message, String, String>>() {
-    override fun areItemsTheSame(oldItem: Triple<Message, String, String>, newItem: Triple<Message, String, String>): Boolean {
-        return oldItem.first.id == newItem.first.id
+class MessageDiffCallback : DiffUtil.ItemCallback<MessageUi>() {
+    override fun areItemsTheSame(oldItem: MessageUi, newItem: MessageUi): Boolean {
+        return oldItem.message.id == newItem.message.id
     }
 
-    override fun areContentsTheSame(oldItem: Triple<Message, String, String>, newItem: Triple<Message, String, String>): Boolean {
-        return oldItem.first == newItem.first
+    override fun areContentsTheSame(oldItem: MessageUi, newItem: MessageUi): Boolean {
+        return oldItem == newItem
     }
 
-    override fun getChangePayload(oldItem: Triple<Message, String, String>, newItem: Triple<Message, String, String>): Any? {
-        return if (!oldItem.first.isRead && newItem.first.isRead) "isRead" else null
+    override fun getChangePayload(oldItem: MessageUi, newItem: MessageUi): Any? {
+        return if (!oldItem.message.isRead && newItem.message.isRead) "isRead" else null
     }
 }
 
@@ -91,76 +89,29 @@ class MessageAdapter(
     private val actionListener: MessageActionListener,
     private val currentUserId: Int,
     private val context: Context,
-    private val messageViewModel: BaseChatViewModel,
     private val isGroup: Boolean,
     private val canDelete: Boolean
-) : ListAdapter<Triple<Message, String, String>, RecyclerView.ViewHolder>(MessageDiffCallback()) {
+) : ListAdapter<MessageUi, RecyclerView.ViewHolder>(MessageDiffCallback()) {
     var members: Map<Int, Pair<String?, String?>?> = mapOf()
-    var membersFull: List<User> = listOf()
     var canLongClick: Boolean = true
     private var checkedPositions: MutableSet<Int> = mutableSetOf()
     private var checkedMessageIds: MutableSet<Int> = mutableSetOf()
     private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
     private var highlightedPosition: Int? = null
-    private val uiScopeMain = CoroutineScope(Dispatchers.Main)
     private val linkPattern = Regex("""\[([^]]+)]\((https?://[^)]+)\)|(https?://\S+)""")
-
-
-    fun addNewMessages(messages: List<Triple<Message, String, String>>) {
-        val updatedList = currentList.toMutableList()
-        var needNotify = false
-        if(isGroup) {
-            val firstItem = updatedList.firstOrNull()?.first
-            var firstItemId = firstItem?.id ?: -10
-            val firstItemSenderId = firstItem?.idSender ?: -10
-            messages.forEachIndexed { index, message ->
-                val messageIdSender = message.first.idSender
-                val messageId = message.first.id
-                if(firstItemId != -10) {
-                    val info = members[firstItemId]
-                    if(messageIdSender != currentUserId) {
-                        if(messageIdSender == firstItemSenderId && message.second == "") {
-                            val second: String = info?.second ?: ""
-                            members += messageId to (null to second)
-                            members += firstItemId to (info?.first to null)
-                            if(index == 0) needNotify = true
-                        } else {
-                            val member = membersFull.find { it.id == messageIdSender }
-                            val avatar = member?.avatar ?: ""
-                            members += messageId to (member?.username to avatar)
-                        }
-                    }
-                } else {
-                    val member = membersFull.find { it.id == messageIdSender }
-                    members += messageId to (member?.username to member?.avatar)
-                }
-                firstItemId = message.first.id
-            }
-        }
-        updatedList.addAll(0, messages)
-        submitList(updatedList) {
-            if(needNotify) notifyItemChanged(messages.size, "isAvatar")
-        }
-    }
-
-    fun addUnsentMessage(message: Triple<Message, String, String>) {
-        val updatedList = currentList.toMutableList()
-        updatedList.add(0, message)
-        submitList(updatedList)
-    }
 
     fun deleteUnsentMessage(message: Message) {
         val updatedList = currentList.toMutableList()
-        updatedList.remove(Triple(message, "", ""))
+        updatedList.remove(MessageUi(message, "", ""))
         submitList(updatedList)
     }
 
-    fun getItemNotProtected(position: Int) : Triple<Message, String, String> = getItem(position)
+    fun getItemNotProtected(position: Int) : MessageUi = getItem(position)
 
     override fun getItemCount(): Int = currentList.size
 
     override fun getItemId(position: Int): Long { // Исключает потенциальные баги с индексацией
-        return getItem(position).first.id.toLong()
+        return getItem(position).message.id.toLong()
     }
 
     fun getDeleteList(): List<Int> = checkedMessageIds.toList()
@@ -168,27 +119,12 @@ class MessageAdapter(
     fun getForwardList(): List<Pair<Message, Boolean>> {
         val list = mutableListOf<Pair<Message, Boolean>>()
         checkedPositions.forEach {
-            val message = getItem(it)?.first
+            val message = getItem(it)?.message
             if(message != null) {
                 list.add(Pair(message, mapPositions[it] ?: true))
             }
         }
         return list
-    }
-
-    fun updateMessagesAsRead(listIds: List<Int>) {
-        if(listIds.isNotEmpty()) {
-            val currentPagingData = currentList
-            val updatedPagingData = currentPagingData.map { pair ->
-                if (pair.first.id in listIds && pair.first.idSender == currentUserId) {
-                    pair.copy(first = pair.first.copy(isRead = true))
-                } else {
-                    pair
-                }
-            }
-            if(updatedPagingData == currentPagingData) return
-            submitList(updatedPagingData)
-        }
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -200,8 +136,8 @@ class MessageAdapter(
         notifyDataSetChanged()
     }
 
-    private fun getItemPositionWithId(idMessage: Int): Int {
-        return currentList.indexOfLast { it.first.id == idMessage }
+    fun getItemPositionWithId(idMessage: Int): Int {
+        return currentList.indexOfLast { it.message.id == idMessage }
     }
 
     private fun savePosition(messageId: Int, isSender: Boolean) {
@@ -241,7 +177,7 @@ class MessageAdapter(
     }
 
     override fun getItemViewType(position: Int): Int {
-        val message = getItem(position)?.first ?: return -1
+        val message = getItem(position)?.message ?: return -1
         if(message.idSender == currentUserId || message.idSender == -5) { // -5 is unsent message
             return when {
                 message.images?.isNotEmpty() == true -> {

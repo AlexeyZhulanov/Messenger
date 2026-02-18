@@ -29,7 +29,7 @@ import com.example.messenger.codeview.syntax.LanguageName
 import com.example.messenger.codeview.syntax.ThemeName
 import com.example.messenger.databinding.FragmentCodeBinding
 import com.example.messenger.model.Message
-import com.example.messenger.model.getParcelableCompat
+import com.example.messenger.utils.getParcelableCompat
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.launch
 import java.util.Locale

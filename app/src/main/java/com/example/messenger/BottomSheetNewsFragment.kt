@@ -20,8 +20,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.messenger.databinding.FragmentNewsCreateBinding
 import com.example.messenger.model.News
 import com.example.messenger.model.ParcelableFile
-import com.example.messenger.model.getParcelableArrayListCompat
-import com.example.messenger.model.getParcelableCompat
+import com.example.messenger.utils.getParcelableArrayListCompat
+import com.example.messenger.utils.getParcelableCompat
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine

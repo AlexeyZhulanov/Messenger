@@ -1,6 +1,5 @@
 package com.example.messenger.model
 
-import android.content.Context
 import java.io.File
 
 interface RetrofitRepository {
@@ -102,11 +101,11 @@ interface RetrofitRepository {
 
     suspend fun uploadNews(news: File) : String
 
-    suspend fun downloadFile(context: Context, folder: String, dialogId: Int, filename: String, isGroup: Int?) : String
+    suspend fun downloadFile(folder: String, dialogId: Int, filename: String, isGroup: Int?) : String
 
-    suspend fun downloadAvatar(context: Context, filename: String) : String
+    suspend fun downloadAvatar(filename: String) : String
 
-    suspend fun downloadNews(context: Context, filename: String) : String
+    suspend fun downloadNews(filename: String) : String
 
     suspend fun getMedias(dialogId: Int, page: Int, isGroup: Int?) : List<String>?
 
@@ -114,7 +113,7 @@ interface RetrofitRepository {
 
     suspend fun getAudios(dialogId: Int, page: Int, isGroup: Int?) : List<String>?
 
-    suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String, isGroup: Int?) : String
+    suspend fun getMediaPreview(dialogId: Int, filename: String, isGroup: Int?) : String
 
     suspend fun getVacation() : Pair<String, String>?
 

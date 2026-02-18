@@ -26,7 +26,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentSettingsBinding
 import com.example.messenger.model.User
-import com.example.messenger.model.getParcelableCompat
+import com.example.messenger.utils.getParcelableCompat
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine

@@ -27,7 +27,7 @@ import com.example.messenger.databinding.FragmentMessengerBinding
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
-import com.example.messenger.model.chunkedFlowLast
+import com.example.messenger.utils.chunkedFlowLast
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.buffer

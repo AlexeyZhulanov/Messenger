@@ -13,8 +13,8 @@ import com.example.messenger.model.Group
 import com.example.messenger.model.LastMessage
 import com.example.messenger.model.MediaItem
 import com.example.messenger.model.User
-import com.example.messenger.model.getParcelableArrayListCompat
-import com.example.messenger.model.getParcelableCompat
+import com.example.messenger.utils.getParcelableArrayListCompat
+import com.example.messenger.utils.getParcelableCompat
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.async

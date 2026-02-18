@@ -3,10 +3,15 @@ package com.example.messenger
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.MediaStore
 import android.provider.OpenableColumns
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.TextPaint
+import android.text.style.ClickableSpan
 import android.util.Base64
 import android.util.Log
 import android.view.View
@@ -18,10 +23,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.FileManager
-import com.example.messenger.model.ImageUtils
+import com.example.messenger.utils.ImageUtils
 import com.example.messenger.model.Message
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
@@ -29,6 +33,11 @@ import com.example.messenger.model.WebSocketService
 import com.example.messenger.model.appsettings.AppSettings
 import com.example.messenger.security.ChatKeyManager
 import com.example.messenger.security.TinkAesGcmHelper
+import com.example.messenger.states.FileState
+import com.example.messenger.states.ImageState
+import com.example.messenger.states.ImagesState
+import com.example.messenger.states.MessageUi
+import com.example.messenger.states.VoiceState
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.entity.LocalMedia
 import kotlinx.coroutines.CoroutineDispatcher
@@ -39,7 +48,10 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -50,6 +62,11 @@ import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
+import androidx.core.net.toUri
+import com.example.messenger.states.AvatarState
+import com.example.messenger.utils.chunkedFlowLast
+import kotlinx.coroutines.flow.buffer
+import kotlin.collections.plus
 
 abstract class BaseChatViewModel(
     protected val messengerService: MessengerService,
@@ -61,6 +78,7 @@ abstract class BaseChatViewModel(
 ) : ViewModel() {
     protected var convId: Int = -1
     private var isGroup: Int = 0
+    protected var currentUserId: Int = -1
     protected var disableRefresh: Boolean = false
     protected var pendingRefresh: Boolean = false
     @SuppressLint("StaticFieldLeak")
@@ -71,7 +89,6 @@ abstract class BaseChatViewModel(
     private val chatKeyManager = ChatKeyManager()
     protected var tinkAesGcmHelper: TinkAesGcmHelper? = null
     private val imageUtils = ImageUtils()
-    private var avatarCache: MutableMap<String, Uri> = mutableMapOf()
 
     protected val searchBy = MutableLiveData("")
     protected val currentPage = MutableStateFlow(0)
@@ -79,8 +96,11 @@ abstract class BaseChatViewModel(
     private val _initFlow = MutableSharedFlow<Unit>()
     val initFlow: SharedFlow<Unit> = _initFlow
 
-    protected val _newMessageFlow = MutableSharedFlow<Triple<Message, String, String>?>(extraBufferCapacity = 5)
-    val newMessageFlow: SharedFlow<Triple<Message, String, String>?> = _newMessageFlow
+    protected val _arrowTriggerFlow = MutableSharedFlow<Unit>()
+    val arrowTriggerFlow: SharedFlow<Unit> = _arrowTriggerFlow
+
+    protected val _scrollTriggerFlow = MutableSharedFlow<Unit>()
+    val scrollTriggerFlow: SharedFlow<Unit> = _scrollTriggerFlow
 
     protected val _typingState = MutableStateFlow<Pair<Boolean, String?>>(Pair(false, null))
     val typingState: StateFlow<Pair<Boolean, String?>> get() = _typingState
@@ -88,15 +108,123 @@ abstract class BaseChatViewModel(
     protected val _deleteState = MutableStateFlow(0)
     val deleteState: StateFlow<Int> get() = _deleteState
 
-    protected val _readMessagesFlow = MutableSharedFlow<List<Int>>(extraBufferCapacity = 5)
-    val readMessagesFlow: SharedFlow<List<Int>> get() = _readMessagesFlow
+    protected val _messagesUi = MutableStateFlow<List<MessageUi>>(emptyList())
+    val messagesUi: StateFlow<List<MessageUi>> = _messagesUi
 
-    private val _unsentMessageFlow = MutableStateFlow<Message?>(null)
-    val unsentMessageFlow: StateFlow<Message?> get() = _unsentMessageFlow
+    private val linkPattern = Regex("""\[([^]]+)]\((https?://[^)]+)\)|(https?://\S+)""")
 
-    protected val _editMessageFlow = MutableStateFlow<Message?>(null)
-    val editMessageFlow: StateFlow<Message?> get() = _editMessageFlow
+    private val preloadSemaphore = Semaphore(3)
+    private val voiceCache = mutableMapOf<Int, VoiceState>()
+    private val fileCache = mutableMapOf<Int, FileState>()
+    private val imageCache = mutableMapOf<Int, ImageState>()
+    private val imagesCache = mutableMapOf<Int, ImagesState>()
+    private val loadingIds = mutableSetOf<Int>()
+    private val avatarCache = mutableMapOf<String, Uri>()
+    private val avatarLoading = mutableSetOf<String>()
 
+    abstract fun applyGroupDisplayInfo(list: List<MessageUi>): List<MessageUi>
+
+    init {
+        viewModelScope.launch {
+            webSocketService.newMessageFlow
+                .buffer()
+                .chunkedFlowLast(200)
+                .collect { newMessages ->
+                    if(!disableRefresh) {
+                        if (newMessages.isEmpty()) return@collect
+                        val decrypted = newMessages.map { mes ->
+                            mes.text?.let { tinkAesGcmHelper?.decryptText(it) }
+                            mes
+                        }
+                        Log.d("testSocketsMessage", "New Messages: $newMessages")
+                        val unreadMessages = decrypted.filter {
+                            if(it.isPersonalUnread == null) {
+                                currentUserId != it.idSender && !it.isRead
+                            } else {
+                                currentUserId != it.idSender && it.isPersonalUnread == true
+                            }
+                        }
+                        if (unreadMessages.isNotEmpty()) {
+                            markMessagesAsRead(unreadMessages)
+                        }
+                        val newUi = decrypted.map {mes ->
+                            val newMessageTriple =
+                                if(lastMessageDate == "") Triple(mes,"", formatMessageTime(mes.timestamp))
+                                else Triple(mes,formatMessageDate(mes.timestamp), formatMessageTime(mes.timestamp))
+                            toMessageUi(newMessageTriple)
+                        }
+                        newUi.lastOrNull()?.let { updateLastDate(it.message.timestamp) }
+                        _messagesUi.update { old ->
+                            applyGroupDisplayInfo(newUi + old)
+                        }
+                        _arrowTriggerFlow.emit(Unit)
+                    } else pendingRefresh = true
+                }
+        }
+        viewModelScope.launch {
+            webSocketService.editMessageFlow.collect { message ->
+                if(!disableRefresh) {
+                    message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
+                    Log.d("testSocketsMessage", "Edited Message: $message")
+                    _messagesUi.update { old ->
+                        val idx = old.indexOfFirst { it.message.id == message.id }
+                        if(idx != -1) {
+                            val element = old[idx]
+                            val triple = Triple(element.message, element.formattedDate, element.formattedTime)
+                            old.toMutableList().apply {
+                                this[idx] = toMessageUi(triple).copy(
+                                    username = element.username,
+                                    showUsername = element.showUsername,
+                                    showAvatar = element.showAvatar,
+                                    avatarState = element.avatarState
+                                )
+                            }
+                        } else old
+                    }
+                } else pendingRefresh = true
+            }
+        }
+        viewModelScope.launch {
+            webSocketService.deleteMessageFlow.collect {
+                if(!disableRefresh) {
+                    Log.d("testSocketsMessage", "Deleted messages ids: ${it.deletedMessagesIds}")
+                    val adapter = recyclerView.adapter
+                    if(adapter is MessageAdapter) adapter.clearPositions() // todo это изучить надо ли
+                    refresh()
+                    recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+                        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                            recyclerView.scrollToPosition(0)
+                        }
+                    })
+                } else pendingRefresh = true
+            }
+        }
+        viewModelScope.launch {
+            webSocketService.readMessageFlow.collect { event ->
+                Log.d("testSocketsMessage", "Messages read: ${event.messagesReadIds}")
+                _messagesUi.update { old ->
+                    old.map { ui ->
+                        if(ui.message.id in event.messagesReadIds) {
+                            ui.copy(message = ui.message.copy(isRead = true))
+                        } else ui
+                    }
+                }
+            }
+        }
+        viewModelScope.launch {
+            webSocketService.deleteAllMessageFlow.collect {
+                Log.d("testSocketsMessage", "All messages deleted")
+                _deleteState.value = 1
+                refresh()
+            }
+        }
+        viewModelScope.launch {
+            webSocketService.dialogDeletedFlow.collect {
+                Log.d("testSocketsMessage", "Dialog deleted")
+                _deleteState.value = 2
+            }
+        }
+    }
 
     fun updateLastDate(time: Long) {
         val greenwichMessageDate = Calendar.getInstance().apply {
@@ -134,6 +262,10 @@ abstract class BaseChatViewModel(
     }
 
     fun setConvInfo(convId: Int, isGroup: Int, chatKey: String, userId: Int, context: Context) {
+        this.convId = convId
+        this.isGroup = isGroup
+        this.currentUserId = userId
+
         val chatTypeString = if(isGroup == 0) "dialog" else "group"
         val aead = chatKeyManager.getAead(convId, chatTypeString)
         if(aead != null) {
@@ -153,8 +285,6 @@ abstract class BaseChatViewModel(
                 } else Log.d("testErrorTinkInit", "newAead is null")
             } else Log.d("testErrorTinkInit", "chatKey is null")
         }
-        this.convId = convId
-        this.isGroup = isGroup
 
         viewModelScope.launch {
             _initFlow.emit(Unit)
@@ -298,7 +428,11 @@ abstract class BaseChatViewModel(
                 val id = if(isGroup == 0) messengerService.insertUnsentMessage(convId, mes)
                 else messengerService.insertUnsentMessageGroup(convId, mes)
                 mes = mes.copy(id = id)
-                _unsentMessageFlow.value = mes
+                _messagesUi.update { old ->
+                    val newUi = toMessageUi(Triple(mes, "", ""))
+                    applyGroupDisplayInfo(listOf(newUi) + old)
+                }
+                _scrollTriggerFlow.emit(Unit)
             }
         }
     }
@@ -428,8 +562,8 @@ abstract class BaseChatViewModel(
         }
     }
 
-    suspend fun downloadFile(context: Context, folder: String, filename: String): String = withContext(ioDispatcher) {
-        val downloadedFilePath = retrofitService.downloadFile(context, folder, convId, filename, isGroup)
+    suspend fun downloadFile(folder: String, filename: String): String = withContext(ioDispatcher) {
+        val downloadedFilePath = retrofitService.downloadFile(folder, convId, filename, isGroup)
         val downloadedFile = File(downloadedFilePath)
 
         tinkAesGcmHelper?.decryptFile(downloadedFile, downloadedFile)
@@ -557,7 +691,7 @@ abstract class BaseChatViewModel(
                     return@async fManagerGetFilePath(image)
                 } else {
                     try {
-                        return@async downloadFile(context, "photos", image)
+                        return@async downloadFile("photos", image)
                     } catch (_: Exception) {
                         return@async null
                     }
@@ -585,8 +719,8 @@ abstract class BaseChatViewModel(
         return messengerService.isNotificationsEnabled(convId, type)
     }
 
-    suspend fun downloadAvatar(context: Context, filename: String): String {
-        return retrofitService.downloadAvatar(context, filename)
+    suspend fun downloadAvatar(filename: String): String {
+        return retrofitService.downloadAvatar(filename)
     }
 
     fun fileToLocalMedia(file: File): LocalMedia {
@@ -704,64 +838,393 @@ abstract class BaseChatViewModel(
         return null
     }
 
-    fun processDateDuplicates(list: MutableList<Triple<Message, String, String>>): MutableList<Triple<Message, String, String>> {
+    fun processDateDuplicates(list: List<MessageUi>): List<MessageUi> {
         val seenDates = mutableSetOf<String>()
-        for (i in list.indices.reversed()) {
-            val pair = list[i]
-            if (pair.second.isNotEmpty() && pair.second in seenDates) {
-                list[i] = pair.copy(second = "")
+
+        return list.asReversed().map { ui ->
+            if (ui.formattedDate.isNotEmpty() && ui.formattedDate in seenDates) {
+                ui.copy(formattedDate = "")
             } else {
-                seenDates.add(pair.second)
+                seenDates.add(ui.formattedDate)
+                ui
             }
-        }
-        return list
+        }.asReversed()
     }
 
     fun getWallpaper(isDark: Boolean): String {
         return if(isDark) appSettings.getDarkWallpaper() else appSettings.getLightWallpaper()
     }
+        // todo на всякий случай сохранил
+//    fun avatarSet(avatar: String, imageView: ImageView, context: Context) {
+//        if (avatar != "") {
+//            viewModelScope.launch {
+//                val uriCached = avatarCache[avatar]
+//                if(uriCached != null) {
+//                    imageView.imageTintList = null
+//                    Glide.with(context)
+//                        .load(uriCached)
+//                        .apply(RequestOptions.circleCropTransform())
+//                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+//                        .into(imageView)
+//                } else {
+//                    val filePathTemp = async {
+//                        if (fManagerIsExistAvatar(avatar)) {
+//                            return@async Pair(fManagerGetAvatarPath(avatar), true)
+//                        } else {
+//                            try {
+//                                return@async Pair(downloadAvatar(avatar), false)
+//                            } catch (_: Exception) {
+//                                return@async Pair(null, true)
+//                            }
+//                        }
+//                    }
+//                    val (first, second) = filePathTemp.await()
+//                    if (first != null) {
+//                        val file = File(first)
+//                        if (file.exists()) {
+//                            if (!second) fManagerSaveAvatar(avatar, file.readBytes())
+//                            val uri = Uri.fromFile(file)
+//                            avatarCache[avatar] = uri
+//                            imageView.imageTintList = null
+//                            Glide.with(context)
+//                                .load(uri)
+//                                .apply(RequestOptions.circleCropTransform())
+//                                .diskCacheStrategy(DiskCacheStrategy.ALL)
+//                                .into(imageView)
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
 
-    fun avatarSet(avatar: String, imageView: ImageView, context: Context) {
-        if (avatar != "") {
-            viewModelScope.launch {
-                val uriCached = avatarCache[avatar]
-                if(uriCached != null) {
-                    imageView.imageTintList = null
-                    Glide.with(context)
-                        .load(uriCached)
-                        .apply(RequestOptions.circleCropTransform())
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .into(imageView)
-                } else {
-                    val filePathTemp = async {
-                        if (fManagerIsExistAvatar(avatar)) {
-                            return@async Pair(fManagerGetAvatarPath(avatar), true)
-                        } else {
-                            try {
-                                return@async Pair(downloadAvatar(context, avatar), false)
-                            } catch (_: Exception) {
-                                return@async Pair(null, true)
+    protected fun toMessageUi(triple: Triple<Message, String, String>): MessageUi {
+        val (message, date, time) = triple
+
+        val parsedText = message.text?.let {
+            if (message.isUrl == true) parseMessageWithLinks(it) else it
+        }
+
+        return MessageUi(
+            message = message,
+            formattedDate = date,
+            formattedTime = time,
+            parsedText = parsedText,
+            voiceState = if (message.voice != null) VoiceState.Loading else null,
+            fileState = if (message.file != null) FileState.Loading else null,
+            imageState = if (message.images?.size == 1) ImageState.Loading else null,
+            imagesState = if ((message.images?.size ?: 0) > 1) ImagesState.Loading else null
+        )
+    }
+
+    protected fun preloadVoice(ui: MessageUi) {
+        val id = ui.message.id
+
+        // Уже загружено?
+        if (voiceCache.containsKey(id)) {
+            updateVoiceState(id, voiceCache[id]!!)
+            return
+        }
+        // Уже загружается?
+        if (loadingIds.contains(id)) return
+
+        loadingIds.add(id)
+        viewModelScope.launch {
+            val result = preloadSemaphore.withPermit {
+                withContext(ioDispatcher) {
+                    try {
+                        val voiceName = ui.message.voice!!
+                        val localPath =
+                            if (fManagerIsExist(voiceName)) {
+                                fManagerGetFilePath(voiceName)
+                            } else {
+                                downloadFile("audio", voiceName)
                             }
-                        }
-                    }
-                    val (first, second) = filePathTemp.await()
-                    if (first != null) {
-                        val file = File(first)
-                        if (file.exists()) {
-                            if (!second) fManagerSaveAvatar(avatar, file.readBytes())
-                            val uri = Uri.fromFile(file)
-                            avatarCache[avatar] = uri
-                            imageView.imageTintList = null
-                            Glide.with(context)
-                                .load(uri)
-                                .apply(RequestOptions.circleCropTransform())
-                                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                .into(imageView)
-                        }
+
+                        val duration = readDuration(localPath)
+
+                        VoiceState.Ready(localPath, duration)
+
+                    } catch (_: Exception) {
+                        VoiceState.Error
                     }
                 }
+            }
+            voiceCache[id] = result
+            loadingIds.remove(id)
+            updateVoiceState(id, result)
+        }
+    }
+
+    private fun updateVoiceState(id: Int, state: VoiceState) {
+        _messagesUi.update { list ->
+            list.map {
+                if (it.message.id == id) {
+                    it.copy(voiceState = state)
+                } else it
             }
         }
     }
 
+    protected fun preloadFile(ui: MessageUi) {
+        val id = ui.message.id
+
+        if (fileCache.containsKey(id)) {
+            updateFileState(id, fileCache[id]!!)
+            return
+        }
+        if (loadingIds.contains(id)) return
+        loadingIds.add(id)
+
+        viewModelScope.launch {
+            val result = preloadSemaphore.withPermit {
+                withContext(ioDispatcher) {
+                    try {
+                        val fileName = ui.message.file!!
+                        val localPath =
+                            if (fManagerIsExist(fileName)) {
+                                fManagerGetFilePath(fileName)
+                            } else {
+                                downloadFile("files", fileName)
+                            }
+
+                        val file = File(localPath)
+
+                        FileState.Ready(
+                            localPath = localPath,
+                            fileName = file.name,
+                            fileSize = formatFileSize(file.length())
+                        )
+
+                    } catch (_: Exception) {
+                        FileState.Error
+                    }
+                }
+            }
+            fileCache[id] = result
+            loadingIds.remove(id)
+            updateFileState(id, result)
+        }
+    }
+
+    private fun updateFileState(id: Int, state: FileState) {
+        _messagesUi.update { list ->
+            list.map {
+                if (it.message.id == id) {
+                    it.copy(fileState = state)
+                } else it
+            }
+        }
+    }
+
+    protected fun preloadImage(ui: MessageUi) {
+        val id = ui.message.id
+
+        if (imageCache.containsKey(id)) {
+            updateImageState(id, imageCache[id]!!)
+            return
+        }
+        if (loadingIds.contains(id)) return
+        loadingIds.add(id)
+
+        viewModelScope.launch {
+            val result = preloadSemaphore.withPermit {
+                withContext(ioDispatcher) {
+                    try {
+                        val imageName = ui.message.images!!.first()
+                        val localPath =
+                            if (fManagerIsExist(imageName)) {
+                                fManagerGetFilePath(imageName)
+                            } else {
+                                downloadFile("photos", imageName)
+                            }
+
+                        ImageState.Ready(localPath)
+
+                    } catch (_: Exception) {
+                        ImageState.Error
+                    }
+                }
+            }
+            imageCache[id] = result
+            loadingIds.remove(id)
+            updateImageState(id, result)
+        }
+    }
+
+    private fun updateImageState(id: Int, state: ImageState) {
+        _messagesUi.update { list ->
+            list.map {
+                if (it.message.id == id) {
+                    it.copy(imageState = state)
+                } else it
+            }
+        }
+    }
+
+    protected fun preloadImages(ui: MessageUi) {
+        val id = ui.message.id
+
+        if (imagesCache.containsKey(id)) {
+            updateImagesState(id, imagesCache[id]!!)
+            return
+        }
+        if (loadingIds.contains(id)) return
+        loadingIds.add(id)
+
+        viewModelScope.launch {
+            val result = preloadSemaphore.withPermit {
+                withContext(ioDispatcher) {
+                    try {
+                        val imageNames = ui.message.images ?: emptyList()
+
+                        val localPaths = imageNames.map { imageName ->
+                            if (fManagerIsExist(imageName)) {
+                                fManagerGetFilePath(imageName)
+                            } else {
+                                downloadFile("photos", imageName)
+                            }
+                        }
+                        ImagesState.Ready(localPaths)
+
+                    } catch (_: Exception) {
+                        ImagesState.Error
+                    }
+                }
+            }
+            imagesCache[id] = result
+            loadingIds.remove(id)
+            updateImagesState(id, result)
+        }
+    }
+
+    private fun updateImagesState(id: Int, state: ImagesState) {
+        _messagesUi.update { list ->
+            list.map {
+                if (it.message.id == id) {
+                    it.copy(imagesState = state)
+                } else it
+            }
+        }
+    }
+
+    protected fun preloadAvatar(messageId: Int, avatar: String) {
+        if (avatar.isBlank()) return
+
+        // Уже есть?
+        avatarCache[avatar]?.let { uri ->
+            updateAvatarState(messageId, AvatarState.Ready(uri))
+            return
+        }
+
+        // Уже грузится?
+        if (avatarLoading.contains(avatar)) return
+
+        avatarLoading.add(avatar)
+
+        viewModelScope.launch {
+            val result = preloadSemaphore.withPermit {
+                withContext(ioDispatcher) {
+                    try {
+                        val localPath =
+                            if (fileManager.isExistAvatar(avatar)) {
+                                fileManager.getAvatarFilePath(avatar)
+                            } else {
+                                val downloaded = downloadAvatar(avatar)
+                                fileManager.saveAvatarFile(
+                                    avatar,
+                                    File(downloaded).readBytes()
+                                )
+                                downloaded
+                            }
+
+                        val file = File(localPath)
+                        val uri = Uri.fromFile(file)
+
+                        avatarCache[avatar] = uri
+                        AvatarState.Ready(uri)
+                    } catch (_: Exception) {
+                        AvatarState.Error
+                    }
+                }
+            }
+
+            avatarLoading.remove(avatar)
+            updateAvatarState(messageId, result)
+        }
+    }
+
+    private fun updateAvatarState(messageId: Int, state: AvatarState) {
+        _messagesUi.update { list ->
+            list.map {
+                if (it.message.id == messageId) {
+                    it.copy(avatarState = state)
+                } else it
+            }
+        }
+    }
+
+    private fun readDuration(localPath: String): Long {
+        return try {
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(localPath)
+            val duration =
+                retriever.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_DURATION
+                )?.toLong() ?: 0L
+            retriever.release()
+            duration
+        } catch (_: Exception) {
+            0L
+        }
+    }
+
+    protected fun parseMessageWithLinks(text: String): CharSequence {
+        if (!text.contains("""\[[^]]+]\(https?://[^)]+\)""".toRegex())
+            && !text.contains("https?://\\S+".toRegex())
+        ) {
+            return text
+        }
+
+        val spannable = SpannableStringBuilder(text)
+        val matches = linkPattern.findAll(text).toList()
+
+        matches.reversed().forEach { match ->
+            when {
+                match.groups[1] != null && match.groups[2] != null -> {
+                    val (linkText, url) = match.destructured
+                    val start = match.range.first
+                    val end = match.range.last + 1
+
+                    spannable.replace(start, end, linkText)
+                    applyLinkStyle(spannable, start, start + linkText.length, url)
+                }
+
+                match.groups[3] != null -> {
+                    val url = match.groups[3]!!.value
+                    val start = match.range.first
+                    val end = match.range.last + 1
+
+                    applyLinkStyle(spannable, start, end, url)
+                }
+            }
+        }
+        return spannable
+    }
+
+    private fun applyLinkStyle(spannable: SpannableStringBuilder, start: Int, end: Int, url: String) {
+        spannable.setSpan(
+            object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    widget.context.startActivity(
+                        Intent(Intent.ACTION_VIEW, url.toUri())
+                    )
+                }
+                override fun updateDrawState(ds: TextPaint) {
+                    ds.color = Color.CYAN
+                    ds.isUnderlineText = true
+                }
+            }, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+    }
 }

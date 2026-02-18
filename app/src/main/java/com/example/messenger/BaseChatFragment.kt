@@ -37,8 +37,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import com.example.messenger.databinding.FragmentMessageBinding
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
-import com.example.messenger.model.chunkedFlowLast
-import com.example.messenger.model.getParcelableCompat
+import com.example.messenger.utils.getParcelableCompat
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
@@ -52,7 +51,6 @@ import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -61,6 +59,8 @@ import java.io.File
 import androidx.core.view.isVisible
 import androidx.core.net.toUri
 import androidx.core.view.isGone
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 
 @AndroidEntryPoint
 abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
@@ -155,65 +155,27 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     @OptIn(FlowPreview::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        lifecycleScope.launch {
-            launch {
-                viewModel.newMessageFlow
-                    .buffer()
-                    .chunkedFlowLast(200) // custom func
-                    .collect { newMessages ->
-                        if(newMessages.isNotEmpty()) {
-                            registerArrowObserver()
-                            val clearMessages = newMessages.filterNotNull()
-                            adapter.addNewMessages(clearMessages)
-                            val unreadMessages = clearMessages.filter {
-                                if(it.first.isPersonalUnread == null) {
-                                    currentUser.id != it.first.idSender && !it.first.isRead
-                                } else {
-                                    currentUser.id != it.first.idSender && it.first.isPersonalUnread == true
-                                }
-                            }
-                            if (unreadMessages.isNotEmpty()) {
-                                viewModel.markMessagesAsRead(unreadMessages.map { it.first })
-                            }
-                        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.arrowTriggerFlow.collect {
+                        registerArrowObserver()
                     }
-            }
-            launch {
-                viewModel.unsentMessageFlow.collect { uMessage ->
-                    if(uMessage != null) {
+                }
+                launch {
+                    viewModel.scrollTriggerFlow.collect {
                         registerScrollObserver()
-                        Log.d("testUnsentFlow", "OK")
-                        adapter.addUnsentMessage(Triple(uMessage, "", ""))
                     }
                 }
-            }
-            launch {
-                viewModel.editMessageFlow.collect { message ->
-                    if(message != null) {
-                        Log.d("testEditFlow", "OK")
-                        val updatedList = adapter.currentList.toMutableList()
-                        val index = updatedList.indexOfFirst { it.first.id == message.id }
-                        if(index != -1) {
-                            val oldPair = updatedList[index]
-                            updatedList[index] = oldPair.copy(first = message)
-                            adapter.submitList(updatedList)
+                launch {
+                    viewModel.deleteState.collectLatest {
+                        if(it == 1) {
+                            Toast.makeText(requireContext(), "Все сообщения были удалены", Toast.LENGTH_SHORT).show()
                         }
-                    }
-                }
-            }
-            launch {
-                viewModel.readMessagesFlow.collect { readMessagesIds ->
-                    adapter.updateMessagesAsRead(readMessagesIds)
-                }
-            }
-            launch {
-                viewModel.deleteState.collectLatest {
-                    if(it == 1) {
-                        Toast.makeText(requireContext(), "Все сообщения были удалены", Toast.LENGTH_SHORT).show()
-                    }
-                    if(it == 2) {
-                        Toast.makeText(requireContext(), "Диалог был удален", Toast.LENGTH_SHORT).show()
-                        backPressed()
+                        if(it == 2) {
+                            Toast.makeText(requireContext(), "Диалог был удален", Toast.LENGTH_SHORT).show()
+                            backPressed()
+                        }
                     }
                 }
             }
@@ -262,28 +224,30 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         val dot2: View = view.findViewById(R.id.dot2)
         val dot3: View = view.findViewById(R.id.dot3)
         val typingAnimation = TypingAnimation(dot1, dot2, dot3)
-        lifecycleScope.launch {
-            viewModel.typingState
-                .debounce(2000)
-                .distinctUntilChanged()
-                .collect { (isTyping, username) ->
-                    if (isTyping) {
-                        lastSession.visibility = View.INVISIBLE
-                        typingTextView.text = if(username != null) "$username печатает" else "печатает"
-                        typingTextView.visibility = View.VISIBLE
-                        dot1.visibility = View.VISIBLE
-                        dot2.visibility = View.VISIBLE
-                        dot3.visibility = View.VISIBLE
-                        typingAnimation.startAnimation()
-                    } else {
-                        typingAnimation.stopAnimation()
-                        typingTextView.visibility = View.INVISIBLE
-                        dot1.visibility = View.INVISIBLE
-                        dot2.visibility = View.INVISIBLE
-                        dot3.visibility = View.INVISIBLE
-                        lastSession.visibility = View.VISIBLE
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.typingState
+                    .debounce(2000)
+                    .distinctUntilChanged()
+                    .collect { (isTyping, username) ->
+                        if (isTyping) {
+                            lastSession.visibility = View.INVISIBLE
+                            typingTextView.text = if(username != null) "$username печатает" else "печатает"
+                            typingTextView.visibility = View.VISIBLE
+                            dot1.visibility = View.VISIBLE
+                            dot2.visibility = View.VISIBLE
+                            dot3.visibility = View.VISIBLE
+                            typingAnimation.startAnimation()
+                        } else {
+                            typingAnimation.stopAnimation()
+                            typingTextView.visibility = View.INVISIBLE
+                            dot1.visibility = View.INVISIBLE
+                            dot2.visibility = View.INVISIBLE
+                            dot3.visibility = View.INVISIBLE
+                            lastSession.visibility = View.VISIBLE
+                        }
                     }
-                }
+            }
         }
         val icSearch: ImageView = view.findViewById(R.id.ic_search)
         icSearch.setOnClickListener {
@@ -864,7 +828,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     dialog.show(parentFragmentManager, "CodePreviewDialogFragment")
                 }
             }
-        }, currentUser.id, requireContext(), viewModel, isGroup(), canDelete())
+        }, currentUser.id, requireContext(), isGroup(), canDelete())
         adapter.setHasStableIds(true)
         binding.recyclerview.adapter = adapter
     }
