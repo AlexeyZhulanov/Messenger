@@ -15,6 +15,7 @@ class MessagePagingSource(
     private val isDialog: Boolean = true
 ) {
 
+    private var lastCursor: Long? = null
     private var flag = true
     private var invertedIndex: InvertedIndex? = null
     private val searchCache = object : LinkedHashMap<String, List<Message>>(MAX_CACHE_SIZE, 0.75f, true) {
@@ -27,12 +28,12 @@ class MessagePagingSource(
         private const val MAX_CACHE_SIZE = 50 // 50 queries
     }
 
-    suspend fun loadPage(pageIndex: Int, pageSize: Int, currentQuery: String): List<Triple<Message, String, String>> {
+    suspend fun loadPage(pageSize: Int, currentQuery: String): List<Triple<Message, String, String>> {
         return try {
             val messages = if (currentQuery.isEmpty()) {
                 try {
-                    val mes = if(isDialog) retrofitService.getMessages(convId, pageIndex, pageSize)
-                    else retrofitService.getGroupMessages(convId, pageIndex, pageSize)
+                    val mes = if(isDialog) retrofitService.getMessages(convId, pageSize, lastCursor)
+                    else retrofitService.getGroupMessages(convId, pageSize, lastCursor)
                     mes.forEach {
                         it.text = it.text?.let { text -> tinkAesGcmHelper?.decryptText(text) }
                         it.code = it.code?.let { code -> tinkAesGcmHelper?.decryptText(code) }
@@ -62,6 +63,13 @@ class MessagePagingSource(
                     result
                 }
             }
+            if(lastCursor == null && flag) {
+                if(isDialog) messengerService.replaceMessages(convId, messages, fileManager)
+                else messengerService.replaceGroupMessages(convId, messages, fileManager)
+            }
+            // Обновляем курсор
+            lastCursor = messages.first().timestamp
+
             val formattedData = formatMessageTimesAndDates(messages)
             // Формирование дат для адаптера
             val dates = mutableSetOf<String>()
@@ -75,16 +83,16 @@ class MessagePagingSource(
                     messageDatePairs.add(Triple(message, "", formattedTime))
                 }
             }
-
-            if(pageIndex == 0 && flag) {
-                if(isDialog) messengerService.replaceMessages(convId, messages, fileManager)
-                else messengerService.replaceGroupMessages(convId, messages, fileManager)
-            }
             messageDatePairs.reversed()
         } catch (e: Exception) {
-            Log.e("MessagePagingSource", "Error loading page", e)
+            Log.e("testMessagePagingSource", "Error loading page", e)
             emptyList()
         }
+    }
+
+    fun resetCursor() {
+        lastCursor = null
+        flag = true
     }
 
     private fun formatMessageTimesAndDates(messages: List<Message>): Map<Int, Pair<String, String>> {

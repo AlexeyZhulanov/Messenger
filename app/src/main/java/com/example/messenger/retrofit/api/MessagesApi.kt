@@ -31,8 +31,8 @@ interface MessagesApi {
     @GET("messages/{id_dialog}")
     suspend fun getMessages(
         @Path("id_dialog") idDialog: Int,
-        @Query("page") pageIndex: Int,
-        @Query("size") pageSize: Int
+        @Query("size") pageSize: Int,
+        @Query("before") before: Long?
         ) : List<Message>
 
     @GET("message/{message_id}")

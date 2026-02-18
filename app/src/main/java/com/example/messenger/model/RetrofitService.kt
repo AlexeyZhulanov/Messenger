@@ -173,9 +173,9 @@ class RetrofitService(
         }
     }
 
-    override suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int): List<Message> = withContext(ioDispatcher) {
+    override suspend fun getMessages(idDialog: Int, pageSize: Int, lastCursor: Long?): List<Message> = withContext(ioDispatcher) {
         val messages = try {
-            messagesSource.getMessages(idDialog, pageIndex, pageSize)
+            messagesSource.getMessages(idDialog, pageSize, lastCursor)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw DialogNotFoundException(e)
@@ -362,9 +362,9 @@ class RetrofitService(
         return@withContext true
     }
 
-    override suspend fun getGroupMessages(groupId: Int, start: Int, end: Int): List<Message> = withContext(ioDispatcher) {
+    override suspend fun getGroupMessages(groupId: Int, pageSize: Int, lastCursor: Long?): List<Message> = withContext(ioDispatcher) {
         val groupMessages = try {
-            groupsSource.getGroupMessages(groupId, start, end)
+            groupsSource.getGroupMessages(groupId, pageSize, lastCursor)
         } catch (e: BackendException) {
             when (e.code) {
                 404 -> throw GroupNotFoundException(e)

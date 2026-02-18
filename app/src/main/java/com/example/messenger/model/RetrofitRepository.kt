@@ -26,7 +26,7 @@ interface RetrofitRepository {
                             code: String?, codeLanguage: String?, referenceToMessageId: Int?, isForwarded: Boolean,
                             isUrl: Boolean?, usernameAuthorOriginal: String?, waveform: List<Int>?) : Boolean
 
-    suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int) : List<Message>
+    suspend fun getMessages(idDialog: Int, pageSize: Int, lastCursor: Long?) : List<Message>
 
     suspend fun findMessage(idMessage: Int, idDialog: Int) : Pair<Message, Int>
 
@@ -56,7 +56,7 @@ interface RetrofitRepository {
                    isForwarded: Boolean, isUrl: Boolean?, usernameAuthorOriginal: String?,
                                  waveform: List<Int>?) : Boolean
 
-    suspend fun getGroupMessages(groupId: Int, start: Int, end: Int): List<Message>
+    suspend fun getGroupMessages(groupId: Int, pageSize: Int, lastCursor: Long?): List<Message>
 
     suspend fun findGroupMessage(idMessage: Int, groupId: Int) : Pair<Message, Int>
 

@@ -62,27 +62,35 @@ class GroupMessageViewModel @Inject constructor(
                 .flatMapLatest { searchQuery ->
                     currentPage.map { page -> searchQuery to page }
                 }.onEach { (searchQuery, page) ->
-                    val pageSize = 30
-                    val triples = pagingSource?.loadPage(page, pageSize, searchQuery)
-                    if(triples != null) {
-                        val newUi = triples.map { triple -> toMessageUi(triple) }
-                        val endData = if(page == 0) {
-                            val firstMessage = newUi.firstOrNull()?.message
-                            if(firstMessage != null) updateLastDate(firstMessage.timestamp)
-                            val m = getUnsentMessages()
-                            if(m != null) {
-                                val mUi = m.map { message ->
-                                    toMessageUi(Triple(message, "", ""))
-                                }
-                                newUi + mUi
-                            } else newUi
-                        } else {
-                            val processed = processDateDuplicates(_messagesUi.value + newUi)
-                            processed
+                    if(isLoadingPage) return@onEach
+
+                    isLoadingPage = true
+                    try {
+                        if(page == 0) pagingSource?.resetCursor()
+                        val pageSize = 30
+                        val triples = pagingSource?.loadPage(pageSize, searchQuery)
+                        if(triples != null) {
+                            val newUi = triples.map { triple -> toMessageUi(triple) }
+                            val endData = if(page == 0) {
+                                val firstMessage = newUi.firstOrNull()?.message
+                                if(firstMessage != null) updateLastDate(firstMessage.timestamp)
+                                val m = getUnsentMessages()
+                                if(m != null) {
+                                    val mUi = m.map { message ->
+                                        toMessageUi(Triple(message, "", ""))
+                                    }
+                                    newUi + mUi
+                                } else newUi
+                            } else {
+                                val processed = processDateDuplicates(_messagesUi.value + newUi)
+                                processed
+                            }
+                            val finalList = applyGroupDisplayInfo(endData)
+                            _messagesUi.value = finalList
+                            preloadAttachments(finalList)
                         }
-                        val finalList = applyGroupDisplayInfo(endData)
-                        _messagesUi.value = finalList
-                        preloadAttachments(finalList)
+                    } finally {
+                        isLoadingPage = false
                     }
                 }.launchIn(viewModelScope)
 

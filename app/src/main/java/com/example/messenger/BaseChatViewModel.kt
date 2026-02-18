@@ -1,6 +1,5 @@
 package com.example.messenger
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -19,7 +18,6 @@ import android.widget.ImageView
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.messenger.di.IoDispatcher
@@ -81,8 +79,7 @@ abstract class BaseChatViewModel(
     protected var currentUserId: Int = -1
     protected var disableRefresh: Boolean = false
     protected var pendingRefresh: Boolean = false
-    @SuppressLint("StaticFieldLeak")
-    protected lateinit var recyclerView: RecyclerView
+    protected var isLoadingPage = false
     protected var lastMessageDate: String = ""
     private var debounceJob: Job? = null
     private val readMessageIds = mutableSetOf<Int>()
@@ -191,13 +188,14 @@ abstract class BaseChatViewModel(
             }
         }
         viewModelScope.launch {
-            webSocketService.deleteMessageFlow.collect {
+            webSocketService.deleteMessageFlow.collect { event ->
                 if(!disableRefresh) {
-                    Log.d("testSocketsMessage", "Deleted messages ids: ${it.deletedMessagesIds}")
+                    Log.d("testSocketsMessage", "Deleted messages ids: ${event.deletedMessagesIds}")
                     clearSelection()
-                    // todo нужно сделать cursor-based pagination и убрать refresh отсюда
-                    refresh() // todo подумать над тем, чтобы просто убрать эти id из messagesUi
-                    _scrollTriggerFlow.emit(Unit)
+                    _messagesUi.update { list ->
+                        list.filterNot { it.message.id in event.deletedMessagesIds }
+                    }
+                    //_scrollTriggerFlow.emit(Unit)
                 } else pendingRefresh = true
             }
         }
@@ -300,10 +298,6 @@ abstract class BaseChatViewModel(
         appSettings.setCurrentRefreshToken(null)
         appSettings.setRemember(false)
         context.sendBroadcast(Intent("com.example.messenger.LOGOUT"))
-    }
-
-    fun bindRecyclerView(recyclerView: RecyclerView) {
-        this.recyclerView = recyclerView
     }
 
     private fun updateLastSession() {

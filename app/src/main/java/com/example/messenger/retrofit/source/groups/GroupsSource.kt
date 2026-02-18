@@ -15,7 +15,7 @@ interface GroupsSource {
                     isUrl: Boolean? = null, usernameAuthorOriginal: String? = null,
                                  waveform: List<Int>? = null) : String
 
-    suspend fun getGroupMessages(groupId: Int, pageIndex: Int, pageSize: Int) : List<Message>
+    suspend fun getGroupMessages(groupId: Int, pageSize: Int, lastCursor: Long? = null) : List<Message>
 
     suspend fun findGroupMessage(idMessage: Int, groupId: Int) : Pair<Message, Int>
 

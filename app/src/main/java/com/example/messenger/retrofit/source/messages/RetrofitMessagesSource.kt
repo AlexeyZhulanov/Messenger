@@ -31,8 +31,8 @@ class RetrofitMessagesSource(
         messagesApi.sendMessage(idDialog, sendMessageRequestEntity).message
     }
 
-    override suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int): List<Message> = wrapRetrofitExceptions {
-        val response = messagesApi.getMessages(idDialog, pageIndex, pageSize)
+    override suspend fun getMessages(idDialog: Int, pageSize: Int, lastCursor: Long?): List<Message> = wrapRetrofitExceptions {
+        val response = messagesApi.getMessages(idDialog, pageSize, lastCursor)
         response.map { it.toMessage() }
     }
 

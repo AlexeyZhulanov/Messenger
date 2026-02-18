@@ -35,8 +35,8 @@ interface GroupsApi {
     @GET("group/messages/{group_id}")
     suspend fun getGroupMessages(
         @Path("group_id") groupId: Int,
-        @Query("page") pageIndex: Int,
-        @Query("size") pageSize: Int
+        @Query("size") pageSize: Int,
+        @Query("before") before: Long?
     ) : List<Message>
 
     @GET("group/message/{message_id}")

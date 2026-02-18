@@ -12,7 +12,7 @@ interface MessagesSource {
               codeLanguage: String? = null, referenceToMessageId: Int? = null, isForwarded: Boolean = false,
               isUrl: Boolean? = null, usernameAuthorOriginal: String? = null, waveform: List<Int>? = null) : String
 
-    suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int) : List<Message>
+    suspend fun getMessages(idDialog: Int, pageSize: Int, lastCursor: Long? = null) : List<Message>
 
     suspend fun findMessage(idMessage: Int, idDialog: Int) : Pair<Message, Int>
 

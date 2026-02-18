@@ -1,6 +1,6 @@
 package com.example.messenger.model
 
-class InvertedIndex(private val messages: List<Message>) {
+class InvertedIndex(messages: List<Message>) {
     private val index = mutableMapOf<String, MutableList<Message>>()
 
     init {
