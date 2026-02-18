@@ -1,6 +1,5 @@
 package com.example.messenger
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -68,6 +67,7 @@ interface MessageActionListener {
     fun onImagesClick(images: ArrayList<LocalMedia>, position: Int)
     fun onUnsentMessageClick(message: Message, itemView: View)
     fun onCodeOpenClick(message: Message)
+    fun onReplyClick(referenceId: Int)
 }
 
 
@@ -92,73 +92,12 @@ class MessageAdapter(
     private val isGroup: Boolean,
     private val canDelete: Boolean
 ) : ListAdapter<MessageUi, RecyclerView.ViewHolder>(MessageDiffCallback()) {
-    var members: Map<Int, Pair<String?, String?>?> = mapOf()
     var canLongClick: Boolean = true
-    private var checkedPositions: MutableSet<Int> = mutableSetOf()
-    private var checkedMessageIds: MutableSet<Int> = mutableSetOf()
-    private var mapPositions: MutableMap<Int, Boolean> = mutableMapOf()
-    private var highlightedPosition: Int? = null
-    private val linkPattern = Regex("""\[([^]]+)]\((https?://[^)]+)\)|(https?://\S+)""")
-
-    fun deleteUnsentMessage(message: Message) {
-        val updatedList = currentList.toMutableList()
-        updatedList.remove(MessageUi(message, "", ""))
-        submitList(updatedList)
-    }
-
-    fun getItemNotProtected(position: Int) : MessageUi = getItem(position)
 
     override fun getItemCount(): Int = currentList.size
 
     override fun getItemId(position: Int): Long { // Исключает потенциальные баги с индексацией
         return getItem(position).message.id.toLong()
-    }
-
-    fun getDeleteList(): List<Int> = checkedMessageIds.toList()
-
-    fun getForwardList(): List<Pair<Message, Boolean>> {
-        val list = mutableListOf<Pair<Message, Boolean>>()
-        checkedPositions.forEach {
-            val message = getItem(it)?.message
-            if(message != null) {
-                list.add(Pair(message, mapPositions[it] ?: true))
-            }
-        }
-        return list
-    }
-
-    @SuppressLint("NotifyDataSetChanged")
-    fun clearPositions() {
-        canLongClick = true
-        checkedPositions.clear()
-        checkedMessageIds.clear()
-        mapPositions.clear()
-        notifyDataSetChanged()
-    }
-
-    fun getItemPositionWithId(idMessage: Int): Int {
-        return currentList.indexOfLast { it.message.id == idMessage }
-    }
-
-    private fun savePosition(messageId: Int, isSender: Boolean) {
-        val position = getItemPositionWithId(messageId)
-        if (messageId in checkedMessageIds) {
-            checkedMessageIds.remove(messageId)
-            checkedPositions.remove(position)
-            mapPositions.remove(position)
-        } else {
-            checkedMessageIds.add(messageId)
-            checkedPositions.add(position)
-            mapPositions[position] = isSender
-        }
-        notifyItemChanged(position)
-    }
-
-    @SuppressLint("NotifyDataSetChanged")
-    private fun onLongClick(messageId: Int, isSender: Boolean) {
-        savePosition(messageId, isSender)
-        canLongClick = false
-        notifyDataSetChanged()
     }
 
     companion object {
@@ -328,11 +267,6 @@ class MessageAdapter(
 
             is MessagesViewHolderCodeSender -> holder.bind(message, date, time, position)
         }
-    }
-
-    fun highlightPosition(position: Int) {
-        highlightedPosition = position
-        notifyItemChanged(position)
     }
 
     private inline fun <reified T : ViewBinding> handleAnswerLayout(binder: T, message: Message, isSender: Boolean): Int {

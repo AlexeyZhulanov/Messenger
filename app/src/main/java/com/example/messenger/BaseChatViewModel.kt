@@ -19,7 +19,6 @@ import android.widget.ImageView
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -61,9 +60,10 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
-import kotlin.math.abs
 import androidx.core.net.toUri
 import com.example.messenger.states.AvatarState
+import com.example.messenger.states.ReplyPreview
+import com.example.messenger.states.ReplyState
 import com.example.messenger.utils.chunkedFlowLast
 import kotlinx.coroutines.flow.buffer
 import kotlin.collections.plus
@@ -121,8 +121,11 @@ abstract class BaseChatViewModel(
     private val loadingIds = mutableSetOf<Int>()
     private val avatarCache = mutableMapOf<String, Uri>()
     private val avatarLoading = mutableSetOf<String>()
+    private val replyCache = mutableMapOf<Int, ReplyState>()
+    private val replyLoading = mutableSetOf<Int>()
 
     abstract fun applyGroupDisplayInfo(list: List<MessageUi>): List<MessageUi>
+    abstract fun preloadAttachments(list: List<MessageUi>)
 
     init {
         viewModelScope.launch {
@@ -157,6 +160,7 @@ abstract class BaseChatViewModel(
                         _messagesUi.update { old ->
                             applyGroupDisplayInfo(newUi + old)
                         }
+                        preloadAttachments(newUi)
                         _arrowTriggerFlow.emit(Unit)
                     } else pendingRefresh = true
                 }
@@ -171,8 +175,10 @@ abstract class BaseChatViewModel(
                         if(idx != -1) {
                             val element = old[idx]
                             val triple = Triple(element.message, element.formattedDate, element.formattedTime)
+                            val newUi = toMessageUi(triple)
+                            preloadAttachments(listOf(newUi))
                             old.toMutableList().apply {
-                                this[idx] = toMessageUi(triple).copy(
+                                this[idx] = newUi.copy(
                                     username = element.username,
                                     showUsername = element.showUsername,
                                     showAvatar = element.showAvatar,
@@ -188,14 +194,10 @@ abstract class BaseChatViewModel(
             webSocketService.deleteMessageFlow.collect {
                 if(!disableRefresh) {
                     Log.d("testSocketsMessage", "Deleted messages ids: ${it.deletedMessagesIds}")
-                    val adapter = recyclerView.adapter
-                    if(adapter is MessageAdapter) adapter.clearPositions() // todo это изучить надо ли
-                    refresh()
-                    recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-                        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                            recyclerView.scrollToPosition(0)
-                        }
-                    })
+                    clearSelection()
+                    // todo нужно сделать cursor-based pagination и убрать refresh отсюда
+                    refresh() // todo подумать над тем, чтобы просто убрать эти id из messagesUi
+                    _scrollTriggerFlow.emit(Unit)
                 } else pendingRefresh = true
             }
         }
@@ -313,15 +315,6 @@ abstract class BaseChatViewModel(
         }
     }
 
-    private fun highlightItem(position: Int) {
-        val adapter = recyclerView.adapter
-        if (adapter is MessageAdapter) {
-            recyclerView.post {
-                adapter.highlightPosition(position)
-            }
-        }
-    }
-
     fun markMessagesAsRead(visibleMessages: List<Message>) {
         readMessageIds.addAll(visibleMessages.map { it.id })
         debounceJob?.cancel()
@@ -340,43 +333,6 @@ abstract class BaseChatViewModel(
             else retrofitService.markGroupMessagesAsRead(convId, messageIds)
         } catch (e: Exception) {
             Log.e("ReadMessagesError", "Failed to send read messages: ${e.message}")
-        }
-    }
-
-    fun smartScrollToPosition(targetPosition: Int) {
-        recyclerView.clearOnScrollListeners()
-        val currentPos = (recyclerView.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition()
-
-        if (currentPos >= targetPosition) {
-            // Целевая позиция уже на экране
-            recyclerView.smoothScrollToPosition(targetPosition)
-            recyclerView.post { highlightItem(targetPosition) }
-            return
-        }
-
-        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-
-                val lastVisiblePosition = (recyclerView.layoutManager as LinearLayoutManager).findLastVisibleItemPosition()
-
-                if (lastVisiblePosition >= targetPosition) {
-                    // Достигли целевой позиции, остановим скролл
-                    recyclerView.removeOnScrollListener(this)
-                    recyclerView.post { highlightItem(targetPosition) }
-                } else {
-                    // Если не достигли целевой позиции, продолжаем скролл
-                    recyclerView.smoothScrollToPosition(lastVisiblePosition + 1)
-                }
-            }
-        })
-
-        // Начинаем скролл
-        if(abs(targetPosition - currentPos) > 10)
-            recyclerView.smoothScrollToPosition(currentPos + 10)
-        else {
-            recyclerView.smoothScrollToPosition(targetPosition)
-            recyclerView.post { highlightItem(targetPosition) }
         }
     }
 
@@ -577,22 +533,6 @@ abstract class BaseChatViewModel(
 
     fun fManagerGetFilePath(fileName: String): String {
         return fileManager.getMessageFilePath(fileName)
-    }
-
-    suspend fun fManagerSaveFile(fileName: String, fileData: ByteArray) = withContext(ioDispatcher) {
-        fileManager.saveMessageFile(fileName, fileData)
-    }
-
-    private fun fManagerIsExistAvatar(fileName: String): Boolean {
-        return fileManager.isExistAvatar(fileName)
-    }
-
-    private fun fManagerGetAvatarPath(fileName: String): String {
-        return fileManager.getAvatarFilePath(fileName)
-    }
-
-    private suspend fun fManagerSaveAvatar(fileName: String, fileData: ByteArray) = withContext(ioDispatcher) {
-        fileManager.saveAvatarFile(fileName, fileData)
     }
 
     suspend fun fManagerDeleteUnsent(files: List<String>) = withContext(ioDispatcher) {
@@ -913,7 +853,8 @@ abstract class BaseChatViewModel(
             voiceState = if (message.voice != null) VoiceState.Loading else null,
             fileState = if (message.file != null) FileState.Loading else null,
             imageState = if (message.images?.size == 1) ImageState.Loading else null,
-            imagesState = if ((message.images?.size ?: 0) > 1) ImagesState.Loading else null
+            imagesState = if ((message.images?.size ?: 0) > 1) ImagesState.Loading else null,
+            replyState = if(message.referenceToMessageId != null) ReplyState.Loading else null
         )
     }
 
@@ -1226,5 +1167,137 @@ abstract class BaseChatViewModel(
                 }
             }, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
         )
+    }
+
+    protected fun preloadReply(ui: MessageUi) {
+        val refId = ui.message.referenceToMessageId ?: return
+
+        // Уже готово?
+        replyCache[refId]?.let { cached ->
+            updateReplyState(ui.message.id, cached)
+            return
+        }
+        // Уже загружается?
+        if (replyLoading.contains(refId)) return
+
+        replyLoading.add(refId)
+
+        viewModelScope.launch {
+            val result = preloadSemaphore.withPermit {
+                withContext(ioDispatcher) {
+                    try {
+                        val existing = _messagesUi.value.firstOrNull { it.message.id == refId }
+                        if (existing != null) {
+                            val preview = buildReplyPreview(existing.message)
+
+                            val imagePath = preview.imageName?.let {
+                                preloadReplyImage(it)
+                            }
+                            return@withContext ReplyState.Ready(
+                                referenceMessageId = refId,
+                                previewText = preview.text,
+                                previewImagePath = imagePath,
+                                username = preview.username
+                            )
+                        }
+                        val local = findMessage(refId)?.first
+                            ?: return@withContext ReplyState.Error
+
+                        val preview = buildReplyPreview(local)
+
+                        val imagePath = preview.imageName?.let {
+                            preloadReplyImage(it)
+                        }
+                        ReplyState.Ready(
+                            referenceMessageId = refId,
+                            previewText = preview.text,
+                            previewImagePath = imagePath,
+                            username = preview.username
+                        )
+
+                    } catch (_: Exception) {
+                        ReplyState.Error
+                    }
+                }
+            }
+            replyCache[refId] = result
+            replyLoading.remove(refId)
+            updateReplyState(ui.message.id, result)
+        }
+    }
+
+    private suspend fun preloadReplyImage(imageName: String): String? = withContext(ioDispatcher) {
+        try {
+            if (fManagerIsExist(imageName)) {
+                fManagerGetFilePath(imageName)
+            } else {
+                downloadFile("photos", imageName)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun buildReplyPreview(message: Message): ReplyPreview {
+        val text = when {
+            message.text != null -> message.text!!
+            message.images != null -> "Фотография"
+            message.file != null -> message.file!!
+            message.voice != null -> "Голосовое сообщение"
+            else -> "Сообщение"
+        }
+        val name = message.images?.firstOrNull()
+
+        return ReplyPreview(
+            text = text,
+            imageName = name,
+            username = message.usernameAuthorOriginal
+        )
+    }
+
+    private fun updateReplyState(messageId: Int, state: ReplyState) {
+        _messagesUi.update { list ->
+            list.map {
+                if (it.message.id == messageId)
+                    it.copy(replyState = state)
+                else it
+            }
+        }
+    }
+
+    fun highlightMessage(id: Int) {
+        _messagesUi.update { list ->
+            list.map {
+                it.copy(isHighlighted = it.message.id == id)
+            }
+        }
+        viewModelScope.launch {
+            delay(1300)
+            _messagesUi.update { list ->
+                list.map { it.copy(isHighlighted = false) }
+            }
+        }
+    }
+
+    fun toggleSelection(messageId: Int) {
+        _messagesUi.update { list ->
+            list.map {
+                if (it.message.id == messageId)
+                    it.copy(isSelected = !it.isSelected)
+                else it
+            }
+        }
+    }
+
+    fun getSelectedMessages(): List<Message> {
+        return _messagesUi.value
+            .filter { it.isSelected }
+            .map { it.message }
+    }
+
+    fun clearSelection() {
+        _messagesUi.update { list ->
+            list.map { it.copy(isSelected = false) }
+        }
     }
 }

@@ -3,11 +3,8 @@ package com.example.messenger
 import android.util.Log
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.FileManager
-import com.example.messenger.model.Message
 import com.example.messenger.model.MessagePagingSource
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
@@ -15,22 +12,18 @@ import com.example.messenger.model.User
 import com.example.messenger.model.WebSocketService
 import com.example.messenger.model.appsettings.AppSettings
 import com.example.messenger.states.AvatarState
-import com.example.messenger.states.GroupDisplayInfo
 import com.example.messenger.states.MessageUi
-import com.example.messenger.utils.chunkedFlowLast
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
@@ -89,7 +82,7 @@ class GroupMessageViewModel @Inject constructor(
                         }
                         val finalList = applyGroupDisplayInfo(endData)
                         _messagesUi.value = finalList
-                        preloadGroupAttachments(finalList)
+                        preloadAttachments(finalList)
                     }
                 }.launchIn(viewModelScope)
 
@@ -135,31 +128,6 @@ class GroupMessageViewModel @Inject constructor(
             } else {
                 webSocketService.send("stop_typing_group", typingData)
             }
-        }
-
-        fun setMarkScrollListener(recyclerView: RecyclerView, adapter: MessageAdapter, currentUserId: Int) {
-            val scrollListener = object : RecyclerView.OnScrollListener() {
-                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    super.onScrolled(recyclerView, dx, dy)
-                    val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-                    val lastVisibleItemPosition = layoutManager.findLastVisibleItemPosition()
-                    val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
-
-                    // Проверяем видимые элементы от последнего к первому
-                    if (lastVisibleItemPosition != RecyclerView.NO_POSITION && firstVisibleItemPosition != RecyclerView.NO_POSITION) {
-                        val visibleMessages = (lastVisibleItemPosition downTo firstVisibleItemPosition).mapNotNull { position ->
-                            adapter.getItemNotProtected(position).first.takeIf { it.idSender != currentUserId && it.isPersonalUnread == true }
-                        }
-
-                        markMessagesAsRead(visibleMessages)
-
-                        if (firstVisibleItemPosition == 0) {
-                            recyclerView.removeOnScrollListener(this)
-                        }
-                    }
-                }
-            }
-            recyclerView.addOnScrollListener(scrollListener)
         }
 
         override fun applyGroupDisplayInfo(list: List<MessageUi>): List<MessageUi> {
@@ -263,7 +231,7 @@ class GroupMessageViewModel @Inject constructor(
             webSocketService.send("leave_group", leaveData)
         }
 
-        private fun preloadGroupAttachments(list: List<MessageUi>) {
+        override fun preloadAttachments(list: List<MessageUi>) {
             val userMap = currentMemberList.associateBy { it.id }
 
             list.forEach { ui ->
@@ -274,12 +242,12 @@ class GroupMessageViewModel @Inject constructor(
                         preloadAvatar(ui.message.id, avatarString)
                     }
                 }
-
                 when {
                     ui.voiceState != null -> preloadVoice(ui)
-                    ui.fileState != null -> preloadFile(ui)
                     ui.imageState != null -> preloadImage(ui)
+                    ui.replyState != null -> preloadReply(ui)
                     ui.imagesState != null -> preloadImages(ui)
+                    ui.fileState != null -> preloadFile(ui)
                 }
             }
         }

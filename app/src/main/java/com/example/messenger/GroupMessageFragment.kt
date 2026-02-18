@@ -14,6 +14,7 @@ import com.example.messenger.model.Group
 import com.example.messenger.model.LastMessage
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
+import com.example.messenger.states.MessageUi
 import com.example.messenger.utils.getParcelableCompat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
@@ -104,6 +105,12 @@ class GroupMessageFragment : BaseChatFragment() {
     override fun canDelete(): Boolean = group.canDelete
 
     override fun getUnreadCount(): Int = group.unreadCount
+
+    override fun markReadCondition(ui: MessageUi): Message? {
+        return ui.message.takeIf {
+            it.idSender != currentUser.id && it.isPersonalUnread == true
+        }
+    }
 
     override fun replaceToInfoFragment() {
         parentFragmentManager.beginTransaction()

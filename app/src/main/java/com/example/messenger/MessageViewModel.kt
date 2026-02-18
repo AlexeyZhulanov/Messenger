@@ -9,17 +9,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.FileManager
-import com.example.messenger.model.Message
 import com.example.messenger.model.MessagePagingSource
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.WebSocketService
 import com.example.messenger.model.appsettings.AppSettings
-import com.example.messenger.states.FileState
-import com.example.messenger.states.ImageState
-import com.example.messenger.states.ImagesState
 import com.example.messenger.states.MessageUi
-import com.example.messenger.states.VoiceState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -136,31 +131,6 @@ class MessageViewModel @Inject constructor(
         }
     }
 
-    fun setMarkScrollListener(recyclerView: RecyclerView, adapter: MessageAdapter) {
-        val scrollListener = object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-                val lastVisibleItemPosition = layoutManager.findLastVisibleItemPosition()
-                val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
-
-                // Проверяем видимые элементы от последнего к первому
-                if (lastVisibleItemPosition != RecyclerView.NO_POSITION && firstVisibleItemPosition != RecyclerView.NO_POSITION) {
-                    val visibleMessages = (lastVisibleItemPosition downTo firstVisibleItemPosition).mapNotNull { position ->
-                        adapter.getItemNotProtected(position).first.takeIf { it.idSender == otherUserId && !it.isRead }
-                    }
-
-                    markMessagesAsRead(visibleMessages)
-
-                    if (firstVisibleItemPosition == 0) {
-                        recyclerView.removeOnScrollListener(this)
-                    }
-                }
-            }
-        }
-        recyclerView.addOnScrollListener(scrollListener)
-    }
-
     private fun joinDialog() {
         val joinData = JSONObject()
         joinData.put("dialog_id", convId)
@@ -183,13 +153,14 @@ class MessageViewModel @Inject constructor(
         }
     }
 
-    fun preloadAttachments(list: List<MessageUi>) {
+    override fun preloadAttachments(list: List<MessageUi>) {
         list.forEach { ui ->
             when {
                 ui.voiceState != null -> preloadVoice(ui)
-                ui.fileState != null -> preloadFile(ui)
                 ui.imageState != null -> preloadImage(ui)
+                ui.replyState != null -> preloadReply(ui)
                 ui.imagesState != null -> preloadImages(ui)
+                ui.fileState != null -> preloadFile(ui)
             }
         }
     }

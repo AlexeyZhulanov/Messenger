@@ -9,6 +9,13 @@ data class MessageUi(
     val formattedTime: String,
     val parsedText: CharSequence? = null,
 
+    // Checkbox на удаление и пересылку
+    val isSelected: Boolean = false,
+
+    // Reply
+    val replyState: ReplyState? = null,
+    val isHighlighted: Boolean = false,
+
     // Файлы
     val voiceState: VoiceState? = null,
     val fileState: FileState? = null,
@@ -63,9 +70,21 @@ sealed class AvatarState {
     object Error : AvatarState()
 }
 
-data class GroupDisplayInfo(
-    val username: String?,
-    val avatar: String?,
-    val showUsername: Boolean,
-    val showAvatar: Boolean
+sealed class ReplyState {
+    object Loading : ReplyState()
+
+    data class Ready(
+        val referenceMessageId: Int,
+        val previewText: String,
+        val previewImagePath: String?, // локальный путь
+        val username: String?
+    ) : ReplyState()
+
+    object Error : ReplyState()
+}
+
+data class ReplyPreview(
+    val text: String,
+    val imageName: String?,
+    val username: String?
 )

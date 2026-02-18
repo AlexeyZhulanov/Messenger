@@ -61,6 +61,7 @@ import androidx.core.net.toUri
 import androidx.core.view.isGone
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.example.messenger.states.MessageUi
 
 @AndroidEntryPoint
 abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
@@ -108,6 +109,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     abstract fun isGroup(): Boolean
     abstract fun canDelete(): Boolean
     abstract fun getUnreadCount(): Int
+    abstract fun markReadCondition(ui: MessageUi): Message?
 
     private val adapterDataObserver = object : RecyclerView.AdapterDataObserver() {
         override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
@@ -828,6 +830,14 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     dialog.show(parentFragmentManager, "CodePreviewDialogFragment")
                 }
             }
+            override fun onReplyClick(referenceId: Int) {
+                val index = viewModel.messagesUi.value.indexOfFirst { it.message.id == referenceId }
+                if (index != -1) {
+                    binding.recyclerview.clearOnScrollListeners()
+                    binding.recyclerview.smoothScrollToPosition(index)
+                    viewModel.highlightMessage(referenceId)
+                }
+            }
         }, currentUser.id, requireContext(), isGroup(), canDelete())
         adapter.setHasStableIds(true)
         binding.recyclerview.adapter = adapter
@@ -1266,6 +1276,34 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                 viewModel.searchMessagesInDialog(query.toString())
             }
         }
+    }
+
+    fun setMarkScrollListener() {
+        binding.recyclerview.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+                val last = layoutManager.findLastVisibleItemPosition()
+                val first = layoutManager.findFirstVisibleItemPosition()
+
+                // Проверяем видимые элементы от последнего к первому
+                if (last != RecyclerView.NO_POSITION && first != RecyclerView.NO_POSITION) {
+                    val visibleMessages =
+                        viewModel.messagesUi.value
+                            .subList(first, last + 1)
+                            .mapNotNull { ui ->
+                                markReadCondition(ui)
+                            }
+
+                    if (visibleMessages.isNotEmpty()) {
+                        viewModel.markMessagesAsRead(visibleMessages)
+                    }
+
+                    if (first == 0) {
+                        recyclerView.removeOnScrollListener(this)
+                    }
+                }
+            }
+        })
     }
 
     class VerticalSpaceItemDecoration(private val verticalSpaceHeight: Int) :
