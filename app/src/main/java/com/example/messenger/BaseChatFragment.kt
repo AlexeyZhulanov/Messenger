@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Rect
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -61,7 +62,12 @@ import androidx.core.net.toUri
 import androidx.core.view.isGone
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.example.messenger.MessageAdapter.Companion.PAYLOAD_PAUSE
+import com.example.messenger.MessageAdapter.Companion.PAYLOAD_PLAY_STATE
+import com.example.messenger.MessageAdapter.Companion.PAYLOAD_PROGRESS
+import com.example.messenger.MessageAdapter.Companion.PAYLOAD_STOP
 import com.example.messenger.states.MessageUi
+import com.example.messenger.states.VoiceState
 
 @AndroidEntryPoint
 abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
@@ -95,6 +101,12 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     private val namedLinks = mutableMapOf<String, String>()
     private var currentLink: String? = null
     private var currentLinkNumber = 0
+
+    // Голосовые сообщения
+    private var mediaPlayer: MediaPlayer? = null
+    private var playingMessageId: Int? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private var updateRunnable: Runnable? = null
 
     abstract val viewModel: BaseChatViewModel
 
@@ -481,7 +493,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         binding.recyclerview.layoutManager = layoutManager
         binding.recyclerview.addItemDecoration(VerticalSpaceItemDecoration(15))
         binding.recyclerview.setItemViewCacheSize(30) // works good
-        viewModel.bindRecyclerView(binding.recyclerview)
         binding.selectedPhotosRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         binding.selectedPhotosRecyclerView.adapter = imageAdapter
         binding.recyclerview.addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -842,9 +853,104 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
             override fun onSelected(messageId: Int) {
                 viewModel.toggleSelection(messageId)
             }
+            override fun onVoiceClick(messageId: Int) {
+                val ui = viewModel.messagesUi.value.firstOrNull { it.message.id == messageId } ?: return
+                val state = ui.voiceState as? VoiceState.Ready ?: return
+                when {
+                    playingMessageId == messageId -> pauseAudio()
+                    playingMessageId != null -> {
+                        // играл другой — стопаем его
+                        stopAudio()
+                        startAudio(messageId, state.localPath)
+                    }
+                    else -> startAudio(messageId, state.localPath)
+                }
+            }
+            override fun onVoiceSeek(messageId: Int, progress: Int) {
+                if (playingMessageId == messageId) {
+                    val player = mediaPlayer ?: return
+                    if (player.isPlaying) {
+                        player.seekTo(progress)
+                    }
+                }
+            }
         }, currentUser.id, requireContext(), isGroup(), canDelete())
         adapter.setHasStableIds(true)
         binding.recyclerview.adapter = adapter
+    }
+
+    private fun startAudio(messageId: Int, path: String) {
+        stopAudio()
+
+        mediaPlayer = MediaPlayer().apply {
+            setDataSource(path)
+            prepare()
+            start()
+            setOnCompletionListener {
+                stopAudio()
+            }
+        }
+        playingMessageId = messageId
+        startSeekUpdates()
+    }
+
+    private fun pauseAudio() {
+        val player = mediaPlayer ?: return
+        val id = playingMessageId ?: return
+
+        if (player.isPlaying) {
+            player.pause()
+            stopSeekUpdates()
+
+            // обновляем кнопку play/pause
+            val index = viewModel.messagesUi.value.indexOfFirst { it.message.id == id }
+            if (index != -1) {
+                adapter.notifyItemChanged(index, PAYLOAD_PAUSE)
+            }
+        }
+    }
+
+    private fun stopAudio() {
+        stopSeekUpdates()
+        val id = playingMessageId
+
+        mediaPlayer?.release()
+        mediaPlayer = null
+        playingMessageId = null
+
+        id?.let {
+            val index = viewModel.messagesUi.value.indexOfFirst { m -> m.message.id == it }
+            if (index != -1) {
+                adapter.notifyItemChanged(index, PAYLOAD_STOP)
+            }
+        }
+    }
+
+    private fun startSeekUpdates() {
+        updateRunnable = object : Runnable {
+            override fun run() {
+                val player = mediaPlayer ?: return
+                val id = playingMessageId ?: return
+
+                if (player.isPlaying) {
+                    val progress = player.currentPosition
+                    val index = viewModel.messagesUi.value.indexOfFirst { it.message.id == id }
+
+                    if (index != -1) {
+                        adapter.notifyItemChanged(index, PAYLOAD_PROGRESS to progress)
+                    }
+                    handler.postDelayed(this, 100)
+                }
+            }
+        }
+        updateRunnable?.let { handler.post(it) }
+    }
+
+    private fun stopSeekUpdates() {
+        updateRunnable?.let {
+            handler.removeCallbacks(it)
+        }
+        updateRunnable = null
     }
 
     override val defaultViewModelCreationExtras: CreationExtras
@@ -1343,6 +1449,10 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        stopAudio()
+    }
     companion object {
         const val ARG_USER = "arg_user"
         const val ARG_FROM_NOTIFICATION = "arg_from_notification"

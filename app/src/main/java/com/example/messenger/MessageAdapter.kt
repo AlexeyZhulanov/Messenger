@@ -3,7 +3,6 @@ package com.example.messenger
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
-import android.graphics.Rect
 import android.graphics.Typeface
 import android.media.MediaPlayer
 import android.net.Uri
@@ -16,7 +15,6 @@ import android.view.View
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.view.ViewGroup
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
@@ -24,7 +22,6 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import androidx.viewbinding.ViewBinding
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
@@ -70,6 +67,8 @@ interface MessageActionListener {
     fun onCodeOpenClick(message: Message)
     fun onReplyClick(referenceId: Int)
     fun onSelected(messageId: Int)
+    fun onVoiceClick(messageId: Int)
+    fun onVoiceSeek(messageId: Int, progress: Int)
 }
 
 
@@ -115,6 +114,9 @@ class MessageAdapter(
         private const val TYPE_TEXT_IMAGES_SENDER = 9
         private const val TYPE_CODE_RECEIVER = 10
         private const val TYPE_CODE_SENDER = 11
+        const val PAYLOAD_PROGRESS = "progress"
+        const val PAYLOAD_PAUSE = "pause"
+        const val PAYLOAD_STOP = "stop"
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -199,31 +201,41 @@ class MessageAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: MutableList<Any>) {
-        when {
-            payloads.contains("isRead") -> {
-                when(holder) {
-                    is MessagesViewHolderSender -> holder.updateReadStatus()
-                    is MessagesViewHolderVoiceSender -> holder.updateReadStatus()
-                    is MessagesViewHolderFileSender -> holder.updateReadStatus()
-                    is MessagesViewHolderTextImageSender -> holder.updateReadStatus()
-                    is MessagesViewHolderTextImagesSender -> holder.updateReadStatus()
-                    is MessagesViewHolderCodeSender -> holder.updateReadStatus()
+        if (payloads.isNotEmpty()) {
+            payloads.forEach { payload ->
+                when(payload) {
+                    is Pair<*, *> -> {
+                        if (payload.first == PAYLOAD_PROGRESS) {
+                            val progress = payload.second as Int
+                            if (holder is MessagesViewHolderVoiceReceiver) holder.updateProgress(progress)
+                            else if (holder is MessagesViewHolderVoiceSender) holder.updateProgress(progress)
+                            return
+                        }
+                    }
+                    PAYLOAD_PAUSE -> {
+                        if (holder is MessagesViewHolderVoiceReceiver) holder.playerPause()
+                        else if (holder is MessagesViewHolderVoiceSender) holder.playerPause()
+                        return
+                    }
+                    PAYLOAD_STOP -> {
+                        if (holder is MessagesViewHolderVoiceReceiver) holder.playerStop()
+                        else if (holder is MessagesViewHolderVoiceSender) holder.playerStop()
+                        return
+                    }
+                    "isRead" -> {
+                        when(holder) {
+                            is MessagesViewHolderSender -> holder.updateReadStatus()
+                            is MessagesViewHolderVoiceSender -> holder.updateReadStatus()
+                            is MessagesViewHolderFileSender -> holder.updateReadStatus()
+                            is MessagesViewHolderTextImageSender -> holder.updateReadStatus()
+                            is MessagesViewHolderTextImagesSender -> holder.updateReadStatus()
+                            is MessagesViewHolderCodeSender -> holder.updateReadStatus()
+                        }
+                        return
+                    }
                 }
-                return
             }
-            payloads.contains("isAvatar") -> {
-                when(holder) {
-                    is MessagesViewHolderReceiver -> holder.updateAvatar()
-                    is MessagesViewHolderVoiceReceiver -> holder.updateAvatar()
-                    is MessagesViewHolderFileReceiver -> holder.updateAvatar()
-                    is MessagesViewHolderTextImageReceiver -> holder.updateAvatar()
-                    is MessagesViewHolderTextImagesReceiver -> holder.updateAvatar()
-                    is MessagesViewHolderCodeReceiver -> holder.updateAvatar()
-                }
-                return
-            }
-            else -> onBindViewHolder(holder, position)
-        }
+        } else onBindViewHolder(holder, position)
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
@@ -277,11 +289,6 @@ class MessageAdapter(
             binding.answerLayout.root.setOnClickListener {
                 messageSave?.referenceToMessageId?.let { actionListener.onReplyClick(it) }
             }
-        }
-
-        fun updateAvatar() {
-            binding.photoImageView.isVisible = false
-            binding.spaceAvatar.isVisible = true
         }
 
         fun bind(ui: MessageUi) {
@@ -472,47 +479,21 @@ class MessageAdapter(
 
     inner class MessagesViewHolderVoiceReceiver(private val binding: ItemVoiceReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         private var isPlaying: Boolean = false
-        private val handler = Handler(Looper.getMainLooper())
         private var messageSave: Message? = null
-
-        private var mediaPlayer: MediaPlayer = MediaPlayer()
-        private var updateSeekBarRunnable: Runnable = object : Runnable {
-            override fun run() {
-                if (isPlaying && mediaPlayer.isPlaying) {
-                    val currentPosition = mediaPlayer.currentPosition.toFloat()
-                    binding.waveformSeekBar.progress = currentPosition
-                    binding.timeVoiceTextView.text = formatTime(currentPosition.toLong())
-                    handler.postDelayed(this, 100)
-                }
-            }
-        }
+        private var lastDurationStr: String? = null
 
         init {
             binding.playButton.setOnClickListener {
-                if (!isPlaying) {
-                    mediaPlayer.start()
-                    binding.playButton.setImageResource(R.drawable.ic_pause)
-                    isPlaying = true
-                    handler.post(updateSeekBarRunnable)
-                } else {
-                    mediaPlayer.pause()
-                    binding.playButton.setImageResource(R.drawable.ic_play)
-                    isPlaying = false
-                    handler.removeCallbacks(updateSeekBarRunnable)
+                messageSave?.let {
+                    actionListener.onVoiceClick(it.id)
                 }
-            }
-            mediaPlayer.setOnCompletionListener {
-                binding.playButton.setImageResource(R.drawable.ic_play)
-                binding.waveformSeekBar.progress = 0f
-                binding.timeVoiceTextView.text = formatTime(mediaPlayer.duration.toLong())
-                isPlaying = false
-                handler.removeCallbacks(updateSeekBarRunnable)
             }
             binding.waveformSeekBar.onProgressChanged = object : SeekBarOnProgressChanged {
                 override fun onProgressChanged(waveformSeekBar: WaveformSeekBar, progress: Float, fromUser: Boolean) {
                     if (fromUser) {
-                        mediaPlayer.seekTo(progress.toInt())
-                        binding.timeVoiceTextView.text = formatTime(progress.toLong())
+                        messageSave?.let {
+                            actionListener.onVoiceSeek(it.id, progress.toInt())
+                        }
                     }
                 }
             }
@@ -539,15 +520,29 @@ class MessageAdapter(
             }
         }
 
-        fun updateAvatar() {
-            binding.photoImageView.isVisible = false
-            binding.spaceAvatar.isVisible = true
+        fun updateProgress(progress: Int) {
+            if(!isPlaying) {
+                binding.playButton.setImageResource(R.drawable.ic_pause)
+                isPlaying = true
+            }
+            binding.waveformSeekBar.progress = progress.toFloat()
+            binding.timeVoiceTextView.text = formatTime(progress.toLong())
+        }
+
+        fun playerPause() {
+            isPlaying = false
+            binding.playButton.setImageResource(R.drawable.ic_play)
+        }
+
+        fun playerStop() {
+            isPlaying = false
+            binding.playButton.setImageResource(R.drawable.ic_play)
+            binding.waveformSeekBar.progress = 0f
+            binding.timeVoiceTextView.text = lastDurationStr ?: "0"
         }
 
         fun bind(ui: MessageUi) {
             messageSave = ui.message
-
-            binding.playButton.isVisible = true
 
             binding.checkbox.isVisible = ui.isShowCheckbox
             when(val state = ui.replyState) {
@@ -632,10 +627,9 @@ class MessageAdapter(
                     binding.errorImageView.isVisible = false
                     binding.waveformSeekBar.setSampleFrom(ui.message.waveform?.toIntArray() ?: intArrayOf())
                     binding.waveformSeekBar.maxProgress = state.duration.toFloat()
-                    binding.timeVoiceTextView.text = formatTime(state.duration)
-                    mediaPlayer.reset()
-                    mediaPlayer.setDataSource(state.localPath)
-                    mediaPlayer.prepare()
+                    val st = formatTime(state.duration)
+                    binding.timeVoiceTextView.text = st
+                    lastDurationStr = st
                 }
                 is VoiceState.Error -> {
                     binding.progressBar.isVisible = false
@@ -649,47 +643,21 @@ class MessageAdapter(
 
     inner class MessagesViewHolderVoiceSender(private val binding: ItemVoiceSenderBinding) : RecyclerView.ViewHolder(binding.root) {
         private var isPlaying: Boolean = false
-        private val handler = Handler(Looper.getMainLooper())
         private var messageSave: Message? = null
-
-        private var mediaPlayer: MediaPlayer = MediaPlayer()
-        private var updateSeekBarRunnable: Runnable = object : Runnable {
-            override fun run() {
-                if (isPlaying && mediaPlayer.isPlaying) {
-                    val currentPosition = mediaPlayer.currentPosition.toFloat()
-                    binding.waveformSeekBar.progress = currentPosition
-                    binding.timeVoiceTextView.text = messageViewModel.formatTime(currentPosition.toLong())
-                    handler.postDelayed(this, 100)
-                }
-            }
-        }
+        private var lastDurationStr: String? = null
 
         init {
             binding.playButton.setOnClickListener {
-                if (!isPlaying) {
-                    mediaPlayer.start()
-                    binding.playButton.setImageResource(R.drawable.ic_pause)
-                    isPlaying = true
-                    handler.post(updateSeekBarRunnable)
-                } else {
-                    mediaPlayer.pause()
-                    binding.playButton.setImageResource(R.drawable.ic_play)
-                    isPlaying = false
-                    handler.removeCallbacks(updateSeekBarRunnable)
+                messageSave?.let {
+                    actionListener.onVoiceClick(it.id)
                 }
-            }
-            mediaPlayer.setOnCompletionListener {
-                binding.playButton.setImageResource(R.drawable.ic_play)
-                binding.waveformSeekBar.progress = 0f
-                binding.timeVoiceTextView.text = messageViewModel.formatTime(mediaPlayer.duration.toLong())
-                isPlaying = false
-                handler.removeCallbacks(updateSeekBarRunnable)
             }
             binding.waveformSeekBar.onProgressChanged = object : SeekBarOnProgressChanged {
                 override fun onProgressChanged(waveformSeekBar: WaveformSeekBar, progress: Float, fromUser: Boolean) {
                     if (fromUser) {
-                        mediaPlayer.seekTo(progress.toInt())
-                        binding.timeVoiceTextView.text = messageViewModel.formatTime(progress.toLong())
+                        messageSave?.let {
+                            actionListener.onVoiceSeek(it.id, progress.toInt())
+                        }
                     }
                 }
             }
@@ -697,120 +665,140 @@ class MessageAdapter(
                 messageSave?.let {
                     when {
                         it.isUnsent == true -> actionListener.onUnsentMessageClick(it, itemView)
-                        !canLongClick -> savePosition(it.id, true)
+                        !canLongClick -> actionListener.onSelected(it.id)
                         else -> actionListener.onMessageClick(it, itemView, true)
                     }
                 }
             }
             binding.root.setOnLongClickListener {
-                if(canLongClick) {
+                if(canLongClick && messageSave?.isUnsent != true) {
                     messageSave?.let {
-                        onLongClick(it.id, true)
-                        actionListener.onMessageLongClick(itemView)
+                        actionListener.onMessageLongClick(it.id)
                     }
                 }
                 true
             }
             binding.checkbox.setOnClickListener {
-                messageSave?.let { savePosition(it.id, true) }
+                messageSave?.let { actionListener.onSelected(it.id) }
             }
+            binding.answerLayout.root.setOnClickListener {
+                messageSave?.referenceToMessageId?.let { actionListener.onReplyClick(it) }
+            }
+        }
+
+        fun updateProgress(progress: Int) {
+            if(!isPlaying) {
+                binding.playButton.setImageResource(R.drawable.ic_pause)
+                isPlaying = true
+            }
+            binding.waveformSeekBar.progress = progress.toFloat()
+            binding.timeVoiceTextView.text = formatTime(progress.toLong())
+        }
+
+        fun playerPause() {
+            isPlaying = false
+            binding.playButton.setImageResource(R.drawable.ic_play)
+        }
+
+        fun playerStop() {
+            isPlaying = false
+            binding.playButton.setImageResource(R.drawable.ic_play)
+            binding.waveformSeekBar.progress = 0f
+            binding.timeVoiceTextView.text = lastDurationStr ?: "0"
         }
 
         fun updateReadStatus() {
             binding.icCheck.visibility = View.INVISIBLE
-            binding.icCheck2.visibility = View.VISIBLE
+            binding.icCheck2.isVisible = true
             binding.icCheck2.bringToFront()
         }
 
-        fun bind(message: Message, date: String, time: String, position: Int, isInLast30: Boolean, isAnswer: Boolean) {
-            messageSave = message
+        fun bind(ui: MessageUi) {
+            messageSave = ui.message
 
-            binding.playButton.visibility = View.VISIBLE
+            binding.checkbox.isVisible = ui.isShowCheckbox && ui.message.isUnsent != true
+            when(val state = ui.replyState) {
+                is ReplyState.Loading -> {
+                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
+                    binding.answerLayout.root.isVisible = true
+                    binding.answerLayout.answerMessage.text = "..."
+                }
+                is ReplyState.Ready -> {
+                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
+                    binding.answerLayout.root.isVisible = true
+                    binding.answerLayout.answerMessage.text = state.previewText
+                    binding.answerLayout.answerUsername.text = state.username
+                    state.previewImagePath?.let {
+                        Glide.with(binding.answerLayout.answerImageView)
+                            .load(it)
+                            .centerCrop()
+                            .into(binding.answerLayout.answerImageView)
+                    }
+                }
+                is ReplyState.Error -> {
+                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
+                    binding.answerLayout.root.isVisible = true
+                    binding.answerLayout.answerMessage.text = "Сообщение недоступно"
+                }
+                null -> binding.answerLayout.root.isVisible = false
+            }
 
-            if(isAnswer) handleAnswerLayout(binding, message, true)
-            else binding.answerLayout.root.visibility = View.GONE
-
-            if(message.isForwarded) {
-                binding.forwardLayout.root.visibility = View.VISIBLE
+            if(ui.message.isForwarded) {
+                binding.forwardLayout.root.isVisible = true
                 binding.forwardLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
-                binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
-            } else binding.forwardLayout.root.visibility = View.GONE
+                binding.forwardLayout.forwardUsername.text = ui.message.usernameAuthorOriginal
+            } else binding.forwardLayout.root.isVisible = false
 
-            if(message.isUnsent == true) {
-                binding.timeTextView.text = "----"
-                binding.dateTextView.visibility = View.GONE
-                binding.icCheck.visibility = View.INVISIBLE
-                binding.icCheck2.visibility = View.INVISIBLE
-                binding.editTextView.visibility = View.GONE
-                binding.icError.visibility = View.VISIBLE
+            if(ui.message.isUnsent == true) {
+                with(binding) {
+                    timeTextView.text = "----"
+                    dateTextView.isVisible = false
+                    icCheck.visibility = View.INVISIBLE
+                    icCheck2.visibility = View.INVISIBLE
+                    editTextView.isVisible = false
+                    icError.isVisible = true
+                }
             } else {
-                binding.icError.visibility = View.GONE
-                if(date != "") {
-                    binding.dateTextView.visibility = View.VISIBLE
-                    binding.dateTextView.text = date
+                binding.icError.isVisible = false
+                if(ui.formattedDate != "") {
+                    binding.dateTextView.isVisible = true
+                    binding.dateTextView.text = ui.formattedDate
                 } else {
-                    binding.dateTextView.visibility = View.GONE
-                    binding.space.visibility = View.GONE
+                    binding.dateTextView.isVisible = false
+                    binding.space.isVisible = false
                 }
 
-                binding.timeTextView.text = time
-                if(!canLongClick) {
-                    if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
-                    binding.checkbox.isChecked = position in checkedPositions
-                    binding.checkbox.setOnClickListener {
-                        savePosition(message.id, true)
-                    }
-                } else binding.checkbox.visibility = View.GONE
-
-                if (message.isRead) {
+                binding.timeTextView.text = ui.formattedTime
+                if (ui.message.isRead) {
                     updateReadStatus()
                 } else {
-                    binding.icCheck.visibility = View.VISIBLE
+                    binding.icCheck.isVisible = true
                     binding.icCheck2.visibility = View.INVISIBLE
                 }
-                if(message.isEdited) binding.editTextView.visibility = View.VISIBLE
-                else binding.editTextView.visibility = View.GONE
+                binding.editTextView.isVisible = ui.message.isEdited
             }
-            uiScopeMain.launch {
-                val filePathTemp = async {
-                    if(message.isUnsent == true) {
-                        return@async Pair(message.localFilePaths?.firstOrNull(), true)
-                    } else {
-                        val voice = message.voice ?: "nonWork"
-                        if (messageViewModel.fManagerIsExist(voice)) {
-                            return@async Pair(messageViewModel.fManagerGetFilePath(voice), true)
-                        } else {
-                            try {
-                                return@async Pair(messageViewModel.downloadFile(context, "audio", message.voice!!), false)
-                            } catch (_: Exception) {
-                                return@async Pair(null, true)
-                            }
-                        }
-                    }
+            when (val state = ui.voiceState) {
+                is VoiceState.Loading -> {
+                    binding.progressBar.isVisible = true
+                    binding.playButton.isVisible = false
+                    binding.errorImageView.isVisible = false
                 }
-                val (first, second) = filePathTemp.await()
-                if (first != null) {
-                val file = File(first)
-                if (file.exists()) {
-                    if (!second && isInLast30) messageViewModel.fManagerSaveFile(message.voice!!, file.readBytes())
-                    mediaPlayer.reset()
-                    mediaPlayer.setDataSource(first)
-                    mediaPlayer.prepare()
-                    val duration = mediaPlayer.duration
-                    binding.waveformSeekBar.setSampleFrom(message.waveform?.toIntArray() ?: intArrayOf())
-                    binding.waveformSeekBar.maxProgress = duration.toFloat()
-                    binding.timeVoiceTextView.text = messageViewModel.formatTime(duration.toLong())
-                } else {
-                    Log.e("VoiceError", "File does not exist: $first")
-                    binding.progressBar.visibility = View.GONE
-                    binding.errorImageView.visibility = View.VISIBLE
-                    binding.playButton.visibility = View.GONE
+                is VoiceState.Ready -> {
+                    binding.progressBar.isVisible = false
+                    binding.playButton.isVisible = true
+                    binding.errorImageView.isVisible = false
+                    binding.waveformSeekBar.setSampleFrom(ui.message.waveform?.toIntArray() ?: intArrayOf())
+                    binding.waveformSeekBar.maxProgress = state.duration.toFloat()
+                    val st = formatTime(state.duration)
+                    binding.timeVoiceTextView.text = st
+                    lastDurationStr = st
                 }
-            } else {
-                    binding.progressBar.visibility = View.GONE
-                    binding.errorImageView.visibility = View.VISIBLE
-                    binding.playButton.visibility = View.GONE
+                is VoiceState.Error -> {
+                    binding.progressBar.isVisible = false
+                    binding.playButton.isVisible = false
+                    binding.errorImageView.isVisible = true
                 }
+                null -> Unit
             }
         }
     }
