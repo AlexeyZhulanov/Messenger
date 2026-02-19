@@ -15,6 +15,7 @@ import com.example.messenger.picker.DateUtils
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.config.SelectMimeType
 import com.luck.picture.lib.entity.LocalMedia
+import androidx.core.net.toUri
 
 interface ImagesActionListener {
     fun onImageClicked(images: ArrayList<LocalMedia>, position: Int)
@@ -70,7 +71,7 @@ class ImagesAdapter(
                 photoImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
             } else {
                 Glide.with(context)
-                    .load(if (PictureMimeType.isContent(path) && !localMedia.isCut && !localMedia.isCompressed) Uri.parse(path) else path)
+                    .load(if (PictureMimeType.isContent(path) && !localMedia.isCut && !localMedia.isCompressed) path.toUri() else path)
                     .centerCrop()
                     .placeholder(R.color.app_color_f6)
                     .diskCacheStrategy(DiskCacheStrategy.ALL)

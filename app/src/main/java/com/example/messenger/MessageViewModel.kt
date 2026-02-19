@@ -5,8 +5,6 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.FileManager
 import com.example.messenger.model.MessagePagingSource
@@ -70,13 +68,14 @@ class MessageViewModel @Inject constructor(
                     val pageSize = 30
                     val triples = pagingSource?.loadPage(pageSize, searchQuery)
                     if(triples != null) {
-                        val newUi = triples.map { triple -> toMessageUi(triple) }
+                        val flag = page == 0
+                        val newUi = triples.map { triple -> toMessageUi(triple, flag) }
                         val endData = if(page == 0) {
                             val firstMessage = newUi.firstOrNull()?.message
                             if(firstMessage != null) updateLastDate(firstMessage.timestamp)
                             val m = getUnsentMessages()
                             if(m != null) {
-                                val mUi = m.map { toMessageUi(Triple(it, "", "")) }
+                                val mUi = m.map { toMessageUi(Triple(it, "", ""), false) }
                                 newUi + mUi
                             } else newUi
                         } else {

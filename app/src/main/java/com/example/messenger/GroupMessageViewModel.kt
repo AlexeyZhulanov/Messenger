@@ -70,14 +70,15 @@ class GroupMessageViewModel @Inject constructor(
                         val pageSize = 30
                         val triples = pagingSource?.loadPage(pageSize, searchQuery)
                         if(triples != null) {
-                            val newUi = triples.map { triple -> toMessageUi(triple) }
+                            val flag = page == 0
+                            val newUi = triples.map { triple -> toMessageUi(triple, flag) }
                             val endData = if(page == 0) {
                                 val firstMessage = newUi.firstOrNull()?.message
                                 if(firstMessage != null) updateLastDate(firstMessage.timestamp)
                                 val m = getUnsentMessages()
                                 if(m != null) {
                                     val mUi = m.map { message ->
-                                        toMessageUi(Triple(message, "", ""))
+                                        toMessageUi(Triple(message, "", ""), false)
                                     }
                                     newUi + mUi
                                 } else newUi

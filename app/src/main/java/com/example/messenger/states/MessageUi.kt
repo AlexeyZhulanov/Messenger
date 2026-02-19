@@ -8,9 +8,11 @@ data class MessageUi(
     val formattedDate: String,
     val formattedTime: String,
     val parsedText: CharSequence? = null,
+    val isFirstPage: Boolean = false,
 
     // Checkbox на удаление и пересылку
     val isSelected: Boolean = false,
+    val isShowCheckbox: Boolean = false,
 
     // Reply
     val replyState: ReplyState? = null,

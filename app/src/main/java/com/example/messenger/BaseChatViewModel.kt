@@ -151,7 +151,7 @@ abstract class BaseChatViewModel(
                             val newMessageTriple =
                                 if(lastMessageDate == "") Triple(mes,"", formatMessageTime(mes.timestamp))
                                 else Triple(mes,formatMessageDate(mes.timestamp), formatMessageTime(mes.timestamp))
-                            toMessageUi(newMessageTriple)
+                            toMessageUi(newMessageTriple, true)
                         }
                         newUi.lastOrNull()?.let { updateLastDate(it.message.timestamp) }
                         _messagesUi.update { old ->
@@ -172,7 +172,7 @@ abstract class BaseChatViewModel(
                         if(idx != -1) {
                             val element = old[idx]
                             val triple = Triple(element.message, element.formattedDate, element.formattedTime)
-                            val newUi = toMessageUi(triple)
+                            val newUi = toMessageUi(triple, true)
                             preloadAttachments(listOf(newUi))
                             old.toMutableList().apply {
                                 this[idx] = newUi.copy(
@@ -379,7 +379,7 @@ abstract class BaseChatViewModel(
                 else messengerService.insertUnsentMessageGroup(convId, mes)
                 mes = mes.copy(id = id)
                 _messagesUi.update { old ->
-                    val newUi = toMessageUi(Triple(mes, "", ""))
+                    val newUi = toMessageUi(Triple(mes, "", ""), false)
                     applyGroupDisplayInfo(listOf(newUi) + old)
                 }
                 _scrollTriggerFlow.emit(Unit)
@@ -521,14 +521,6 @@ abstract class BaseChatViewModel(
         return@withContext downloadedFile.absolutePath
     }
 
-    fun fManagerIsExist(fileName: String): Boolean {
-        return fileManager.isExistMessage(fileName)
-    }
-
-    fun fManagerGetFilePath(fileName: String): String {
-        return fileManager.getMessageFilePath(fileName)
-    }
-
     suspend fun fManagerDeleteUnsent(files: List<String>) = withContext(ioDispatcher) {
         fileManager.deleteFilesUnsent(files)
     }
@@ -618,11 +610,12 @@ abstract class BaseChatViewModel(
         }
     }
 
+    // todo это нужно отсюда перенести
     fun imageSet(image: String, imageView: ImageView, context: Context) {
         viewModelScope.launch {
             val filePathTemp = async {
-                if (fManagerIsExist(image)) {
-                    return@async fManagerGetFilePath(image)
+                if (fileManager.isExistMessage(image)) {
+                    return@async fileManager.getMessageFilePath(image)
                 } else {
                     try {
                         return@async downloadFile("photos", image)
@@ -711,12 +704,6 @@ abstract class BaseChatViewModel(
             size < mb -> "${(size / kb).toInt()} KB"
             else -> String.format(Locale.ROOT, "%.2f MB", size / mb)
         }
-    }
-
-    fun formatTime(milliseconds: Long): String {
-        val minutes = TimeUnit.MILLISECONDS.toMinutes(milliseconds)
-        val seconds = TimeUnit.MILLISECONDS.toSeconds(milliseconds) % 60
-        return String.format(Locale.ROOT,"%02d:%02d", minutes, seconds)
     }
 
     fun uriToFile(uri: Uri, context: Context): File? {
@@ -832,7 +819,7 @@ abstract class BaseChatViewModel(
 //        }
 //    }
 
-    protected fun toMessageUi(triple: Triple<Message, String, String>): MessageUi {
+    protected fun toMessageUi(triple: Triple<Message, String, String>, isFirstPage: Boolean): MessageUi {
         val (message, date, time) = triple
 
         val parsedText = message.text?.let {
@@ -844,6 +831,7 @@ abstract class BaseChatViewModel(
             formattedDate = date,
             formattedTime = time,
             parsedText = parsedText,
+            isFirstPage = isFirstPage,
             voiceState = if (message.voice != null) VoiceState.Loading else null,
             fileState = if (message.file != null) FileState.Loading else null,
             imageState = if (message.images?.size == 1) ImageState.Loading else null,
@@ -870,10 +858,14 @@ abstract class BaseChatViewModel(
                     try {
                         val voiceName = ui.message.voice!!
                         val localPath =
-                            if (fManagerIsExist(voiceName)) {
-                                fManagerGetFilePath(voiceName)
+                            if (fileManager.isExistMessage(voiceName)) {
+                                fileManager.getMessageFilePath(voiceName)
                             } else {
-                                downloadFile("audio", voiceName)
+                                val path = downloadFile("audio", voiceName)
+                                if(ui.isFirstPage) {
+                                    fileManager.saveMessageFile(voiceName, File(path).readBytes())
+                                }
+                                path
                             }
 
                         val duration = readDuration(localPath)
@@ -917,10 +909,14 @@ abstract class BaseChatViewModel(
                     try {
                         val fileName = ui.message.file!!
                         val localPath =
-                            if (fManagerIsExist(fileName)) {
-                                fManagerGetFilePath(fileName)
+                            if (fileManager.isExistMessage(fileName)) {
+                                fileManager.getMessageFilePath(fileName)
                             } else {
-                                downloadFile("files", fileName)
+                                val path = downloadFile("files", fileName)
+                                if(ui.isFirstPage) {
+                                    fileManager.saveMessageFile(fileName, File(path).readBytes())
+                                }
+                                path
                             }
 
                         val file = File(localPath)
@@ -968,10 +964,14 @@ abstract class BaseChatViewModel(
                     try {
                         val imageName = ui.message.images!!.first()
                         val localPath =
-                            if (fManagerIsExist(imageName)) {
-                                fManagerGetFilePath(imageName)
+                            if (fileManager.isExistMessage(imageName)) {
+                                fileManager.getMessageFilePath(imageName)
                             } else {
-                                downloadFile("photos", imageName)
+                                val path = downloadFile("photos", imageName)
+                                if(ui.isFirstPage) {
+                                    fileManager.saveMessageFile(imageName, File(path).readBytes())
+                                }
+                                path
                             }
 
                         ImageState.Ready(localPath)
@@ -1014,10 +1014,14 @@ abstract class BaseChatViewModel(
                         val imageNames = ui.message.images ?: emptyList()
 
                         val localPaths = imageNames.map { imageName ->
-                            if (fManagerIsExist(imageName)) {
-                                fManagerGetFilePath(imageName)
+                            if (fileManager.isExistMessage(imageName)) {
+                                fileManager.getMessageFilePath(imageName)
                             } else {
-                                downloadFile("photos", imageName)
+                                val path = downloadFile("photos", imageName)
+                                if(ui.isFirstPage) {
+                                    fileManager.saveMessageFile(imageName, File(path).readBytes())
+                                }
+                                path
                             }
                         }
                         ImagesState.Ready(localPaths)
@@ -1222,8 +1226,8 @@ abstract class BaseChatViewModel(
 
     private suspend fun preloadReplyImage(imageName: String): String? = withContext(ioDispatcher) {
         try {
-            if (fManagerIsExist(imageName)) {
-                fManagerGetFilePath(imageName)
+            if (fileManager.isExistMessage(imageName)) {
+                fileManager.getMessageFilePath(imageName)
             } else {
                 downloadFile("photos", imageName)
             }
@@ -1289,9 +1293,19 @@ abstract class BaseChatViewModel(
             .map { it.message }
     }
 
+    fun toggleCheckboxes(messageId: Int) {
+        _messagesUi.update { list ->
+            list.map {
+                if (it.message.id == messageId)
+                    it.copy(isShowCheckbox = true, isSelected = true)
+                else it.copy(isShowCheckbox = true)
+            }
+        }
+    }
+
     fun clearSelection() {
         _messagesUi.update { list ->
-            list.map { it.copy(isSelected = false) }
+            list.map { it.copy(isSelected = false, isShowCheckbox = false) }
         }
     }
 }

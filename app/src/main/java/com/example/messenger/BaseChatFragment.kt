@@ -723,7 +723,8 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                 else showPopupMenuMessage(itemView, R.menu.popup_menu_message_receiver, message, localMedias, false)
             }
 
-            override fun onMessageLongClick(itemView: View) {
+            override fun onMessageLongClick(messageId: Int) {
+                viewModel.toggleCheckboxes(messageId)
                 var flag = true
                 lifecycleScope.launch {
                     viewModel.stopRefresh()
@@ -837,6 +838,9 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     binding.recyclerview.smoothScrollToPosition(index)
                     viewModel.highlightMessage(referenceId)
                 }
+            }
+            override fun onSelected(messageId: Int) {
+                viewModel.toggleSelection(messageId)
             }
         }, currentUser.id, requireContext(), isGroup(), canDelete())
         adapter.setHasStableIds(true)
