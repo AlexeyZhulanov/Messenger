@@ -1,6 +1,5 @@
 package com.example.messenger.states
 
-import android.net.Uri
 import com.example.messenger.model.Message
 
 data class MessageUi(
@@ -53,7 +52,9 @@ sealed class FileState {
 sealed class ImageState {
     object Loading : ImageState()
     data class Ready(
-        val localPath: String
+        val localPath: String,
+        val mimeType: String,
+        val duration: Long
     ) : ImageState()
     object Error : ImageState()
 }
@@ -61,14 +62,16 @@ sealed class ImageState {
 sealed class ImagesState {
     object Loading : ImagesState()
     data class Ready(
-        val localPaths: List<String>
+        val localPaths: List<String>,
+        val mimeTypes: List<String>,
+        val durations: List<Long>
     ) : ImagesState()
     object Error : ImagesState()
 }
 
 sealed class AvatarState {
     object Loading : AvatarState()
-    data class Ready(val uri: Uri) : AvatarState()
+    data class Ready(val localPath: String) : AvatarState()
     object Error : AvatarState()
 }
 

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Rect
 import android.media.MediaPlayer
@@ -29,6 +30,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.CreationExtras
@@ -63,9 +65,9 @@ import androidx.core.view.isGone
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.messenger.MessageAdapter.Companion.PAYLOAD_PAUSE
-import com.example.messenger.MessageAdapter.Companion.PAYLOAD_PLAY_STATE
 import com.example.messenger.MessageAdapter.Companion.PAYLOAD_PROGRESS
 import com.example.messenger.MessageAdapter.Companion.PAYLOAD_STOP
+import com.example.messenger.states.FileState
 import com.example.messenger.states.MessageUi
 import com.example.messenger.states.VoiceState
 
@@ -871,6 +873,24 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     val player = mediaPlayer ?: return
                     if (player.isPlaying) {
                         player.seekTo(progress)
+                    }
+                }
+            }
+            override fun onFileOpenClick(messageId: Int) {
+                val ui = viewModel.messagesUi.value.firstOrNull { it.message.id == messageId } ?: return
+                val state = ui.fileState as? FileState.Ready ?: return
+                val file = File(state.localPath)
+                if(file.exists()) {
+                    try {
+                        val uri = FileProvider.getUriForFile(requireContext(), requireContext().applicationContext.packageName + ".provider", file)
+                        val intent = Intent(Intent.ACTION_VIEW)
+                        intent.setDataAndType(uri, requireContext().contentResolver.getType(uri))
+                        intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+
+                        val chooser = Intent.createChooser(intent, "Выберите приложение для открытия файла")
+                        requireContext().startActivity(chooser)
+                    } catch (e: IllegalArgumentException) {
+                        e.printStackTrace()
                     }
                 }
             }

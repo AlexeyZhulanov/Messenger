@@ -36,7 +36,6 @@ import com.example.messenger.states.ImagesState
 import com.example.messenger.states.MessageUi
 import com.example.messenger.states.VoiceState
 import com.luck.picture.lib.config.PictureMimeType
-import com.luck.picture.lib.entity.LocalMedia
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -57,7 +56,6 @@ import java.net.URLConnection
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 import androidx.core.net.toUri
 import com.example.messenger.states.AvatarState
 import com.example.messenger.states.ReplyPreview
@@ -116,7 +114,7 @@ abstract class BaseChatViewModel(
     private val imageCache = mutableMapOf<Int, ImageState>()
     private val imagesCache = mutableMapOf<Int, ImagesState>()
     private val loadingIds = mutableSetOf<Int>()
-    private val avatarCache = mutableMapOf<String, Uri>()
+    private val avatarCache = mutableMapOf<String, String>()
     private val avatarLoading = mutableSetOf<String>()
     private val replyCache = mutableMapOf<Int, ReplyState>()
     private val replyLoading = mutableSetOf<Int>()
@@ -650,14 +648,10 @@ abstract class BaseChatViewModel(
         return retrofitService.downloadAvatar(filename)
     }
 
-    fun fileToLocalMedia(file: File): LocalMedia {
-        val localMedia = LocalMedia()
+    suspend fun fileToPrepareLocalMedia(filePath: String): Pair<String, Long> = withContext(ioDispatcher) {
+        val file = File(filePath)
 
-        // Установите путь файла
-        localMedia.path = file.absolutePath
-
-        // Определите MIME тип файла на основе его расширения
-        localMedia.mimeType = when (file.extension.lowercase(Locale.ROOT)) {
+        val type = when (file.extension.lowercase(Locale.ROOT)) {
             "jpg", "jpeg" -> PictureMimeType.ofJPEG()
             "png" -> PictureMimeType.ofPNG()
             "mp4" -> PictureMimeType.ofMP4()
@@ -666,20 +660,11 @@ abstract class BaseChatViewModel(
             else -> PictureMimeType.MIME_TYPE_AUDIO // Или другой тип по умолчанию
         }
 
-        // Установите дополнительные свойства
-        localMedia.isCompressed = false // Или true, если вы хотите сжать изображение
-        localMedia.isCut = false // Если это изображение было обрезано
-        localMedia.isOriginal = false // Если это оригинальный файл
+        val duration = if (type == PictureMimeType.MIME_TYPE_VIDEO) {
+            getVideoDuration(file)
+        } else 0 // Для изображений длительность обычно равна 0
 
-        if (localMedia.mimeType == PictureMimeType.MIME_TYPE_VIDEO) {
-            // Получаем длительность видео
-            val duration = getVideoDuration(file)
-            localMedia.duration = duration
-        } else {
-            localMedia.duration = 0 // Для изображений длительность обычно равна 0
-        }
-
-        return localMedia
+        return@withContext type to duration
     }
 
     private fun getVideoDuration(file: File): Long {
@@ -856,22 +841,24 @@ abstract class BaseChatViewModel(
             val result = preloadSemaphore.withPermit {
                 withContext(ioDispatcher) {
                     try {
-                        val voiceName = ui.message.voice!!
-                        val localPath =
-                            if (fileManager.isExistMessage(voiceName)) {
+                        val voiceName = ui.message.voice ?: return@withContext VoiceState.Error
+                        val localPath = when {
+                            ui.message.isUnsent == true -> {
+                                ui.message.localFilePaths?.firstOrNull() ?: return@withContext VoiceState.Error
+                            }
+                            fileManager.isExistMessage(voiceName) -> {
                                 fileManager.getMessageFilePath(voiceName)
-                            } else {
+                            }
+                            else -> {
                                 val path = downloadFile("audio", voiceName)
                                 if(ui.isFirstPage) {
                                     fileManager.saveMessageFile(voiceName, File(path).readBytes())
                                 }
                                 path
                             }
-
+                        }
                         val duration = readDuration(localPath)
-
                         VoiceState.Ready(localPath, duration)
-
                     } catch (_: Exception) {
                         VoiceState.Error
                     }
@@ -907,18 +894,22 @@ abstract class BaseChatViewModel(
             val result = preloadSemaphore.withPermit {
                 withContext(ioDispatcher) {
                     try {
-                        val fileName = ui.message.file!!
-                        val localPath =
-                            if (fileManager.isExistMessage(fileName)) {
+                        val fileName = ui.message.file ?: return@withContext FileState.Error
+                        val localPath = when {
+                            ui.message.isUnsent == true -> {
+                                ui.message.localFilePaths?.firstOrNull() ?: return@withContext FileState.Error
+                            }
+                            fileManager.isExistMessage(fileName) -> {
                                 fileManager.getMessageFilePath(fileName)
-                            } else {
+                            }
+                            else -> {
                                 val path = downloadFile("files", fileName)
                                 if(ui.isFirstPage) {
                                     fileManager.saveMessageFile(fileName, File(path).readBytes())
                                 }
                                 path
                             }
-
+                        }
                         val file = File(localPath)
 
                         FileState.Ready(
@@ -926,7 +917,6 @@ abstract class BaseChatViewModel(
                             fileName = file.name,
                             fileSize = formatFileSize(file.length())
                         )
-
                     } catch (_: Exception) {
                         FileState.Error
                     }
@@ -962,20 +952,24 @@ abstract class BaseChatViewModel(
             val result = preloadSemaphore.withPermit {
                 withContext(ioDispatcher) {
                     try {
-                        val imageName = ui.message.images!!.first()
-                        val localPath =
-                            if (fileManager.isExistMessage(imageName)) {
+                        val imageName = ui.message.images?.first() ?: return@withContext ImageState.Error
+                        val localPath = when {
+                            ui.message.isUnsent == true -> {
+                                ui.message.localFilePaths?.firstOrNull() ?: return@withContext ImageState.Error
+                            }
+                            fileManager.isExistMessage(imageName) -> {
                                 fileManager.getMessageFilePath(imageName)
-                            } else {
+                            }
+                            else -> {
                                 val path = downloadFile("photos", imageName)
                                 if(ui.isFirstPage) {
                                     fileManager.saveMessageFile(imageName, File(path).readBytes())
                                 }
                                 path
                             }
-
-                        ImageState.Ready(localPath)
-
+                        }
+                        val (mimeType, duration) = fileToPrepareLocalMedia(localPath)
+                        ImageState.Ready(localPath, mimeType, duration)
                     } catch (_: Exception) {
                         ImageState.Error
                     }
@@ -1011,21 +1005,28 @@ abstract class BaseChatViewModel(
             val result = preloadSemaphore.withPermit {
                 withContext(ioDispatcher) {
                     try {
-                        val imageNames = ui.message.images ?: emptyList()
+                        val imageNames = ui.message.images ?: return@withContext ImagesState.Error
 
-                        val localPaths = imageNames.map { imageName ->
-                            if (fileManager.isExistMessage(imageName)) {
-                                fileManager.getMessageFilePath(imageName)
-                            } else {
-                                val path = downloadFile("photos", imageName)
-                                if(ui.isFirstPage) {
-                                    fileManager.saveMessageFile(imageName, File(path).readBytes())
+                        val localPaths = imageNames.mapIndexed { index, imageName ->
+                            when {
+                                ui.message.isUnsent == true -> {
+                                    ui.message.localFilePaths?.get(index) ?: return@withContext ImagesState.Error
                                 }
-                                path
+                                fileManager.isExistMessage(imageName) -> {
+                                    fileManager.getMessageFilePath(imageName)
+                                }
+                                else -> {
+                                    val path = downloadFile("photos", imageName)
+                                    if(ui.isFirstPage) {
+                                        fileManager.saveMessageFile(imageName, File(path).readBytes())
+                                    }
+                                    path
+                                }
                             }
                         }
-                        ImagesState.Ready(localPaths)
-
+                        val processed = localPaths.map { fileToPrepareLocalMedia(it) }
+                        val (mimeTypes, durations) = processed.map { it.first } to processed.map { it.second }
+                        ImagesState.Ready(localPaths, mimeTypes, durations)
                     } catch (_: Exception) {
                         ImagesState.Error
                     }
@@ -1051,8 +1052,8 @@ abstract class BaseChatViewModel(
         if (avatar.isBlank()) return
 
         // Уже есть?
-        avatarCache[avatar]?.let { uri ->
-            updateAvatarState(messageId, AvatarState.Ready(uri))
+        avatarCache[avatar]?.let { path ->
+            updateAvatarState(messageId, AvatarState.Ready(path))
             return
         }
 
@@ -1077,11 +1078,8 @@ abstract class BaseChatViewModel(
                                 downloaded
                             }
 
-                        val file = File(localPath)
-                        val uri = Uri.fromFile(file)
-
-                        avatarCache[avatar] = uri
-                        AvatarState.Ready(uri)
+                        avatarCache[avatar] = localPath
+                        AvatarState.Ready(localPath)
                     } catch (_: Exception) {
                         AvatarState.Error
                     }
