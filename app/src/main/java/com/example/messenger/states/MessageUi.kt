@@ -8,6 +8,7 @@ data class MessageUi(
     val formattedTime: String,
     val parsedText: CharSequence? = null,
     val isFirstPage: Boolean = false,
+    val previewCode: String? = null,
 
     // Checkbox на удаление и пересылку
     val isSelected: Boolean = false,
@@ -59,12 +60,16 @@ sealed class ImageState {
     object Error : ImageState()
 }
 
+data class ImageItem(
+    val localPath: String,
+    val mimeType: String,
+    val duration: Long
+)
+
 sealed class ImagesState {
     object Loading : ImagesState()
     data class Ready(
-        val localPaths: List<String>,
-        val mimeTypes: List<String>,
-        val durations: List<Long>
+        val imageItems: List<ImageItem>
     ) : ImagesState()
     object Error : ImagesState()
 }

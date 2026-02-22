@@ -58,6 +58,7 @@ import java.util.Calendar
 import java.util.Locale
 import androidx.core.net.toUri
 import com.example.messenger.states.AvatarState
+import com.example.messenger.states.ImageItem
 import com.example.messenger.states.ReplyPreview
 import com.example.messenger.states.ReplyState
 import com.example.messenger.utils.chunkedFlowLast
@@ -810,6 +811,7 @@ abstract class BaseChatViewModel(
         val parsedText = message.text?.let {
             if (message.isUrl == true) parseMessageWithLinks(it) else it
         }
+        val previewCode = message.code?.lines()?.take(5)?.joinToString("\n")
 
         return MessageUi(
             message = message,
@@ -817,6 +819,7 @@ abstract class BaseChatViewModel(
             formattedTime = time,
             parsedText = parsedText,
             isFirstPage = isFirstPage,
+            previewCode = previewCode,
             voiceState = if (message.voice != null) VoiceState.Loading else null,
             fileState = if (message.file != null) FileState.Loading else null,
             imageState = if (message.images?.size == 1) ImageState.Loading else null,
@@ -1025,8 +1028,10 @@ abstract class BaseChatViewModel(
                             }
                         }
                         val processed = localPaths.map { fileToPrepareLocalMedia(it) }
-                        val (mimeTypes, durations) = processed.map { it.first } to processed.map { it.second }
-                        ImagesState.Ready(localPaths, mimeTypes, durations)
+                        val imageItems = localPaths.zip(processed) { localPath, (mimeType, duration) ->
+                            ImageItem(localPath, mimeType, duration)
+                        }
+                        ImagesState.Ready(imageItems)
                     } catch (_: Exception) {
                         ImagesState.Error
                     }

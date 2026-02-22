@@ -1,33 +1,25 @@
 package com.example.messenger
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
-import android.media.MediaPlayer
-import android.net.Uri
-import android.os.Handler
-import android.os.Looper
 import android.text.method.LinkMovementMethod
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
-import android.view.View.GONE
-import android.view.View.VISIBLE
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.codeview.syntax.LanguageManager
 import com.example.messenger.codeview.syntax.LanguageName
 import com.example.messenger.codeview.syntax.ThemeName
+import com.example.messenger.customview.AdaptiveGridSpacingItemDecoration
+import com.example.messenger.customview.CustomLayoutManager
 import com.example.messenger.databinding.ItemCodeReceiverBinding
 import com.example.messenger.databinding.ItemCodeSenderBinding
 import com.example.messenger.databinding.ItemFileReceiverBinding
@@ -45,16 +37,11 @@ import com.example.messenger.picker.DateUtils
 import com.example.messenger.states.AvatarState
 import com.example.messenger.states.FileState
 import com.example.messenger.states.ImageState
+import com.example.messenger.states.ImagesState
 import com.luck.picture.lib.config.PictureMimeType
 import com.luck.picture.lib.config.SelectMimeType
-import com.luck.picture.lib.entity.LocalMedia
 import com.masoudss.lib.SeekBarOnProgressChanged
 import com.masoudss.lib.WaveformSeekBar
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
-import java.io.File
 import com.example.messenger.states.MessageUi
 import com.example.messenger.states.ReplyState
 import com.example.messenger.states.VoiceState
@@ -97,6 +84,8 @@ class MessageAdapter(
     private val canDelete: Boolean
 ) : ListAdapter<MessageUi, RecyclerView.ViewHolder>(MessageDiffCallback()) {
     var canLongClick: Boolean = true
+
+    private val sharedPool = RecyclerView.RecycledViewPool()
 
     override fun getItemCount(): Int = currentList.size
 
@@ -436,7 +425,7 @@ class MessageAdapter(
                     }
                 }
                 is ReplyState.Error -> {
-                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
+                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
                     binding.answerLayout.root.isVisible = true
                     binding.answerLayout.answerMessage.text = "Сообщение недоступно"
                 }
@@ -745,7 +734,7 @@ class MessageAdapter(
                     }
                 }
                 is ReplyState.Error -> {
-                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
+                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
                     binding.answerLayout.root.isVisible = true
                     binding.answerLayout.answerMessage.text = "Сообщение недоступно"
                 }
@@ -1005,7 +994,7 @@ class MessageAdapter(
                     }
                 }
                 is ReplyState.Error -> {
-                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
+                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
                     binding.answerLayout.root.isVisible = true
                     binding.answerLayout.answerMessage.text = "Сообщение недоступно"
                 }
@@ -1202,15 +1191,13 @@ class MessageAdapter(
 
                     if (chooseModel == SelectMimeType.ofAudio()) {
                         binding.tvDuration.isVisible = true
-                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                            com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ps_ic_audio, 0, 0, 0)
                     } else {
-                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                            com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ps_ic_video, 0, 0, 0)
                     }
                     binding.tvDuration.text = (DateUtils.formatDurationTime(state.duration))
                     if (chooseModel == SelectMimeType.ofAudio()) {
-                        binding.receiverImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
+                        binding.receiverImageView.setImageResource(R.drawable.ps_audio_placeholder)
                     } else {
                         Glide.with(binding.receiverImageView)
                             .load(state.localPath)
@@ -1299,7 +1286,7 @@ class MessageAdapter(
                     }
                 }
                 is ReplyState.Error -> {
-                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
+                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
                     binding.answerLayout.root.isVisible = true
                     binding.answerLayout.answerMessage.text = "Сообщение недоступно"
                 }
@@ -1369,15 +1356,13 @@ class MessageAdapter(
 
                     if (chooseModel == SelectMimeType.ofAudio()) {
                         binding.tvDuration.isVisible = true
-                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                            com.luck.picture.lib.R.drawable.ps_ic_audio, 0, 0, 0)
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ps_ic_audio, 0, 0, 0)
                     } else {
-                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                            com.luck.picture.lib.R.drawable.ps_ic_video, 0, 0, 0)
+                        binding.tvDuration.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ps_ic_video, 0, 0, 0)
                     }
                     binding.tvDuration.text = (DateUtils.formatDurationTime(state.duration))
                     if (chooseModel == SelectMimeType.ofAudio()) {
-                        binding.senderImageView.setImageResource(com.luck.picture.lib.R.drawable.ps_audio_placeholder)
+                        binding.senderImageView.setImageResource(R.drawable.ps_audio_placeholder)
                     } else {
                         Glide.with(binding.senderImageView)
                             .load(state.localPath)
@@ -1398,18 +1383,17 @@ class MessageAdapter(
 
     inner class MessagesViewHolderTextImagesReceiver(private val binding: ItemTextImagesReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
         private var messageSave: Message? = null
-        private var localMediasSave: ArrayList<LocalMedia> = arrayListOf()
 
-        private val adapter = ImagesAdapter(context, object: ImagesActionListener {
-            override fun onImageClicked(images: ArrayList<LocalMedia>, position: Int) {
-                actionListener.onImagesClick(images, position)
+        private val adapter = ImagesAdapter(object: ImagesActionListener {
+            override fun onImageClicked(position: Int) {
+                messageSave?.let {
+                    actionListener.onImagesClick(it.id, position)
+                }
             }
-
             override fun onLongImageClicked() {
                 if(canLongClick) {
                     messageSave?.let {
-                        onLongClick(it.id, false)
-                        actionListener.onMessageLongClick(itemView)
+                        actionListener.onMessageLongClick(it.id)
                     }
                 }
             }
@@ -1418,172 +1402,156 @@ class MessageAdapter(
         init {
             binding.recyclerview.layoutManager = CustomLayoutManager()
             binding.recyclerview.addItemDecoration(AdaptiveGridSpacingItemDecoration(2, true))
-            binding.recyclerview.setItemViewCacheSize(5)
+            binding.recyclerview.setRecycledViewPool(sharedPool)
+            binding.recyclerview.setHasFixedSize(true)
             binding.recyclerview.adapter = adapter
 
             binding.root.setOnClickListener {
                 messageSave?.let {
                     if(!canLongClick && canDelete) {
-                        savePosition(it.id, false)
+                        actionListener.onSelected(it.id)
                     } else {
-                        if(localMediasSave.isNotEmpty()) {
-                            actionListener.onMessageClickImage(it, itemView, localMediasSave, false)
-                        }
+                        actionListener.onMessageClickImage(it, itemView, false)
                     }
                 }
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick && canDelete) {
                     messageSave?.let {
-                        onLongClick(it.id, false)
-                        actionListener.onMessageLongClick(itemView)
+                        actionListener.onMessageLongClick(it.id)
                     }
                 }
                 true
             }
             binding.checkbox.setOnClickListener {
-                messageSave?.let { savePosition(it.id, false) }
+                messageSave?.let { actionListener.onSelected(it.id) }
+            }
+            binding.answerLayout.root.setOnClickListener {
+                messageSave?.referenceToMessageId?.let { actionListener.onReplyClick(it) }
             }
         }
 
-        fun updateAvatar() {
-            binding.photoImageView.visibility = View.GONE
-            binding.spaceAvatar.visibility = View.VISIBLE
-        }
+        fun bind(ui: MessageUi) {
+            messageSave = ui.message
 
-        fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
-            messageSave = message
+            binding.checkbox.isVisible = ui.isShowCheckbox
+            when(val state = ui.replyState) {
+                is ReplyState.Loading -> {
+                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
+                    binding.answerLayout.root.isVisible = true
+                    binding.answerLayout.answerMessage.text = "..."
+                }
+                is ReplyState.Ready -> {
+                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
+                    binding.answerLayout.root.isVisible = true
+                    binding.answerLayout.answerMessage.text = state.previewText
+                    binding.answerLayout.answerUsername.text = state.username
+                    state.previewImagePath?.let {
+                        Glide.with(binding.answerLayout.answerImageView)
+                            .load(it)
+                            .centerCrop()
+                            .dontAnimate()
+                            .into(binding.answerLayout.answerImageView)
+                    }
+                }
+                is ReplyState.Error -> {
+                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
+                    binding.answerLayout.root.isVisible = true
+                    binding.answerLayout.answerMessage.text = "Сообщение недоступно"
+                }
+                null -> binding.answerLayout.root.isVisible = false
+            }
 
-            if(isAnswer) handleAnswerLayout(binding, message, false)
-            else binding.answerLayout.root.visibility = View.GONE
-
-            if(message.isForwarded) {
-                binding.forwardLayout.root.visibility = View.VISIBLE
+            if(ui.message.isForwarded) {
+                binding.forwardLayout.root.isVisible = true
                 binding.forwardLayout.root.setBackgroundResource(R.drawable.answer_background)
-                binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
-            } else binding.forwardLayout.root.visibility = View.GONE
+                binding.forwardLayout.forwardUsername.text = ui.message.usernameAuthorOriginal
+            } else binding.forwardLayout.root.isVisible = false
 
+            val flagText = !ui.message.text.isNullOrEmpty()
             val timeTextView = if(flagText) binding.timeTextView else binding.timeTextViewImage
             val editTextView = if(flagText) binding.editTextView else binding.editTextViewImage
             with(binding) {
                 if(flagText) {
-                    customMessageLayout.visibility = View.VISIBLE
-                    timeLayout.visibility = View.GONE
-                    message.text?.let {
-                        if(message.isUrl == true) {
-                            val processedText = parseMessageWithLinks(it)
-                            binding.messageReceiverTextView.text = processedText
-                            binding.messageReceiverTextView.movementMethod = LinkMovementMethod.getInstance()
-                        } else binding.messageReceiverTextView.text = it
-                    }
+                    customMessageLayout.isVisible = true
+                    timeLayout.isVisible = false
+                    messageReceiverTextView.text = ui.parsedText
+                    if(ui.message.isUrl == true) messageReceiverTextView.movementMethod = LinkMovementMethod.getInstance()
                 } else {
-                    customMessageLayout.visibility = View.GONE
-                    timeLayout.visibility = View.VISIBLE
+                    customMessageLayout.isVisible = false
+                    timeLayout.isVisible = true
                 }
             }
-
-            if(date != "") {
-                binding.dateTextView.visibility = View.VISIBLE
-                binding.dateTextView.text = date
+            if(ui.formattedDate != "") {
+                binding.dateTextView.isVisible = true
+                binding.dateTextView.text = ui.formattedDate
             } else {
-                binding.dateTextView.visibility = View.GONE
-                binding.space.visibility = View.GONE
+                binding.dateTextView.isVisible = false
+                binding.space.isVisible = false
             }
 
-            timeTextView.text = time
+            timeTextView.text = ui.formattedTime
+            editTextView.isVisible = ui.message.isEdited
             if(isGroup) {
-                val user = members[message.id]
-                if(user != null) {
-                    if(user.first != null) {
-                        binding.userNameTextView.visibility = View.VISIBLE
-                        binding.userNameTextView.text = user.first
-                    } else binding.userNameTextView.visibility = View.GONE
-                    if(user.second != null) {
-                        binding.photoImageView.visibility = View.VISIBLE
-                        binding.spaceAvatar.visibility = View.GONE
-                        if(user.second != "") messageViewModel.avatarSet(user.second ?: "", binding.photoImageView, context)
-                    } else {
-                        binding.spaceAvatar.visibility = View.VISIBLE
-                        binding.photoImageView.visibility = View.GONE
+                binding.userNameTextView.isVisible = ui.showUsername
+                ui.username?.let { binding.userNameTextView.text = it }
+                when(val state = ui.avatarState) {
+                    is AvatarState.Loading -> {
+                        binding.photoImageView.isVisible = true
                     }
-                } else {
-                    binding.spaceAvatar.visibility = View.VISIBLE
-                    binding.photoImageView.visibility = View.GONE
-                    binding.userNameTextView.visibility = View.GONE
+                    is AvatarState.Ready -> {
+                        binding.photoImageView.isVisible = true
+                        Glide.with(binding.photoImageView)
+                            .load(state.localPath)
+                            .apply(RequestOptions.circleCropTransform())
+                            .dontAnimate()
+                            .into(binding.photoImageView)
+                    }
+                    is AvatarState.Error -> {
+                        binding.photoImageView.isVisible = true
+                    }
+                    null -> {
+                        binding.photoImageView.isVisible = ui.showAvatar
+                        binding.spaceAvatar.isVisible = !ui.showAvatar
+                    }
                 }
             } else {
-                binding.spaceAvatar.visibility = View.GONE
-                binding.photoImageView.visibility = View.GONE
-                binding.userNameTextView.visibility = View.GONE
+                binding.spaceAvatar.isVisible = false
+                binding.photoImageView.isVisible = false
+                binding.userNameTextView.isVisible = false
             }
-
-            if(!canLongClick && canDelete) {
-                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
-                binding.checkbox.isChecked = position in checkedPositions
-            } else binding.checkbox.visibility = View.GONE
-
-            if(message.isEdited) editTextView.visibility = View.VISIBLE
-            else editTextView.visibility = View.GONE
-
-            binding.progressBar.visibility = View.VISIBLE
-            binding.errorImageView.visibility = View.GONE
-            val semaphore = Semaphore(4)
-            uiScopeMain.launch {
-                val localMedias = async {
-                    val medias = arrayListOf<LocalMedia>()
-                    for (image in message.images!!) {
-                        val filePath = async {
-                            semaphore.withPermit {
-                                if (messageViewModel.fManagerIsExist(image)) {
-                                    Pair(messageViewModel.fManagerGetFilePath(image), true)
-                                } else {
-                                    try {
-                                        Pair(messageViewModel.downloadFile(context, "photos", image), false)
-                                    } catch (_: Exception) {
-                                        Pair(null, true)
-                                    }
-                                }
-                            }
-                        }
-                        val (first, second) = filePath.await()
-                        if (first != null) {
-                        val file = File(first)
-                        if (file.exists()) {
-                            if (!second && isInLast30) messageViewModel.fManagerSaveFile(image, file.readBytes())
-                            medias += messageViewModel.fileToLocalMedia(file)
-                        } else {
-                            Log.e("ImageError", "File does not exist: $filePath")
-                            binding.progressBar.visibility = View.GONE
-                            binding.errorImageView.visibility = View.VISIBLE
-                        }
-                    } else {
-                            binding.progressBar.visibility = View.GONE
-                            binding.errorImageView.visibility = View.VISIBLE
-                        }
-                    }
-                    return@async medias
+            when (val state = ui.imagesState) {
+                is ImagesState.Loading -> {
+                    binding.progressBar.isVisible = true
+                    binding.errorImageView.isVisible = false
                 }
-                localMediasSave = localMedias.await()
-                adapter.images = localMedias.await()
-                binding.progressBar.visibility = View.GONE
+                is ImagesState.Ready -> {
+                    binding.progressBar.isVisible = false
+                    binding.errorImageView.isVisible = false
+                    adapter.submitList(state.imageItems)
+                }
+                is ImagesState.Error -> {
+                    binding.progressBar.isVisible = false
+                    binding.errorImageView.isVisible = true
+                }
+                null -> Unit
             }
         }
     }
 
     inner class MessagesViewHolderTextImagesSender(private val binding: ItemTextImagesSenderBinding) : RecyclerView.ViewHolder(binding.root) {
         private var messageSave: Message? = null
-        private var localMediasSave: ArrayList<LocalMedia> = arrayListOf()
 
-        private val adapter = ImagesAdapter(context, object: ImagesActionListener {
-            override fun onImageClicked(images: ArrayList<LocalMedia>, position: Int) {
-                actionListener.onImagesClick(images, position)
+        private val adapter = ImagesAdapter(object: ImagesActionListener {
+            override fun onImageClicked(position: Int) {
+                messageSave?.let {
+                    actionListener.onImagesClick(it.id, position)
+                }
             }
-
             override fun onLongImageClicked() {
                 if(canLongClick) {
                     messageSave?.let {
-                        onLongClick(it.id, true)
-                        actionListener.onMessageLongClick(itemView)
+                        actionListener.onMessageLongClick(it.id)
                     }
                 }
             }
@@ -1592,33 +1560,32 @@ class MessageAdapter(
         init {
             binding.recyclerview.layoutManager = CustomLayoutManager()
             binding.recyclerview.addItemDecoration(AdaptiveGridSpacingItemDecoration(2, true))
-            binding.recyclerview.setItemViewCacheSize(5)
+            binding.recyclerview.setRecycledViewPool(sharedPool)
+            binding.recyclerview.setHasFixedSize(true)
             binding.recyclerview.adapter = adapter
 
             binding.root.setOnClickListener {
                 messageSave?.let {
                     when {
                         it.isUnsent == true -> actionListener.onUnsentMessageClick(it, itemView)
-                        !canLongClick -> savePosition(it.id, true)
-                        else -> {
-                            if(localMediasSave.isNotEmpty()) {
-                                actionListener.onMessageClickImage(it, itemView, localMediasSave, true)
-                            }
-                        }
+                        !canLongClick -> actionListener.onSelected(it.id)
+                        else -> actionListener.onMessageClickImage(it, itemView, true)
                     }
                 }
             }
             binding.root.setOnLongClickListener {
-                if(canLongClick) {
+                if(canLongClick && messageSave?.isUnsent != true) {
                     messageSave?.let {
-                        onLongClick(it.id, true)
-                        actionListener.onMessageLongClick(itemView)
+                        actionListener.onMessageLongClick(it.id)
                     }
                 }
                 true
             }
             binding.checkbox.setOnClickListener {
-                messageSave?.let { savePosition(it.id, true) }
+                messageSave?.let { actionListener.onSelected(it.id) }
+            }
+            binding.answerLayout.root.setOnClickListener {
+                messageSave?.referenceToMessageId?.let { actionListener.onReplyClick(it) }
             }
         }
 
@@ -1626,28 +1593,54 @@ class MessageAdapter(
             with(binding) {
                 if(timeLayout.isVisible) {
                     icCheckImage.visibility = View.INVISIBLE
-                    icCheck2Image.visibility = View.VISIBLE
+                    icCheck2Image.isVisible = true
                     icCheck2Image.bringToFront()
                 } else {
                     icCheck.visibility = View.INVISIBLE
-                    icCheck2.visibility = View.VISIBLE
+                    icCheck2.isVisible = true
                     icCheck2.bringToFront()
                 }
             }
         }
 
-        fun bind(message: Message, date: String, time: String, position: Int, flagText: Boolean, isInLast30: Boolean, isAnswer: Boolean) {
-            messageSave = message
+        fun bind(ui: MessageUi) {
+            messageSave = ui.message
 
-            if(isAnswer) handleAnswerLayout(binding, message, true)
-            else binding.answerLayout.root.visibility = View.GONE
+            binding.checkbox.isVisible = ui.isShowCheckbox && ui.message.isUnsent != true
+            when(val state = ui.replyState) {
+                is ReplyState.Loading -> {
+                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
+                    binding.answerLayout.root.isVisible = true
+                    binding.answerLayout.answerMessage.text = "..."
+                }
+                is ReplyState.Ready -> {
+                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
+                    binding.answerLayout.root.isVisible = true
+                    binding.answerLayout.answerMessage.text = state.previewText
+                    binding.answerLayout.answerUsername.text = state.username
+                    state.previewImagePath?.let {
+                        Glide.with(binding.answerLayout.answerImageView)
+                            .load(it)
+                            .centerCrop()
+                            .dontAnimate()
+                            .into(binding.answerLayout.answerImageView)
+                    }
+                }
+                is ReplyState.Error -> {
+                    binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
+                    binding.answerLayout.root.isVisible = true
+                    binding.answerLayout.answerMessage.text = "Сообщение недоступно"
+                }
+                null -> binding.answerLayout.root.isVisible = false
+            }
 
-            if(message.isForwarded) {
-                binding.forwardLayout.root.visibility = View.VISIBLE
+            if(ui.message.isForwarded) {
+                binding.forwardLayout.root.isVisible = true
                 binding.forwardLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
-                binding.forwardLayout.forwardUsername.text = message.usernameAuthorOriginal
-            } else binding.forwardLayout.root.visibility = View.GONE
+                binding.forwardLayout.forwardUsername.text = ui.message.usernameAuthorOriginal
+            } else binding.forwardLayout.root.isVisible = false
 
+            val flagText = !ui.message.text.isNullOrEmpty()
             val timeTextView = if(flagText) binding.timeTextView else binding.timeTextViewImage
             val editTextView = if(flagText) binding.editTextView else binding.editTextViewImage
             val icCheck = if(flagText) binding.icCheck else binding.icCheckImage
@@ -1655,232 +1648,181 @@ class MessageAdapter(
             val icError = if(flagText) binding.icError else binding.icErrorImage
             with(binding) {
                 if(flagText) {
-                    customMessageLayout.visibility = View.VISIBLE
-                    timeLayout.visibility = View.GONE
-                    message.text?.let {
-                        if(message.isUrl == true) {
-                            val processedText = parseMessageWithLinks(it)
-                            binding.messageSenderTextView.text = processedText
-                            binding.messageSenderTextView.movementMethod = LinkMovementMethod.getInstance()
-                        } else binding.messageSenderTextView.text = it
-                    }
+                    customMessageLayout.isVisible = true
+                    timeLayout.isVisible = false
+                    messageSenderTextView.text = ui.parsedText
+                    if(ui.message.isUrl == true) messageSenderTextView.movementMethod = LinkMovementMethod.getInstance()
                 } else {
-                    customMessageLayout.visibility = View.GONE
-                    timeLayout.visibility = View.VISIBLE
+                    customMessageLayout.isVisible = false
+                    timeLayout.isVisible = true
                 }
             }
-            if(message.isUnsent == true) {
-                binding.dateTextView.visibility = View.GONE
+            if(ui.message.isUnsent == true) {
+                binding.dateTextView.isVisible = false
                 timeTextView.text = "----"
                 icCheck.visibility = View.INVISIBLE
                 icCheck2.visibility = View.INVISIBLE
-                editTextView.visibility = View.GONE
-                icError.visibility = View.VISIBLE
+                editTextView.isVisible = false
+                icError.isVisible = true
             } else {
-                icError.visibility = View.GONE
-                if(date != "") {
-                    binding.dateTextView.visibility = View.VISIBLE
-                    binding.dateTextView.text = date
+                icError.isVisible = false
+                if(ui.formattedDate != "") {
+                    binding.dateTextView.isVisible = true
+                    binding.dateTextView.text = ui.formattedDate
                 } else {
-                    binding.dateTextView.visibility = View.GONE
-                    binding.space.visibility = View.GONE
+                    binding.dateTextView.isVisible = false
+                    binding.space.isVisible = false
                 }
 
-                timeTextView.text = time
-
-                if(!canLongClick) {
-                    if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
-                    binding.checkbox.isChecked = position in checkedPositions
-                }
-                else binding.checkbox.visibility = View.GONE
-
-                if (message.isRead) {
+                timeTextView.text = ui.formattedTime
+                if (ui.message.isRead) {
                     updateReadStatus()
                 } else {
-                    icCheck.visibility = View.VISIBLE
+                    icCheck.isVisible = true
                     icCheck2.visibility = View.INVISIBLE
                 }
-                if(message.isEdited) editTextView.visibility = View.VISIBLE
-                else editTextView.visibility = View.GONE
+                editTextView.isVisible = ui.message.isEdited
             }
-            binding.progressBar.visibility = View.VISIBLE
-            binding.errorImageView.visibility = View.GONE
-            val semaphore = Semaphore(4)
-            uiScopeMain.launch {
-                val localMedias = async {
-                    val medias = arrayListOf<LocalMedia>()
-                    message.images?.forEachIndexed { index, image ->
-                        val filePath = async {
-                            semaphore.withPermit {
-                                if (message.isUnsent == true) {
-                                    Pair(message.localFilePaths?.get(index), true)
-                                } else {
-                                    if (messageViewModel.fManagerIsExist(image)) {
-                                        Pair(messageViewModel.fManagerGetFilePath(image), true)
-                                    } else {
-                                        try {
-                                            Pair(messageViewModel.downloadFile(context, "photos", image), false)
-                                        } catch (_: Exception) {
-                                            Pair(null, true)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        val (first, second) = filePath.await()
-                        if (first != null) {
-                            val file = File(first)
-                            if (file.exists()) {
-                                if (!second && isInLast30) messageViewModel.fManagerSaveFile(image, file.readBytes())
-                                medias += messageViewModel.fileToLocalMedia(file)
-                            } else {
-                                Log.e("ImageError", "File does not exist: $filePath")
-                                binding.progressBar.visibility = View.GONE
-                                binding.errorImageView.visibility = View.VISIBLE
-                            }
-                        } else {
-                            binding.progressBar.visibility = View.GONE
-                            binding.errorImageView.visibility = View.VISIBLE
-                        }
-                    }
-                    return@async medias
+            when (val state = ui.imagesState) {
+                is ImagesState.Loading -> {
+                    binding.progressBar.isVisible = true
+                    binding.errorImageView.isVisible = false
                 }
-                localMediasSave = localMedias.await()
-                adapter.images = localMedias.await()
-                binding.progressBar.visibility = View.GONE
+                is ImagesState.Ready -> {
+                    binding.progressBar.isVisible = false
+                    binding.errorImageView.isVisible = false
+                    adapter.submitList(state.imageItems)
+                }
+                is ImagesState.Error -> {
+                    binding.progressBar.isVisible = false
+                    binding.errorImageView.isVisible = true
+                }
+                null -> Unit
             }
         }
     }
 
-    // ViewHolder для текстовых сообщений получателя
     inner class MessagesViewHolderCodeReceiver(private val binding: ItemCodeReceiverBinding) : RecyclerView.ViewHolder(binding.root) {
 
         private var messageSave: Message? = null
-
-        private val jetBrainsMono: Typeface? = ResourcesCompat.getFont(context, R.font.jetbrains_mono_medium)
+        private val languageManager = LanguageManager(context, binding.codeView)
+        private var currentLang: LanguageName? = null
 
         init {
+            val jetBrainsMono: Typeface? = ResourcesCompat.getFont(context, R.font.jetbrains_mono_medium)
+            binding.codeView.setTypeface(jetBrainsMono)
+
             binding.root.setOnClickListener {
                 messageSave?.let {
                     if(!canLongClick && canDelete) {
-                        savePosition(it.id, false)
+                        actionListener.onSelected(it.id)
                     } else actionListener.onMessageClick(it, itemView, false)
                 }
             }
             binding.root.setOnLongClickListener {
                 if(canLongClick && canDelete) {
                     messageSave?.let {
-                        onLongClick(it.id, false)
-                        actionListener.onMessageLongClick(itemView)
+                        actionListener.onMessageLongClick(it.id)
                     }
                 }
                 true
             }
             binding.checkbox.setOnClickListener {
-                messageSave?.let { savePosition(it.id, false) }
+                messageSave?.let { actionListener.onSelected(it.id) }
             }
             binding.openFullIcon.setOnClickListener {
                 messageSave?.let { actionListener.onCodeOpenClick(it) }
             }
         }
 
-        fun updateAvatar() {
-            binding.photoImageView.visibility = View.GONE
-            binding.spaceAvatar.visibility = View.VISIBLE
-        }
+        fun bind(ui: MessageUi) {
+            messageSave = ui.message
 
-        fun bind(message: Message, date: String, time: String, position: Int) {
-            messageSave = message
-
-            if(!canLongClick && canDelete) {
-                if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
-                binding.checkbox.isChecked = position in checkedPositions
-            } else binding.checkbox.visibility = View.GONE
-
-            message.code?.let {
-                val shortCode = it.lines().take(5).joinToString("\n")
-                val lang = when(message.codeLanguage) {
+            binding.checkbox.isVisible = ui.isShowCheckbox
+            ui.previewCode?.let {
+                val lang = when(ui.message.codeLanguage) {
                     "java" -> LanguageName.JAVA
                     "python" -> LanguageName.PYTHON
                     "go" -> LanguageName.GO_LANG
                     else -> null
                 }
-                binding.codeView.setTypeface(jetBrainsMono)
-                lang?.let { lang ->
-                    LanguageManager(context, binding.codeView).apply {
-                        applyTheme(lang, ThemeName.MONOKAI)
-                    }
+                if (lang != null && lang != currentLang) {
+                    languageManager.applyTheme(lang, ThemeName.MONOKAI)
+                    currentLang = lang
                 }
-                binding.codeView.setText(shortCode)
+                binding.codeView.setText(it)
             }
-            binding.languageTextView.text = message.codeLanguage ?: "unknown"
-            if(date != "") {
-                binding.dateTextView.visibility = View.VISIBLE
-                binding.dateTextView.text = date
+            binding.languageTextView.text = ui.message.codeLanguage ?: "unknown"
+            if(ui.formattedDate != "") {
+                binding.dateTextView.isVisible = true
+                binding.dateTextView.text = ui.formattedDate
             } else {
-                binding.dateTextView.visibility = View.GONE
-                binding.space.visibility = View.GONE
+                binding.dateTextView.isVisible = false
+                binding.space.isVisible = false
             }
 
-            binding.timeTextViewImage.text = time
+            binding.timeTextViewImage.text = ui.formattedTime
+            binding.editTextViewImage.isVisible = ui.message.isEdited
             if(isGroup) {
-                val user = members[message.id]
-                if(user != null) {
-                    if(user.first != null) {
-                        binding.userNameTextView.visibility = View.VISIBLE
-                        binding.userNameTextView.text = user.first
-                    } else binding.userNameTextView.visibility = View.GONE
-                    if(user.second != null) {
-                        binding.photoImageView.visibility = View.VISIBLE
-                        binding.spaceAvatar.visibility = View.GONE
-                        if(user.second != "") messageViewModel.avatarSet(user.second ?: "", binding.photoImageView, context)
-                    } else {
-                        binding.spaceAvatar.visibility = View.VISIBLE
-                        binding.photoImageView.visibility = View.GONE
+                binding.userNameTextView.isVisible = ui.showUsername
+                ui.username?.let { binding.userNameTextView.text = it }
+                when(val state = ui.avatarState) {
+                    is AvatarState.Loading -> {
+                        binding.photoImageView.isVisible = true
                     }
-                } else {
-                    binding.spaceAvatar.visibility = View.VISIBLE
-                    binding.photoImageView.visibility = View.GONE
-                    binding.userNameTextView.visibility = View.GONE
+                    is AvatarState.Ready -> {
+                        binding.photoImageView.isVisible = true
+                        Glide.with(binding.photoImageView)
+                            .load(state.localPath)
+                            .apply(RequestOptions.circleCropTransform())
+                            .dontAnimate()
+                            .into(binding.photoImageView)
+                    }
+                    is AvatarState.Error -> {
+                        binding.photoImageView.isVisible = true
+                    }
+                    null -> {
+                        binding.photoImageView.isVisible = ui.showAvatar
+                        binding.spaceAvatar.isVisible = !ui.showAvatar
+                    }
                 }
             } else {
-                binding.spaceAvatar.visibility = View.GONE
-                binding.photoImageView.visibility = View.GONE
-                binding.userNameTextView.visibility = View.GONE
+                binding.spaceAvatar.isVisible = false
+                binding.photoImageView.isVisible = false
+                binding.userNameTextView.isVisible = false
             }
-
-            if(message.isEdited) binding.editTextViewImage.visibility = View.VISIBLE
-            else binding.editTextViewImage.visibility = View.GONE
         }
     }
 
     inner class MessagesViewHolderCodeSender(private val binding: ItemCodeSenderBinding) : RecyclerView.ViewHolder(binding.root) {
 
         private var messageSave: Message? = null
-
-        private val jetBrainsMono: Typeface? = ResourcesCompat.getFont(context, R.font.jetbrains_mono_medium)
+        private val languageManager = LanguageManager(context, binding.codeView)
+        private var currentLang: LanguageName? = null
 
         init {
+            val jetBrainsMono: Typeface? = ResourcesCompat.getFont(context, R.font.jetbrains_mono_medium)
+            binding.codeView.setTypeface(jetBrainsMono)
+
             binding.root.setOnClickListener {
                 messageSave?.let {
                     when {
                         it.isUnsent == true -> actionListener.onUnsentMessageClick(it, itemView)
-                        !canLongClick -> savePosition(it.id, true)
+                        !canLongClick -> actionListener.onSelected(it.id)
                         else -> actionListener.onMessageClick(it, itemView, true)
                     }
                 }
             }
             binding.root.setOnLongClickListener {
-                if(canLongClick) {
+                if(canLongClick && messageSave?.isUnsent != true) {
                     messageSave?.let {
-                        onLongClick(it.id, true)
-                        actionListener.onMessageLongClick(itemView)
+                        actionListener.onMessageLongClick(it.id)
                     }
                 }
                 true
             }
             binding.checkbox.setOnClickListener {
-                messageSave?.let { savePosition(it.id, true) }
+                messageSave?.let { actionListener.onSelected(it.id) }
             }
             binding.openFullIcon.setOnClickListener {
                 messageSave?.let { actionListener.onCodeOpenClick(it) }
@@ -1889,64 +1831,55 @@ class MessageAdapter(
 
         fun updateReadStatus() {
             binding.icCheckImage.visibility = View.INVISIBLE
-            binding.icCheck2Image.visibility = View.VISIBLE
+            binding.icCheck2Image.isVisible = true
             binding.icCheck2Image.bringToFront()
         }
 
-        fun bind(message: Message, date: String, time: String, position: Int) {
-            messageSave = message
+        fun bind(ui: MessageUi) {
+            messageSave = ui.message
 
-            if(message.isUnsent == true) {
+            binding.checkbox.isVisible = ui.isShowCheckbox && ui.message.isUnsent != true
+            if(ui.message.isUnsent == true) {
                 with(binding) {
                     timeTextViewImage.text = "----"
-                    dateTextView.visibility = View.GONE
+                    dateTextView.isVisible = false
                     icCheckImage.visibility = View.INVISIBLE
                     icCheck2Image.visibility = View.INVISIBLE
-                    editTextViewImage.visibility = View.GONE
-                    icErrorImage.visibility = View.VISIBLE
+                    editTextViewImage.isVisible = false
+                    icErrorImage.isVisible = true
                 }
             } else {
-                if(!canLongClick) {
-                    if(!binding.checkbox.isVisible) binding.checkbox.visibility = View.VISIBLE
-                    binding.checkbox.isChecked = position in checkedPositions
-                } else binding.checkbox.visibility = View.GONE
-
-                binding.icErrorImage.visibility = View.GONE
-                if(date != "") {
-                    binding.dateTextView.visibility = View.VISIBLE
-                    binding.dateTextView.text = date
+                binding.icErrorImage.isVisible = false
+                if(ui.formattedDate != "") {
+                    binding.dateTextView.isVisible = true
+                    binding.dateTextView.text = ui.formattedDate
                 } else {
-                    binding.dateTextView.visibility = View.GONE
-                    binding.space.visibility = View.GONE
+                    binding.dateTextView.isVisible = false
+                    binding.space.isVisible = false
                 }
+                binding.timeTextViewImage.text = ui.formattedTime
 
-                binding.timeTextViewImage.text = time
-
-                if (message.isRead) {
+                if (ui.message.isRead) {
                     updateReadStatus()
                 } else {
-                    binding.icCheckImage.visibility = View.VISIBLE
+                    binding.icCheckImage.isVisible = true
                     binding.icCheck2Image.visibility = View.INVISIBLE
                 }
-                if(message.isEdited) binding.editTextViewImage.visibility = View.VISIBLE
-                else binding.editTextViewImage.visibility = View.GONE
+                binding.editTextViewImage.isVisible = ui.message.isEdited
             }
-            binding.languageTextView.text = message.codeLanguage ?: "unknown"
-            message.code?.let {
-                val shortCode = it.lines().take(5).joinToString("\n")
-                val lang = when(message.codeLanguage) {
+            binding.languageTextView.text = ui.message.codeLanguage ?: "unknown"
+            ui.previewCode?.let {
+                val lang = when(ui.message.codeLanguage) {
                     "java" -> LanguageName.JAVA
                     "python" -> LanguageName.PYTHON
                     "go" -> LanguageName.GO_LANG
                     else -> null
                 }
-                binding.codeView.setTypeface(jetBrainsMono)
-                lang?.let { lang ->
-                    LanguageManager(context, binding.codeView).apply {
-                        applyTheme(lang, ThemeName.MONOKAI)
-                    }
+                if (lang != null && lang != currentLang) {
+                    languageManager.applyTheme(lang, ThemeName.MONOKAI)
+                    currentLang = lang
                 }
-                binding.codeView.setText(shortCode)
+                binding.codeView.setText(it)
             }
         }
     }
