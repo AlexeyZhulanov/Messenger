@@ -1,6 +1,5 @@
 package com.example.messenger.model
 
-import android.content.Context
 import java.io.File
 
 interface RetrofitRepository {
@@ -27,7 +26,7 @@ interface RetrofitRepository {
                             code: String?, codeLanguage: String?, referenceToMessageId: Int?, isForwarded: Boolean,
                             isUrl: Boolean?, usernameAuthorOriginal: String?, waveform: List<Int>?) : Boolean
 
-    suspend fun getMessages(idDialog: Int, pageIndex: Int, pageSize: Int) : List<Message>
+    suspend fun getMessages(idDialog: Int, pageSize: Int, lastCursor: Long?) : List<Message>
 
     suspend fun findMessage(idMessage: Int, idDialog: Int) : Pair<Message, Int>
 
@@ -57,7 +56,7 @@ interface RetrofitRepository {
                    isForwarded: Boolean, isUrl: Boolean?, usernameAuthorOriginal: String?,
                                  waveform: List<Int>?) : Boolean
 
-    suspend fun getGroupMessages(groupId: Int, start: Int, end: Int): List<Message>
+    suspend fun getGroupMessages(groupId: Int, pageSize: Int, lastCursor: Long?): List<Message>
 
     suspend fun findGroupMessage(idMessage: Int, groupId: Int) : Pair<Message, Int>
 
@@ -102,11 +101,11 @@ interface RetrofitRepository {
 
     suspend fun uploadNews(news: File) : String
 
-    suspend fun downloadFile(context: Context, folder: String, dialogId: Int, filename: String, isGroup: Int?) : String
+    suspend fun downloadFile(folder: String, dialogId: Int, filename: String, isGroup: Int?) : String
 
-    suspend fun downloadAvatar(context: Context, filename: String) : String
+    suspend fun downloadAvatar(filename: String) : String
 
-    suspend fun downloadNews(context: Context, filename: String) : String
+    suspend fun downloadNews(filename: String) : String
 
     suspend fun getMedias(dialogId: Int, page: Int, isGroup: Int?) : List<String>?
 
@@ -114,7 +113,7 @@ interface RetrofitRepository {
 
     suspend fun getAudios(dialogId: Int, page: Int, isGroup: Int?) : List<String>?
 
-    suspend fun getMediaPreview(context: Context, dialogId: Int, filename: String, isGroup: Int?) : String
+    suspend fun getMediaPreview(dialogId: Int, filename: String, isGroup: Int?) : String
 
     suspend fun getVacation() : Pair<String, String>?
 

@@ -1,0 +1,101 @@
+package com.example.messenger.states
+
+import android.os.Parcelable
+import com.example.messenger.model.Message
+import kotlinx.parcelize.Parcelize
+
+data class MessageUi(
+    val message: Message,
+    val formattedDate: String,
+    val formattedTime: String,
+    val parsedText: CharSequence? = null,
+    val isFirstPage: Boolean = false,
+    val previewCode: String? = null,
+
+    // Checkbox на удаление и пересылку
+    val isSelected: Boolean = false,
+    val isShowCheckbox: Boolean = false,
+
+    // Reply
+    val replyState: ReplyState? = null,
+    val isHighlighted: Boolean = false,
+
+    // Файлы
+    val voiceState: VoiceState? = null,
+    val fileState: FileState? = null,
+    val imageState: ImageState? = null,
+    val imagesState: ImagesState? = null,
+
+    // Аватарки
+    val avatarState: AvatarState? = null,
+    val username: String? = null,
+    val showUsername: Boolean = false,
+    val showAvatar: Boolean = false
+)
+
+sealed class VoiceState {
+    object Loading : VoiceState()
+    data class Ready(
+        val localPath: String,
+        val duration: Long
+    ) : VoiceState()
+    object Error : VoiceState()
+}
+
+sealed class FileState {
+    object Loading : FileState()
+    data class Ready(
+        val localPath: String,
+        val fileName: String,
+        val fileSize: String
+    ) : FileState()
+    object Error : FileState()
+}
+
+sealed class ImageState {
+    object Loading : ImageState()
+    data class Ready(
+        val localPath: String,
+        val mimeType: String,
+        val duration: Long
+    ) : ImageState()
+    object Error : ImageState()
+}
+
+@Parcelize
+data class ImageItem(
+    val localPath: String,
+    val mimeType: String,
+    val duration: Long
+) : Parcelable
+
+@Parcelize
+sealed class ImagesState : Parcelable {
+    object Loading : ImagesState()
+    data class Ready(
+        val imageItems: List<ImageItem>
+    ) : ImagesState()
+    object Error : ImagesState()
+}
+
+sealed class AvatarState {
+    object Loading : AvatarState()
+    data class Ready(val localPath: String) : AvatarState()
+    object Error : AvatarState()
+}
+
+sealed class ReplyState {
+    object Loading : ReplyState()
+
+    data class Ready(
+        val previewText: String,
+        val previewImagePath: String? // локальный путь
+    ) : ReplyState()
+
+    object Error : ReplyState()
+}
+
+data class ReplyPreview(
+    val text: String,
+    val imageName: String?
+)

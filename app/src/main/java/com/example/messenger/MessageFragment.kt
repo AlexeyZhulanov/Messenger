@@ -7,12 +7,15 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.messenger.model.Dialog
 import com.example.messenger.model.LastMessage
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
-import com.example.messenger.model.getParcelableCompat
+import com.example.messenger.states.MessageUi
+import com.example.messenger.utils.getParcelableCompat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -35,33 +38,25 @@ class MessageFragment : BaseChatFragment() {
         viewModel.setInfo(dialog.otherUser.id)
         Log.d("testCurrentUser", currentUser.toString())
         super.onViewCreated(view, savedInstanceState)
-        lifecycleScope.launch {
-            viewModel.pagingDataFlow.collectLatest { pagingData ->
-                if(pagingData.isNotEmpty()) {
-                    Log.d("testPagingFlow", "Submitting paging data")
-                    if(viewModel.isFirstPage()) {
-                        if(dialog.unreadCount in 4..29) registerInitialListObserver()
-                        val mes = viewModel.getUnsentMessages()
-                        val summaryPagingData = if(mes != null) {
-                            val pair = mes.map { Triple(it, "", "") }
-                            pair + pagingData
-                        } else pagingData
-                        adapter.submitList(summaryPagingData)
-                        val firstItem = pagingData.firstOrNull()?.first
-                        if(firstItem != null) viewModel.updateLastDate(firstItem.timestamp)
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.messagesUi.collectLatest { pagingData ->
+                    if(pagingData.isNotEmpty()) {
+                        Log.d("testPagingFlow", "Submitting paging data")
+                        if(viewModel.isFirstPage() && dialog.unreadCount in 4..29) {
+                            registerInitialListObserver()
+                        }
+                        adapter.submitList(pagingData)
+                    } else {
+                        if(!viewModel.isFirstPage()) {
+                            Log.d("testStopPag", "Called")
+                            isStopPagination = true
+                        }
                     }
-                    else {
-                        val updatedList = adapter.currentList.toMutableList()
-                        updatedList.addAll(pagingData)
-                        viewModel.processDateDuplicates(updatedList)
-                        adapter.submitList(updatedList)
-                    }
-                } else {
-                    isStopPagination = true
                 }
             }
         }
-        viewModel.setMarkScrollListener(binding.recyclerview, adapter)
+        setMarkScrollListener()
         viewModel.fetchLastSession()
         val lastSession: TextView = view.findViewById(R.id.lastSessionTextView)
         viewModel.lastSessionString.observe(viewLifecycleOwner) { sessionString ->
@@ -110,6 +105,12 @@ class MessageFragment : BaseChatFragment() {
     override fun canDelete(): Boolean = dialog.canDelete
 
     override fun getUnreadCount(): Int = dialog.unreadCount
+
+    override fun markReadCondition(ui: MessageUi): Message? {
+        return ui.message.takeIf {
+            it.idSender == dialog.otherUser.id && !it.isRead
+        }
+    }
 
     companion object {
         private const val ARG_DIALOG = "arg_dialog"

@@ -6,7 +6,7 @@
     <color name="colorPrimary">#529BEA</color>
     <color name="colorPrimaryDark">#000000</color>
     <color name="colorAccent">#808080</color>
-    <color name="chatAnswerHighlight">#1FFFFFFF</color>
+    <color name="chatAnswerHighlight">#3FFFFFFF</color>
     <color name="login_color">#A485F7</color>
     <color name="navigation_bar_color">#F5F5F5</color>
     <color name="colorMessageSenderBack">#E7F0F9</color>

@@ -27,7 +27,7 @@ import com.example.messenger.databinding.FragmentMessengerBinding
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
-import com.example.messenger.model.chunkedFlowLast
+import com.example.messenger.utils.chunkedFlowLast
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.buffer
@@ -93,7 +93,7 @@ class MessengerFragment : Fragment() {
                             return@async Pair(messengerViewModel.fManagerGetAvatarPath(avatar), true)
                         } else {
                             try {
-                                return@async Pair(messengerViewModel.downloadAvatar(requireContext(), avatar), false)
+                                return@async Pair(messengerViewModel.downloadAvatar(avatar), false)
                             } catch (_: Exception) {
                                 return@async Pair(null, true)
                             }

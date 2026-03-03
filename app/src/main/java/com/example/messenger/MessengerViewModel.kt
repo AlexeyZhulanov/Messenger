@@ -1,6 +1,5 @@
 package com.example.messenger
 
-import android.content.Context
 import android.util.Base64
 import android.util.Log
 import androidx.lifecycle.LiveData
@@ -306,8 +305,8 @@ class MessengerViewModel @Inject constructor(
         fileManager.saveAvatarFile(fileName, fileData)
     }
 
-    suspend fun downloadAvatar(context: Context, filename: String): String {
-        return retrofitService.downloadAvatar(context, filename)
+    suspend fun downloadAvatar(filename: String): String {
+        return retrofitService.downloadAvatar(filename)
     }
 
     private fun getCurrentTime(): Long {

@@ -99,10 +99,6 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
                         displayImage(resource);
                         loadOriginalImage(filename);
                     }
-
-                    @Override
-                    public void onLoadFailed(@Nullable Drawable errorDrawable) {}
-
                     @Override
                     public void onLoadCleared(@Nullable Drawable placeholder) {}
                 });
@@ -118,10 +114,6 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
                         displayImage(resource);
                         loadVideo(filename);
                     }
-
-                    @Override
-                    public void onLoadFailed(@Nullable Drawable errorDrawable) {}
-
                     @Override
                     public void onLoadCleared(@Nullable Drawable placeholder) {}
                 });
@@ -137,7 +129,7 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
                 path = viewModel.fManagerGetFilePath(filename);
             } else {
                 try {
-                    path = viewModel.downloadFileJava(itemView.getContext(), "photos", filename);
+                    path = viewModel.downloadFileJava("photos", filename);
                     flagExist.set(false);
                 } catch (Exception e) {
                     return;
@@ -195,7 +187,7 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
                 path = viewModel.fManagerGetFilePath(filename);
             } else {
                 try {
-                    path = viewModel.downloadFileJava(itemView.getContext(), "photos", filename);
+                    path = viewModel.downloadFileJava("photos", filename);
                     flagExist.set(false);
                 } catch (Exception e) {
                     return;
@@ -223,10 +215,6 @@ public class CustomPreviewImageHolder extends BasePreviewHolder {
                                 displayImage(resource);
                                 isOriginalLoaded = true;
                             }
-
-                            @Override
-                            public void onLoadFailed(@Nullable Drawable errorDrawable) {}
-
                             @Override
                             public void onLoadCleared(@Nullable Drawable placeholder) {}
                         }));

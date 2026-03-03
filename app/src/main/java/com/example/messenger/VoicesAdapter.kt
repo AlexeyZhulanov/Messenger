@@ -9,7 +9,7 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.databinding.ItemVoiceBinding
-import com.example.messenger.model.takeSample
+import com.example.messenger.utils.takeSample
 import com.masoudss.lib.SeekBarOnProgressChanged
 import com.masoudss.lib.WaveformSeekBar
 import java.io.File

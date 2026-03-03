@@ -3,17 +3,16 @@ package com.example.messenger
 import android.util.Log
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.FileManager
-import com.example.messenger.model.Message
 import com.example.messenger.model.MessagePagingSource
 import com.example.messenger.model.MessengerService
 import com.example.messenger.model.RetrofitService
 import com.example.messenger.model.User
 import com.example.messenger.model.WebSocketService
 import com.example.messenger.model.appsettings.AppSettings
+import com.example.messenger.states.AvatarState
+import com.example.messenger.states.MessageUi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -22,7 +21,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
@@ -45,18 +46,6 @@ class GroupMessageViewModel @Inject constructor(
 
         private var pagingSource: MessagePagingSource? = null
 
-        @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
-        val pagingDataFlow = searchBy.asFlow()
-            .debounce(500)
-            .flatMapLatest { searchQuery ->
-                currentPage.flatMapLatest { page ->
-                    flow {
-                        val pageSize = 30
-                        val messages = pagingSource?.loadPage(page, pageSize, searchQuery)
-                        if(messages != null) emit(messages)
-                    }
-                }
-            }
 
         init {
             webSocketService.reconnectIfNeeded()
@@ -65,62 +54,54 @@ class GroupMessageViewModel @Inject constructor(
                     pagingSource = MessagePagingSource(retrofitService, messengerService, convId, fileManager, tinkAesGcmHelper, false)
                 }
             }
-            viewModelScope.launch {
-                webSocketService.newMessageFlow.collect { message ->
-                    if(!disableRefresh) {
-                        message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
-                        Log.d("testSocketsMessage", "New Message: $message")
-                        val newMessageTriple =
-                            if(lastMessageDate == "") Triple(message,"", formatMessageTime(message.timestamp))
-                            else Triple(message,formatMessageDate(message.timestamp), formatMessageTime(message.timestamp))
-                        _newMessageFlow.tryEmit(newMessageTriple)
-                        updateLastDate(message.timestamp)
-                    } else pendingRefresh = true
-                }
-            }
-            viewModelScope.launch {
-                webSocketService.editMessageFlow.collect { message ->
-                    if(!disableRefresh) {
-                        message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
-                        Log.d("testSocketsMessage", "Edited Message: $message")
-                        _editMessageFlow.value = message
-                    } else pendingRefresh = true
-                }
-            }
-            viewModelScope.launch {
-                webSocketService.deleteMessageFlow.collect {
-                    if(!disableRefresh) {
-                        Log.d("testSocketsMessage", "Deleted messages ids: ${it.deletedMessagesIds}")
-                        val adapter = recyclerView.adapter
-                        if(adapter is MessageAdapter) adapter.clearPositions()
-                        refresh()
-                        recyclerView.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-                            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                                recyclerView.scrollToPosition(0)
+
+            // Пагинация
+            @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+            searchBy.asFlow()
+                .debounce(500)
+                .flatMapLatest { searchQuery ->
+                    currentPage.map { page -> searchQuery to page }
+                }.onEach { (searchQuery, page) ->
+                    if(isLoadingPage) return@onEach
+
+                    isLoadingPage = true
+                    try {
+                        if(page == 0) {
+                            pagingSource?.resetCursor()
+                            _stopPagination.value = false
+                        }
+                        val pageSize = 30
+                        val triples = pagingSource?.loadPage(pageSize, searchQuery)
+                        if(!triples.isNullOrEmpty()) {
+                            val flag = page == 0
+                            val newUi = triples.map { triple -> toMessageUi(triple, flag) }
+                            val endData = if(page == 0) {
+                                val firstMessage = newUi.firstOrNull()?.message
+                                if(firstMessage != null) updateLastDate(firstMessage.timestamp)
+                                val m = getUnsentMessages()
+                                if(!m.isNullOrEmpty()) {
+                                    val mUi = m.map { message ->
+                                        toMessageUi(Triple(message, "", ""), false)
+                                    }
+                                    newUi + mUi
+                                } else newUi
+                            } else {
+                                val processed = processDateDuplicates(_messagesUi.value + newUi)
+                                processed
                             }
-                        })
-                    } else pendingRefresh = true
-                }
-            }
-            viewModelScope.launch {
-                webSocketService.readMessageFlow.collect {
-                    Log.d("testSocketsMessage", "Messages read: ${it.messagesReadIds}")
-                    _readMessagesFlow.tryEmit(it.messagesReadIds)
-                }
-            }
-            viewModelScope.launch {
-                webSocketService.deleteAllMessageFlow.collect {
-                    Log.d("testSocketsMessage", "All messages deleted")
-                    _deleteState.value = 1
-                    refresh()
-                }
-            }
-            viewModelScope.launch {
-                webSocketService.dialogDeletedFlow.collect {
-                    Log.d("testSocketsMessage", "Dialog deleted")
-                    _deleteState.value = 2
-                }
-            }
+                            val finalList = applyGroupDisplayInfo(endData)
+                            _messagesUi.value = finalList
+                            preloadAttachments(finalList)
+                        } else {
+                            if(triples != null && triples.isEmpty()) {
+                                _stopPagination.value = true
+                            }
+                        }
+                    } finally {
+                        isLoadingPage = false
+                    }
+                }.launchIn(viewModelScope)
+
             viewModelScope.launch {
                 webSocketService.typingFlow.collect { (userId, isStart) ->
                     Log.d("testSocketsMessage", "User#$userId is typing: $isStart")
@@ -151,7 +132,7 @@ class GroupMessageViewModel @Inject constructor(
                         Log.d("testActualMembers", actualList.toString())
                         messengerService.replaceGroupMembers(convId, actualList)
                     }
-                } catch (e: Exception) { return@launch }
+                } catch (_: Exception) { return@launch }
             }
         }
 
@@ -165,69 +146,50 @@ class GroupMessageViewModel @Inject constructor(
             }
         }
 
-        fun setMarkScrollListener(recyclerView: RecyclerView, adapter: MessageAdapter, currentUserId: Int) {
-            val scrollListener = object : RecyclerView.OnScrollListener() {
-                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    super.onScrolled(recyclerView, dx, dy)
-                    val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-                    val lastVisibleItemPosition = layoutManager.findLastVisibleItemPosition()
-                    val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+        override fun applyGroupDisplayInfo(initialList: List<MessageUi>): List<MessageUi> {
+            if (initialList.isEmpty()) return initialList
 
-                    // Проверяем видимые элементы от последнего к первому
-                    if (lastVisibleItemPosition != RecyclerView.NO_POSITION && firstVisibleItemPosition != RecyclerView.NO_POSITION) {
-                        val visibleMessages = (lastVisibleItemPosition downTo firstVisibleItemPosition).mapNotNull { position ->
-                            adapter.getItemNotProtected(position).first.takeIf { it.idSender != currentUserId && it.isPersonalUnread == true }
-                        }
+            val list = initialList.reversed()
+            val userMap = currentMemberList.associateBy { it.id }
 
-                        markMessagesAsRead(visibleMessages)
+            return list.mapIndexed { index, ui ->
+                val message = ui.message
 
-                        if (firstVisibleItemPosition == 0) {
-                            recyclerView.removeOnScrollListener(this)
-                        }
-                    }
-                }
-            }
-            recyclerView.addOnScrollListener(scrollListener)
-        }
-
-        fun separateMessages(messages: List<Triple<Message, String, String>>, currentUserId: Int): Map<Int, Pair<String?, String?>?> {
-            // Optimizing access to users using the Map
-            val userMap = currentMemberList.associate { it.id to (it.username to it.avatar) }
-            val groupedMessages = mutableListOf<List<Message>>()
-            val tempList = mutableListOf<Message>()
-
-            for ((message, date) in messages.reversed()) {
-                if(tempList.isNotEmpty()) {
-                    if ((tempList.last().idSender != message.idSender) || (date != "")) {
-                        groupedMessages.add(ArrayList(tempList))
-                        tempList.clear()
-                    }
-                }
-                if (message.idSender != currentUserId) tempList.add(message)
-            }
-            if (tempList.isNotEmpty()) {
-                groupedMessages.add(tempList)
-            }
-            // Filling in the final Map with username and avatar
-            val messageDisplayMap = mutableMapOf<Int, Pair<String?, String?>?>()
-
-            for (mes in groupedMessages) {
-                val first = mes.last() // reversed
-                val last = mes.first() // reversed
-                val userInfo = userMap[first.idSender]
-
-                // If there is one element in the group, both fields are used.
-                if (first == last) {
-                    messageDisplayMap[first.id] = userInfo
+                if (message.idSender == currentUserId) {
+                    ui.copy(
+                        username = null,
+                        showUsername = false,
+                        showAvatar = false,
+                        avatarState = null
+                    )
                 } else {
-                    // The first element gets a username (the adapter is reversed)
-                    messageDisplayMap[last.id] = userInfo?.first to null
-                    // The last element gets an avatar (adapter is reversed)
-                    val avatar = userInfo?.second ?: "" // If user without avatar
-                    messageDisplayMap[first.id] = null to avatar
+                    val prev = list.getOrNull(index - 1)
+                    val next = list.getOrNull(index + 1)
+
+                    val showUsername = prev == null ||
+                                prev.message.idSender != message.idSender ||
+                                ui.formattedDate.isNotEmpty()
+
+                    val showAvatar = next == null ||
+                                next.message.idSender != message.idSender ||
+                                next.formattedDate.isNotEmpty()
+
+                    val user = userMap[message.idSender]
+
+                    ui.copy(
+                        username = if (showUsername) user?.username else null,
+                        showUsername = showUsername,
+                        showAvatar = showAvatar,
+                        avatarState =
+                            if (showAvatar && !user?.avatar.isNullOrBlank()) {
+                                val path = avatarCache[user.avatar]
+                                if(path != null) AvatarState.Ready(path)
+                                else AvatarState.Loading
+                            }
+                            else null
+                    )
                 }
-            }
-            return messageDisplayMap
+            }.reversed()
         }
 
         fun joinGroup() {
@@ -240,6 +202,27 @@ class GroupMessageViewModel @Inject constructor(
             val leaveData = JSONObject()
             leaveData.put("group_id", convId)
             webSocketService.send("leave_group", leaveData)
+        }
+
+        override fun preloadAttachments(list: List<MessageUi>) {
+            val userMap = currentMemberList.associateBy { it.id }
+
+            list.forEach { ui ->
+                ui.avatarState?.let {
+                    val user = userMap[ui.message.idSender]
+                    val avatarString = user?.avatar
+                    if (!avatarString.isNullOrBlank()) {
+                        preloadAvatar(ui.message.id, avatarString)
+                    }
+                }
+                when {
+                    ui.voiceState != null -> preloadVoice(ui)
+                    ui.imageState != null -> preloadImage(ui)
+                    ui.replyState != null -> preloadReply(ui)
+                    ui.imagesState != null -> preloadImages(ui)
+                    ui.fileState != null -> preloadFile(ui)
+                }
+            }
         }
 
         override fun onCleared() {

@@ -3,7 +3,6 @@ package com.example.messenger.model
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
@@ -26,6 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
+import androidx.core.graphics.createBitmap
 
 @AndroidEntryPoint
 class  WebSocketNotificationsService : LifecycleService() {
@@ -77,7 +77,7 @@ class  WebSocketNotificationsService : LifecycleService() {
     }
 
     private fun acquireWakeLock() {
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "WebSocketService::Wakelock")
         wakeLock.acquire(10_000L)
     }
@@ -88,7 +88,7 @@ class  WebSocketNotificationsService : LifecycleService() {
             channelId, "WebSocket Service",
             NotificationManager.IMPORTANCE_MIN
         )
-        (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
+        (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
 
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Для моментальных уведомлений")
@@ -221,8 +221,8 @@ class  WebSocketNotificationsService : LifecycleService() {
                     return@async Pair(fileManager.getAvatarFilePath(avatar), true)
                 } else {
                     try {
-                        return@async Pair(webSocketService.downloadAvatar(context, avatar), false)
-                    } catch (e: Exception) {
+                        return@async Pair(webSocketService.downloadAvatar(avatar), false)
+                    } catch (_: Exception) {
                         return@async Pair(null, true)
                     }
                 }
@@ -240,12 +240,12 @@ class  WebSocketNotificationsService : LifecycleService() {
                             .apply(RequestOptions.circleCropTransform())
                             .submit()
                             .get()
-                    } catch (e: Exception) {
-                        Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+                    } catch (_: Exception) {
+                        createBitmap(1, 1)
                     }
-                } else return@withContext Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-            } else return@withContext Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-        } else return@withContext Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+                } else return@withContext createBitmap(1, 1)
+            } else return@withContext createBitmap(1, 1)
+        } else return@withContext createBitmap(1, 1)
     }
 
     private fun sendNewsNotification(event: NewsEvent) {

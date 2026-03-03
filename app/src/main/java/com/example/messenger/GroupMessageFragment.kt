@@ -7,12 +7,15 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.messenger.model.Group
 import com.example.messenger.model.LastMessage
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
-import com.example.messenger.model.getParcelableCompat
+import com.example.messenger.states.MessageUi
+import com.example.messenger.utils.getParcelableCompat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -38,38 +41,20 @@ class GroupMessageFragment : BaseChatFragment() {
             viewModel.joinGroup()
         }
         super.onViewCreated(view, savedInstanceState)
-        lifecycleScope.launch {
-            viewModel.pagingDataFlow.collectLatest { pagingData ->
-                if(pagingData.isNotEmpty()) {
-                    Log.d("testPagingFlow", "Submitting paging data")
-                    if(viewModel.isFirstPage()) {
-                        if(group.unreadCount in 4..29) registerInitialListObserver()
-                        val mes = viewModel.getUnsentMessages()
-                        val summaryPagingData = if(mes != null) {
-                            val pair = mes.map { Triple(it, "", "") }
-                            pair + pagingData
-                        } else pagingData
-                        adapter.membersFull = viewModel.currentMemberList
-                        adapter.members = viewModel.separateMessages(summaryPagingData, currentUser.id)
-                        adapter.submitList(summaryPagingData)
-                        val firstItem = pagingData.firstOrNull()?.first
-                        if(firstItem != null) viewModel.updateLastDate(firstItem.timestamp)
-                    }
-                    else {
-                        val updatedList = adapter.currentList.toMutableList()
-                        val count = adapter.itemCount
-                        updatedList.addAll(pagingData)
-                        viewModel.processDateDuplicates(updatedList)
-                        adapter.members = viewModel.separateMessages(updatedList, currentUser.id)
-                        adapter.submitList(updatedList)
-                        adapter.notifyItemChanged(count-1)
-                    }
-                } else {
-                    isStopPagination = true
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.messagesUi.collectLatest { pagingData ->
+                    if(pagingData.isNotEmpty()) {
+                        Log.d("testPagingFlow", "Submitting paging data")
+                        if(viewModel.isFirstPage() && group.unreadCount in 4..29) {
+                            registerInitialListObserver()
+                        }
+                        adapter.submitList(pagingData)
+                    } else isStopPagination = true
                 }
             }
         }
-        viewModel.setMarkScrollListener(binding.recyclerview, adapter, currentUser.id)
+        setMarkScrollListener()
         val lastSession: TextView = view.findViewById(R.id.lastSessionTextView)
         lifecycleScope.launch {
             viewModel.membersCount.collectLatest {
@@ -115,6 +100,12 @@ class GroupMessageFragment : BaseChatFragment() {
     override fun canDelete(): Boolean = group.canDelete
 
     override fun getUnreadCount(): Int = group.unreadCount
+
+    override fun markReadCondition(ui: MessageUi): Message? {
+        return ui.message.takeIf {
+            it.idSender != currentUser.id && it.isPersonalUnread == true
+        }
+    }
 
     override fun replaceToInfoFragment() {
         parentFragmentManager.beginTransaction()

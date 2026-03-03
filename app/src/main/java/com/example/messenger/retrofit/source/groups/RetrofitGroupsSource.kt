@@ -36,8 +36,8 @@ class RetrofitGroupsSource(
         groupsApi.sendGroupMessage(groupId, sendGroupMessageRequestEntity).message
     }
 
-    override suspend fun getGroupMessages(groupId: Int, pageIndex: Int, pageSize: Int): List<Message> = wrapRetrofitExceptions {
-        val response = groupsApi.getGroupMessages(groupId, pageIndex, pageSize)
+    override suspend fun getGroupMessages(groupId: Int, pageSize: Int, lastCursor: Long?): List<Message> = wrapRetrofitExceptions {
+        val response = groupsApi.getGroupMessages(groupId, pageSize, lastCursor)
         response.map { it.toMessage() }
     }
 

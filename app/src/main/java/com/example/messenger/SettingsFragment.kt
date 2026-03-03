@@ -26,7 +26,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentSettingsBinding
 import com.example.messenger.model.User
-import com.example.messenger.model.getParcelableCompat
+import com.example.messenger.utils.getParcelableCompat
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
@@ -126,8 +126,8 @@ class SettingsFragment : Fragment() {
                             return@async Pair(viewModel.fManagerGetAvatarPath(avatar), true)
                         } else {
                             try {
-                                return@async Pair(viewModel.downloadAvatar(requireContext(), avatar), false)
-                            } catch (e: Exception) {
+                                return@async Pair(viewModel.downloadAvatar( avatar), false)
+                            } catch (_: Exception) {
                                 return@async Pair(null, true)
                             }
                         }

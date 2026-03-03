@@ -4,8 +4,10 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Rect
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -28,6 +30,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.CreationExtras
@@ -37,8 +40,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import com.example.messenger.databinding.FragmentMessageBinding
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
-import com.example.messenger.model.chunkedFlowLast
-import com.example.messenger.model.getParcelableCompat
+import com.example.messenger.utils.getParcelableCompat
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
 import com.example.messenger.picker.GlideEngine
@@ -52,7 +54,6 @@ import com.luck.picture.lib.interfaces.OnInjectLayoutResourceListener
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -60,7 +61,22 @@ import kotlinx.coroutines.launch
 import java.io.File
 import androidx.core.view.isVisible
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import com.bumptech.glide.Glide
+import com.example.messenger.MessageAdapter.Companion.PAYLOAD_PAUSE
+import com.example.messenger.MessageAdapter.Companion.PAYLOAD_PROGRESS
+import com.example.messenger.MessageAdapter.Companion.PAYLOAD_STOP
+import com.example.messenger.states.AvatarState
+import com.example.messenger.states.FileState
+import com.example.messenger.states.ImageState
+import com.example.messenger.states.ImagesState
+import com.example.messenger.states.MessageUi
+import com.example.messenger.states.VoiceState
 
 @AndroidEntryPoint
 abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
@@ -95,6 +111,12 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     private var currentLink: String? = null
     private var currentLinkNumber = 0
 
+    // Голосовые сообщения
+    private var mediaPlayer: MediaPlayer? = null
+    private var playingMessageId: Int? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private var updateRunnable: Runnable? = null
+
     abstract val viewModel: BaseChatViewModel
 
     abstract fun sendTypingEvent(isSend: Boolean)
@@ -108,6 +130,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     abstract fun isGroup(): Boolean
     abstract fun canDelete(): Boolean
     abstract fun getUnreadCount(): Int
+    abstract fun markReadCondition(ui: MessageUi): Message?
 
     private val adapterDataObserver = object : RecyclerView.AdapterDataObserver() {
         override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
@@ -155,65 +178,54 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     @OptIn(FlowPreview::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        lifecycleScope.launch {
-            launch {
-                viewModel.newMessageFlow
-                    .buffer()
-                    .chunkedFlowLast(200) // custom func
-                    .collect { newMessages ->
-                        if(newMessages.isNotEmpty()) {
-                            registerArrowObserver()
-                            val clearMessages = newMessages.filterNotNull()
-                            adapter.addNewMessages(clearMessages)
-                            val unreadMessages = clearMessages.filter {
-                                if(it.first.isPersonalUnread == null) {
-                                    currentUser.id != it.first.idSender && !it.first.isRead
-                                } else {
-                                    currentUser.id != it.first.idSender && it.first.isPersonalUnread == true
-                                }
-                            }
-                            if (unreadMessages.isNotEmpty()) {
-                                viewModel.markMessagesAsRead(unreadMessages.map { it.first })
-                            }
-                        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.arrowTriggerFlow.collect {
+                        registerArrowObserver()
                     }
-            }
-            launch {
-                viewModel.unsentMessageFlow.collect { uMessage ->
-                    if(uMessage != null) {
+                }
+                launch {
+                    viewModel.scrollTriggerFlow.collect {
                         registerScrollObserver()
-                        Log.d("testUnsentFlow", "OK")
-                        adapter.addUnsentMessage(Triple(uMessage, "", ""))
                     }
                 }
-            }
-            launch {
-                viewModel.editMessageFlow.collect { message ->
-                    if(message != null) {
-                        Log.d("testEditFlow", "OK")
-                        val updatedList = adapter.currentList.toMutableList()
-                        val index = updatedList.indexOfFirst { it.first.id == message.id }
-                        if(index != -1) {
-                            val oldPair = updatedList[index]
-                            updatedList[index] = oldPair.copy(first = message)
-                            adapter.submitList(updatedList)
+                launch {
+                    viewModel.deleteState.collectLatest {
+                        if(it == 1) {
+                            Toast.makeText(requireContext(), "Все сообщения были удалены", Toast.LENGTH_SHORT).show()
+                        }
+                        if(it == 2) {
+                            Toast.makeText(requireContext(), "Диалог был удален", Toast.LENGTH_SHORT).show()
+                            backPressed()
                         }
                     }
                 }
-            }
-            launch {
-                viewModel.readMessagesFlow.collect { readMessagesIds ->
-                    adapter.updateMessagesAsRead(readMessagesIds)
+                launch {
+                    val icVolumeOff: ImageView = view.findViewById(R.id.ic_volume_off)
+                    icVolumeOff.visibility = if(viewModel.isNotificationsEnabled()) View.GONE else View.VISIBLE
                 }
-            }
-            launch {
-                viewModel.deleteState.collectLatest {
-                    if(it == 1) {
-                        Toast.makeText(requireContext(), "Все сообщения были удалены", Toast.LENGTH_SHORT).show()
+                launch {
+                    viewModel.opponentAvatar.collect { state ->
+                        if(state is AvatarState.Ready) {
+                            val profilePhoto: ImageView = view.findViewById(R.id.photoImageView)
+                            profilePhoto.imageTintList = null
+                            Glide.with(profilePhoto)
+                                .load(state.localPath)
+                                .circleCrop()
+                                .dontAnimate()
+                                .into(profilePhoto)
+                        }
                     }
-                    if(it == 2) {
-                        Toast.makeText(requireContext(), "Диалог был удален", Toast.LENGTH_SHORT).show()
-                        backPressed()
+                }
+                launch {
+                    viewModel.canLongClick.collect {
+                        adapter.canLongClick = it
+                    }
+                }
+                launch {
+                    viewModel.stopPagination.collect {
+                        isStopPagination = it
                     }
                 }
             }
@@ -226,11 +238,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         }
 
         registerArrowScrollListener()
-        val typedValue = TypedValue()
-        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
-        val colorBar = typedValue.data
-        requireActivity().window.statusBarColor = colorBar
-        requireActivity().window.navigationBarColor = ContextCompat.getColor(requireContext(), R.color.navigation_bar_color)
+        viewModel.preloadOpponentAvatar(getAvatarString())
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.custom_action_bar, toolbarContainer, false)
@@ -244,12 +252,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
             binding.enterMessage.isEnabled = false // необходимо для предотвращения багов из-за клавиатуры
             replaceToInfoFragment()
         }
-        val icVolumeOff: ImageView = view.findViewById(R.id.ic_volume_off)
-        lifecycleScope.launch {
-            icVolumeOff.visibility = if(viewModel.isNotificationsEnabled()) View.GONE else View.VISIBLE
-            val avatar = getAvatarString()
-            viewModel.avatarSet(avatar, profilePhoto, requireContext())
-        }
         val userName: TextView = view.findViewById(R.id.userNameTextView)
         userName.text = getUpperName()
         userName.setOnClickListener {
@@ -262,28 +264,30 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         val dot2: View = view.findViewById(R.id.dot2)
         val dot3: View = view.findViewById(R.id.dot3)
         val typingAnimation = TypingAnimation(dot1, dot2, dot3)
-        lifecycleScope.launch {
-            viewModel.typingState
-                .debounce(2000)
-                .distinctUntilChanged()
-                .collect { (isTyping, username) ->
-                    if (isTyping) {
-                        lastSession.visibility = View.INVISIBLE
-                        typingTextView.text = if(username != null) "$username печатает" else "печатает"
-                        typingTextView.visibility = View.VISIBLE
-                        dot1.visibility = View.VISIBLE
-                        dot2.visibility = View.VISIBLE
-                        dot3.visibility = View.VISIBLE
-                        typingAnimation.startAnimation()
-                    } else {
-                        typingAnimation.stopAnimation()
-                        typingTextView.visibility = View.INVISIBLE
-                        dot1.visibility = View.INVISIBLE
-                        dot2.visibility = View.INVISIBLE
-                        dot3.visibility = View.INVISIBLE
-                        lastSession.visibility = View.VISIBLE
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.typingState
+                    .debounce(2000)
+                    .distinctUntilChanged()
+                    .collect { (isTyping, username) ->
+                        if (isTyping) {
+                            lastSession.visibility = View.INVISIBLE
+                            typingTextView.text = if(username != null) "$username печатает" else "печатает"
+                            typingTextView.visibility = View.VISIBLE
+                            dot1.visibility = View.VISIBLE
+                            dot2.visibility = View.VISIBLE
+                            dot3.visibility = View.VISIBLE
+                            typingAnimation.startAnimation()
+                        } else {
+                            typingAnimation.stopAnimation()
+                            typingTextView.visibility = View.INVISIBLE
+                            dot1.visibility = View.INVISIBLE
+                            dot2.visibility = View.INVISIBLE
+                            dot3.visibility = View.INVISIBLE
+                            lastSession.visibility = View.VISIBLE
+                        }
                     }
-                }
+            }
         }
         val icSearch: ImageView = view.findViewById(R.id.ic_search)
         icSearch.setOnClickListener {
@@ -293,12 +297,35 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         binding = FragmentMessageBinding.inflate(inflater, container, false)
+        WindowCompat.setDecorFitsSystemWindows(requireActivity().window, false)
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val systemBarsAndIme = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
+
+            binding.statusBarScrim.layoutParams.height = systemBars.top
+            // Нижний скрам принимает высоту навбара ИЛИ клавиатуры (что из них больше в данный момент)
+            binding.navigationBarScrim.layoutParams.height = systemBarsAndIme.bottom
+
+            // Принудительно обновляем layout, так как мы изменили layoutParams
+            binding.statusBarScrim.requestLayout()
+            binding.navigationBarScrim.requestLayout()
+
+            insets
+        }
+
         val wallpaper = viewModel.getWallpaper(isDarkTheme(requireContext()))
         if (wallpaper != "") {
             val resId = WALLPAPER_MAP[wallpaper] ?: -1
             if(resId != -1)
                 binding.messageLayout.background = ContextCompat.getDrawable(requireContext(), resId)
         }
+        val typedValue = TypedValue()
+        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
+        val colorBar = typedValue.data
+        binding.statusBarScrim.setBackgroundColor(colorBar)
+        binding.navigationBarScrim.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.navigation_bar_color))
+
         filePickerManager = FilePickerManager(this)
         setupAdapterDialog()
         if(isFromNotification) {
@@ -514,8 +541,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         }
         binding.recyclerview.layoutManager = layoutManager
         binding.recyclerview.addItemDecoration(VerticalSpaceItemDecoration(15))
-        binding.recyclerview.setItemViewCacheSize(30) // works good
-        viewModel.bindRecyclerView(binding.recyclerview)
+        binding.recyclerview.setItemViewCacheSize(60) // works good
         binding.selectedPhotosRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         binding.selectedPhotosRecyclerView.adapter = imageAdapter
         binding.recyclerview.addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -752,15 +778,16 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                 else showPopupMenuMessage(itemView, R.menu.popup_menu_message_receiver, message, null, false)
             }
 
-            override fun onMessageClickImage(message: Message, itemView: View, localMedias: ArrayList<LocalMedia>, isSender: Boolean) {
+            override fun onMessageClickImage(message: Message, itemView: View, isSender: Boolean) {
+                val localMedias = message.images?.size?.let { getLocalMedias(message.id, it == 1) }
                 if(isSender) showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, localMedias, true)
                 else showPopupMenuMessage(itemView, R.menu.popup_menu_message_receiver, message, localMedias, false)
             }
 
-            override fun onMessageLongClick(itemView: View) {
+            override fun onMessageLongClick(messageId: Int) {
+                viewModel.toggleCheckboxes(messageId)
                 var flag = true
                 lifecycleScope.launch {
-                    viewModel.stopRefresh()
                     binding.floatingActionButtonDelete.visibility = View.VISIBLE
                     binding.floatingActionButtonForward.visibility = View.VISIBLE
                     requireActivity().onBackPressedDispatcher.addCallback(
@@ -769,7 +796,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                             @SuppressLint("NotifyDataSetChanged")
                             override fun handleOnBackPressed() {
                                 if (!adapter.canLongClick && flag) {
-                                    adapter.clearPositions()
+                                    viewModel.clearSelection()
                                     binding.floatingActionButtonDelete.visibility = View.GONE
                                     binding.floatingActionButtonForward.visibility = View.GONE
                                 } else {
@@ -777,25 +804,22 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                                     remove()
                                     backPressed()
                                 }
-                                viewModel.startRefresh()
                                 registerScrollObserver()
                             }
                         })
                     binding.floatingActionButtonDelete.setOnClickListener {
-                        val messagesToDelete = adapter.getDeleteList()
+                        val messagesToDelete = viewModel.getSelectedMessages()
                         if (messagesToDelete.isNotEmpty()) {
                             lifecycleScope.launch {
                                 binding.progressBar.visibility = View.VISIBLE
                                 binding.floatingActionButtonDelete.visibility = View.GONE
                                 binding.floatingActionButtonForward.visibility = View.GONE
-                                val response = async { viewModel.deleteMessages(messagesToDelete) }
+                                val response = async { viewModel.deleteMessages(messagesToDelete.map { it.id }) }
                                 if(response.await()) {
-                                    adapter.clearPositions()
-                                    viewModel.startRefresh()
+                                    viewModel.clearSelection()
                                     binding.progressBar.visibility = View.GONE
                                 } else {
-                                    adapter.clearPositions()
-                                    viewModel.startRefresh()
+                                    viewModel.clearSelection()
                                     binding.progressBar.visibility = View.GONE
                                     Toast.makeText(requireContext(), "Не удалось удалить сообщения", Toast.LENGTH_SHORT).show()
                                 }
@@ -804,7 +828,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     }
                     binding.floatingActionButtonForward.setOnClickListener {
                         flag = false
-                        val fMessages = adapter.getForwardList()
+                        val fMessages = viewModel.getForwardMessages()
                         fMessages.sortedBy { it.first.timestamp }
                         val (messages, booleans) = fMessages.unzip()
                         if(fMessages.isNotEmpty()) {
@@ -835,7 +859,9 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     }
                 }
             }
-            override fun onImagesClick(images: ArrayList<LocalMedia>, position: Int) {
+            override fun onImagesClick(messageId: Int, position: Int) {
+                val images = getLocalMedias(messageId, position == 0)
+                if(images.isEmpty()) return
                 Log.d("testClickImages", "images: $images")
                 PictureSelector.create(requireActivity())
                     .openPreview()
@@ -864,9 +890,131 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     dialog.show(parentFragmentManager, "CodePreviewDialogFragment")
                 }
             }
-        }, currentUser.id, requireContext(), viewModel, isGroup(), canDelete())
+            override fun onReplyClick(referenceId: Int) {
+                val index = viewModel.messagesUi.value.indexOfFirst { it.message.id == referenceId }
+                if (index != -1) {
+                    binding.recyclerview.smoothScrollToPosition(index)
+                    viewModel.highlightMessage(referenceId)
+                }
+            }
+            override fun onSelected(messageId: Int) {
+                viewModel.toggleSelection(messageId)
+            }
+            override fun onVoiceClick(messageId: Int) {
+                val ui = viewModel.messagesUi.value.firstOrNull { it.message.id == messageId } ?: return
+                val state = ui.voiceState as? VoiceState.Ready ?: return
+                when {
+                    playingMessageId == messageId -> pauseAudio()
+                    playingMessageId != null -> {
+                        // играл другой — стопаем его
+                        stopAudio()
+                        startAudio(messageId, state.localPath)
+                    }
+                    else -> startAudio(messageId, state.localPath)
+                }
+            }
+            override fun onVoiceSeek(messageId: Int, progress: Int) {
+                if (playingMessageId == messageId) {
+                    val player = mediaPlayer ?: return
+                    player.seekTo(progress)
+                }
+            }
+            override fun onFileOpenClick(messageId: Int) {
+                val ui = viewModel.messagesUi.value.firstOrNull { it.message.id == messageId } ?: return
+                val state = ui.fileState as? FileState.Ready ?: return
+                val file = File(state.localPath)
+                if(file.exists()) {
+                    try {
+                        val uri = FileProvider.getUriForFile(requireContext(), requireContext().applicationContext.packageName + ".provider", file)
+                        val intent = Intent(Intent.ACTION_VIEW)
+                        intent.setDataAndType(uri, requireContext().contentResolver.getType(uri))
+                        intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+
+                        val chooser = Intent.createChooser(intent, "Выберите приложение для открытия файла")
+                        requireContext().startActivity(chooser)
+                    } catch (e: IllegalArgumentException) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }, currentUser.id, requireContext(), isGroup(), canDelete())
         adapter.setHasStableIds(true)
         binding.recyclerview.adapter = adapter
+    }
+
+    private fun startAudio(messageId: Int, path: String) {
+        mediaPlayer = MediaPlayer().apply {
+            setDataSource(path)
+            prepare()
+            start()
+            setOnCompletionListener {
+                stopAudio()
+            }
+        }
+        playingMessageId = messageId
+        startSeekUpdates()
+    }
+
+    private fun pauseAudio() {
+        val player = mediaPlayer ?: return
+        val id = playingMessageId ?: return
+
+        if (player.isPlaying) {
+            player.pause()
+            stopSeekUpdates()
+
+            // обновляем кнопку play/pause
+            val index = viewModel.messagesUi.value.indexOfFirst { it.message.id == id }
+            if (index != -1) {
+                adapter.notifyItemChanged(index, PAYLOAD_PAUSE)
+            }
+        } else { // Если то же аудио мы стопаем и снова запускаем
+            player.start()
+            startSeekUpdates()
+        }
+    }
+
+    private fun stopAudio() {
+        stopSeekUpdates()
+        val id = playingMessageId
+
+        mediaPlayer?.release()
+        mediaPlayer = null
+        playingMessageId = null
+
+        id?.let {
+            val index = viewModel.messagesUi.value.indexOfFirst { m -> m.message.id == it }
+            if (index != -1) {
+                adapter.notifyItemChanged(index, PAYLOAD_STOP)
+            }
+        }
+    }
+
+    private fun startSeekUpdates() {
+        updateRunnable = object : Runnable {
+            override fun run() {
+                val player = mediaPlayer ?: return
+                val id = playingMessageId ?: return
+
+                if (player.isPlaying) {
+                    val progress = player.currentPosition
+                    val index = viewModel.messagesUi.value.indexOfFirst { it.message.id == id }
+
+                    if (index != -1) {
+                        adapter.notifyItemChanged(index, PAYLOAD_PROGRESS to progress)
+                    }
+                    handler.postDelayed(this, 100)
+                }
+            }
+        }
+        updateRunnable?.let { handler.post(it) }
+    }
+
+    private fun stopSeekUpdates() {
+        updateRunnable?.let {
+            handler.removeCallbacks(it)
+        }
+        updateRunnable = null
     }
 
     override val defaultViewModelCreationExtras: CreationExtras
@@ -1071,7 +1219,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                         val flag = viewModel.sendUnsentMessage(finalMessage)
                         if(flag) {
                             viewModel.deleteUnsentMessage(message.id)
-                            adapter.deleteUnsentMessage(message)
                         } else {
                             Toast.makeText(requireContext(), "Не удалось отправить сообщение", Toast.LENGTH_SHORT).show()
                         }
@@ -1081,7 +1228,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                 R.id.item_delete -> {
                     lifecycleScope.launch {
                         viewModel.deleteUnsentMessage(message.id)
-                        adapter.deleteUnsentMessage(message)
                     }
                     true
                 }
@@ -1304,6 +1450,64 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         }
     }
 
+    fun setMarkScrollListener() {
+        binding.recyclerview.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+                val last = layoutManager.findLastVisibleItemPosition()
+                val first = layoutManager.findFirstVisibleItemPosition()
+
+                // Проверяем видимые элементы от последнего к первому
+                if (last != RecyclerView.NO_POSITION && first != RecyclerView.NO_POSITION) {
+                    val visibleMessages =
+                        viewModel.messagesUi.value
+                            .subList(first, last + 1)
+                            .mapNotNull { ui ->
+                                markReadCondition(ui)
+                            }
+
+                    if (visibleMessages.isNotEmpty()) {
+                        viewModel.markMessagesAsRead(visibleMessages)
+                    }
+
+                    if (first == 0) {
+                        recyclerView.removeOnScrollListener(this)
+                    }
+                }
+            }
+        })
+    }
+
+    fun getLocalMedias(messageId: Int, isSingle: Boolean): ArrayList<LocalMedia> {
+        val ui = viewModel.messagesUi.value.firstOrNull { it.message.id == messageId } ?: return arrayListOf()
+        val images = if(isSingle) {
+            val state = ui.imageState as? ImageState.Ready ?: return arrayListOf()
+            val lc = LocalMedia().apply {
+                path = state.localPath
+                mimeType = state.mimeType
+                duration = state.duration
+                isCompressed = false
+                isCut = false
+                isOriginal = false
+            }
+            arrayListOf(lc)
+        } else {
+            val state = ui.imagesState as? ImagesState.Ready ?: return arrayListOf()
+            val list = state.imageItems.map { item ->
+                LocalMedia().apply {
+                    path = item.localPath
+                    mimeType = item.mimeType
+                    duration = item.duration
+                    isCompressed = false
+                    isCut = false
+                    isOriginal = false
+                }
+            }
+            ArrayList(list)
+        }
+        return images
+    }
+
     class VerticalSpaceItemDecoration(private val verticalSpaceHeight: Int) :
         RecyclerView.ItemDecoration() {
         override fun getItemOffsets(
@@ -1337,6 +1541,10 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        stopAudio()
+    }
     companion object {
         const val ARG_USER = "arg_user"
         const val ARG_FROM_NOTIFICATION = "arg_from_notification"

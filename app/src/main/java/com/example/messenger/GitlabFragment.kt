@@ -23,7 +23,7 @@ import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentGitlabBinding
 import com.example.messenger.model.Repo
 import com.example.messenger.model.User
-import com.example.messenger.model.getParcelableCompat
+import com.example.messenger.utils.getParcelableCompat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 

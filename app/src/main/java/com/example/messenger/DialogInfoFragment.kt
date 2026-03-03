@@ -10,7 +10,7 @@ import android.view.ViewGroup
 import com.example.messenger.model.Dialog
 import com.example.messenger.model.LastMessage
 import com.example.messenger.model.User
-import com.example.messenger.model.getParcelableCompat
+import com.example.messenger.utils.getParcelableCompat
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

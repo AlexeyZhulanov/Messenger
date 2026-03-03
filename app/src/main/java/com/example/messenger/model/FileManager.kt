@@ -145,7 +145,7 @@ class FileManager(private val context: Context) {
                 }
             }
             true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }
