@@ -14,7 +14,6 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.codeview.syntax.LanguageManager
 import com.example.messenger.codeview.syntax.LanguageName
 import com.example.messenger.codeview.syntax.ThemeName
@@ -72,7 +71,12 @@ class MessageDiffCallback : DiffUtil.ItemCallback<MessageUi>() {
     }
 
     override fun getChangePayload(oldItem: MessageUi, newItem: MessageUi): Any? {
-        return if (!oldItem.message.isRead && newItem.message.isRead) "isRead" else null
+        return when {
+            !oldItem.message.isRead && newItem.message.isRead -> "isRead"
+            oldItem.isShowCheckbox != newItem.isShowCheckbox -> "isCheckbox" to Pair(newItem.isShowCheckbox, newItem.isSelected)
+            oldItem.isSelected != newItem.isSelected -> "isChecked" to newItem.isSelected
+            else -> null
+        }
     }
 }
 
@@ -203,6 +207,44 @@ class MessageAdapter(
                             else if (holder is MessagesViewHolderVoiceSender) holder.updateProgress(progress)
                             return
                         }
+                        if(payload.first == "isCheckbox") {
+                            val pair = payload.second as Pair<*, *>
+                            val isShowCheckbox = pair.first as Boolean
+                            val isChecked = pair.second as Boolean
+                            when(holder) {
+                                is MessagesViewHolderSender -> holder.toggleCheckbox(isShowCheckbox, isChecked)
+                                is MessagesViewHolderVoiceSender -> holder.toggleCheckbox(isShowCheckbox, isChecked)
+                                is MessagesViewHolderFileSender -> holder.toggleCheckbox(isShowCheckbox, isChecked)
+                                is MessagesViewHolderTextImageSender -> holder.toggleCheckbox(isShowCheckbox, isChecked)
+                                is MessagesViewHolderTextImagesSender -> holder.toggleCheckbox(isShowCheckbox, isChecked)
+                                is MessagesViewHolderCodeSender -> holder.toggleCheckbox(isShowCheckbox, isChecked)
+                                is MessagesViewHolderReceiver -> holder.toggleCheckbox(isShowCheckbox, isChecked)
+                                is MessagesViewHolderVoiceReceiver -> holder.toggleCheckbox(isShowCheckbox, isChecked)
+                                is MessagesViewHolderFileReceiver -> holder.toggleCheckbox(isShowCheckbox, isChecked)
+                                is MessagesViewHolderTextImageReceiver -> holder.toggleCheckbox(isShowCheckbox, isChecked)
+                                is MessagesViewHolderTextImagesReceiver -> holder.toggleCheckbox(isShowCheckbox, isChecked)
+                                is MessagesViewHolderCodeReceiver -> holder.toggleCheckbox(isShowCheckbox, isChecked)
+                            }
+                            return
+                        }
+                        if(payload.first == "isChecked") {
+                            val isChecked = payload.second as Boolean
+                            when(holder) {
+                                is MessagesViewHolderSender -> holder.toggleCheck(isChecked)
+                                is MessagesViewHolderVoiceSender -> holder.toggleCheck(isChecked)
+                                is MessagesViewHolderFileSender -> holder.toggleCheck(isChecked)
+                                is MessagesViewHolderTextImageSender -> holder.toggleCheck(isChecked)
+                                is MessagesViewHolderTextImagesSender -> holder.toggleCheck(isChecked)
+                                is MessagesViewHolderCodeSender -> holder.toggleCheck(isChecked)
+                                is MessagesViewHolderReceiver -> holder.toggleCheck(isChecked)
+                                is MessagesViewHolderVoiceReceiver -> holder.toggleCheck(isChecked)
+                                is MessagesViewHolderFileReceiver -> holder.toggleCheck(isChecked)
+                                is MessagesViewHolderTextImageReceiver -> holder.toggleCheck(isChecked)
+                                is MessagesViewHolderTextImagesReceiver -> holder.toggleCheck(isChecked)
+                                is MessagesViewHolderCodeReceiver -> holder.toggleCheck(isChecked)
+                            }
+                            return
+                        }
                     }
                     PAYLOAD_PAUSE -> {
                         if (holder is MessagesViewHolderVoiceReceiver) holder.playerPause()
@@ -235,7 +277,6 @@ class MessageAdapter(
 
         if (item.isHighlighted) {
             holder.itemView.setBackgroundColor(ContextCompat.getColor(context, R.color.chatAnswerHighlight))
-            return // todo тест, возможно так нельзя
         } else holder.itemView.setBackgroundColor(Color.TRANSPARENT)
 
         when (holder) {
@@ -283,10 +324,20 @@ class MessageAdapter(
             }
         }
 
+        fun toggleCheckbox(isShow: Boolean, isChecked: Boolean) {
+            binding.checkbox.isVisible = isShow
+            binding.checkbox.isChecked = isChecked
+        }
+
+        fun toggleCheck(isChecked: Boolean) {
+            binding.checkbox.isChecked = isChecked
+        }
+
         fun bind(ui: MessageUi) {
             messageSave = ui.message
 
             binding.checkbox.isVisible = ui.isShowCheckbox
+            binding.checkbox.isChecked = ui.isSelected
             when(val state = ui.replyState) {
                 is ReplyState.Loading -> {
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
@@ -297,7 +348,7 @@ class MessageAdapter(
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
                     binding.answerLayout.root.isVisible = true
                     binding.answerLayout.answerMessage.text = state.previewText
-                    binding.answerLayout.answerUsername.text = state.username
+                    binding.answerLayout.answerUsername.text = ui.message.usernameAuthorOriginal
                     state.previewImagePath?.let {
                         Glide.with(binding.answerLayout.answerImageView)
                             .load(it)
@@ -339,17 +390,21 @@ class MessageAdapter(
                 when(val state = ui.avatarState) {
                     is AvatarState.Loading -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
                     }
                     is AvatarState.Ready -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
+                        binding.photoImageView.imageTintList = null
                         Glide.with(binding.photoImageView)
                             .load(state.localPath)
-                            .apply(RequestOptions.circleCropTransform())
+                            .circleCrop()
                             .dontAnimate()
                             .into(binding.photoImageView)
                     }
                     is AvatarState.Error -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
                     }
                     null -> {
                         binding.photoImageView.isVisible = ui.showAvatar
@@ -401,10 +456,22 @@ class MessageAdapter(
             binding.icCheck2.bringToFront()
         }
 
+        fun toggleCheckbox(isShow: Boolean, isChecked: Boolean) {
+            if(messageSave?.isUnsent != true) {
+                binding.checkbox.isVisible = isShow
+                binding.checkbox.isChecked = isChecked
+            }
+        }
+
+        fun toggleCheck(isChecked: Boolean) {
+            binding.checkbox.isChecked = isChecked
+        }
+
         fun bind(ui: MessageUi) {
             messageSave = ui.message
 
             binding.checkbox.isVisible = ui.isShowCheckbox && ui.message.isUnsent != true
+            binding.checkbox.isChecked = ui.isSelected
             when(val state = ui.replyState) {
                 is ReplyState.Loading -> {
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
@@ -415,7 +482,7 @@ class MessageAdapter(
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
                     binding.answerLayout.root.isVisible = true
                     binding.answerLayout.answerMessage.text = state.previewText
-                    binding.answerLayout.answerUsername.text = state.username
+                    binding.answerLayout.answerUsername.text = ui.message.usernameAuthorOriginal
                     state.previewImagePath?.let {
                         Glide.with(binding.answerLayout.answerImageView)
                             .load(it)
@@ -536,10 +603,20 @@ class MessageAdapter(
             binding.timeVoiceTextView.text = lastDurationStr ?: "0"
         }
 
+        fun toggleCheckbox(isShow: Boolean, isChecked: Boolean) {
+            binding.checkbox.isVisible = isShow
+            binding.checkbox.isChecked = isChecked
+        }
+
+        fun toggleCheck(isChecked: Boolean) {
+            binding.checkbox.isChecked = isChecked
+        }
+
         fun bind(ui: MessageUi) {
             messageSave = ui.message
 
             binding.checkbox.isVisible = ui.isShowCheckbox
+            binding.checkbox.isChecked = ui.isSelected
             when(val state = ui.replyState) {
                 is ReplyState.Loading -> {
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
@@ -550,7 +627,7 @@ class MessageAdapter(
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
                     binding.answerLayout.root.isVisible = true
                     binding.answerLayout.answerMessage.text = state.previewText
-                    binding.answerLayout.answerUsername.text = state.username
+                    binding.answerLayout.answerUsername.text = ui.message.usernameAuthorOriginal
                     state.previewImagePath?.let {
                         Glide.with(binding.answerLayout.answerImageView)
                             .load(it)
@@ -589,17 +666,21 @@ class MessageAdapter(
                 when(val state = ui.avatarState) {
                     is AvatarState.Loading -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
                     }
                     is AvatarState.Ready -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
+                        binding.photoImageView.imageTintList = null
                         Glide.with(binding.photoImageView)
                             .load(state.localPath)
-                            .apply(RequestOptions.circleCropTransform())
+                            .circleCrop()
                             .dontAnimate()
                             .into(binding.photoImageView)
                     }
                     is AvatarState.Error -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
                     }
                     null -> {
                         binding.photoImageView.isVisible = ui.showAvatar
@@ -710,10 +791,22 @@ class MessageAdapter(
             binding.icCheck2.bringToFront()
         }
 
+        fun toggleCheckbox(isShow: Boolean, isChecked: Boolean) {
+            if(messageSave?.isUnsent != true) {
+                binding.checkbox.isVisible = isShow
+                binding.checkbox.isChecked = isChecked
+            }
+        }
+
+        fun toggleCheck(isChecked: Boolean) {
+            binding.checkbox.isChecked = isChecked
+        }
+
         fun bind(ui: MessageUi) {
             messageSave = ui.message
 
             binding.checkbox.isVisible = ui.isShowCheckbox && ui.message.isUnsent != true
+            binding.checkbox.isChecked = ui.isSelected
             when(val state = ui.replyState) {
                 is ReplyState.Loading -> {
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
@@ -724,7 +817,7 @@ class MessageAdapter(
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
                     binding.answerLayout.root.isVisible = true
                     binding.answerLayout.answerMessage.text = state.previewText
-                    binding.answerLayout.answerUsername.text = state.username
+                    binding.answerLayout.answerUsername.text = ui.message.usernameAuthorOriginal
                     state.previewImagePath?.let {
                         Glide.with(binding.answerLayout.answerImageView)
                             .load(it)
@@ -833,10 +926,20 @@ class MessageAdapter(
             }
         }
 
+        fun toggleCheckbox(isShow: Boolean, isChecked: Boolean) {
+            binding.checkbox.isVisible = isShow
+            binding.checkbox.isChecked = isChecked
+        }
+
+        fun toggleCheck(isChecked: Boolean) {
+            binding.checkbox.isChecked = isChecked
+        }
+
         fun bind(ui: MessageUi) {
             messageSave = ui.message
 
             binding.checkbox.isVisible = ui.isShowCheckbox
+            binding.checkbox.isChecked = ui.isSelected
             when(val state = ui.replyState) {
                 is ReplyState.Loading -> {
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
@@ -847,7 +950,7 @@ class MessageAdapter(
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
                     binding.answerLayout.root.isVisible = true
                     binding.answerLayout.answerMessage.text = state.previewText
-                    binding.answerLayout.answerUsername.text = state.username
+                    binding.answerLayout.answerUsername.text = ui.message.usernameAuthorOriginal
                     state.previewImagePath?.let {
                         Glide.with(binding.answerLayout.answerImageView)
                             .load(it)
@@ -886,17 +989,21 @@ class MessageAdapter(
                 when(val state = ui.avatarState) {
                     is AvatarState.Loading -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
                     }
                     is AvatarState.Ready -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
+                        binding.photoImageView.imageTintList = null
                         Glide.with(binding.photoImageView)
                             .load(state.localPath)
-                            .apply(RequestOptions.circleCropTransform())
+                            .circleCrop()
                             .dontAnimate()
                             .into(binding.photoImageView)
                     }
                     is AvatarState.Error -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
                     }
                     null -> {
                         binding.photoImageView.isVisible = ui.showAvatar
@@ -911,17 +1018,18 @@ class MessageAdapter(
 
             when (val state = ui.fileState) {
                 is FileState.Loading -> {
-                    binding.fileButton.isVisible = false // todo need test
+                    binding.fileButton.isVisible = false
                     binding.progressBar.isVisible = true
                     binding.errorImageView.isVisible = false
                 }
                 is FileState.Ready -> {
+                    binding.fileButton.isVisible = true
                     binding.progressBar.isVisible = false
                     binding.fileNameReceiverTextView.text = state.fileName
                     binding.fileSizeTextView.text = state.fileSize
                 }
                 is FileState.Error -> {
-                    binding.fileButton.isVisible = false // todo need test
+                    binding.fileButton.isVisible = true
                     binding.progressBar.isVisible = false
                     binding.errorImageView.isVisible = true
                 }
@@ -970,10 +1078,22 @@ class MessageAdapter(
             binding.icCheck2.bringToFront()
         }
 
+        fun toggleCheckbox(isShow: Boolean, isChecked: Boolean) {
+            if(messageSave?.isUnsent != true) {
+                binding.checkbox.isVisible = isShow
+                binding.checkbox.isChecked = isChecked
+            }
+        }
+
+        fun toggleCheck(isChecked: Boolean) {
+            binding.checkbox.isChecked = isChecked
+        }
+
         fun bind(ui: MessageUi) {
             messageSave = ui.message
 
             binding.checkbox.isVisible = ui.isShowCheckbox && ui.message.isUnsent != true
+            binding.checkbox.isChecked = ui.isSelected
             when(val state = ui.replyState) {
                 is ReplyState.Loading -> {
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
@@ -984,7 +1104,7 @@ class MessageAdapter(
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
                     binding.answerLayout.root.isVisible = true
                     binding.answerLayout.answerMessage.text = state.previewText
-                    binding.answerLayout.answerUsername.text = state.username
+                    binding.answerLayout.answerUsername.text = ui.message.usernameAuthorOriginal
                     state.previewImagePath?.let {
                         Glide.with(binding.answerLayout.answerImageView)
                             .load(it)
@@ -1042,12 +1162,13 @@ class MessageAdapter(
                     binding.errorImageView.isVisible = false
                 }
                 is FileState.Ready -> {
+                    binding.fileButton.isVisible = true
                     binding.progressBar.isVisible = false
                     binding.fileNameSenderTextView.text = state.fileName
                     binding.fileSizeTextView.text = state.fileSize
                 }
                 is FileState.Error -> {
-                    binding.fileButton.isVisible = false
+                    binding.fileButton.isVisible = true
                     binding.progressBar.isVisible = false
                     binding.errorImageView.isVisible = true
                 }
@@ -1088,10 +1209,20 @@ class MessageAdapter(
             }
         }
 
+        fun toggleCheckbox(isShow: Boolean, isChecked: Boolean) {
+            binding.checkbox.isVisible = isShow
+            binding.checkbox.isChecked = isChecked
+        }
+
+        fun toggleCheck(isChecked: Boolean) {
+            binding.checkbox.isChecked = isChecked
+        }
+
         fun bind(ui: MessageUi) {
             messageSave = ui.message
 
             binding.checkbox.isVisible = ui.isShowCheckbox
+            binding.checkbox.isChecked = ui.isSelected
             when(val state = ui.replyState) {
                 is ReplyState.Loading -> {
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
@@ -1102,7 +1233,7 @@ class MessageAdapter(
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
                     binding.answerLayout.root.isVisible = true
                     binding.answerLayout.answerMessage.text = state.previewText
-                    binding.answerLayout.answerUsername.text = state.username
+                    binding.answerLayout.answerUsername.text = ui.message.usernameAuthorOriginal
                     state.previewImagePath?.let {
                         Glide.with(binding.answerLayout.answerImageView)
                             .load(it)
@@ -1155,17 +1286,21 @@ class MessageAdapter(
                 when(val state = ui.avatarState) {
                     is AvatarState.Loading -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
                     }
                     is AvatarState.Ready -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
+                        binding.photoImageView.imageTintList = null
                         Glide.with(binding.photoImageView)
                             .load(state.localPath)
-                            .apply(RequestOptions.circleCropTransform())
+                            .circleCrop()
                             .dontAnimate()
                             .into(binding.photoImageView)
                     }
                     is AvatarState.Error -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
                     }
                     null -> {
                         binding.photoImageView.isVisible = ui.showAvatar
@@ -1262,10 +1397,22 @@ class MessageAdapter(
             }
         }
 
+        fun toggleCheckbox(isShow: Boolean, isChecked: Boolean) {
+            if(messageSave?.isUnsent != true) {
+                binding.checkbox.isVisible = isShow
+                binding.checkbox.isChecked = isChecked
+            }
+        }
+
+        fun toggleCheck(isChecked: Boolean) {
+            binding.checkbox.isChecked = isChecked
+        }
+
         fun bind(ui: MessageUi) {
             messageSave = ui.message
 
             binding.checkbox.isVisible = ui.isShowCheckbox && ui.message.isUnsent != true
+            binding.checkbox.isChecked = ui.isSelected
             when(val state = ui.replyState) {
                 is ReplyState.Loading -> {
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
@@ -1276,7 +1423,7 @@ class MessageAdapter(
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
                     binding.answerLayout.root.isVisible = true
                     binding.answerLayout.answerMessage.text = state.previewText
-                    binding.answerLayout.answerUsername.text = state.username
+                    binding.answerLayout.answerUsername.text = ui.message.usernameAuthorOriginal
                     state.previewImagePath?.let {
                         Glide.with(binding.answerLayout.answerImageView)
                             .load(it)
@@ -1431,10 +1578,20 @@ class MessageAdapter(
             }
         }
 
+        fun toggleCheckbox(isShow: Boolean, isChecked: Boolean) {
+            binding.checkbox.isVisible = isShow
+            binding.checkbox.isChecked = isChecked
+        }
+
+        fun toggleCheck(isChecked: Boolean) {
+            binding.checkbox.isChecked = isChecked
+        }
+
         fun bind(ui: MessageUi) {
             messageSave = ui.message
 
             binding.checkbox.isVisible = ui.isShowCheckbox
+            binding.checkbox.isChecked = ui.isSelected
             when(val state = ui.replyState) {
                 is ReplyState.Loading -> {
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
@@ -1445,7 +1602,7 @@ class MessageAdapter(
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background)
                     binding.answerLayout.root.isVisible = true
                     binding.answerLayout.answerMessage.text = state.previewText
-                    binding.answerLayout.answerUsername.text = state.username
+                    binding.answerLayout.answerUsername.text = ui.message.usernameAuthorOriginal
                     state.previewImagePath?.let {
                         Glide.with(binding.answerLayout.answerImageView)
                             .load(it)
@@ -1498,17 +1655,21 @@ class MessageAdapter(
                 when(val state = ui.avatarState) {
                     is AvatarState.Loading -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
                     }
                     is AvatarState.Ready -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
+                        binding.photoImageView.imageTintList = null
                         Glide.with(binding.photoImageView)
                             .load(state.localPath)
-                            .apply(RequestOptions.circleCropTransform())
+                            .circleCrop()
                             .dontAnimate()
                             .into(binding.photoImageView)
                     }
                     is AvatarState.Error -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
                     }
                     null -> {
                         binding.photoImageView.isVisible = ui.showAvatar
@@ -1603,10 +1764,22 @@ class MessageAdapter(
             }
         }
 
+        fun toggleCheckbox(isShow: Boolean, isChecked: Boolean) {
+            if(messageSave?.isUnsent != true) {
+                binding.checkbox.isVisible = isShow
+                binding.checkbox.isChecked = isChecked
+            }
+        }
+
+        fun toggleCheck(isChecked: Boolean) {
+            binding.checkbox.isChecked = isChecked
+        }
+
         fun bind(ui: MessageUi) {
             messageSave = ui.message
 
             binding.checkbox.isVisible = ui.isShowCheckbox && ui.message.isUnsent != true
+            binding.checkbox.isChecked = ui.isSelected
             when(val state = ui.replyState) {
                 is ReplyState.Loading -> {
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
@@ -1617,7 +1790,7 @@ class MessageAdapter(
                     binding.answerLayout.root.setBackgroundResource(R.drawable.answer_background_sender)
                     binding.answerLayout.root.isVisible = true
                     binding.answerLayout.answerMessage.text = state.previewText
-                    binding.answerLayout.answerUsername.text = state.username
+                    binding.answerLayout.answerUsername.text = ui.message.usernameAuthorOriginal
                     state.previewImagePath?.let {
                         Glide.with(binding.answerLayout.answerImageView)
                             .load(it)
@@ -1735,10 +1908,20 @@ class MessageAdapter(
             }
         }
 
+        fun toggleCheckbox(isShow: Boolean, isChecked: Boolean) {
+            binding.checkbox.isVisible = isShow
+            binding.checkbox.isChecked = isChecked
+        }
+
+        fun toggleCheck(isChecked: Boolean) {
+            binding.checkbox.isChecked = isChecked
+        }
+
         fun bind(ui: MessageUi) {
             messageSave = ui.message
 
             binding.checkbox.isVisible = ui.isShowCheckbox
+            binding.checkbox.isChecked = ui.isSelected
             ui.previewCode?.let {
                 val lang = when(ui.message.codeLanguage) {
                     "java" -> LanguageName.JAVA
@@ -1769,17 +1952,21 @@ class MessageAdapter(
                 when(val state = ui.avatarState) {
                     is AvatarState.Loading -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
                     }
                     is AvatarState.Ready -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
+                        binding.photoImageView.imageTintList = null
                         Glide.with(binding.photoImageView)
                             .load(state.localPath)
-                            .apply(RequestOptions.circleCropTransform())
+                            .circleCrop()
                             .dontAnimate()
                             .into(binding.photoImageView)
                     }
                     is AvatarState.Error -> {
                         binding.photoImageView.isVisible = true
+                        binding.spaceAvatar.isVisible = false
                     }
                     null -> {
                         binding.photoImageView.isVisible = ui.showAvatar
@@ -1835,10 +2022,22 @@ class MessageAdapter(
             binding.icCheck2Image.bringToFront()
         }
 
+        fun toggleCheckbox(isShow: Boolean, isChecked: Boolean) {
+            if(messageSave?.isUnsent != true) {
+                binding.checkbox.isVisible = isShow
+                binding.checkbox.isChecked = isChecked
+            }
+        }
+
+        fun toggleCheck(isChecked: Boolean) {
+            binding.checkbox.isChecked = isChecked
+        }
+
         fun bind(ui: MessageUi) {
             messageSave = ui.message
 
             binding.checkbox.isVisible = ui.isShowCheckbox && ui.message.isUnsent != true
+            binding.checkbox.isChecked = ui.isSelected
             if(ui.message.isUnsent == true) {
                 with(binding) {
                     timeTextViewImage.text = "----"
