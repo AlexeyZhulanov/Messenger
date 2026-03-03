@@ -1,7 +1,5 @@
 package com.example.messenger
 
-import android.content.Context
-import android.content.SharedPreferences
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -29,13 +27,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val prefs: SharedPreferences,
     private val retrofitService: RetrofitService,
     private val fileManager: FileManager,
     private val appSettings: AppSettings,
     private val messengerService: MessengerService,
     private val webSocketService: WebSocketService,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
     private val _wallpaperLight = MutableLiveData<String>()
@@ -104,23 +101,23 @@ class SettingsViewModel @Inject constructor(
     suspend fun uploadAvatar(avatar: File): String {
         return try {
             retrofitService.uploadAvatar(avatar)
-        } catch (e: Exception) { "" }
+        } catch (_: Exception) { "" }
     }
 
-    suspend fun downloadAvatar(context: Context, filename: String): String {
-        return retrofitService.downloadAvatar(context, filename)
+    suspend fun downloadAvatar(filename: String): String {
+        return retrofitService.downloadAvatar(filename)
     }
 
     suspend fun updateAvatar(photo: String) : Boolean {
         return try {
             retrofitService.updateProfile(null, photo)
-        } catch (e: Exception) { false }
+        } catch (_: Exception) { false }
     }
     
     suspend fun updateUserName(username: String) : Boolean {
         return try {
             retrofitService.updateProfile(username, null)
-        } catch (e: Exception) { false }
+        } catch (_: Exception) { false }
     }
 
     fun updatePassword(oldPassword: String, newPassword: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
@@ -128,7 +125,7 @@ class SettingsViewModel @Inject constructor(
             if(newPassword != oldPassword) {
                 val result = try {
                     retrofitService.updatePassword(oldPassword, newPassword)
-                } catch (e: Exception) { false }
+                } catch (_: Exception) { false }
                 if (result) {
                     onSuccess()
                 } else {
@@ -143,7 +140,7 @@ class SettingsViewModel @Inject constructor(
     suspend fun deleteFCMToken() : Boolean {
         return try {
             retrofitService.deleteFCMToken()
-        } catch (e: Exception) { false }
+        } catch (_: Exception) { false }
     }
 
     fun clearAllAppFiles(callback: (Boolean) -> Unit) {

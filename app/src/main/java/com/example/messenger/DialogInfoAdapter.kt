@@ -154,7 +154,7 @@ class DialogInfoAdapter(
                         return@async Pair(viewModel.fManagerGetFilePath(content), false)
                     } else {
                         try {
-                            return@async Pair(viewModel.downloadFile(context, "files", content), true)
+                            return@async Pair(viewModel.downloadFile("files", content), true)
                         } catch (_: Exception) {
                             return@async Pair(null, false)
                         }
@@ -205,7 +205,7 @@ class DialogInfoAdapter(
                         return@async Pair(viewModel.fManagerGetFilePath(content), false)
                     } else {
                         try {
-                            return@async Pair(viewModel.downloadFile(context, "audio", content), true)
+                            return@async Pair(viewModel.downloadFile("audio", content), true)
                         } catch (_: Exception) {
                             return@async Pair(null, false)
                         }
@@ -294,7 +294,7 @@ class DialogInfoAdapter(
                                 return@async Pair(viewModel.fManagerGetAvatarPath(avatar), true)
                             } else {
                                 try {
-                                    return@async Pair(viewModel.downloadAvatar(context, avatar), false)
+                                    return@async Pair(viewModel.downloadAvatar(avatar), false)
                                 } catch (_: Exception) {
                                     return@async Pair(null, true)
                                 }

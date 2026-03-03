@@ -93,7 +93,7 @@ class MessengerFragment : Fragment() {
                             return@async Pair(messengerViewModel.fManagerGetAvatarPath(avatar), true)
                         } else {
                             try {
-                                return@async Pair(messengerViewModel.downloadAvatar(requireContext(), avatar), false)
+                                return@async Pair(messengerViewModel.downloadAvatar(avatar), false)
                             } catch (_: Exception) {
                                 return@async Pair(null, true)
                             }

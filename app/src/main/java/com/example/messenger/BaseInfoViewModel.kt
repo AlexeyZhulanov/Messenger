@@ -1,6 +1,5 @@
 package com.example.messenger
 
-import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.util.Base64
 import androidx.lifecycle.ViewModel
@@ -35,7 +34,7 @@ class BaseInfoViewModel @Inject constructor(
     private val messengerService: MessengerService,
     private val retrofitService: RetrofitService,
     private val fileManager: FileManager,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
     private var convId: Int = -1
     private var isGroup: Int = 0
@@ -72,9 +71,9 @@ class BaseInfoViewModel @Inject constructor(
 
                     if(success) callback("Пользователь успешно добавлен") else callback("Не удалось добавить пользователя")
                 } else callback("Ошибка: Пользователь ни разу не заходил в мессенджер, невозможно его добавить в группу!")
-            } catch (e: UserNotFoundException) {
+            } catch (_: UserNotFoundException) {
                 callback("Ошибка: Пользователя не существует")
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 callback("Ошибка: Нет сети!")
             }
         }
@@ -99,8 +98,8 @@ class BaseInfoViewModel @Inject constructor(
         fileManager.saveAvatarFile(fileName, fileData)
     }
 
-    suspend fun downloadAvatar(context: Context, filename: String): String {
-        return retrofitService.downloadAvatar(context, filename)
+    suspend fun downloadAvatar(filename: String): String {
+        return retrofitService.downloadAvatar(filename)
     }
 
     suspend fun isNotificationsEnabled(): Boolean {
@@ -123,25 +122,25 @@ class BaseInfoViewModel @Inject constructor(
     suspend fun getMediaPreviews(page: Int): List<String>? {
         return try {
             retrofitService.getMedias(convId, page, isGroup)
-        } catch (e: Exception) { null }
+        } catch (_: Exception) { null }
     }
 
     suspend fun getFiles(page: Int): List<String>? {
         return try {
             retrofitService.getFiles(convId, page, isGroup)
-        } catch (e: Exception) { null }
+        } catch (_: Exception) { null }
     }
 
     suspend fun getAudios(page: Int): List<String>? {
         return try {
             retrofitService.getAudios(convId, page, isGroup)
-        } catch (e: Exception) { null }
+        } catch (_: Exception) { null }
     }
 
-    suspend fun getPreview(context: Context, filename: String): String {
+    suspend fun getPreview(filename: String): String {
         val previewPath = try {
-            retrofitService.getMediaPreview(context, convId, filename, isGroup)
-        } catch (e: Exception) {
+            retrofitService.getMediaPreview(convId, filename, isGroup)
+        } catch (_: Exception) {
             return ""
         }
         return decryptPath(previewPath)
@@ -161,7 +160,7 @@ class BaseInfoViewModel @Inject constructor(
         return try {
             if(isGroup == 0) retrofitService.deleteDialogMessages(convId)
             else retrofitService.deleteGroupMessagesAll(convId)
-        } catch (e: Exception) { false }
+        } catch (_: Exception) { false }
     }
 
     suspend fun deleteConv(): Pair<Boolean, String> {
@@ -169,10 +168,10 @@ class BaseInfoViewModel @Inject constructor(
             if(isGroup == 0) {
                 retrofitService.deleteDialog(convId) to "Ошибка: Нет сети!"
             } else retrofitService.deleteGroup(convId) to "Ошибка: Нет сети!"
-        } catch (e: NoPermissionException) {
+        } catch (_: NoPermissionException) {
             false to "Ошибка: Только создатель группы может её удалить"
         }
-        catch (e: Exception) {
+        catch (_: Exception) {
             false to "Ошибка: Нет сети!"
         }
     }
@@ -181,7 +180,7 @@ class BaseInfoViewModel @Inject constructor(
         return try {
             if(isGroup == 0) retrofitService.updateAutoDeleteInterval(convId, interval)
             else retrofitService.updateGroupAutoDeleteInterval(convId, interval)
-        } catch (e: Exception) { false }
+        } catch (_: Exception) { false }
     }
 
     fun addTempFile(filename: String) = tempFiles.add(filename)
@@ -203,14 +202,14 @@ class BaseInfoViewModel @Inject constructor(
         fileManager.saveMessageFile(fileName, fileData)
     }
 
-    suspend fun downloadFile(context: Context, folder: String, filename: String): String {
-        val downloadedFilePath = retrofitService.downloadFile(context, folder, convId, filename, isGroup)
+    suspend fun downloadFile(folder: String, filename: String): String {
+        val downloadedFilePath = retrofitService.downloadFile(folder, convId, filename, isGroup)
         return decryptPath(downloadedFilePath)
     }
 
-    fun downloadFileJava(context: Context, folder: String, filename: String): String {
+    fun downloadFileJava(folder: String, filename: String): String {
         return runBlocking {
-            val downloadedFilePath = retrofitService.downloadFile(context, folder, convId, filename, isGroup)
+            val downloadedFilePath = retrofitService.downloadFile(folder, convId, filename, isGroup)
             decryptPath(downloadedFilePath)
         }
     }
@@ -222,25 +221,25 @@ class BaseInfoViewModel @Inject constructor(
     suspend fun deleteUserFromGroup(userId: Int): Boolean {
         return try {
             retrofitService.deleteUserFromGroup(convId, userId)
-        } catch (e: Exception) { false }
+        } catch (_: Exception) { false }
     }
 
     suspend fun updateGroupAvatar(avatar: String): Boolean {
         return try {
             retrofitService.updateGroupAvatar(convId, avatar)
-        } catch (e: Exception) { false }
+        } catch (_: Exception) { false }
     }
 
     suspend fun updateGroupName(name: String): Boolean {
         return try {
             retrofitService.editGroupName(convId, name)
-        } catch (e: Exception) { false }
+        } catch (_: Exception) { false }
     }
 
     suspend fun uploadAvatar(avatar: File): String {
         return try {
             retrofitService.uploadAvatar(avatar)
-        } catch (e: Exception) { "" }
+        } catch (_: Exception) { "" }
     }
 
     fun formatFileSize(size: Long): String {

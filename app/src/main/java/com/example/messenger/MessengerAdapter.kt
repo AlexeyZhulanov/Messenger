@@ -135,7 +135,7 @@ class MessengerAdapter(
                             } else {
                                 try {
                                     // todo это перенести в viewmodel
-                                    return@async Pair(messengerViewModel.downloadAvatar(context, avatar), false)
+                                    return@async Pair(messengerViewModel.downloadAvatar(avatar), false)
                                 } catch (e: Exception) {
                                     return@async Pair(null, true)
                                 }

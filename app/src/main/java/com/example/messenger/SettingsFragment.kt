@@ -126,8 +126,8 @@ class SettingsFragment : Fragment() {
                             return@async Pair(viewModel.fManagerGetAvatarPath(avatar), true)
                         } else {
                             try {
-                                return@async Pair(viewModel.downloadAvatar(requireContext(), avatar), false)
-                            } catch (e: Exception) {
+                                return@async Pair(viewModel.downloadAvatar( avatar), false)
+                            } catch (_: Exception) {
                                 return@async Pair(null, true)
                             }
                         }
