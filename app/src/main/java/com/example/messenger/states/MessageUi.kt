@@ -1,6 +1,8 @@
 package com.example.messenger.states
 
+import android.os.Parcelable
 import com.example.messenger.model.Message
+import kotlinx.parcelize.Parcelize
 
 data class MessageUi(
     val message: Message,
@@ -28,7 +30,7 @@ data class MessageUi(
     val avatarState: AvatarState? = null,
     val username: String? = null,
     val showUsername: Boolean = false,
-    val showAvatar: Boolean = false,
+    val showAvatar: Boolean = false
 )
 
 sealed class VoiceState {
@@ -60,13 +62,15 @@ sealed class ImageState {
     object Error : ImageState()
 }
 
+@Parcelize
 data class ImageItem(
     val localPath: String,
     val mimeType: String,
     val duration: Long
-)
+) : Parcelable
 
-sealed class ImagesState {
+@Parcelize
+sealed class ImagesState : Parcelable {
     object Loading : ImagesState()
     data class Ready(
         val imageItems: List<ImageItem>
@@ -84,10 +88,8 @@ sealed class ReplyState {
     object Loading : ReplyState()
 
     data class Ready(
-        val referenceMessageId: Int,
         val previewText: String,
-        val previewImagePath: String?, // локальный путь
-        val username: String?
+        val previewImagePath: String? // локальный путь
     ) : ReplyState()
 
     object Error : ReplyState()
@@ -95,6 +97,5 @@ sealed class ReplyState {
 
 data class ReplyPreview(
     val text: String,
-    val imageName: String?,
-    val username: String?
+    val imageName: String?
 )

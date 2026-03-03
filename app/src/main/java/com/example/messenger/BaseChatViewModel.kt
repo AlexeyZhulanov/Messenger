@@ -62,6 +62,7 @@ import com.example.messenger.states.ImageItem
 import com.example.messenger.states.ReplyPreview
 import com.example.messenger.states.ReplyState
 import com.example.messenger.utils.chunkedFlowLast
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.buffer
 import kotlin.collections.plus
 
@@ -76,8 +77,6 @@ abstract class BaseChatViewModel(
     protected var convId: Int = -1
     private var isGroup: Int = 0
     protected var currentUserId: Int = -1
-    protected var disableRefresh: Boolean = false
-    protected var pendingRefresh: Boolean = false
     protected var isLoadingPage = false
     protected var lastMessageDate: String = ""
     private var debounceJob: Job? = null
@@ -107,6 +106,15 @@ abstract class BaseChatViewModel(
     protected val _messagesUi = MutableStateFlow<List<MessageUi>>(emptyList())
     val messagesUi: StateFlow<List<MessageUi>> = _messagesUi
 
+    private val _opponentAvatar = MutableStateFlow<AvatarState>(AvatarState.Loading)
+    val opponentAvatar: StateFlow<AvatarState> = _opponentAvatar
+
+    private val _canLongClick = MutableStateFlow(true)
+    val canLongClick: StateFlow<Boolean> = _canLongClick
+
+    protected val _stopPagination = MutableStateFlow(false)
+    val stopPagination: StateFlow<Boolean> = _stopPagination
+
     private val linkPattern = Regex("""\[([^]]+)]\((https?://[^)]+)\)|(https?://\S+)""")
 
     private val preloadSemaphore = Semaphore(3)
@@ -115,12 +123,14 @@ abstract class BaseChatViewModel(
     private val imageCache = mutableMapOf<Int, ImageState>()
     private val imagesCache = mutableMapOf<Int, ImagesState>()
     private val loadingIds = mutableSetOf<Int>()
-    private val avatarCache = mutableMapOf<String, String>()
-    private val avatarLoading = mutableSetOf<String>()
     private val replyCache = mutableMapOf<Int, ReplyState>()
     private val replyLoading = mutableSetOf<Int>()
 
-    abstract fun applyGroupDisplayInfo(list: List<MessageUi>): List<MessageUi>
+    // Аватарок может быть много одинаковых, поэтому используем single-flight реализацию
+    protected val avatarCache = mutableMapOf<String, String>()
+    private val avatarDeferred = mutableMapOf<String, Deferred<AvatarState>>()
+
+    abstract fun applyGroupDisplayInfo(initialList: List<MessageUi>): List<MessageUi>
     abstract fun preloadAttachments(list: List<MessageUi>)
 
     init {
@@ -129,73 +139,70 @@ abstract class BaseChatViewModel(
                 .buffer()
                 .chunkedFlowLast(200)
                 .collect { newMessages ->
-                    if(!disableRefresh) {
-                        if (newMessages.isEmpty()) return@collect
-                        val decrypted = newMessages.map { mes ->
-                            mes.text?.let { tinkAesGcmHelper?.decryptText(it) }
-                            mes
+                    if (newMessages.isEmpty()) return@collect
+                    val decrypted = newMessages.map { mes ->
+                        val txt = mes.text?.let { tinkAesGcmHelper?.decryptText(it) }
+                        val code = mes.code?.let { tinkAesGcmHelper?.decryptText(it) }
+                        mes.copy(text = txt, code = code)
+                    }
+                    Log.d("testSocketsMessage", "New Messages: $newMessages")
+                    val unreadMessages = decrypted.filter {
+                        if(it.isPersonalUnread == null) {
+                            currentUserId != it.idSender && !it.isRead
+                        } else {
+                            currentUserId != it.idSender && it.isPersonalUnread == true
                         }
-                        Log.d("testSocketsMessage", "New Messages: $newMessages")
-                        val unreadMessages = decrypted.filter {
-                            if(it.isPersonalUnread == null) {
-                                currentUserId != it.idSender && !it.isRead
-                            } else {
-                                currentUserId != it.idSender && it.isPersonalUnread == true
-                            }
-                        }
-                        if (unreadMessages.isNotEmpty()) {
-                            markMessagesAsRead(unreadMessages)
-                        }
-                        val newUi = decrypted.map {mes ->
-                            val newMessageTriple =
-                                if(lastMessageDate == "") Triple(mes,"", formatMessageTime(mes.timestamp))
-                                else Triple(mes,formatMessageDate(mes.timestamp), formatMessageTime(mes.timestamp))
-                            toMessageUi(newMessageTriple, true)
-                        }
-                        newUi.lastOrNull()?.let { updateLastDate(it.message.timestamp) }
-                        _messagesUi.update { old ->
-                            applyGroupDisplayInfo(newUi + old)
-                        }
-                        preloadAttachments(newUi)
-                        _arrowTriggerFlow.emit(Unit)
-                    } else pendingRefresh = true
+                    }
+                    if (unreadMessages.isNotEmpty()) {
+                        markMessagesAsRead(unreadMessages)
+                    }
+                    val newUi = decrypted.map {mes ->
+                        val newMessageTriple =
+                            if(lastMessageDate == "") Triple(mes,"", formatMessageTime(mes.timestamp))
+                            else Triple(mes,formatMessageDate(mes.timestamp), formatMessageTime(mes.timestamp))
+                        toMessageUi(newMessageTriple, true)
+                    }
+                    newUi.lastOrNull()?.let { updateLastDate(it.message.timestamp) }
+                    val finalUi = applyGroupDisplayInfo(newUi + _messagesUi.value)
+                    _messagesUi.value = finalUi
+                    preloadAttachments(finalUi.take(newMessages.size))
+                    _arrowTriggerFlow.emit(Unit)
                 }
         }
         viewModelScope.launch {
             webSocketService.editMessageFlow.collect { message ->
-                if(!disableRefresh) {
-                    message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
-                    Log.d("testSocketsMessage", "Edited Message: $message")
-                    _messagesUi.update { old ->
-                        val idx = old.indexOfFirst { it.message.id == message.id }
-                        if(idx != -1) {
-                            val element = old[idx]
-                            val triple = Triple(element.message, element.formattedDate, element.formattedTime)
-                            val newUi = toMessageUi(triple, true)
-                            preloadAttachments(listOf(newUi))
-                            old.toMutableList().apply {
-                                this[idx] = newUi.copy(
-                                    username = element.username,
-                                    showUsername = element.showUsername,
-                                    showAvatar = element.showAvatar,
-                                    avatarState = element.avatarState
-                                )
-                            }
-                        } else old
+                message.text = message.text?.let { tinkAesGcmHelper?.decryptText(it) }
+                message.code = message.code?.let { tinkAesGcmHelper?.decryptText(it) }
+                Log.d("testSocketsMessage", "Edited Message: $message")
+                var ui: MessageUi? = null
+                _messagesUi.update { old ->
+                    val idx = old.indexOfFirst { it.message.id == message.id }
+                    if (idx == -1) return@update old
+                    val element = old[idx]
+                    val triple = Triple(message, element.formattedDate, element.formattedTime)
+                    val newUi = toMessageUi(triple, true)
+                    ui = newUi
+                    old.toMutableList().also { list ->
+                        list[idx] = newUi.copy(
+                            username = element.username,
+                            showUsername = element.showUsername,
+                            showAvatar = element.showAvatar,
+                            avatarState = element.avatarState
+                        )
                     }
-                } else pendingRefresh = true
+                }
+                ui?.let { preloadAttachments(listOf(it)) }
             }
         }
         viewModelScope.launch {
             webSocketService.deleteMessageFlow.collect { event ->
-                if(!disableRefresh) {
-                    Log.d("testSocketsMessage", "Deleted messages ids: ${event.deletedMessagesIds}")
-                    clearSelection()
-                    _messagesUi.update { list ->
-                        list.filterNot { it.message.id in event.deletedMessagesIds }
-                    }
-                    //_scrollTriggerFlow.emit(Unit)
-                } else pendingRefresh = true
+                Log.d("testSocketsMessage", "Deleted messages ids: ${event.deletedMessagesIds}")
+                clearSelection()
+                _messagesUi.update { list ->
+                    list.filterNot { it.message.id in event.deletedMessagesIds }
+                }
+                val firstMessage = _messagesUi.value.firstOrNull()?.message
+                if(firstMessage != null) updateLastDate(firstMessage.timestamp)
             }
         }
         viewModelScope.launch {
@@ -215,6 +222,7 @@ abstract class BaseChatViewModel(
                 Log.d("testSocketsMessage", "All messages deleted")
                 _deleteState.value = 1
                 refresh()
+                updateLastDate(0)
             }
         }
         viewModelScope.launch {
@@ -240,24 +248,8 @@ abstract class BaseChatViewModel(
     fun isFirstPage() : Boolean = currentPage.value == 0
 
     fun refresh() {
-        if (disableRefresh) {
-            pendingRefresh = true
-            return
-        }
         currentPage.value = 0
         this.searchBy.value = ""
-    }
-
-    fun stopRefresh() {
-        disableRefresh = true
-    }
-
-    fun startRefresh() {
-        disableRefresh = false
-        if (pendingRefresh) {
-            pendingRefresh = false
-            refresh() // Отложенное обновление
-        }
     }
 
     fun setConvInfo(convId: Int, isGroup: Int, chatKey: String, userId: Int, context: Context) {
@@ -413,6 +405,9 @@ abstract class BaseChatViewModel(
 
     suspend fun deleteUnsentMessage(messageId: Int) {
         messengerService.deleteUnsentMessage(messageId)
+        _messagesUi.update { list ->
+            list.filterNot { messageId == it.message.id }
+        }
     }
 
     suspend fun sendUnsentMessage(mes: Message) : Boolean {
@@ -1056,20 +1051,16 @@ abstract class BaseChatViewModel(
     protected fun preloadAvatar(messageId: Int, avatar: String) {
         if (avatar.isBlank()) return
 
-        // Уже есть?
+        // Уже закэширован?
         avatarCache[avatar]?.let { path ->
             updateAvatarState(messageId, AvatarState.Ready(path))
             return
         }
 
-        // Уже грузится?
-        if (avatarLoading.contains(avatar)) return
-
-        avatarLoading.add(avatar)
-
         viewModelScope.launch {
-            val result = preloadSemaphore.withPermit {
-                withContext(ioDispatcher) {
+            // Получаем или создаем deferred
+            val deferred = avatarDeferred.getOrPut(avatar) {
+                viewModelScope.async(ioDispatcher) {
                     try {
                         val localPath =
                             if (fileManager.isExistAvatar(avatar)) {
@@ -1090,9 +1081,14 @@ abstract class BaseChatViewModel(
                     }
                 }
             }
-
-            avatarLoading.remove(avatar)
+            // Ждем результат (если уже выполняется — просто await)
+            val result = deferred.await()
             updateAvatarState(messageId, result)
+
+            // Удаляем completed deferred чтобы не держать память
+            if (deferred.isCompleted) {
+                avatarDeferred.remove(avatar)
+            }
         }
     }
 
@@ -1103,6 +1099,37 @@ abstract class BaseChatViewModel(
                     it.copy(avatarState = state)
                 } else it
             }
+        }
+    }
+
+    fun preloadOpponentAvatar(avatar: String) {
+        if (avatar.isBlank()) {
+            _opponentAvatar.value = AvatarState.Error
+            return
+        }
+        viewModelScope.launch {
+            val result = preloadSemaphore.withPermit {
+                withContext(ioDispatcher) {
+                    try {
+                        val localPath =
+                            if (fileManager.isExistAvatar(avatar)) {
+                                fileManager.getAvatarFilePath(avatar)
+                            } else {
+                                val downloaded = downloadAvatar(avatar)
+                                fileManager.saveAvatarFile(
+                                    avatar,
+                                    File(downloaded).readBytes()
+                                )
+                                downloaded
+                            }
+                        avatarCache[avatar] = localPath
+                        AvatarState.Ready(localPath)
+                    } catch (_: Exception) {
+                        AvatarState.Error
+                    }
+                }
+            }
+            _opponentAvatar.value = result
         }
     }
 
@@ -1195,10 +1222,8 @@ abstract class BaseChatViewModel(
                                 preloadReplyImage(it)
                             }
                             return@withContext ReplyState.Ready(
-                                referenceMessageId = refId,
                                 previewText = preview.text,
-                                previewImagePath = imagePath,
-                                username = preview.username
+                                previewImagePath = imagePath
                             )
                         }
                         val local = findMessage(refId)?.first
@@ -1210,10 +1235,8 @@ abstract class BaseChatViewModel(
                             preloadReplyImage(it)
                         }
                         ReplyState.Ready(
-                            referenceMessageId = refId,
                             previewText = preview.text,
-                            previewImagePath = imagePath,
-                            username = preview.username
+                            previewImagePath = imagePath
                         )
 
                     } catch (_: Exception) {
@@ -1251,8 +1274,7 @@ abstract class BaseChatViewModel(
 
         return ReplyPreview(
             text = text,
-            imageName = name,
-            username = message.usernameAuthorOriginal
+            imageName = name
         )
     }
 
@@ -1283,9 +1305,10 @@ abstract class BaseChatViewModel(
     fun toggleSelection(messageId: Int) {
         _messagesUi.update { list ->
             list.map {
-                if (it.message.id == messageId)
+                if (it.message.id == messageId) {
+                    if(!it.isSelected && _canLongClick.value) _canLongClick.value = false
                     it.copy(isSelected = !it.isSelected)
-                else it
+                } else it
             }
         }
     }
@@ -1296,19 +1319,28 @@ abstract class BaseChatViewModel(
             .map { it.message }
     }
 
+    fun getForwardMessages(): List<Pair<Message, Boolean>> {
+        val selected = getSelectedMessages()
+        return selected.map {
+            it to (it.idSender == currentUserId)
+        }
+    }
+
     fun toggleCheckboxes(messageId: Int) {
         _messagesUi.update { list ->
             list.map {
-                if (it.message.id == messageId)
+                if (it.message.id == messageId) {
+                    _canLongClick.value = false
                     it.copy(isShowCheckbox = true, isSelected = true)
-                else it.copy(isShowCheckbox = true)
+                } else it.copy(isShowCheckbox = true)
             }
         }
     }
 
     fun clearSelection() {
         _messagesUi.update { list ->
-            list.map { it.copy(isSelected = false, isShowCheckbox = false) }
+            list.map { it.copy(isShowCheckbox = false, isSelected = false) }
         }
+        _canLongClick.value = true
     }
 }

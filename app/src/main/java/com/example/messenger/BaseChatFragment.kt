@@ -61,13 +61,20 @@ import kotlinx.coroutines.launch
 import java.io.File
 import androidx.core.view.isVisible
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.bumptech.glide.Glide
 import com.example.messenger.MessageAdapter.Companion.PAYLOAD_PAUSE
 import com.example.messenger.MessageAdapter.Companion.PAYLOAD_PROGRESS
 import com.example.messenger.MessageAdapter.Companion.PAYLOAD_STOP
+import com.example.messenger.states.AvatarState
 import com.example.messenger.states.FileState
+import com.example.messenger.states.ImageState
+import com.example.messenger.states.ImagesState
 import com.example.messenger.states.MessageUi
 import com.example.messenger.states.VoiceState
 
@@ -194,6 +201,33 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                         }
                     }
                 }
+                launch {
+                    val icVolumeOff: ImageView = view.findViewById(R.id.ic_volume_off)
+                    icVolumeOff.visibility = if(viewModel.isNotificationsEnabled()) View.GONE else View.VISIBLE
+                }
+                launch {
+                    viewModel.opponentAvatar.collect { state ->
+                        if(state is AvatarState.Ready) {
+                            val profilePhoto: ImageView = view.findViewById(R.id.photoImageView)
+                            profilePhoto.imageTintList = null
+                            Glide.with(profilePhoto)
+                                .load(state.localPath)
+                                .circleCrop()
+                                .dontAnimate()
+                                .into(profilePhoto)
+                        }
+                    }
+                }
+                launch {
+                    viewModel.canLongClick.collect {
+                        adapter.canLongClick = it
+                    }
+                }
+                launch {
+                    viewModel.stopPagination.collect {
+                        isStopPagination = it
+                    }
+                }
             }
         }
         recorder = VoiceRecorder(requireContext())
@@ -204,11 +238,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         }
 
         registerArrowScrollListener()
-        val typedValue = TypedValue()
-        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
-        val colorBar = typedValue.data
-        requireActivity().window.statusBarColor = colorBar
-        requireActivity().window.navigationBarColor = ContextCompat.getColor(requireContext(), R.color.navigation_bar_color)
+        viewModel.preloadOpponentAvatar(getAvatarString())
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.custom_action_bar, toolbarContainer, false)
@@ -221,12 +251,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         profilePhoto.setOnClickListener {
             binding.enterMessage.isEnabled = false // необходимо для предотвращения багов из-за клавиатуры
             replaceToInfoFragment()
-        }
-        val icVolumeOff: ImageView = view.findViewById(R.id.ic_volume_off)
-        lifecycleScope.launch {
-            icVolumeOff.visibility = if(viewModel.isNotificationsEnabled()) View.GONE else View.VISIBLE
-            val avatar = getAvatarString()
-            viewModel.avatarSet(avatar, profilePhoto, requireContext())
         }
         val userName: TextView = view.findViewById(R.id.userNameTextView)
         userName.text = getUpperName()
@@ -273,12 +297,35 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         binding = FragmentMessageBinding.inflate(inflater, container, false)
+        WindowCompat.setDecorFitsSystemWindows(requireActivity().window, false)
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val systemBarsAndIme = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
+
+            binding.statusBarScrim.layoutParams.height = systemBars.top
+            // Нижний скрам принимает высоту навбара ИЛИ клавиатуры (что из них больше в данный момент)
+            binding.navigationBarScrim.layoutParams.height = systemBarsAndIme.bottom
+
+            // Принудительно обновляем layout, так как мы изменили layoutParams
+            binding.statusBarScrim.requestLayout()
+            binding.navigationBarScrim.requestLayout()
+
+            insets
+        }
+
         val wallpaper = viewModel.getWallpaper(isDarkTheme(requireContext()))
         if (wallpaper != "") {
             val resId = WALLPAPER_MAP[wallpaper] ?: -1
             if(resId != -1)
                 binding.messageLayout.background = ContextCompat.getDrawable(requireContext(), resId)
         }
+        val typedValue = TypedValue()
+        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
+        val colorBar = typedValue.data
+        binding.statusBarScrim.setBackgroundColor(colorBar)
+        binding.navigationBarScrim.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.navigation_bar_color))
+
         filePickerManager = FilePickerManager(this)
         setupAdapterDialog()
         if(isFromNotification) {
@@ -494,7 +541,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         }
         binding.recyclerview.layoutManager = layoutManager
         binding.recyclerview.addItemDecoration(VerticalSpaceItemDecoration(15))
-        binding.recyclerview.setItemViewCacheSize(30) // works good
+        binding.recyclerview.setItemViewCacheSize(60) // works good
         binding.selectedPhotosRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         binding.selectedPhotosRecyclerView.adapter = imageAdapter
         binding.recyclerview.addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -731,7 +778,8 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                 else showPopupMenuMessage(itemView, R.menu.popup_menu_message_receiver, message, null, false)
             }
 
-            override fun onMessageClickImage(message: Message, itemView: View, localMedias: ArrayList<LocalMedia>, isSender: Boolean) {
+            override fun onMessageClickImage(message: Message, itemView: View, isSender: Boolean) {
+                val localMedias = message.images?.size?.let { getLocalMedias(message.id, it == 1) }
                 if(isSender) showPopupMenuMessage(itemView, R.menu.popup_menu_message, message, localMedias, true)
                 else showPopupMenuMessage(itemView, R.menu.popup_menu_message_receiver, message, localMedias, false)
             }
@@ -740,7 +788,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                 viewModel.toggleCheckboxes(messageId)
                 var flag = true
                 lifecycleScope.launch {
-                    viewModel.stopRefresh()
                     binding.floatingActionButtonDelete.visibility = View.VISIBLE
                     binding.floatingActionButtonForward.visibility = View.VISIBLE
                     requireActivity().onBackPressedDispatcher.addCallback(
@@ -749,7 +796,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                             @SuppressLint("NotifyDataSetChanged")
                             override fun handleOnBackPressed() {
                                 if (!adapter.canLongClick && flag) {
-                                    adapter.clearPositions()
+                                    viewModel.clearSelection()
                                     binding.floatingActionButtonDelete.visibility = View.GONE
                                     binding.floatingActionButtonForward.visibility = View.GONE
                                 } else {
@@ -757,25 +804,22 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                                     remove()
                                     backPressed()
                                 }
-                                viewModel.startRefresh()
                                 registerScrollObserver()
                             }
                         })
                     binding.floatingActionButtonDelete.setOnClickListener {
-                        val messagesToDelete = adapter.getDeleteList()
+                        val messagesToDelete = viewModel.getSelectedMessages()
                         if (messagesToDelete.isNotEmpty()) {
                             lifecycleScope.launch {
                                 binding.progressBar.visibility = View.VISIBLE
                                 binding.floatingActionButtonDelete.visibility = View.GONE
                                 binding.floatingActionButtonForward.visibility = View.GONE
-                                val response = async { viewModel.deleteMessages(messagesToDelete) }
+                                val response = async { viewModel.deleteMessages(messagesToDelete.map { it.id }) }
                                 if(response.await()) {
-                                    adapter.clearPositions()
-                                    viewModel.startRefresh()
+                                    viewModel.clearSelection()
                                     binding.progressBar.visibility = View.GONE
                                 } else {
-                                    adapter.clearPositions()
-                                    viewModel.startRefresh()
+                                    viewModel.clearSelection()
                                     binding.progressBar.visibility = View.GONE
                                     Toast.makeText(requireContext(), "Не удалось удалить сообщения", Toast.LENGTH_SHORT).show()
                                 }
@@ -784,7 +828,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     }
                     binding.floatingActionButtonForward.setOnClickListener {
                         flag = false
-                        val fMessages = adapter.getForwardList()
+                        val fMessages = viewModel.getForwardMessages()
                         fMessages.sortedBy { it.first.timestamp }
                         val (messages, booleans) = fMessages.unzip()
                         if(fMessages.isNotEmpty()) {
@@ -815,7 +859,9 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     }
                 }
             }
-            override fun onImagesClick(images: ArrayList<LocalMedia>, position: Int) {
+            override fun onImagesClick(messageId: Int, position: Int) {
+                val images = getLocalMedias(messageId, position == 0)
+                if(images.isEmpty()) return
                 Log.d("testClickImages", "images: $images")
                 PictureSelector.create(requireActivity())
                     .openPreview()
@@ -847,7 +893,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
             override fun onReplyClick(referenceId: Int) {
                 val index = viewModel.messagesUi.value.indexOfFirst { it.message.id == referenceId }
                 if (index != -1) {
-                    binding.recyclerview.clearOnScrollListeners()
                     binding.recyclerview.smoothScrollToPosition(index)
                     viewModel.highlightMessage(referenceId)
                 }
@@ -871,9 +916,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
             override fun onVoiceSeek(messageId: Int, progress: Int) {
                 if (playingMessageId == messageId) {
                     val player = mediaPlayer ?: return
-                    if (player.isPlaying) {
-                        player.seekTo(progress)
-                    }
+                    player.seekTo(progress)
                 }
             }
             override fun onFileOpenClick(messageId: Int) {
@@ -900,8 +943,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     }
 
     private fun startAudio(messageId: Int, path: String) {
-        stopAudio()
-
         mediaPlayer = MediaPlayer().apply {
             setDataSource(path)
             prepare()
@@ -927,6 +968,9 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
             if (index != -1) {
                 adapter.notifyItemChanged(index, PAYLOAD_PAUSE)
             }
+        } else { // Если то же аудио мы стопаем и снова запускаем
+            player.start()
+            startSeekUpdates()
         }
     }
 
@@ -1175,7 +1219,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                         val flag = viewModel.sendUnsentMessage(finalMessage)
                         if(flag) {
                             viewModel.deleteUnsentMessage(message.id)
-                            adapter.deleteUnsentMessage(message)
                         } else {
                             Toast.makeText(requireContext(), "Не удалось отправить сообщение", Toast.LENGTH_SHORT).show()
                         }
@@ -1185,7 +1228,6 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                 R.id.item_delete -> {
                     lifecycleScope.launch {
                         viewModel.deleteUnsentMessage(message.id)
-                        adapter.deleteUnsentMessage(message)
                     }
                     true
                 }
@@ -1434,6 +1476,36 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                 }
             }
         })
+    }
+
+    fun getLocalMedias(messageId: Int, isSingle: Boolean): ArrayList<LocalMedia> {
+        val ui = viewModel.messagesUi.value.firstOrNull { it.message.id == messageId } ?: return arrayListOf()
+        val images = if(isSingle) {
+            val state = ui.imageState as? ImageState.Ready ?: return arrayListOf()
+            val lc = LocalMedia().apply {
+                path = state.localPath
+                mimeType = state.mimeType
+                duration = state.duration
+                isCompressed = false
+                isCut = false
+                isOriginal = false
+            }
+            arrayListOf(lc)
+        } else {
+            val state = ui.imagesState as? ImagesState.Ready ?: return arrayListOf()
+            val list = state.imageItems.map { item ->
+                LocalMedia().apply {
+                    path = item.localPath
+                    mimeType = item.mimeType
+                    duration = item.duration
+                    isCompressed = false
+                    isCut = false
+                    isOriginal = false
+                }
+            }
+            ArrayList(list)
+        }
+        return images
     }
 
     class VerticalSpaceItemDecoration(private val verticalSpaceHeight: Int) :

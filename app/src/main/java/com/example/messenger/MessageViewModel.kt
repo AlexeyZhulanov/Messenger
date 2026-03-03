@@ -64,19 +64,22 @@ class MessageViewModel @Inject constructor(
 
                 isLoadingPage = true
                 try {
-                    if(page == 0) pagingSource?.resetCursor()
+                    if(page == 0) {
+                        pagingSource?.resetCursor()
+                        _stopPagination.value = false
+                    }
                     val pageSize = 30
                     val triples = pagingSource?.loadPage(pageSize, searchQuery)
-                    if(triples != null) {
+                    if(!triples.isNullOrEmpty()) {
                         val flag = page == 0
                         val newUi = triples.map { triple -> toMessageUi(triple, flag) }
                         val endData = if(page == 0) {
                             val firstMessage = newUi.firstOrNull()?.message
                             if(firstMessage != null) updateLastDate(firstMessage.timestamp)
                             val m = getUnsentMessages()
-                            if(m != null) {
+                            if(!m.isNullOrEmpty()) {
                                 val mUi = m.map { toMessageUi(Triple(it, "", ""), false) }
-                                newUi + mUi
+                                mUi + newUi
                             } else newUi
                         } else {
                             val processed = processDateDuplicates(_messagesUi.value + newUi)
@@ -84,6 +87,10 @@ class MessageViewModel @Inject constructor(
                         }
                         _messagesUi.value = endData
                         preloadAttachments(endData)
+                    } else {
+                        if(triples != null && triples.isEmpty()) {
+                            _stopPagination.value = true
+                        }
                     }
                 } finally {
                     isLoadingPage = false
@@ -119,7 +126,7 @@ class MessageViewModel @Inject constructor(
         }
     }
 
-    override fun applyGroupDisplayInfo(list: List<MessageUi>): List<MessageUi> = list
+    override fun applyGroupDisplayInfo(initialList: List<MessageUi>): List<MessageUi> = initialList
 
     fun setInfo(otherUserId: Int) {
         this.otherUserId = otherUserId

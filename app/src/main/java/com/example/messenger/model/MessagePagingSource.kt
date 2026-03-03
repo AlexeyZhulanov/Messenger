@@ -47,6 +47,7 @@ class MessagePagingSource(
                     } else throw e
                 }
             } else {
+                flag = false
                 searchCache[currentQuery] ?: run {
                     if (invertedIndex == null) {
                         val allMessages = try {
@@ -68,7 +69,10 @@ class MessagePagingSource(
                 else messengerService.replaceGroupMessages(convId, messages, fileManager)
             }
             // Обновляем курсор
-            lastCursor = messages.first().timestamp
+            val timestamp = messages.firstOrNull()?.timestamp
+            if(timestamp != null && flag) {
+                lastCursor = timestamp
+            }
 
             val formattedData = formatMessageTimesAndDates(messages)
             // Формирование дат для адаптера

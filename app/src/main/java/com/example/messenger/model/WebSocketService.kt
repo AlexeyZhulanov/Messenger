@@ -184,7 +184,7 @@ class WebSocketService @Inject constructor(
 
             val newAccessToken = try {
                 retrofitService.refreshToken(refreshToken)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 Log.d("testSocketIO", "Error: Couldn't update the token")
                 appSettings.setTokenRefreshing(false)
                 return@launch
@@ -320,8 +320,8 @@ class WebSocketService @Inject constructor(
         }
     }
 
-    suspend fun downloadAvatar(context: Context, filename: String): String {
-        return retrofitService.downloadAvatar(context, filename)
+    suspend fun downloadAvatar(filename: String): String {
+        return retrofitService.downloadAvatar(filename)
     }
 
     suspend fun isNotificationsEnabled(chatId: Int, type: Boolean): Boolean {

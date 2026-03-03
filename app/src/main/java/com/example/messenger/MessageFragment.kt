@@ -10,8 +10,6 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.model.Dialog
 import com.example.messenger.model.LastMessage
 import com.example.messenger.model.Message
@@ -45,16 +43,16 @@ class MessageFragment : BaseChatFragment() {
                 viewModel.messagesUi.collectLatest { pagingData ->
                     if(pagingData.isNotEmpty()) {
                         Log.d("testPagingFlow", "Submitting paging data")
-                        if(viewModel.isFirstPage()) {
-                            if(dialog.unreadCount in 4..29) registerInitialListObserver()
-                            adapter.submitList(pagingData)
-                        } else {
-                            val count = adapter.itemCount
-                            adapter.submitList(pagingData)
-                            // Перерисовка даты над сообщением
-                            adapter.notifyItemChanged(count-1)
+                        if(viewModel.isFirstPage() && dialog.unreadCount in 4..29) {
+                            registerInitialListObserver()
                         }
-                    } else isStopPagination = true
+                        adapter.submitList(pagingData)
+                    } else {
+                        if(!viewModel.isFirstPage()) {
+                            Log.d("testStopPag", "Called")
+                            isStopPagination = true
+                        }
+                    }
                 }
             }
         }

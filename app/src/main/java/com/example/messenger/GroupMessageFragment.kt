@@ -46,20 +46,15 @@ class GroupMessageFragment : BaseChatFragment() {
                 viewModel.messagesUi.collectLatest { pagingData ->
                     if(pagingData.isNotEmpty()) {
                         Log.d("testPagingFlow", "Submitting paging data")
-                        if(viewModel.isFirstPage()) {
-                            if(group.unreadCount in 4..29) registerInitialListObserver()
-                            adapter.submitList(pagingData)
-                        } else {
-                            val count = adapter.itemCount
-                            adapter.submitList(pagingData)
-                            // Перерисовка даты над сообщением
-                            adapter.notifyItemChanged(count-1)
+                        if(viewModel.isFirstPage() && group.unreadCount in 4..29) {
+                            registerInitialListObserver()
                         }
+                        adapter.submitList(pagingData)
                     } else isStopPagination = true
                 }
             }
         }
-        viewModel.setMarkScrollListener(binding.recyclerview, adapter, currentUser.id)
+        setMarkScrollListener()
         val lastSession: TextView = view.findViewById(R.id.lastSessionTextView)
         lifecycleScope.launch {
             viewModel.membersCount.collectLatest {

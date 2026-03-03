@@ -66,17 +66,20 @@ class GroupMessageViewModel @Inject constructor(
 
                     isLoadingPage = true
                     try {
-                        if(page == 0) pagingSource?.resetCursor()
+                        if(page == 0) {
+                            pagingSource?.resetCursor()
+                            _stopPagination.value = false
+                        }
                         val pageSize = 30
                         val triples = pagingSource?.loadPage(pageSize, searchQuery)
-                        if(triples != null) {
+                        if(!triples.isNullOrEmpty()) {
                             val flag = page == 0
                             val newUi = triples.map { triple -> toMessageUi(triple, flag) }
                             val endData = if(page == 0) {
                                 val firstMessage = newUi.firstOrNull()?.message
                                 if(firstMessage != null) updateLastDate(firstMessage.timestamp)
                                 val m = getUnsentMessages()
-                                if(m != null) {
+                                if(!m.isNullOrEmpty()) {
                                     val mUi = m.map { message ->
                                         toMessageUi(Triple(message, "", ""), false)
                                     }
@@ -89,6 +92,10 @@ class GroupMessageViewModel @Inject constructor(
                             val finalList = applyGroupDisplayInfo(endData)
                             _messagesUi.value = finalList
                             preloadAttachments(finalList)
+                        } else {
+                            if(triples != null && triples.isEmpty()) {
+                                _stopPagination.value = true
+                            }
                         }
                     } finally {
                         isLoadingPage = false
@@ -139,9 +146,10 @@ class GroupMessageViewModel @Inject constructor(
             }
         }
 
-        override fun applyGroupDisplayInfo(list: List<MessageUi>): List<MessageUi> {
-            if (list.isEmpty()) return list
+        override fun applyGroupDisplayInfo(initialList: List<MessageUi>): List<MessageUi> {
+            if (initialList.isEmpty()) return initialList
 
+            val list = initialList.reversed()
             val userMap = currentMemberList.associateBy { it.id }
 
             return list.mapIndexed { index, ui ->
@@ -173,60 +181,16 @@ class GroupMessageViewModel @Inject constructor(
                         showUsername = showUsername,
                         showAvatar = showAvatar,
                         avatarState =
-                            if (showAvatar && !user?.avatar.isNullOrBlank())
-                                AvatarState.Loading
+                            if (showAvatar && !user?.avatar.isNullOrBlank()) {
+                                val path = avatarCache[user.avatar]
+                                if(path != null) AvatarState.Ready(path)
+                                else AvatarState.Loading
+                            }
                             else null
                     )
                 }
-            }
+            }.reversed()
         }
-            // todo можно убрать, если верхняя функция будет без ошибок работать
-//        fun buildGroupDisplayInfo(messages: List<Triple<Message, String, String>>, currentUserId: Int): Map<Int, GroupDisplayInfo> {
-//
-//            val userMap = currentMemberList.associate { it.id to (it.username to it.avatar) }
-//            val groupedMessages = mutableListOf<List<Message>>()
-//            val tempList = mutableListOf<Message>()
-//
-//            for ((message, date) in messages.reversed()) {
-//                if (tempList.isNotEmpty()) {
-//                    if ((tempList.last().idSender != message.idSender) || (date != "")) {
-//                        groupedMessages.add(ArrayList(tempList))
-//                        tempList.clear()
-//                    }
-//                }
-//                if (message.idSender != currentUserId) tempList.add(message)
-//            }
-//
-//            if (tempList.isNotEmpty()) groupedMessages.add(tempList)
-//
-//            val result = mutableMapOf<Int, GroupDisplayInfo>()
-//
-//            for (group in groupedMessages) {
-//                val first = group.last()
-//                val last = group.first()
-//                val userInfo = userMap[first.idSender]
-//
-//                if (first == last) {
-//                    result[first.id] =
-//                        GroupDisplayInfo(
-//                            username = userInfo?.first, avatar = userInfo?.second,
-//                            showUsername = true, showAvatar = true
-//                        )
-//                } else {
-//                    result[last.id] =
-//                        GroupDisplayInfo(
-//                            username = userInfo?.first, avatar = null,
-//                            showUsername = true, showAvatar = false
-//                        )
-//                    result[first.id] =
-//                        GroupDisplayInfo(
-//                            username = null, avatar = userInfo?.second,
-//                            showUsername = false, showAvatar = true
-//                        )
-//                }
-//            }
-//            return result
-//        }
 
         fun joinGroup() {
             val joinData = JSONObject()
