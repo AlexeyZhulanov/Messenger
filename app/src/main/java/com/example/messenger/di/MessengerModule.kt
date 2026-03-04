@@ -22,6 +22,7 @@ import com.example.messenger.room.dao.MessageDao
 import com.example.messenger.room.dao.NewsDao
 import com.example.messenger.room.dao.UnsentMessageDao
 import com.example.messenger.room.dao.UserDao
+import com.linc.amplituda.Amplituda
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.EntryPoint
@@ -174,6 +175,12 @@ object MessengerModule {
     @Singleton
     fun provideFileManager(@ApplicationContext context: Context): FileManager {
         return FileManager(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAmplituda(@ApplicationContext context: Context): Amplituda {
+        return Amplituda(context)
     }
 
     @Provides
