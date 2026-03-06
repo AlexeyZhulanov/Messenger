@@ -16,6 +16,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -84,11 +87,6 @@ class SettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val typedValue = TypedValue()
-        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
-        val colorBar = typedValue.data
-        requireActivity().window.statusBarColor = colorBar
-        requireActivity().window.navigationBarColor = ContextCompat.getColor(requireContext(), R.color.navigation_bar_color)
         if(isDark) {
             viewModel.wallpaperDark.observe(viewLifecycleOwner) { wallpaper ->
                 wallpaperDarkItems.forEach {
@@ -117,7 +115,7 @@ class SettingsFragment : Fragment() {
             currentUser = user
             binding.usernameTextView.text = user.username
             binding.nameTextView.text = user.name
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 val avatar = user.avatar ?: ""
                 if (avatar != "") {
                     binding.progressBar.visibility = View.VISIBLE
@@ -170,6 +168,26 @@ class SettingsFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentSettingsBinding.inflate(inflater, container, false)
         isDark = isDarkTheme(requireContext())
+
+        WindowCompat.setDecorFitsSystemWindows(requireActivity().window, false)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+
+            binding.statusBarScrim.layoutParams.height = systemBars.top
+            binding.navigationBarScrim.layoutParams.height = systemBars.bottom
+
+            binding.statusBarScrim.requestLayout()
+            binding.navigationBarScrim.requestLayout()
+
+            insets
+        }
+
+        val typedValue = TypedValue()
+        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
+        val colorBar = typedValue.data
+        binding.statusBarScrim.setBackgroundColor(colorBar)
+        binding.navigationBarScrim.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.navigation_bar_color))
+
         val filePickerManager = FilePickerManager(fragment2 = this)
 
         binding.editPhotoButton.setOnClickListener {
@@ -244,7 +262,7 @@ class SettingsFragment : Fragment() {
             when (item.itemId) {
                 R.id.item_delete -> {
                     if(currentUser?.avatar != null) {
-                        lifecycleScope.launch {
+                        viewLifecycleOwner.lifecycleScope.launch {
                             val success = viewModel.updateAvatar("delete")
                             if(success) {
                                 viewModel.updateAvatarValue("")
@@ -259,27 +277,27 @@ class SettingsFragment : Fragment() {
 
                 R.id.item_update -> {
                     if (file != null) {
-                    lifecycleScope.launch {
-                        val res = async { filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf(viewModel.fileToLocalMedia(file))) }
-                        val photo = res.await()
-                        if(photo.isNotEmpty()) {
-                            val path = viewModel.uploadAvatar(File(photo[0].availablePath))
-                            if(path != "") {
-                                val success = viewModel.updateAvatar(path)
-                                if(success) {
-                                    viewModel.updateAvatarValue(path)
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            val res = async { filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf(viewModel.fileToLocalMedia(file))) }
+                            val photo = res.await()
+                            if(photo.isNotEmpty()) {
+                                val path = viewModel.uploadAvatar(File(photo[0].availablePath))
+                                if(path != "") {
+                                    val success = viewModel.updateAvatar(path)
+                                    if(success) {
+                                        viewModel.updateAvatarValue(path)
+                                    } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
                                 } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
-                            } else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
+                            }
                         }
-                    }
-                } else {
-                    Toast.makeText(requireContext(), "Нельзя редактировать пустоту!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(requireContext(), "Нельзя редактировать пустоту!", Toast.LENGTH_SHORT).show()
                     }
                     true
                 }
 
                 R.id.item_new -> {
-                    lifecycleScope.launch {
+                    viewLifecycleOwner.lifecycleScope.launch {
                         val res = async { filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf()) }
                         val photo = res.await()
                         if(photo.isNotEmpty()) {
@@ -309,7 +327,7 @@ class SettingsFragment : Fragment() {
         val dialog = AlertDialog.Builder(requireContext())
             .setView(dialogView)
             .setPositiveButton("Изменить") { dialogInterface, _ ->
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     val input = editText.text.toString()
                     input.forEach {
                         if(it !in alf) {
@@ -333,7 +351,7 @@ class SettingsFragment : Fragment() {
 
     private fun showConfirmLogoutDialog() {
         val dialog = AlertDialog.Builder(requireContext())
-            .setTitle("Вы уверены, что хотите выйди из аккаунта?")
+            .setTitle("Вы уверены, что хотите выйти из аккаунта?")
             .setPositiveButton("Выйти") { dialogInterface, _ ->
                 logout()
                 dialogInterface.dismiss()
@@ -387,7 +405,7 @@ class SettingsFragment : Fragment() {
     }
 
     private fun logout() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val success = viewModel.deleteFCMToken()
             if(success) {
                 viewModel.clearCurrentUser()

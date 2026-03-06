@@ -45,10 +45,10 @@ class MasterKeyEnterFragment : Fragment() {
 
         setupEditText()
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             pair = try {
                 retrofitService.getKeys()
-            } catch (e: Exception) { null to null }
+            } catch (_: Exception) { null to null }
         }
 
         binding.doneButton.setOnClickListener {
@@ -76,10 +76,10 @@ class MasterKeyEnterFragment : Fragment() {
 
                 } else {
                     showErrorTextView("Не удалось подгрузить ключи, Нет сети!")
-                    lifecycleScope.launch {
+                    viewLifecycleOwner.lifecycleScope.launch {
                         pair = try {
                             retrofitService.getKeys()
-                        } catch (e: Exception) { null to null }
+                        } catch (_: Exception) { null to null }
                     }
                     binding.doneButton.isEnabled = true
                 }

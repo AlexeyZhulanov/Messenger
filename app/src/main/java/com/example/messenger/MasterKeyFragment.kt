@@ -94,7 +94,7 @@ class MasterKeyFragment : Fragment(), OnSaveButtonClickListener {
         encryptedPrivateKey = encryptor.encryptPrivateKey(privateKey)
         publicKeyString = Base64.encodeToString(publicKey.encoded, Base64.NO_WRAP)
         val certificate = BouncyCastleHelper().createSelfSignedCertificate(KeyPair(publicKey, privateKey))
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val success = withContext(NonCancellable) {
                 return@withContext try {
                     retrofitService.saveUserKeys(publicKeyString, encryptedPrivateKey)

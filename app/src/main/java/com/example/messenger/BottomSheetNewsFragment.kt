@@ -197,7 +197,7 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
         }
 
         binding.attachButton.setOnClickListener {
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 try {
                     val res = async { filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = false, imageAdapter.getData()) }
                     imageAdapter.images = res.await()
@@ -252,7 +252,7 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
             val headerTxt = binding.headerEditText.text.toString()
             val txt = binding.textEditText.text.toString()
             val photos = imageAdapter.getData()
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 val photosJob = async {
                     if (photos.isNotEmpty()) {
                         val list = mutableListOf<String>()
@@ -306,7 +306,7 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
         outputFile?.let { file ->
             recorder?.start(
                 file = file,
-                scope = lifecycleScope,
+                scope = viewLifecycleOwner.lifecycleScope,
                 onError = { Log.e("testVoiceRecorder", it) }
             )
         }
@@ -315,14 +315,14 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
     override fun isReady(): Boolean = true
 
     override fun onRecordCancel() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             recorder?.stop()
             outputFile?.delete()
         }
     }
 
     override fun onRecordEnd() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val result = recorder?.stop() ?: return@launch
             val file = result.file
             if (result.durationMs < 300) { // Ошибочное аудио (миссклик)

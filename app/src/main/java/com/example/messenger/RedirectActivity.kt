@@ -1,9 +1,9 @@
 package com.example.messenger
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 
 class RedirectActivity : AppCompatActivity() {
 
@@ -12,7 +12,7 @@ class RedirectActivity : AppCompatActivity() {
 
         val url = intent?.getStringExtra("url")
         if (!url.isNullOrEmpty()) {
-            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            val browserIntent = Intent(Intent.ACTION_VIEW, url.toUri()).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
             startActivity(browserIntent)

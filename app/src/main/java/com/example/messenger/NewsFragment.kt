@@ -30,8 +30,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentNewsBinding
 import com.example.messenger.model.User
 import com.example.messenger.utils.getParcelableCompat
@@ -90,7 +88,7 @@ class NewsFragment : Fragment() {
                     }
                 }
                 launch {
-                    viewModel.attachmentsState.collectLatest { stateMap ->
+                    viewModel.attachmentsState.collect { stateMap ->
                         if(stateMap.isNotEmpty()) {
                             binding.recyclerview.post {
                                 adapter.updateAttachmentsState(stateMap)
@@ -116,8 +114,8 @@ class NewsFragment : Fragment() {
             avatarImageView.imageTintList = null
             Glide.with(avatarImageView)
                 .load(currentUserUri)
-                .apply(RequestOptions.circleCropTransform())
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .circleCrop()
+                .dontAnimate()
                 .into(avatarImageView)
         }
     }
@@ -175,7 +173,7 @@ class NewsFragment : Fragment() {
             }
 
             override fun onDeleteItem(newsId: Int) {
-               lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                    val res = viewModel.deleteNews(newsId)
                    if(res) {
                        Toast.makeText(requireContext(), "Новость успешно удалена", Toast.LENGTH_SHORT).show()
@@ -246,7 +244,7 @@ class NewsFragment : Fragment() {
         binding.recyclerview.setItemViewCacheSize(20)
         binding.recyclerview.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerview.addItemDecoration(SpacingItemDecorator(20))
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             permission = viewModel.getPermission()
             if(permission == 1) {
                 binding.floatingActionButtonAdd.visibility = View.VISIBLE
