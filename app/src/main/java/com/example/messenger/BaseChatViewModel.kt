@@ -14,12 +14,9 @@ import android.text.style.ClickableSpan
 import android.util.Base64
 import android.util.Log
 import android.view.View
-import android.widget.ImageView
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.messenger.di.IoDispatcher
 import com.example.messenger.model.FileManager
 import com.example.messenger.utils.ImageUtils
@@ -604,35 +601,18 @@ abstract class BaseChatViewModel(
         }
     }
 
-    // todo это нужно отсюда перенести
-    fun imageSet(image: String, imageView: ImageView, context: Context) {
-        viewModelScope.launch {
-            val filePathTemp = async {
-                if (fileManager.isExistMessage(image)) {
-                    return@async fileManager.getMessageFilePath(image)
-                } else {
-                    try {
-                        return@async downloadFile("photos", image)
-                    } catch (_: Exception) {
-                        return@async null
-                    }
+    suspend fun loadImage(image: String): String? = withContext(ioDispatcher) {
+        val filePath =
+            if (fileManager.isExistMessage(image)) {
+                fileManager.getMessageFilePath(image)
+            } else {
+                try {
+                    downloadFile("photos", image)
+                } catch (_: Exception) {
+                    null
                 }
             }
-            val first = filePathTemp.await()
-            if (first != null) {
-                val file = File(first)
-                if (file.exists()) {
-                    val uri = Uri.fromFile(file)
-                    imageView.visibility = View.VISIBLE
-                    Glide.with(context)
-                        .load(uri)
-                        .centerCrop()
-                        .placeholder(R.color.app_color_f6)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .into(imageView)
-                }
-            }
-        }
+        return@withContext filePath
     }
 
     suspend fun isNotificationsEnabled(): Boolean {
@@ -756,49 +736,6 @@ abstract class BaseChatViewModel(
     fun getWallpaper(isDark: Boolean): String {
         return if(isDark) appSettings.getDarkWallpaper() else appSettings.getLightWallpaper()
     }
-        // todo на всякий случай сохранил
-//    fun avatarSet(avatar: String, imageView: ImageView, context: Context) {
-//        if (avatar != "") {
-//            viewModelScope.launch {
-//                val uriCached = avatarCache[avatar]
-//                if(uriCached != null) {
-//                    imageView.imageTintList = null
-//                    Glide.with(context)
-//                        .load(uriCached)
-//                        .apply(RequestOptions.circleCropTransform())
-//                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-//                        .into(imageView)
-//                } else {
-//                    val filePathTemp = async {
-//                        if (fManagerIsExistAvatar(avatar)) {
-//                            return@async Pair(fManagerGetAvatarPath(avatar), true)
-//                        } else {
-//                            try {
-//                                return@async Pair(downloadAvatar(avatar), false)
-//                            } catch (_: Exception) {
-//                                return@async Pair(null, true)
-//                            }
-//                        }
-//                    }
-//                    val (first, second) = filePathTemp.await()
-//                    if (first != null) {
-//                        val file = File(first)
-//                        if (file.exists()) {
-//                            if (!second) fManagerSaveAvatar(avatar, file.readBytes())
-//                            val uri = Uri.fromFile(file)
-//                            avatarCache[avatar] = uri
-//                            imageView.imageTintList = null
-//                            Glide.with(context)
-//                                .load(uri)
-//                                .apply(RequestOptions.circleCropTransform())
-//                                .diskCacheStrategy(DiskCacheStrategy.ALL)
-//                                .into(imageView)
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
 
     protected fun toMessageUi(triple: Triple<Message, String, String>, isFirstPage: Boolean): MessageUi {
         val (message, date, time) = triple
@@ -1226,10 +1163,9 @@ abstract class BaseChatViewModel(
                                 previewImagePath = imagePath
                             )
                         }
-                        val local = findMessage(refId)?.first
-                            ?: return@withContext ReplyState.Error
-
-                        val preview = buildReplyPreview(local)
+                        val local = findMessage(refId)?.first ?: return@withContext ReplyState.Error
+                        val txt = local.text?.let { tinkAesGcmHelper?.decryptText(it) }
+                        val preview = buildReplyPreview(local.copy(text = txt))
 
                         val imagePath = preview.imageName?.let {
                             preloadReplyImage(it)

@@ -49,7 +49,7 @@ class MessageFragment : BaseChatFragment() {
                         adapter.submitList(pagingData)
                     } else {
                         if(!viewModel.isFirstPage()) {
-                            Log.d("testStopPag", "Called")
+                            Log.d("testStopPagination", "Called")
                             isStopPagination = true
                         }
                     }

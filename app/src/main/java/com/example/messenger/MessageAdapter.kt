@@ -50,7 +50,7 @@ interface MessageActionListener {
     fun onMessageClick(message: Message, itemView: View, isSender: Boolean)
     fun onMessageClickImage(message: Message, itemView: View, isSender: Boolean)
     fun onMessageLongClick(messageId: Int)
-    fun onImagesClick(messageId: Int, position: Int)
+    fun onImagesClick(messageId: Int, position: Int, isSingle: Boolean)
     fun onUnsentMessageClick(message: Message, itemView: View)
     fun onCodeOpenClick(message: Message)
     fun onReplyClick(referenceId: Int)
@@ -1182,7 +1182,7 @@ class MessageAdapter(
 
         init {
             binding.receiverImageView.setOnClickListener {
-                messageSave?.let { actionListener.onImagesClick(it.id, 0) }
+                messageSave?.let { actionListener.onImagesClick(it.id, 0, true) }
             }
             binding.root.setOnClickListener {
                 messageSave?.let {
@@ -1356,7 +1356,7 @@ class MessageAdapter(
 
         init {
             binding.senderImageView.setOnClickListener {
-                messageSave?.let { actionListener.onImagesClick(it.id, 0) }
+                messageSave?.let { actionListener.onImagesClick(it.id, 0, true) }
             }
             binding.root.setOnClickListener {
                 messageSave?.let {
@@ -1534,7 +1534,7 @@ class MessageAdapter(
         private val adapter = ImagesAdapter(object: ImagesActionListener {
             override fun onImageClicked(position: Int) {
                 messageSave?.let {
-                    actionListener.onImagesClick(it.id, position)
+                    actionListener.onImagesClick(it.id, position, false)
                 }
             }
             override fun onLongImageClicked() {
@@ -1706,7 +1706,7 @@ class MessageAdapter(
         private val adapter = ImagesAdapter(object: ImagesActionListener {
             override fun onImageClicked(position: Int) {
                 messageSave?.let {
-                    actionListener.onImagesClick(it.id, position)
+                    actionListener.onImagesClick(it.id, position, false)
                 }
             }
             override fun onLongImageClicked() {
