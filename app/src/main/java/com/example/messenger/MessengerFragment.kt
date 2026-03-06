@@ -1,6 +1,5 @@
 package com.example.messenger
 
-import android.annotation.SuppressLint
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -16,21 +15,24 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentMessengerBinding
 import com.example.messenger.model.Conversation
 import com.example.messenger.model.Message
 import com.example.messenger.model.User
-import com.example.messenger.utils.chunkedFlowLast
+import com.example.messenger.states.AvatarState
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -59,10 +61,6 @@ class MessengerFragment : Fragment() {
             forwardUsernames = usernames
             forwardFlag = true
         }
-        val typedValue = TypedValue()
-        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
-        val colorBar = typedValue.data
-        requireActivity().window.statusBarColor = colorBar
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.toolbar_custom, toolbarContainer, false)
@@ -85,44 +83,31 @@ class MessengerFragment : Fragment() {
                 logout()
             }
             currentUser = user
-            lifecycleScope.launch {
-                val avatar = user?.avatar ?: ""
-                if (avatar != "") {
-                    val filePathTemp = async {
-                        if (messengerViewModel.fManagerIsExistAvatar(avatar)) {
-                            return@async Pair(messengerViewModel.fManagerGetAvatarPath(avatar), true)
-                        } else {
-                            try {
-                                return@async Pair(messengerViewModel.downloadAvatar(avatar), false)
-                            } catch (_: Exception) {
-                                return@async Pair(null, true)
-                            }
-                        }
-                    }
-                    val (first, second) = filePathTemp.await()
-                    if (first != null) {
-                        val file = File(first)
-                        if (file.exists()) {
-                            if (!second) messengerViewModel.fManagerSaveAvatar(avatar, file.readBytes())
-                            val uri = Uri.fromFile(file)
-                            uriGlobal = uri
-                            avatarImageView.imageTintList = null
-                            Glide.with(requireContext())
-                                .load(uri)
-                                .apply(RequestOptions.circleCropTransform())
-                                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                .into(avatarImageView)
-                        }
-                    }
-                }
-            }
         }
-        observeViewModel()
+        observeViewModel(avatarImageView)
     }
 
-    @SuppressLint("DiscouragedApi")
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentMessengerBinding.inflate(inflater, container, false)
+
+        WindowCompat.setDecorFitsSystemWindows(requireActivity().window, false)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+
+            binding.statusBarScrim.layoutParams.height = systemBars.top
+            binding.navigationBarScrim.layoutParams.height = systemBars.bottom
+
+            binding.statusBarScrim.requestLayout()
+            binding.navigationBarScrim.requestLayout()
+
+            insets
+        }
+
+        val typedValue = TypedValue()
+        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
+        val colorBar = typedValue.data
+        binding.statusBarScrim.setBackgroundColor(colorBar)
+        binding.navigationBarScrim.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.navigation_bar_color))
 
         binding.button.setOnClickListener {
             parentFragmentManager.beginTransaction()
@@ -148,7 +133,7 @@ class MessengerFragment : Fragment() {
         messengerViewModel.stopNotifications(false)
     }
 
-    private fun observeViewModel() {
+    private fun observeViewModel(avatarImageView: ImageView) {
         messengerViewModel.vacation.observe(viewLifecycleOwner) { vacation ->
             if(vacation != null) {
                 parentFragmentManager.beginTransaction()
@@ -156,25 +141,35 @@ class MessengerFragment : Fragment() {
                     .commit()
             }
         }
-        messengerViewModel.conversations.observe(viewLifecycleOwner) { conversations ->
-            Log.d("testConvFetch", "Conversations Fetched")
-            adapter.submitList(conversations)
-        }
-        lifecycleScope.launch {
-            messengerViewModel.newMessageFlow
-                .buffer()
-                .chunkedFlowLast(200) // custom func
-                .collect { newMessages ->
-                    if(newMessages.isNotEmpty()) {
-                        adapter.updateConversations(newMessages)
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    messengerViewModel.conversationsUi.collect { ui ->
+                        Log.d("testConvFetch", "Conversations Fetched")
+                        adapter.submitList(ui)
                     }
                 }
+                launch {
+                    messengerViewModel.userAvatar.collectLatest { state ->
+                        if(state is AvatarState.Ready) {
+                            val file = File(state.localPath)
+                            uriGlobal = Uri.fromFile(file)
+                            avatarImageView.imageTintList = null
+                            Glide.with(avatarImageView)
+                                .load(state.localPath)
+                                .circleCrop()
+                                .dontAnimate()
+                                .into(avatarImageView)
+                        }
+                    }
+                }
+            }
         }
     }
 
     private fun setupRecyclerView() {
-        adapter = MessengerAdapter(messengerViewModel, requireContext(), object : MessengerActionListener {
-            override fun onConversationClicked(conversation: Conversation, index: Int) {
+        adapter = MessengerAdapter(object : MessengerActionListener {
+            override fun onConversationClicked(conversation: Conversation) {
                 when (conversation.type) {
                     "dialog" -> {
                         if (!forwardFlag) {
@@ -242,7 +237,7 @@ class MessengerFragment : Fragment() {
     }
 
     private fun logout() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val success = messengerViewModel.deleteFCMToken()
             if(success) {
                 messengerViewModel.clearCurrentUser()
