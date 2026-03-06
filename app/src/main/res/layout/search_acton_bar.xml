@@ -24,10 +24,13 @@
         android:layout_height="wrap_content"
         android:hint="Поиск"
         android:layout_marginStart="5dp"
+        android:layout_marginEnd="10dp"
         android:textColor="@color/colorDefault"
+        android:inputType="text"
         app:layout_constraintStart_toEndOf="@id/back_arrow_search"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/ic_clear"
         />
 
     <ImageView

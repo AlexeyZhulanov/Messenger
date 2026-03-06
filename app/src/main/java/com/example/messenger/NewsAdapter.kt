@@ -10,34 +10,36 @@ import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.messenger.MessageAdapter.AdaptiveGridSpacingItemDecoration
-import com.example.messenger.MessageAdapter.CustomLayoutManager
 import com.example.messenger.databinding.ItemNewsBinding
-import com.example.messenger.model.News
-import com.luck.picture.lib.entity.LocalMedia
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
-import java.io.File
 import androidx.core.view.isGone
+import androidx.core.view.isVisible
+import com.example.messenger.customview.AdaptiveGridSpacingItemDecoration
+import com.example.messenger.customview.CustomLayoutManager
+import com.example.messenger.states.AudioPlaybackState
+import com.example.messenger.states.FilesState
+import com.example.messenger.states.ImagesState
+import com.example.messenger.states.NewsAttachmentsState
+import com.example.messenger.states.NewsUi
+import com.example.messenger.states.VoicesState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.StateFlow
 
 
 interface NewsActionListener {
-    fun onEditItem(news: News, triple: Triple<ArrayList<LocalMedia>, List<File>, List<File>>)
+    fun onEditItem(ui: NewsUi)
     fun onDeleteItem(newsId: Int)
-    fun onImagesClick(images: ArrayList<LocalMedia>, position: Int)
-    fun onFileClick(file: File)
+    fun onImagesClick(ui: NewsUi, position: Int)
+    fun onFileClick(filePath: String)
+    fun onPlayVoiceClick(filePath: String)
+    fun onVoiceSeek(filePath: String, progress: Int)
 }
 
-class NewsDiffCallback : DiffUtil.ItemCallback<News>() {
-    override fun areItemsTheSame(oldItem: News, newItem: News): Boolean {
-        return oldItem.id == newItem.id
+class NewsDiffCallback : DiffUtil.ItemCallback<NewsUi>() {
+    override fun areItemsTheSame(oldItem: NewsUi, newItem: NewsUi): Boolean {
+        return oldItem.news.id == newItem.news.id
     }
 
-    override fun areContentsTheSame(oldItem: News, newItem: News): Boolean {
+    override fun areContentsTheSame(oldItem: NewsUi, newItem: NewsUi): Boolean {
         return oldItem == newItem
     }
 }
@@ -45,11 +47,21 @@ class NewsDiffCallback : DiffUtil.ItemCallback<News>() {
 class NewsAdapter(
     private val actionListener: NewsActionListener,
     private val context: Context,
-    private val newsViewModel: NewsViewModel,
-    private var permission: Int
-) : PagingDataAdapter<News, NewsAdapter.NewsViewHolder>(NewsDiffCallback()) {
+    private var permission: Int,
+    private val audioPlaybackState: StateFlow<AudioPlaybackState>,
+    private val scope: CoroutineScope
+) : PagingDataAdapter<NewsUi, NewsAdapter.NewsViewHolder>(NewsDiffCallback()) {
 
-    private val uiScopeMain = CoroutineScope(Dispatchers.Main)
+    private val imagesViewPool = RecyclerView.RecycledViewPool()
+    private val filesViewPool = RecyclerView.RecycledViewPool()
+    private val voicesViewPool = RecyclerView.RecycledViewPool()
+
+    private var attachmentsMap: Map<Int, NewsAttachmentsState> = emptyMap()
+
+    fun updateAttachmentsState(newMap: Map<Int, NewsAttachmentsState>) {
+        attachmentsMap = newMap
+        notifyItemRangeChanged(0, itemCount, "ATTACHMENTS_UPDATE")
+    }
 
     @SuppressLint("NotifyDataSetChanged")
     fun setPermission(newPermission: Int) {
@@ -64,10 +76,20 @@ class NewsAdapter(
         return NewsViewHolder(binding)
     }
 
+    override fun onBindViewHolder(holder: NewsViewHolder, position: Int, payloads: List<Any?>) {
+        if (payloads.contains("ATTACHMENTS_UPDATE")) {
+            val ui = getItem(position) ?: return
+            val attachState = attachmentsMap[ui.news.id]
+            holder.bindAttachmentsOnly(ui, attachState)
+        } else {
+            super.onBindViewHolder(holder, position, payloads)
+        }
+    }
+
     override fun onBindViewHolder(holder: NewsViewHolder, position: Int) {
-        val news = getItem(position) ?: return
-        val isInLast10 = position >= itemCount - 10
-        holder.bind(news, isInLast10)
+        val ui = getItem(position) ?: return
+        val attachState = attachmentsMap[ui.news.id]
+        holder.bind(ui, attachState)
     }
 
     inner class NewsViewHolder(private val binding: ItemNewsBinding) : RecyclerView.ViewHolder(binding.root) {
@@ -76,201 +98,139 @@ class NewsAdapter(
         private var voiceView: View? = null
         private var photosView: View? = null
 
-        private val adapterImages = ImagesAdapter(context, object: ImagesActionListener {
-            override fun onImageClicked(images: ArrayList<LocalMedia>, position: Int) {
-                actionListener.onImagesClick(images, position)
-            }
+        private var uiSave: NewsUi? = null
 
+        private val adapterImages = ImagesAdapter(object: ImagesActionListener {
+            override fun onImageClicked(position: Int) {
+                uiSave?.let { actionListener.onImagesClick(it, position) }
+            }
             override fun onLongImageClicked() {}
         })
 
-        private val adapterFiles = FilesAdapter(newsViewModel, object: FilesActionListener {
-            override fun onFileOpenClicked(file: File) {
-                actionListener.onFileClick(file)
+        private val adapterFiles = FilesAdapter(object: FilesActionListener {
+            override fun onFileOpenClicked(filePath: String) {
+                actionListener.onFileClick(filePath)
             }
         })
 
-        private val adapterVoices = VoicesAdapter(newsViewModel, context)
+        private val adapterVoices = VoicesAdapter(audioPlaybackState, scope, object: VoicesActionListener {
+            override fun onPlayClick(filePath: String) {
+                actionListener.onPlayVoiceClick(filePath)
+            }
+            override fun onVoiceSeek(filePath: String, progress: Int) {
+                actionListener.onVoiceSeek(filePath, progress)
+            }
+        })
 
-        private val listVoiceFiles: MutableList<File> = mutableListOf()
+        fun bindAttachmentsOnly(ui: NewsUi, attachState: NewsAttachmentsState?) {
+            val imagesState = attachState?.imagesState ?: ui.imagesState
+            val filesState = attachState?.filesState ?: ui.filesState
+            val voicesState = attachState?.voicesState ?: ui.voicesState
 
-        fun bind(news: News, isInLast10: Boolean) {
-            if(news.text != null && news.text != "") {
-                binding.textContainer.visibility = View.VISIBLE
-                binding.textContainer.text = news.text
-            } else binding.textContainer.visibility = View.GONE
-            val txt = news.headerText
-            binding.headerTextView.text = if(txt.isNullOrEmpty()) "Amessenger" else txt
-            binding.editedText.visibility = if(news.isEdited) View.VISIBLE else View.GONE
-            binding.dateText.text = newsViewModel.formatMessageNews(news.timestamp)
-            val strViewsCount = news.viewsCount.toString()
-            binding.viewCountTextView.text = strViewsCount
             // Обработка фото (ViewStub)
-            if (news.images?.isNotEmpty() == true) {
-                if(binding.nestedLayout.isGone) {
-                    binding.nestedLayout.visibility = View.VISIBLE
-                }
-                if (photosView == null) {
-                    photosView = LayoutInflater.from(context)
-                        .inflate(R.layout.viewstub_photos, binding.nestedLayout, true)
-                }
-                photosView?.visibility = View.VISIBLE
-                val photosRecyclerView = photosView?.findViewById<RecyclerView>(R.id.rvPhotos)
-                photosRecyclerView?.layoutManager = CustomLayoutManager()
-                photosRecyclerView?.addItemDecoration(AdaptiveGridSpacingItemDecoration(2, true))
-                photosRecyclerView?.adapter = adapterImages
-                uiScopeMain.launch {
-                    val semaphore = Semaphore(4) // default photos value
-                    val localMedias = async {
-                        val medias = arrayListOf<LocalMedia>()
-                        news.images?.forEach { photo ->
-                            val filePath = async {
-                                semaphore.withPermit {
-                                    if (newsViewModel.fManagerIsExistNews(photo)) {
-                                        Pair(newsViewModel.fManagerGetFilePathNews(photo), true)
-                                    } else {
-                                        try {
-                                            Pair(newsViewModel.downloadNews(context, photo), false)
-                                        } catch (_: Exception) {
-                                            Pair(null, true)
-                                        }
-                                    }
-                                }
-                            }
-                            val (first, second) = filePath.await()
-                            if (first != null) {
-                                val file = File(first)
-                                if (file.exists()) {
-                                    if (!second && isInLast10) newsViewModel.fManagerSaveFileNews(photo, file.readBytes())
-                                    medias += newsViewModel.fileToLocalMedia(file)
-                                }
-                            }
-                        }
-                        return@async medias
+            when(val state = imagesState) {
+                is ImagesState.Loading -> {}
+                is ImagesState.Ready -> {
+                    if(binding.nestedLayout.isGone) {
+                        binding.nestedLayout.visibility = View.VISIBLE
                     }
-                    adapterImages.images = localMedias.await()
+                    if (photosView == null) {
+                        photosView = LayoutInflater.from(context)
+                            .inflate(R.layout.viewstub_photos, binding.nestedLayout, true)
+                    }
+                    photosView?.visibility = View.VISIBLE
+                    val photosRecyclerView = photosView?.findViewById<RecyclerView>(R.id.rvPhotos)
+                    photosRecyclerView?.setRecycledViewPool(imagesViewPool)
+                    photosRecyclerView?.layoutManager = CustomLayoutManager()
+                    photosRecyclerView?.addItemDecoration(AdaptiveGridSpacingItemDecoration(2, true))
+                    photosRecyclerView?.adapter = adapterImages
+                    adapterImages.submitList(state.imageItems)
                 }
-            } else photosView?.visibility = View.GONE
+                is ImagesState.Error -> photosView?.visibility = View.GONE
+                null -> photosView?.visibility = View.GONE
+            }
 
             // Обработка файлов (ViewStub)
-            if (news.files?.isNotEmpty() == true) {
-                if(binding.nestedLayout.isGone) {
-                    binding.nestedLayout.visibility = View.VISIBLE
-                }
-                if (filesView == null) {
-                    filesView = LayoutInflater.from(context)
-                        .inflate(R.layout.viewstub_files, binding.nestedLayout, true)
-                }
-                filesView?.visibility = View.VISIBLE
-                val filesRecyclerView = filesView?.findViewById<RecyclerView>(R.id.rvFiles)
-                filesRecyclerView?.layoutManager = LinearLayoutManager(context)
-                filesRecyclerView?.adapter = adapterFiles
-                uiScopeMain.launch {
-                    val semaphore = Semaphore(3) // 3 because files can be big
-                    val files = async {
-                        val filesTemp = mutableListOf<File>()
-                        news.files?.forEach {
-                            val filePathTemp = async {
-                                semaphore.withPermit {
-                                    if (newsViewModel.fManagerIsExistNews(it)) {
-                                        Pair(newsViewModel.fManagerGetFilePathNews(it), true)
-                                    } else {
-                                        try {
-                                            Pair(newsViewModel.downloadNews(context, it), false)
-                                        } catch (_: Exception) {
-                                            Pair(null, true)
-                                        }
-                                    }
-                                }
-                            }
-                            val (first, second) = filePathTemp.await()
-                            if (first != null) {
-                                val file = File(first)
-                                if (file.exists()) {
-                                    if (!second && isInLast10) newsViewModel.fManagerSaveFileNews(it, file.readBytes())
-                                    filesTemp += file
-                                }
-                            }
-                        }
-                        return@async filesTemp
+            when(val state = filesState) {
+                is FilesState.Loading -> {}
+                is FilesState.Ready -> {
+                    if(binding.nestedLayout.isGone) {
+                        binding.nestedLayout.visibility = View.VISIBLE
                     }
-                    adapterFiles.files = files.await()
+                    if (filesView == null) {
+                        filesView = LayoutInflater.from(context)
+                            .inflate(R.layout.viewstub_files, binding.nestedLayout, true)
+                    }
+                    filesView?.visibility = View.VISIBLE
+                    val filesRecyclerView = filesView?.findViewById<RecyclerView>(R.id.rvFiles)
+                    filesRecyclerView?.setRecycledViewPool(filesViewPool)
+                    filesRecyclerView?.layoutManager = LinearLayoutManager(context)
+                    filesRecyclerView?.adapter = adapterFiles
+                    adapterFiles.submitList(state.items)
                 }
-
-            } else filesView?.visibility = View.GONE
+                is FilesState.Error -> filesView?.visibility = View.GONE
+                null -> filesView?.visibility = View.GONE
+            }
 
             // Обработка голосовых (ViewStub)
-            if (news.voices?.isNotEmpty() == true) {
-                if(binding.nestedLayout.isGone) {
-                    binding.nestedLayout.visibility = View.VISIBLE
-                }
-                if (voiceView == null) {
-                    voiceView = LayoutInflater.from(context)
-                        .inflate(R.layout.viewstub_voice, binding.nestedLayout, true)
-                }
-                voiceView?.visibility = View.VISIBLE
-                val voiceRecyclerView = voiceView?.findViewById<RecyclerView>(R.id.rvVoices)
-                voiceRecyclerView?.layoutManager = LinearLayoutManager(context)
-                voiceRecyclerView?.adapter = adapterVoices
-                uiScopeMain.launch {
-                    val semaphore = Semaphore(5) // 5 because all voices is light weight
-                    val audioPaths = async {
-                        val audiosTemp = mutableListOf<String>()
-                        news.voices?.forEach {
-                            val filePathTemp = async {
-                                semaphore.withPermit {
-                                    if (newsViewModel.fManagerIsExistNews(it)) {
-                                        Pair(newsViewModel.fManagerGetFilePathNews(it), true)
-                                    } else {
-                                        try {
-                                            Pair(newsViewModel.downloadNews(context, it), false)
-                                        } catch (_: Exception) {
-                                            Pair(null, true)
-                                        }
-                                    }
-                                }
-                            }
-                            val (first, second) = filePathTemp.await()
-                            if (first != null) {
-                                val file = File(first)
-                                if (file.exists()) {
-                                    if (!second && isInLast10) newsViewModel.fManagerSaveFileNews(it, file.readBytes())
-                                    audiosTemp += first
-                                    listVoiceFiles.add(file)
-                                }
-                            }
-                        }
-                        return@async audiosTemp
+            when(val state = voicesState) {
+                is VoicesState.Loading -> {}
+                is VoicesState.Ready -> {
+                    if(binding.nestedLayout.isGone) {
+                        binding.nestedLayout.visibility = View.VISIBLE
                     }
-                    adapterVoices.voicePaths = audioPaths.await()
+                    if (voiceView == null) {
+                        voiceView = LayoutInflater.from(context)
+                            .inflate(R.layout.viewstub_voice, binding.nestedLayout, true)
+                    }
+                    voiceView?.visibility = View.VISIBLE
+                    val voiceRecyclerView = voiceView?.findViewById<RecyclerView>(R.id.rvVoices)
+                    voiceRecyclerView?.setRecycledViewPool(voicesViewPool)
+                    voiceRecyclerView?.layoutManager = LinearLayoutManager(context)
+                    voiceRecyclerView?.adapter = adapterVoices
+                    adapterVoices.submitList(state.items)
                 }
-
-            } else voiceView?.visibility = View.GONE
+                is VoicesState.Error -> voiceView?.visibility = View.GONE
+                null -> voiceView?.visibility = View.GONE
+            }
 
             if(filesView == null && voiceView == null && photosView == null) {
                 binding.nestedLayout.visibility = View.GONE
             }
+        }
+
+        fun bind(ui: NewsUi, attachState: NewsAttachmentsState?) {
+            uiSave = ui
+            if(ui.news.text != null && ui.news.text != "") {
+                binding.textContainer.visibility = View.VISIBLE
+                binding.textContainer.text = ui.news.text
+            } else binding.textContainer.visibility = View.GONE
+            val txt = ui.news.headerText
+            binding.headerTextView.text = if(txt.isNullOrEmpty()) "Amessenger" else txt
+            binding.editedText.isVisible = ui.news.isEdited
+            binding.dateText.text = ui.formattedDate
+            val strViewsCount = ui.news.viewsCount.toString()
+            binding.viewCountTextView.text = strViewsCount
+
+            bindAttachmentsOnly(ui, attachState)
 
             if(permission == 1) {
-                binding.root.setOnClickListener {
-                    val triple = Triple(adapterImages.images, adapterFiles.files, listVoiceFiles.toList())
-                    showPopupMenu(itemView, news, triple)
-                }
+                binding.root.setOnClickListener { showPopupMenu(itemView, ui) }
             }
         }
     }
 
-    private fun showPopupMenu(itemView: View, news: News, triple: Triple<ArrayList<LocalMedia>, List<File>, List<File>>) {
+    private fun showPopupMenu(itemView: View, ui: NewsUi) {
         val popupMenu = PopupMenu(context, itemView)
         popupMenu.menuInflater.inflate(R.menu.popup_menu_news, popupMenu.menu)
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.item_edit -> {
-                    actionListener.onEditItem(news, triple)
+                    actionListener.onEditItem(ui)
                     true
                 }
                 R.id.item_delete -> {
-                    actionListener.onDeleteItem(news.id)
+                    actionListener.onDeleteItem(ui.news.id)
                     true
                 }
                 else -> false

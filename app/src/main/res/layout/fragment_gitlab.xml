@@ -3,11 +3,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:fitsSystemWindows="true"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <FrameLayout
-        android:id="@+id/toolbar_container"
+    <View
+        android:id="@+id/statusBarScrim"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent"
@@ -15,154 +14,180 @@
         app:layout_constraintEnd_toEndOf="parent" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/infoLayout"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:background="?attr/colorBar"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/statusBarScrim"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar_container">
+        app:layout_constraintBottom_toTopOf="@id/navigationBarScrim">
 
-        <TextView
-            android:id="@+id/tokenTextView"
+        <FrameLayout
+            android:id="@+id/toolbar_container"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
-            android:layout_marginStart="5dp"
-            android:gravity="start"
-            android:lines="1"
-            android:ellipsize="end"
-            android:textColor="?attr/colorPrimaryDark"
-            android:textSize="24sp"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/verticalGuideLine"
-            tools:text="Token: example token" />
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/infoLayout"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:background="?attr/colorBar"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/toolbar_container">
+
+            <TextView
+                android:id="@+id/tokenTextView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:layout_marginStart="5dp"
+                android:gravity="start"
+                android:lines="1"
+                android:ellipsize="end"
+                android:textColor="?attr/colorPrimaryDark"
+                android:textSize="24sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/verticalGuideLine"
+                tools:text="Token: example token" />
+
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/verticalGuideLine"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintGuide_percent="0.9"
+                />
+
+            <ImageView
+                android:id="@+id/edit_token_button"
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:layout_marginStart="5dp"
+                android:src="@drawable/ic_edit"
+                app:layout_constraintBottom_toBottomOf="@id/tokenTextView"
+                app:layout_constraintStart_toEndOf="@id/tokenTextView"
+                app:layout_constraintTop_toTopOf="@id/tokenTextView"
+                app:tint="?attr/colorPrimary" />
+
+            <Button
+                android:id="@+id/open_gitlab"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="10dp"
+                android:textSize="18sp"
+                android:gravity="center"
+                android:text="Открыть Gitlab"
+                android:textAllCaps="false"
+                android:textColor="?attr/colorPrimaryDark"
+                android:textStyle="bold|italic"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tokenTextView" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerview"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/infoLayout"
+            app:layout_constraintBottom_toTopOf="@id/bottomGuideLine"
+            android:layout_marginTop="8dp" />
 
         <androidx.constraintlayout.widget.Guideline
-            android:id="@+id/verticalGuideLine"
+            android:id="@+id/bottomGuideLine"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            app:layout_constraintGuide_percent="0.9"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.94"
             />
 
-        <ImageView
-            android:id="@+id/edit_token_button"
-            android:layout_width="25dp"
-            android:layout_height="25dp"
-            android:layout_marginStart="5dp"
-            android:src="@drawable/ic_edit"
-            app:layout_constraintBottom_toBottomOf="@id/tokenTextView"
-            app:layout_constraintStart_toEndOf="@id/tokenTextView"
-            app:layout_constraintTop_toTopOf="@id/tokenTextView"
-            app:tint="?attr/colorPrimary" />
-
-        <Button
-            android:id="@+id/open_gitlab"
+        <View
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="10dp"
-            android:textSize="18sp"
-            android:gravity="center"
-            android:text="Открыть Gitlab"
-            android:textAllCaps="false"
-            android:textColor="?attr/colorPrimaryDark"
-            android:textStyle="bold|italic"
-            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_height="0dp"
+            app:layout_constraintTop_toTopOf="@id/button"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tokenTextView" />
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:background="?attr/colorBar"/>
+
+        <TextView
+            android:id="@+id/button"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:text="Новости"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="10sp"
+            android:autoSizeMaxTextSize="100sp"
+            android:autoSizeStepGranularity="2sp"
+            app:layout_constraintTop_toBottomOf="@+id/bottomGuideLine"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/button3"
+            app:layout_constraintHorizontal_chainStyle="spread_inside"
+            android:textColor="?attr/colorAccent"
+            android:background="?attr/selectableItemBackground"
+            android:gravity="center"
+            android:letterSpacing="0.1"
+            android:textStyle="bold"
+            android:padding="7dp"
+            android:elevation="5dp"
+            />
+
+        <TextView
+            android:id="@+id/button3"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="10sp"
+            android:autoSizeMaxTextSize="100sp"
+            android:autoSizeStepGranularity="2sp"
+            android:background="?attr/selectableItemBackground"
+            android:gravity="center"
+            android:textStyle="bold"
+            android:letterSpacing="0.1"
+            app:layout_constraintTop_toBottomOf="@+id/bottomGuideLine"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/button"
+            app:layout_constraintEnd_toStartOf="@+id/button4"
+            android:textColor="?attr/colorAccent"
+            android:text="Сообщения" />
+
+        <TextView
+            android:id="@+id/button4"
+            android:layout_width="0dp"
+            android:textAllCaps="false"
+            android:layout_height="0dp"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="10sp"
+            android:autoSizeMaxTextSize="100sp"
+            android:autoSizeStepGranularity="2sp"
+            android:background="?attr/selectableItemBackground"
+            android:padding="7dp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:letterSpacing="0.1"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/bottomGuideLine"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/button3"
+            android:textColor="?attr/colorPrimary"
+            android:text="Gitlab" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerview"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/infoLayout"
-        app:layout_constraintBottom_toTopOf="@id/bottomGuideLine"
-        android:layout_marginTop="8dp" />
-
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/bottomGuideLine"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.94"
-        />
-
     <View
+        android:id="@+id/navigationBarScrim"
         android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintTop_toTopOf="@id/button"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:background="?attr/colorBar"/>
-
-    <TextView
-        android:id="@+id/button"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:text="Новости"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="10sp"
-        android:autoSizeMaxTextSize="100sp"
-        android:autoSizeStepGranularity="2sp"
-        app:layout_constraintTop_toBottomOf="@+id/bottomGuideLine"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/button3"
-        app:layout_constraintHorizontal_chainStyle="spread_inside"
-        android:textColor="?attr/colorAccent"
-        android:background="?attr/selectableItemBackground"
-        android:gravity="center"
-        android:letterSpacing="0.1"
-        android:textStyle="bold"
-        android:padding="7dp"
-        android:elevation="5dp"
-        />
-
-    <TextView
-        android:id="@+id/button3"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="10sp"
-        android:autoSizeMaxTextSize="100sp"
-        android:autoSizeStepGranularity="2sp"
-        android:background="?attr/selectableItemBackground"
-        android:gravity="center"
-        android:textStyle="bold"
-        android:letterSpacing="0.1"
-        app:layout_constraintTop_toBottomOf="@+id/bottomGuideLine"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/button"
-        app:layout_constraintEnd_toStartOf="@+id/button4"
-        android:textColor="?attr/colorAccent"
-        android:text="Сообщения" />
-
-    <TextView
-        android:id="@+id/button4"
-        android:layout_width="0dp"
-        android:textAllCaps="false"
-        android:layout_height="0dp"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="10sp"
-        android:autoSizeMaxTextSize="100sp"
-        android:autoSizeStepGranularity="2sp"
-        android:background="?attr/selectableItemBackground"
-        android:padding="7dp"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:letterSpacing="0.1"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/bottomGuideLine"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/button3"
-        android:textColor="?attr/colorPrimary"
-        android:text="Gitlab" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

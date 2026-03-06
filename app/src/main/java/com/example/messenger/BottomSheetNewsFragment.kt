@@ -18,9 +18,6 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.messenger.databinding.FragmentNewsCreateBinding
-import com.example.messenger.model.News
-import com.example.messenger.model.ParcelableFile
-import com.example.messenger.utils.getParcelableArrayListCompat
 import com.example.messenger.utils.getParcelableCompat
 import com.example.messenger.picker.ExoPlayerEngine
 import com.example.messenger.picker.FilePickerManager
@@ -41,6 +38,10 @@ import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 import androidx.core.view.isVisible
 import androidx.core.net.toUri
+import com.example.messenger.states.FilesState
+import com.example.messenger.states.ImagesState
+import com.example.messenger.states.NewsUi
+import com.example.messenger.states.VoicesState
 
 interface BottomSheetNewsListener {
     fun onPostSent()
@@ -50,9 +51,8 @@ interface BottomSheetNewsListener {
 class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Callback {
 
     private val newsViewModel: NewsViewModel by viewModels()
-    private var currentNews: News? = null
+    private var currentUi: NewsUi? = null
     private var userId: Int = -1
-    private var triple: Triple<ArrayList<LocalMedia>, List<File>, List<File>>? = null
     private lateinit var bottomSheetNewsListener: BottomSheetNewsListener
 
     private lateinit var binding: FragmentNewsCreateBinding
@@ -85,14 +85,8 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        currentNews = arguments?.getParcelableCompat(ARG_NEWS)
+        currentUi = arguments?.getParcelableCompat(ARG_NEWS)
         userId = arguments?.getInt(ARG_USER_ID) ?: -1
-        val first = arguments?.getParcelableArrayListCompat<LocalMedia>(ARG_TRIPLE_FIRST)
-        val second = arguments?.getParcelableArrayListCompat<ParcelableFile>(ARG_TRIPLE_SECOND)?.map { it.toFile() }
-        val third = arguments?.getParcelableArrayListCompat<ParcelableFile>(ARG_TRIPLE_THIRD)?.map { it.toFile() }
-        triple = if (first != null && second != null && third != null) {
-            Triple(ArrayList(first), second, third)
-        } else null
 
         pickFileLauncher = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri>? ->
             if (uris != null) {
@@ -169,37 +163,41 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
         binding.voiceRecyclerView.adapter = recAdapterVoices
         binding.voiceRecyclerView.layoutManager = LinearLayoutManager(requireContext())
 
-        if(currentNews != null) {
+        val ui = currentUi
+        if(ui != null) {
             binding.header.text = "Редактирование поста"
-            binding.headerEditText.setText(currentNews?.headerText)
-            binding.textEditText.setText(currentNews?.text)
-            if(triple?.first != null) {
+            binding.headerEditText.setText(ui.news.headerText)
+            binding.textEditText.setText(ui.news.text)
+            if(ui.imagesState != null) {
+                val medias = getLocalMedias(ui)
                 if(canDrag) disableBottomSheetDrag()
-                imageAdapter.images = triple?.first ?: arrayListOf()
+                imageAdapter.images = medias
             }
-            if(triple?.second != null) {
+            if(ui.filesState != null) {
                 if(canDrag) disableBottomSheetDrag()
-                filesList = triple?.second?.toMutableList() ?: mutableListOf()
-                triple?.second?.forEach {
-                    recAdapterFiles.addItem(it.name)
+                val state = ui.filesState as? FilesState.Ready
+                state?.let {
+                    filesList = state.items.map { item ->
+                        recAdapterFiles.addItem(item.fileName)
+                        File(item.localPath)
+                    }.toMutableList()
                 }
             }
-            if(triple?.third != null) {
+            if(ui.voicesState != null) {
                 if(canDrag) disableBottomSheetDrag()
-                voicesList = triple?.third?.toMutableList() ?: mutableListOf()
-                val retriever = MediaMetadataRetriever()
-                triple?.third?.forEach {
-                    retriever.setDataSource(it.absolutePath)
-                    val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
-                    val str = "Гс ${duration/1000} сек"
-                    recAdapterVoices.addItem(str)
+                val state = ui.voicesState as? VoicesState.Ready
+                state?.let {
+                    voicesList = state.items.map { item ->
+                        val d = item.duration / 1000
+                        recAdapterVoices.addItem("Гс $d сек")
+                        File(item.localPath)
+                    }.toMutableList()
                 }
-                retriever.release()
             }
         }
 
         binding.attachButton.setOnClickListener {
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 try {
                     val res = async { filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = false, imageAdapter.getData()) }
                     imageAdapter.images = res.await()
@@ -254,7 +252,7 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
             val headerTxt = binding.headerEditText.text.toString()
             val txt = binding.textEditText.text.toString()
             val photos = imageAdapter.getData()
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 val photosJob = async {
                     if (photos.isNotEmpty()) {
                         val list = mutableListOf<String>()
@@ -281,9 +279,9 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
                 val filesFinal = filesJob.await()
                 val voicesFinal = voicesJob.await()
                 Log.d("testNEWSSEND", headerTxt + txt)
-                val success = if(currentNews == null)
+                val success = if(currentUi == null)
                     newsViewModel.sendNews(headerTxt, txt, photosFinal, voicesFinal, filesFinal)
-                else newsViewModel.editNews(currentNews?.id ?: -1, headerTxt, txt, photosFinal, voicesFinal, filesFinal)
+                else newsViewModel.editNews(currentUi?.news?.id ?: -1, headerTxt, txt, photosFinal, voicesFinal, filesFinal)
                 if(success) {
                     bottomSheetNewsListener.onPostSent()
                     dismiss()
@@ -308,7 +306,7 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
         outputFile?.let { file ->
             recorder?.start(
                 file = file,
-                scope = lifecycleScope,
+                scope = viewLifecycleOwner.lifecycleScope,
                 onError = { Log.e("testVoiceRecorder", it) }
             )
         }
@@ -317,14 +315,14 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
     override fun isReady(): Boolean = true
 
     override fun onRecordCancel() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             recorder?.stop()
             outputFile?.delete()
         }
     }
 
     override fun onRecordEnd() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val result = recorder?.stop() ?: return@launch
             val file = result.file
             if (result.durationMs < 300) { // Ошибочное аудио (миссклик)
@@ -382,25 +380,33 @@ class BottomSheetNewsFragment : BottomSheetDialogFragment(), AudioRecordView.Cal
         }
     }
 
+    fun getLocalMedias(ui: NewsUi): ArrayList<LocalMedia> {
+        val state = ui.imagesState as? ImagesState.Ready ?: return arrayListOf()
+        val list = state.imageItems.map { item ->
+            LocalMedia().apply {
+                path = item.localPath
+                mimeType = item.mimeType
+                duration = item.duration
+                isCompressed = false
+                isCut = false
+                isOriginal = false
+            }
+        }
+        return ArrayList(list)
+    }
+
     companion object {
-        private const val ARG_NEWS = "arg_news"
+        private const val ARG_NEWS = "arg_news_ui"
         private const val ARG_USER_ID = "arg_user_id"
-        private const val ARG_TRIPLE_FIRST = "arg_triple_first"
-        private const val ARG_TRIPLE_SECOND = "arg_triple_second"
-        private const val ARG_TRIPLE_THIRD = "arg_triple_third"
 
         fun newInstance(
-            news: News?,
+            ui: NewsUi?,
             currentUserId: Int,
-            triple: Triple<ArrayList<LocalMedia>, List<ParcelableFile>, List<ParcelableFile>>?,
             listener: BottomSheetNewsListener
         ) = BottomSheetNewsFragment().apply {
             arguments = Bundle().apply {
-                putParcelable(ARG_NEWS, news)
+                putParcelable(ARG_NEWS, ui)
                 putInt(ARG_USER_ID, currentUserId)
-                putParcelableArrayList(ARG_TRIPLE_FIRST, triple?.first)
-                putParcelableArrayList(ARG_TRIPLE_SECOND, triple?.second?.let { ArrayList(it) })
-                putParcelableArrayList(ARG_TRIPLE_THIRD, triple?.third?.let { ArrayList(it) })
             }
             this.bottomSheetNewsListener = listener // Передаем listener отдельно
         }

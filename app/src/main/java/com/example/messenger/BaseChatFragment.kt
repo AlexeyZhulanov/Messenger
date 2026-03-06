@@ -181,12 +181,12 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    viewModel.arrowTriggerFlow.collect {
+                    viewModel.arrowTriggerFlow.collectLatest {
                         registerArrowObserver()
                     }
                 }
                 launch {
-                    viewModel.scrollTriggerFlow.collect {
+                    viewModel.scrollTriggerFlow.collectLatest {
                         registerScrollObserver()
                     }
                 }
@@ -206,7 +206,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     icVolumeOff.visibility = if(viewModel.isNotificationsEnabled()) View.GONE else View.VISIBLE
                 }
                 launch {
-                    viewModel.opponentAvatar.collect { state ->
+                    viewModel.opponentAvatar.collectLatest { state ->
                         if(state is AvatarState.Ready) {
                             val profilePhoto: ImageView = view.findViewById(R.id.photoImageView)
                             profilePhoto.imageTintList = null
@@ -219,12 +219,12 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     }
                 }
                 launch {
-                    viewModel.canLongClick.collect {
+                    viewModel.canLongClick.collectLatest {
                         adapter.canLongClick = it
                     }
                 }
                 launch {
-                    viewModel.stopPagination.collect {
+                    viewModel.stopPagination.collectLatest {
                         isStopPagination = it
                     }
                 }
@@ -473,7 +473,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
             callback = this@BaseChatFragment
         }
         binding.attachButton.setOnClickListener {
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 try {
                     val res = async { filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = false, imageAdapter.getData()) }
                     imageAdapter.images = res.await()
@@ -493,7 +493,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
 
             fragmentChoosePick.setListener(object: ChoosePickListener {
                 override fun onGalleryClick() {
-                    lifecycleScope.launch {
+                    viewLifecycleOwner.lifecycleScope.launch {
                         try {
                             val res = async { filePickerManager.openFilePicker(isCircle = false, isFreeStyleCrop = true, imageAdapter.getData()) }
                             imageAdapter.images = res.await()
@@ -565,7 +565,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
             val (text, isLink) = prepareTextForSend(binding.enterMessage.text.toString())
             val items = imageAdapter.getData()
 
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 if (items.isNotEmpty()) {
                     val listik = async {
                         val list = mutableListOf<String>()
@@ -787,7 +787,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
             override fun onMessageLongClick(messageId: Int) {
                 viewModel.toggleCheckboxes(messageId)
                 var flag = true
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     binding.floatingActionButtonDelete.visibility = View.VISIBLE
                     binding.floatingActionButtonForward.visibility = View.VISIBLE
                     requireActivity().onBackPressedDispatcher.addCallback(
@@ -810,7 +810,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     binding.floatingActionButtonDelete.setOnClickListener {
                         val messagesToDelete = viewModel.getSelectedMessages()
                         if (messagesToDelete.isNotEmpty()) {
-                            lifecycleScope.launch {
+                            viewLifecycleOwner.lifecycleScope.launch {
                                 binding.progressBar.visibility = View.VISIBLE
                                 binding.floatingActionButtonDelete.visibility = View.GONE
                                 binding.floatingActionButtonForward.visibility = View.GONE
@@ -859,8 +859,8 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     }
                 }
             }
-            override fun onImagesClick(messageId: Int, position: Int) {
-                val images = getLocalMedias(messageId, position == 0)
+            override fun onImagesClick(messageId: Int, position: Int, isSingle: Boolean) {
+                val images = getLocalMedias(messageId, isSingle)
                 if(images.isEmpty()) return
                 Log.d("testClickImages", "images: $images")
                 PictureSelector.create(requireActivity())
@@ -1030,7 +1030,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         outputFile?.let { file ->
             recorder?.start(
                 file = file,
-                scope = lifecycleScope,
+                scope = viewLifecycleOwner.lifecycleScope,
                 onError = { Log.e("testVoiceRecorder", it) }
             )
         }
@@ -1039,14 +1039,14 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     override fun isReady(): Boolean = true
 
     override fun onRecordCancel() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             recorder?.stop()
             outputFile?.delete()
         }
     }
 
     override fun onRecordEnd() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val result = recorder?.stop() ?: return@launch
             val file = result.file
             val waveform = result.waveform.toList()
@@ -1084,7 +1084,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     private fun handleFileUri(uri: Uri) {
         val file = viewModel.uriToFile(uri, requireContext())
         if(file != null) {
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 val response = async {
                     val (path, f) = viewModel.uploadFile(file, requireContext())
                     if(f) {
@@ -1138,7 +1138,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.item_resent -> {
-                    lifecycleScope.launch {
+                    viewLifecycleOwner.lifecycleScope.launch {
                         val localFilePaths = message.localFilePaths
                         val finalMessage: Message = if(localFilePaths != null) {
                             val filePathsFinal = async {
@@ -1226,7 +1226,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     true
                 }
                 R.id.item_delete -> {
-                    lifecycleScope.launch {
+                    viewLifecycleOwner.lifecycleScope.launch {
                         viewModel.deleteUnsentMessage(message.id)
                     }
                     true
@@ -1292,7 +1292,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                         }, 100)
 
                         binding.editButton.setOnClickListener {
-                            lifecycleScope.launch {
+                            viewLifecycleOwner.lifecycleScope.launch {
                                 try {
                                     val tempItems = imageAdapter.getData()
                                     val (text, isLink) = prepareTextForSend(binding.enterMessage.text.toString())
@@ -1390,8 +1390,16 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
                     }
                     if(message.images != null) {
                         binding.answerImageView.visibility = View.VISIBLE
-                        lifecycleScope.launch {
-                            viewModel.imageSet(message.images!!.first(), binding.answerImageView, requireContext())
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            val imagePath = viewModel.loadImage(message.images!!.first())
+                            imagePath?.let {
+                                Glide.with(binding.answerImageView)
+                                    .load(it)
+                                    .centerCrop()
+                                    .placeholder(R.color.app_color_f6)
+                                    .dontAnimate()
+                                    .into(binding.answerImageView)
+                            }
                         }
                     }
                     binding.answerMessage.text = when {
@@ -1438,7 +1446,7 @@ abstract class BaseChatFragment : Fragment(), AudioRecordView.Callback {
     }
 
     private fun searchMessages(query: CharSequence?) {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             if (query.isNullOrEmpty()) {
                 viewModel.refresh()
                 registerScrollObserver()

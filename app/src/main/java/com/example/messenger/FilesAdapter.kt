@@ -1,29 +1,31 @@
 package com.example.messenger
 
-import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.databinding.ItemFileBinding
-import java.io.File
+import com.example.messenger.states.FileItem
 
 interface FilesActionListener {
-    fun onFileOpenClicked(file: File)
+    fun onFileOpenClicked(filePath: String)
+}
+
+object FileDiffCallback : DiffUtil.ItemCallback<FileItem>() {
+    override fun areItemsTheSame(oldItem: FileItem, newItem: FileItem): Boolean {
+        return oldItem.localPath == newItem.localPath
+    }
+    override fun areContentsTheSame(oldItem: FileItem, newItem: FileItem): Boolean {
+        return oldItem == newItem
+    }
 }
 
 class FilesAdapter(
-    private val newsViewModel: NewsViewModel,
     private val actionListener: FilesActionListener
-) : RecyclerView.Adapter<FilesAdapter.FilesViewHolder>() {
+) : ListAdapter<FileItem, FilesAdapter.FilesViewHolder>(FileDiffCallback) {
 
-    var files: List<File> = listOf()
-        @SuppressLint("NotifyDataSetChanged")
-        set(value) {
-            field = value
-            notifyDataSetChanged()
-        }
-
-    override fun getItemCount(): Int = files.size
+    override fun getItemCount(): Int = currentList.size
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FilesViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -32,18 +34,15 @@ class FilesAdapter(
     }
 
     override fun onBindViewHolder(holder: FilesViewHolder, position: Int) {
-        val file = files[position]
+        val item = getItem(position)
         with(holder.binding) {
-            fileNameTextView.text = file.name
-            fileSizeTextView.text = newsViewModel.formatFileSize(file.length())
+            fileNameTextView.text = item.fileName
+            fileSizeTextView.text = item.fileSize
             fileButton.setOnClickListener {
-                actionListener.onFileOpenClicked(file)
+                actionListener.onFileOpenClicked(item.localPath)
             }
-            holder.itemView.tag = holder
         }
     }
 
-    class FilesViewHolder(
-        val binding: ItemFileBinding
-    ) : RecyclerView.ViewHolder(binding.root)
+    class FilesViewHolder(val binding: ItemFileBinding) : RecyclerView.ViewHolder(binding.root)
 }

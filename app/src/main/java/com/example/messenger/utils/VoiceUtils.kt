@@ -13,6 +13,12 @@ fun takeSample(context: Context, pathOrUrl: String): IntArray {
     return result.amplitudesAsList().toTypedArray().toIntArray()
 }
 
+fun takeSampleAlt(amplituda: Amplituda, pathOrUrl: String): IntArray {
+    val output = amplituda.processAudio(pathOrUrl)
+    val result = output.get { exception: AmplitudaException -> exception.printStackTrace() }
+    return result.amplitudesAsList().toTypedArray().toIntArray()
+}
+
 fun formatTime(milliseconds: Long): String {
     val minutes = TimeUnit.MILLISECONDS.toMinutes(milliseconds)
     val seconds = TimeUnit.MILLISECONDS.toSeconds(milliseconds) % 60

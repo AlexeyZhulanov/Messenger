@@ -50,7 +50,8 @@ data class ConversationDbEntity(
                     type = conversation.type,
                     text = it.text,
                     timestamp = it.timestamp,
-                    isRead = it.isRead
+                    isRead = it.isRead,
+                    senderName = it.senderName
                 )
             }
 
@@ -122,9 +123,10 @@ data class LastMessageEntity(
     var type: String,
     var text: String? = null,
     var timestamp: Long? = null,
-    @ColumnInfo(name = "is_read") var isRead: Boolean? = null
+    @ColumnInfo(name = "is_read") var isRead: Boolean? = null,
+    @ColumnInfo(name = "sender_name") var senderName: String? = null
 ) {
     fun toLastMessage(): LastMessage = LastMessage(
-        text = text, timestamp = timestamp, isRead = isRead
+        text = text, timestamp = timestamp, isRead = isRead, senderName = senderName
     )
 }

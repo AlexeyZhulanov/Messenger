@@ -1,6 +1,5 @@
 package com.example.messenger
 
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -53,7 +52,7 @@ class GitlabViewModel @Inject constructor(
                     messengerService.replaceRepos(updatedRepos)
                 }
 
-            } catch (e: Exception) { return@launch }
+            } catch (_: Exception) { return@launch }
         }
     }
 
@@ -61,7 +60,7 @@ class GitlabViewModel @Inject constructor(
         try {
             val success = retrofitService.updateRepo(projectId, hooks[0], hooks[1], hooks[2], hooks[3], hooks[4], hooks[5])
             callback(success)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             callback(false)
         }
     }

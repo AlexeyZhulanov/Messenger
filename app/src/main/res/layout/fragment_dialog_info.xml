@@ -2,403 +2,428 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="true"
-    android:id="@+id/dialogInfo_layout"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <FrameLayout
-        android:id="@+id/toolbar_container"
+    <View
+        android:id="@+id/statusBarScrim"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <ImageView
-        android:id="@+id/photoImageView"
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:src="@drawable/ic_user_avatar"
-        app:tint="?attr/colorDayNightAttr2"
-        app:layout_constraintTop_toBottomOf="@id/toolbar_container"
+        android:id="@+id/dialogInfo_layout"
+        app:layout_constraintTop_toBottomOf="@id/statusBarScrim"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/topGuideLine"
-         />
+        app:layout_constraintBottom_toTopOf="@id/navigationBarScrim">
 
-    <ImageView
-        android:id="@+id/errorImageView"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
-        android:src="@drawable/ic_error"
-        app:tint="?attr/colorError"
-        android:visibility="gone"
-        app:layout_constraintStart_toStartOf="@id/photoImageView"
-        app:layout_constraintTop_toTopOf="@id/photoImageView"
-        app:layout_constraintBottom_toBottomOf="@id/photoImageView"
-        app:layout_constraintEnd_toEndOf="@id/photoImageView" />
-
-    <ProgressBar
-        android:id="@+id/progressBar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintStart_toStartOf="@id/photoImageView"
-        app:layout_constraintEnd_toEndOf="@id/photoImageView"
-        app:layout_constraintTop_toTopOf="@id/photoImageView"
-        app:layout_constraintBottom_toBottomOf="@id/photoImageView"
-        android:visibility="gone"
-        />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/lastSessionTextView"
-        tools:text="Дамир"
-        android:layout_marginStart="10dp"
-        android:id="@+id/userNameTextView"
-        android:textColor="?attr/colorPrimaryDark"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="20sp"
-        android:autoSizeMaxTextSize="100sp"
-        android:autoSizeStepGranularity="2sp"
-        android:padding="2dp"
-        android:elevation="4dp"
-        android:fontFamily="@font/roboto_italic"
-        android:textStyle="bold" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintBottom_toBottomOf="@id/photoImageView"
-        android:layout_marginBottom="15dp"
-        tools:text="был в сети час назад"
-        android:layout_marginStart="10dp"
-        android:id="@+id/lastSessionTextView"
-        android:textColor="?attr/colorPrimaryDark"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="16sp"
-        android:autoSizeMaxTextSize="100sp"
-        android:autoSizeStepGranularity="2sp"
-        android:padding="2dp"
-        android:elevation="4dp"
-        android:fontFamily="@font/roboto_italic"
-        android:textStyle="bold" />
-
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/topGuideLine"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.35"
-        />
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/floatingActionButtonOptions"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:clickable="true"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/info_layout"
-        android:layout_marginEnd="10dp"
-        android:layout_marginBottom="15dp"
-        android:src="@drawable/ic_edit"
-        app:tint="?attr/colorPrimaryDark"
-        android:backgroundTint="?attr/colorPrimary"
-        app:borderWidth="0dp"
-        android:visibility="gone"
-        tools:visibility="visible"
-        />
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/info_layout"
-        android:layout_width="0dp"
-        android:background="@drawable/choose_settings"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/photoImageView"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <TextView
+        <FrameLayout
+            android:id="@+id/toolbar_container"
             android:layout_width="0dp"
-            android:layout_height="30dp"
-            app:layout_constraintStart_toStartOf="parent"
+            android:layout_height="wrap_content"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/midStartGuideLine"
-            android:text="Никнейм"
-            android:layout_marginStart="10dp"
-            android:fontFamily="casual"
-            android:id="@+id/nickWordTextView"
-            android:layout_marginTop="10dp"
-            android:textColor="?attr/colorAccent"
-            android:autoSizeTextType="uniform"
-            android:autoSizeMinTextSize="20sp"
-            android:autoSizeMaxTextSize="100sp"
-            android:autoSizeStepGranularity="2sp"
-            android:padding="2dp"
-            android:textStyle="bold|italic"/>
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <ImageView
+            android:id="@+id/photoImageView"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:src="@drawable/ic_user_avatar"
+            app:tint="?attr/colorDayNightAttr2"
+            app:layout_constraintTop_toBottomOf="@id/toolbar_container"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/topGuideLine"
+            />
+
+        <ImageView
+            android:id="@+id/errorImageView"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:src="@drawable/ic_error"
+            app:tint="?attr/colorError"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="@id/photoImageView"
+            app:layout_constraintTop_toTopOf="@id/photoImageView"
+            app:layout_constraintBottom_toBottomOf="@id/photoImageView"
+            app:layout_constraintEnd_toEndOf="@id/photoImageView" />
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toStartOf="@id/photoImageView"
+            app:layout_constraintEnd_toEndOf="@id/photoImageView"
+            app:layout_constraintTop_toTopOf="@id/photoImageView"
+            app:layout_constraintBottom_toBottomOf="@id/photoImageView"
+            android:visibility="gone"
+            />
 
         <TextView
-            android:id="@+id/nickTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="30dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toEndOf="@id/midStartGuideLine"
-            tools:text="user123"
-            android:layout_marginTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/lastSessionTextView"
+            tools:text="Дамир"
+            android:layout_marginStart="10dp"
+            android:id="@+id/userNameTextView"
             android:textColor="?attr/colorPrimaryDark"
-            android:textSize="18sp"
-            android:padding="2dp"
-            android:fontFamily="@font/roboto_italic"
-            android:textStyle="bold"/>
-
-        <ImageView
-            android:id="@+id/copyImageView"
-            android:layout_width="wrap_content"
-            android:layout_height="0dp"
-            android:src="@drawable/ic_copy"
-            app:tint="?attr/colorPrimary"
-            app:layout_constraintTop_toTopOf="@id/nickTextView"
-            app:layout_constraintBottom_toBottomOf="@id/nickTextView"
-            app:layout_constraintStart_toEndOf="@id/nickTextView"
-            android:layout_marginStart="5dp"
-            />
-
-        <TextView
-            android:id="@+id/addMembersTextView"
-            android:layout_width="0dp"
-            android:layout_height="30dp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/nickWordTextView"
-            app:layout_constraintEnd_toStartOf="@id/midGuideLine"
-            android:text="Пригласить участников"
-            android:layout_marginStart="10dp"
-            android:layout_marginTop="15dp"
-            android:textColor="?attr/colorAccent"
-            android:fontFamily="casual"
-            android:autoSizeTextType="uniform"
-            android:autoSizeMinTextSize="12sp"
-            android:autoSizeMaxTextSize="100sp"
-            android:autoSizeStepGranularity="2sp"
-            android:padding="2dp"
-            android:visibility="gone"
-            tools:visibility="visible"
-            android:gravity="bottom"
-            android:textStyle="bold|italic"/>
-
-        <ImageView
-            android:id="@+id/addUsersImageView"
-            android:layout_width="wrap_content"
-            android:layout_height="0dp"
-            android:src="@drawable/ic_add_group"
-            app:tint="?attr/colorPrimary"
-            android:scaleX="1.4"
-            android:scaleY="1.4"
-            app:layout_constraintStart_toEndOf="@id/midGuideLine"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/addMembersTextView"
-            app:layout_constraintBottom_toBottomOf="@id/addMembersTextView"
-            android:layout_marginStart="5dp"
-            android:visibility="gone"
-            tools:visibility="visible"
-            />
-
-        <TextView
-            android:id="@+id/notificationsTextView"
-            android:layout_width="0dp"
-            android:layout_height="30dp"
-            app:layout_constraintEnd_toStartOf="@id/midGuideLine"
-            app:layout_constraintTop_toBottomOf="@id/addMembersTextView"
-            app:layout_constraintStart_toStartOf="parent"
-            android:layout_marginStart="10dp"
-            android:text="Уведомления"
-            android:layout_marginTop="12dp"
-            android:textColor="?attr/colorAccent"
-            android:fontFamily="casual"
             android:autoSizeTextType="uniform"
             android:autoSizeMinTextSize="20sp"
             android:autoSizeMaxTextSize="100sp"
             android:autoSizeStepGranularity="2sp"
             android:padding="2dp"
-            android:textStyle="bold|italic"/>
-
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/switch_notifications"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            app:layout_constraintStart_toEndOf="@id/midGuideLine"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/notificationsTextView"
-            app:layout_constraintBottom_toBottomOf="@id/notificationsTextView"
-            android:layout_marginTop="3dp"
-            app:thumbTint="@color/switch_thumb_tint" />
+            android:elevation="4dp"
+            android:fontFamily="@font/roboto_italic"
+            android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/deleteTextView"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:layout_constraintTop_toBottomOf="@id/notificationsTextView"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toBottomOf="@id/photoImageView"
+            android:layout_marginBottom="15dp"
+            tools:text="был в сети час назад"
             android:layout_marginStart="10dp"
-            android:text="Удаление чужих сообщений"
-            android:layout_marginTop="18dp"
-            android:textColor="?attr/colorAccent"
-            android:fontFamily="casual"
+            android:id="@+id/lastSessionTextView"
+            android:textColor="?attr/colorPrimaryDark"
             android:autoSizeTextType="uniform"
-            android:autoSizeMinTextSize="12sp"
+            android:autoSizeMinTextSize="16sp"
             android:autoSizeMaxTextSize="100sp"
-            android:autoSizeStepGranularity="1sp"
-            android:padding="2dp"
-            android:textStyle="bold|italic"/>
-
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/switch_delete"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            app:layout_constraintStart_toEndOf="@id/midGuideLine"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/deleteTextView"
-            app:layout_constraintBottom_toBottomOf="@id/deleteTextView"
-            android:layout_marginTop="-3dp"
-            app:thumbTint="@color/switch_thumb_tint" />
-
-        <View
-            android:id="@+id/switchOverlay"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintStart_toStartOf="@id/switch_delete"
-            app:layout_constraintEnd_toEndOf="@id/switch_delete"
-            app:layout_constraintTop_toTopOf="@id/switch_delete"
-            app:layout_constraintBottom_toBottomOf="@id/switch_delete"
-            android:visibility="gone"
-            />
-
-        <androidx.constraintlayout.widget.Guideline
-            android:id="@+id/midGuideLine"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            app:layout_constraintGuide_percent="0.5"
-            />
-
-        <androidx.constraintlayout.widget.Guideline
-            android:id="@+id/midStartGuideLine"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            app:layout_constraintGuide_percent="0.4"
-            />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/buttons_layout"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginHorizontal="5dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/info_layout">
-
-        <Button
-            android:id="@+id/button_members"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:textAllCaps="false"
-            android:text="Участни\nки"
-            android:autoSizeTextType="uniform"
-            android:autoSizeMinTextSize="10sp"
-            android:autoSizeMaxTextSize="22sp"
             android:autoSizeStepGranularity="2sp"
-            android:textColor="?attr/colorPrimary"
-            style="?android:attr/buttonBarButtonStyle"
+            android:padding="2dp"
+            android:elevation="4dp"
+            android:fontFamily="@font/roboto_italic"
+            android:textStyle="bold" />
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/topGuideLine"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.35"
+            />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/floatingActionButtonOptions"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/info_layout"
+            android:layout_marginEnd="10dp"
+            android:layout_marginBottom="15dp"
+            android:src="@drawable/ic_edit"
+            app:tint="?attr/colorPrimaryDark"
+            android:backgroundTint="?attr/colorPrimary"
+            app:borderWidth="0dp"
             android:visibility="gone"
             tools:visibility="visible"
-            app:layout_constraintHorizontal_chainStyle="spread_inside"
-            app:layout_constraintTop_toTopOf="parent"
+            />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/info_layout"
+            android:layout_width="0dp"
+            android:background="@drawable/choose_settings"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@id/photoImageView"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/button_media" />
+            app:layout_constraintEnd_toEndOf="parent">
 
-        <Button
-            android:id="@+id/button_media"
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="30dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/midStartGuideLine"
+                android:text="Никнейм"
+                android:layout_marginStart="10dp"
+                android:fontFamily="casual"
+                android:id="@+id/nickWordTextView"
+                android:layout_marginTop="10dp"
+                android:textColor="?attr/colorAccent"
+                android:autoSizeTextType="uniform"
+                android:autoSizeMinTextSize="20sp"
+                android:autoSizeMaxTextSize="100sp"
+                android:autoSizeStepGranularity="2sp"
+                android:padding="2dp"
+                android:textStyle="bold|italic"/>
+
+            <TextView
+                android:id="@+id/nickTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toEndOf="@id/midStartGuideLine"
+                tools:text="user123"
+                android:layout_marginTop="10dp"
+                android:textColor="?attr/colorPrimaryDark"
+                android:textSize="18sp"
+                android:padding="2dp"
+                android:fontFamily="@font/roboto_italic"
+                android:textStyle="bold"/>
+
+            <ImageView
+                android:id="@+id/copyImageView"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:src="@drawable/ic_copy"
+                app:tint="?attr/colorPrimary"
+                app:layout_constraintTop_toTopOf="@id/nickTextView"
+                app:layout_constraintBottom_toBottomOf="@id/nickTextView"
+                app:layout_constraintStart_toEndOf="@id/nickTextView"
+                android:layout_marginStart="5dp"
+                />
+
+            <TextView
+                android:id="@+id/addMembersTextView"
+                android:layout_width="0dp"
+                android:layout_height="30dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/nickWordTextView"
+                app:layout_constraintEnd_toStartOf="@id/midGuideLine"
+                android:text="Пригласить участников"
+                android:layout_marginStart="10dp"
+                android:layout_marginTop="15dp"
+                android:textColor="?attr/colorAccent"
+                android:fontFamily="casual"
+                android:autoSizeTextType="uniform"
+                android:autoSizeMinTextSize="12sp"
+                android:autoSizeMaxTextSize="100sp"
+                android:autoSizeStepGranularity="2sp"
+                android:padding="2dp"
+                android:visibility="gone"
+                tools:visibility="visible"
+                android:gravity="bottom"
+                android:textStyle="bold|italic"/>
+
+            <ImageView
+                android:id="@+id/addUsersImageView"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:src="@drawable/ic_add_group"
+                app:tint="?attr/colorPrimary"
+                android:scaleX="1.4"
+                android:scaleY="1.4"
+                app:layout_constraintStart_toEndOf="@id/midGuideLine"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@id/addMembersTextView"
+                app:layout_constraintBottom_toBottomOf="@id/addMembersTextView"
+                android:layout_marginStart="5dp"
+                android:visibility="gone"
+                tools:visibility="visible"
+                />
+
+            <TextView
+                android:id="@+id/notificationsTextView"
+                android:layout_width="0dp"
+                android:layout_height="30dp"
+                app:layout_constraintEnd_toStartOf="@id/midGuideLine"
+                app:layout_constraintTop_toBottomOf="@id/addMembersTextView"
+                app:layout_constraintStart_toStartOf="parent"
+                android:layout_marginStart="10dp"
+                android:text="Уведомления"
+                android:layout_marginTop="12dp"
+                android:textColor="?attr/colorAccent"
+                android:fontFamily="casual"
+                android:autoSizeTextType="uniform"
+                android:autoSizeMinTextSize="20sp"
+                android:autoSizeMaxTextSize="100sp"
+                android:autoSizeStepGranularity="2sp"
+                android:padding="2dp"
+                android:textStyle="bold|italic"/>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_notifications"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                app:layout_constraintStart_toEndOf="@id/midGuideLine"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@id/notificationsTextView"
+                app:layout_constraintBottom_toBottomOf="@id/notificationsTextView"
+                android:layout_marginTop="3dp"
+                app:thumbTint="@color/switch_thumb_tint" />
+
+            <TextView
+                android:id="@+id/deleteTextView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                app:layout_constraintTop_toBottomOf="@id/notificationsTextView"
+                app:layout_constraintStart_toStartOf="parent"
+                android:layout_marginStart="10dp"
+                android:text="Удаление чужих сообщений"
+                android:layout_marginTop="18dp"
+                android:textColor="?attr/colorAccent"
+                android:fontFamily="casual"
+                android:autoSizeTextType="uniform"
+                android:autoSizeMinTextSize="12sp"
+                android:autoSizeMaxTextSize="100sp"
+                android:autoSizeStepGranularity="1sp"
+                android:padding="2dp"
+                android:textStyle="bold|italic"/>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_delete"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                app:layout_constraintStart_toEndOf="@id/midGuideLine"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@id/deleteTextView"
+                app:layout_constraintBottom_toBottomOf="@id/deleteTextView"
+                android:layout_marginTop="-3dp"
+                app:thumbTint="@color/switch_thumb_tint" />
+
+            <View
+                android:id="@+id/switchOverlay"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:background="@android:color/transparent"
+                app:layout_constraintStart_toStartOf="@id/switch_delete"
+                app:layout_constraintEnd_toEndOf="@id/switch_delete"
+                app:layout_constraintTop_toTopOf="@id/switch_delete"
+                app:layout_constraintBottom_toBottomOf="@id/switch_delete"
+                android:visibility="gone"
+                />
+
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/midGuideLine"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintGuide_percent="0.5"
+                />
+
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/midStartGuideLine"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintGuide_percent="0.4"
+                />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/buttons_layout"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textAllCaps="false"
-            android:text="Медиа"
-            android:autoSizeTextType="uniform"
-            android:autoSizeMinTextSize="10sp"
-            android:autoSizeMaxTextSize="22sp"
-            android:autoSizeStepGranularity="2sp"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toEndOf="@id/button_members"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/button_files"
-            android:textColor="?attr/colorPrimary"
-            style="?android:attr/buttonBarButtonStyle" />
-
-        <Button
-            android:id="@+id/button_files"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:textAllCaps="false"
-            android:autoSizeTextType="uniform"
-            android:autoSizeMinTextSize="10sp"
-            android:autoSizeMaxTextSize="22sp"
-            android:autoSizeStepGranularity="2sp"
-            style="?android:attr/buttonBarButtonStyle"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/button_audio"
-            app:layout_constraintStart_toEndOf="@+id/button_media"
-            android:textColor="?attr/colorAccent"
-            android:text="Файлы" />
-
-        <Button
-            android:id="@+id/button_audio"
-            android:layout_width="0dp"
-            android:textAllCaps="false"
-            android:layout_height="wrap_content"
-            android:autoSizeTextType="uniform"
-            android:autoSizeMinTextSize="6sp"
-            android:autoSizeMaxTextSize="22sp"
-            android:autoSizeStepGranularity="2sp"
-            style="?android:attr/buttonBarButtonStyle"
-            app:layout_constraintHorizontal_bias="1"
+            android:orientation="horizontal"
+            android:layout_marginHorizontal="5dp"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/info_layout">
+
+            <Button
+                android:id="@+id/button_members"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:textAllCaps="false"
+                android:text="Участни\nки"
+                android:autoSizeTextType="uniform"
+                android:autoSizeMinTextSize="10sp"
+                android:autoSizeMaxTextSize="22sp"
+                android:autoSizeStepGranularity="2sp"
+                android:textColor="?attr/colorPrimary"
+                style="?android:attr/buttonBarButtonStyle"
+                android:visibility="gone"
+                tools:visibility="visible"
+                app:layout_constraintHorizontal_chainStyle="spread_inside"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/button_media" />
+
+            <Button
+                android:id="@+id/button_media"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:textAllCaps="false"
+                android:text="Медиа"
+                android:autoSizeTextType="uniform"
+                android:autoSizeMinTextSize="10sp"
+                android:autoSizeMaxTextSize="22sp"
+                android:autoSizeStepGranularity="2sp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toEndOf="@id/button_members"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/button_files"
+                android:textColor="?attr/colorPrimary"
+                style="?android:attr/buttonBarButtonStyle" />
+
+            <Button
+                android:id="@+id/button_files"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:textAllCaps="false"
+                android:autoSizeTextType="uniform"
+                android:autoSizeMinTextSize="10sp"
+                android:autoSizeMaxTextSize="22sp"
+                android:autoSizeStepGranularity="2sp"
+                style="?android:attr/buttonBarButtonStyle"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/button_audio"
+                app:layout_constraintStart_toEndOf="@+id/button_media"
+                android:textColor="?attr/colorAccent"
+                android:text="Файлы" />
+
+            <Button
+                android:id="@+id/button_audio"
+                android:layout_width="0dp"
+                android:textAllCaps="false"
+                android:layout_height="wrap_content"
+                android:autoSizeTextType="uniform"
+                android:autoSizeMinTextSize="6sp"
+                android:autoSizeMaxTextSize="22sp"
+                android:autoSizeStepGranularity="2sp"
+                style="?android:attr/buttonBarButtonStyle"
+                app:layout_constraintHorizontal_bias="1"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/button_files"
+                android:textColor="?attr/colorAccent"
+                tools:text="Голосо\nвые" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <Button
+            android:id="@+id/load_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Загрузить изображения"
+            android:textColor="?attr/colorPrimaryDark"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/buttons_layout"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/button_files"
-            android:textColor="?attr/colorAccent"
-            tools:text="Голосо\nвые" />
+            />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerview"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/buttons_layout"
+            app:layout_constraintBottom_toBottomOf="parent"
+            />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <Button
-        android:id="@+id/load_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Загрузить изображения"
-        android:textColor="?attr/colorPrimaryDark"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/buttons_layout"
-        app:layout_constraintBottom_toBottomOf="parent"
-        />
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerview"
+    <View
+        android:id="@+id/navigationBarScrim"
         android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/buttons_layout"
+        android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent"
-        />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

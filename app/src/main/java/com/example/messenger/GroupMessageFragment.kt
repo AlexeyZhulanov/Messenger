@@ -36,7 +36,7 @@ class GroupMessageFragment : BaseChatFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val list = viewModel.fetchMembersList()
         setupAdapter(list)
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.fetchMembersList2()
             viewModel.joinGroup()
         }
@@ -50,13 +50,18 @@ class GroupMessageFragment : BaseChatFragment() {
                             registerInitialListObserver()
                         }
                         adapter.submitList(pagingData)
-                    } else isStopPagination = true
+                    } else {
+                        if(!viewModel.isFirstPage()) {
+                            Log.d("testStopPagination", "Called")
+                            isStopPagination = true
+                        }
+                    }
                 }
             }
         }
         setMarkScrollListener()
         val lastSession: TextView = view.findViewById(R.id.lastSessionTextView)
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.membersCount.collectLatest {
                 lastSession.text = when(it) {
                     0 -> "" // если не удалось получить, то не отображаем

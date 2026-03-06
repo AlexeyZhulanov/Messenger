@@ -13,19 +13,22 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.request.RequestOptions
 import com.example.messenger.databinding.FragmentGitlabBinding
 import com.example.messenger.model.Repo
 import com.example.messenger.model.User
 import com.example.messenger.utils.getParcelableCompat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import androidx.core.net.toUri
 
 @AndroidEntryPoint
 class GitlabFragment : Fragment(), OnSaveButtonGitlabClickListener {
@@ -45,10 +48,6 @@ class GitlabFragment : Fragment(), OnSaveButtonGitlabClickListener {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val typedValue = TypedValue()
-        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
-        val colorBar = typedValue.data
-        requireActivity().window.statusBarColor = colorBar
         val toolbarContainer: FrameLayout = view.findViewById(R.id.toolbar_container)
         val defaultToolbar = LayoutInflater.from(context)
             .inflate(R.layout.toolbar_news, toolbarContainer, false)
@@ -63,10 +62,10 @@ class GitlabFragment : Fragment(), OnSaveButtonGitlabClickListener {
         }
         if(currentUserUri != null) {
             avatarImageView.imageTintList = null
-            Glide.with(requireContext())
+            Glide.with(avatarImageView)
                 .load(currentUserUri)
-                .apply(RequestOptions.circleCropTransform())
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .circleCrop()
+                .dontAnimate()
                 .into(avatarImageView)
         }
 
@@ -77,6 +76,26 @@ class GitlabFragment : Fragment(), OnSaveButtonGitlabClickListener {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentGitlabBinding.inflate(inflater, container, false)
+
+        WindowCompat.setDecorFitsSystemWindows(requireActivity().window, false)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+
+            binding.statusBarScrim.layoutParams.height = systemBars.top
+            binding.navigationBarScrim.layoutParams.height = systemBars.bottom
+
+            binding.statusBarScrim.requestLayout()
+            binding.navigationBarScrim.requestLayout()
+
+            insets
+        }
+
+        val typedValue = TypedValue()
+        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
+        val colorBar = typedValue.data
+        binding.statusBarScrim.setBackgroundColor(colorBar)
+        binding.navigationBarScrim.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.navigation_bar_color))
+
         val txt = "Token: " + viewModel.getGitlabToken()
         binding.tokenTextView.text = txt
 
@@ -129,7 +148,7 @@ class GitlabFragment : Fragment(), OnSaveButtonGitlabClickListener {
     }
 
     override fun onSaveButtonClicked(id: Int, list: List<Boolean?>) {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.updateRepo(id, list) { success ->
                 if(success) {
                     viewModel.isNeedFetchRepos = true
@@ -148,7 +167,7 @@ class GitlabFragment : Fragment(), OnSaveButtonGitlabClickListener {
 
     private fun openUrlInBrowser(url: String) {
         try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            val intent = Intent(Intent.ACTION_VIEW, url.toUri()).apply {
                 // Добавляем флаг для нового task'а (опционально)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }

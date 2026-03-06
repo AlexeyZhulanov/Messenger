@@ -1,35 +1,44 @@
 package com.example.messenger
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.media.MediaPlayer
-import android.os.Handler
-import android.os.Looper
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.databinding.ItemVoiceBinding
-import com.example.messenger.utils.takeSample
+import com.example.messenger.states.AudioPlaybackState
+import com.example.messenger.states.VoiceItem
+import com.example.messenger.utils.formatTime
 import com.masoudss.lib.SeekBarOnProgressChanged
 import com.masoudss.lib.WaveformSeekBar
-import java.io.File
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+
+interface VoicesActionListener {
+    fun onPlayClick(filePath: String)
+    fun onVoiceSeek(filePath: String, progress: Int)
+}
+
+object VoiceDiffCallback : DiffUtil.ItemCallback<VoiceItem>() {
+    override fun areItemsTheSame(oldItem: VoiceItem, newItem: VoiceItem): Boolean {
+        return oldItem.localPath == newItem.localPath
+    }
+    override fun areContentsTheSame(oldItem: VoiceItem, newItem: VoiceItem): Boolean {
+        return oldItem == newItem
+    }
+}
 
 class VoicesAdapter(
-    private val newsViewModel: NewsViewModel,
-    private val context: Context
-) : RecyclerView.Adapter<VoicesAdapter.VoicesViewHolder>() {
+    private val playbackStateFlow: StateFlow<AudioPlaybackState>,
+    private val scope: CoroutineScope,
+    private val actionListener: VoicesActionListener
+) : ListAdapter<VoiceItem, VoicesAdapter.VoicesViewHolder>(VoiceDiffCallback) {
 
-    private var isPlaying: Boolean = false
-    private val handler = Handler(Looper.getMainLooper())
 
-    var voicePaths: List<String> = listOf()
-        @SuppressLint("NotifyDataSetChanged")
-        set(value) {
-            field = value
-            notifyDataSetChanged()
-        }
-
-    override fun getItemCount(): Int = voicePaths.size
+    override fun getItemCount(): Int = currentList.size
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VoicesViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -38,63 +47,69 @@ class VoicesAdapter(
     }
 
     override fun onBindViewHolder(holder: VoicesViewHolder, position: Int) {
-        val voicePath = voicePaths[position]
-        val file = File(voicePath)
-        with(holder.binding) {
-            val mediaPlayer = MediaPlayer().apply {
-                setDataSource(voicePath)
-                prepare()
-            }
-            val duration = mediaPlayer.duration
-            val intArray = takeSample(context, file.path)
-            waveformSeekBar.setSampleFrom(intArray)
-            waveformSeekBar.maxProgress = duration.toFloat()
-            timeVoiceTextView.text = newsViewModel.formatTime(duration.toLong())
-
-            val updateSeekBarRunnable = object : Runnable {
-                override fun run() {
-                    if (isPlaying && mediaPlayer.isPlaying) {
-                        val currentPosition = mediaPlayer.currentPosition.toFloat()
-                        waveformSeekBar.progress = currentPosition
-                        timeVoiceTextView.text = newsViewModel.formatTime(currentPosition.toLong())
-                        handler.postDelayed(this, 100)
-                    }
-                }
-            }
-            playButton.setOnClickListener {
-                if (!isPlaying) {
-                    mediaPlayer.start()
-                    playButton.setImageResource(R.drawable.ic_pause)
-                    isPlaying = true
-                    handler.post(updateSeekBarRunnable) // Запуск обновления SeekBar
-                } else {
-                    mediaPlayer.pause()
-                    playButton.setImageResource(R.drawable.ic_play)
-                    isPlaying = false
-                    handler.removeCallbacks(updateSeekBarRunnable) // Остановка обновления SeekBar
-                }
-            }
-            // Обработка изменения положения SeekBar
-            waveformSeekBar.onProgressChanged = object :
-                SeekBarOnProgressChanged {
-                override fun onProgressChanged(waveformSeekBar: WaveformSeekBar, progress: Float, fromUser: Boolean) {
-                    if (fromUser) {
-                        mediaPlayer.seekTo(progress.toInt())
-                        timeVoiceTextView.text = newsViewModel.formatTime(progress.toLong())
-                    }
-                }
-            }
-            mediaPlayer.setOnCompletionListener {
-                playButton.setImageResource(R.drawable.ic_play)
-                waveformSeekBar.progress = 0f
-                timeVoiceTextView.text = newsViewModel.formatTime(duration.toLong())
-                isPlaying = false
-                handler.removeCallbacks(updateSeekBarRunnable)
-            }
-        }
+        holder.bind(getItem(position))
     }
 
-    class VoicesViewHolder(
-        val binding: ItemVoiceBinding
-    ) : RecyclerView.ViewHolder(binding.root)
+    override fun onViewRecycled(holder: VoicesViewHolder) {
+        super.onViewRecycled(holder)
+        holder.unbind()
+    }
+
+    inner class VoicesViewHolder(val binding: ItemVoiceBinding) : RecyclerView.ViewHolder(binding.root) {
+        private var currentPath: String? = null
+        private var playbackJob: Job? = null
+
+        init {
+            binding.playButton.setOnClickListener {
+                currentPath?.let { actionListener.onPlayClick(it) }
+            }
+
+            binding.waveformSeekBar.onProgressChanged = object : SeekBarOnProgressChanged {
+                override fun onProgressChanged(waveformSeekBar: WaveformSeekBar, progress: Float, fromUser: Boolean) {
+                    if (fromUser) {
+                        currentPath?.let {
+                            actionListener.onVoiceSeek(it, progress.toInt())
+                        }
+                    }
+                }
+            }
+        }
+
+        fun bind(voice: VoiceItem) {
+            currentPath = voice.localPath
+            binding.waveformSeekBar.setSampleFrom(voice.sample.toIntArray())
+            binding.waveformSeekBar.maxProgress = voice.duration.toFloat()
+            val st = formatTime(voice.duration)
+            binding.timeVoiceTextView.text = st
+
+            observePlaybackState()
+        }
+
+        private fun observePlaybackState() {
+            // Отменяем старую работу, если ViewHolder переиспользуется
+            playbackJob?.cancel()
+
+            playbackJob = scope.launch {
+                playbackStateFlow.collectLatest { state ->
+                    if (state.playingPath == currentPath) {
+                        binding.waveformSeekBar.progress = state.progress.toFloat()
+                        binding.timeVoiceTextView.text = formatTime(state.progress.toLong())
+                        if (state.isPlaying) {
+                            binding.playButton.setImageResource(R.drawable.ic_pause)
+                        } else {
+                            binding.playButton.setImageResource(R.drawable.ic_play)
+                        }
+                    } else {
+                        binding.waveformSeekBar.progress = 0f
+                        binding.playButton.setImageResource(R.drawable.ic_play)
+                        binding.timeVoiceTextView.text = formatTime(binding.waveformSeekBar.maxProgress.toLong())
+                    }
+                }
+            }
+        }
+
+        fun unbind() {
+            playbackJob?.cancel() // Остановка подписки при скролле
+        }
+    }
 }

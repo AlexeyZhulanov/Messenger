@@ -32,10 +32,11 @@ data class ConversationEntity(
 data class MessageEntity(
     val text: String?,
     val timestamp: Long?,
-    @param:Json(name = "is_read") val isRead: Boolean?
+    @param:Json(name = "is_read") val isRead: Boolean?,
+    @param:Json(name = "sender_name") val senderName: String?
 ) {
     fun toLastMessage(): LastMessage {
-        return LastMessage(text = text, timestamp = timestamp, isRead = isRead)
+        return LastMessage(text = text, timestamp = timestamp, isRead = isRead, senderName = senderName)
     }
 }
 @JsonClass(generateAdapter = true)

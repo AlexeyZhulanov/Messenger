@@ -31,5 +31,6 @@ data class Message(
 data class LastMessage(
     val text: String? = null,
     val timestamp: Long? = null,
-    val isRead: Boolean? = null
+    val isRead: Boolean? = null,
+    val senderName: String? = null
 ) : Parcelable

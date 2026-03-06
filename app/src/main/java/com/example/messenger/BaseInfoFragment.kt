@@ -15,6 +15,10 @@ import android.widget.ImageView
 import android.widget.NumberPicker
 import android.widget.Toast
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -66,15 +70,11 @@ abstract class BaseInfoFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val typedValue = TypedValue()
-        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
-        val colorBar = typedValue.data
-        requireActivity().window.statusBarColor = colorBar
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             binding.switchNotifications.isChecked = viewModel.isNotificationsEnabled()
             binding.switchNotifications.setOnCheckedChangeListener { _, _ ->
                 binding.switchNotifications.isEnabled = false
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     viewModel.turnNotifications()
                     delay(5000)
                     binding.switchNotifications.isEnabled = true
@@ -98,12 +98,30 @@ abstract class BaseInfoFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentDialogInfoBinding.inflate(inflater, container, false)
         filePickerManager = FilePickerManager(fragment3 =  this)
+
+        WindowCompat.setDecorFitsSystemWindows(requireActivity().window, false)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+
+            binding.statusBarScrim.layoutParams.height = systemBars.top
+            binding.navigationBarScrim.layoutParams.height = systemBars.bottom
+
+            binding.statusBarScrim.requestLayout()
+            binding.navigationBarScrim.requestLayout()
+
+            insets
+        }
+
         val typedValue = TypedValue()
+        requireActivity().theme.resolveAttribute(R.attr.colorBar, typedValue, true)
+        val colorBar = typedValue.data
+        binding.statusBarScrim.setBackgroundColor(colorBar)
+        binding.navigationBarScrim.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.navigation_bar_color))
         context?.theme?.resolveAttribute(android.R.attr.colorAccent, typedValue, true)
         colorAccent = typedValue.data
         context?.theme?.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
         colorPrimary = typedValue.data
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val avatar = getAvatarString()
             if (avatar != "") {
                 binding.progressBar.visibility = View.VISIBLE
@@ -149,7 +167,7 @@ abstract class BaseInfoFragment : Fragment() {
             binding.switchOverlay.visibility = View.GONE
             binding.switchDelete.setOnCheckedChangeListener { _, _ ->
                 binding.switchDelete.isEnabled = false
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     viewModel.toggleCanDeleteDialog()
                     delay(5000)
                     binding.switchDelete.isEnabled = true
@@ -291,7 +309,7 @@ abstract class BaseInfoFragment : Fragment() {
                     // Достигнут конец списка, подгружаем новые элементы
                     loadMoreMediaItems(selectedType, currentPage) {}
                     isPaginationAllowed = false
-                    lifecycleScope.launch {
+                    viewLifecycleOwner.lifecycleScope.launch {
                         delay(3000)
                         isPaginationAllowed = true
                     }
@@ -305,7 +323,7 @@ abstract class BaseInfoFragment : Fragment() {
     protected fun loadMoreMediaItems(type: Int, page: Int, callback: (Boolean) -> Unit) {
         when(type) {
             MediaItem.TYPE_MEDIA -> {
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     val list = viewModel.getMediaPreviews(page)
                     if(!list.isNullOrEmpty()) {
                         val items = async {
@@ -327,7 +345,7 @@ abstract class BaseInfoFragment : Fragment() {
                 }
             }
             MediaItem.TYPE_FILE -> {
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     val list = viewModel.getFiles(page)
                     if(!list.isNullOrEmpty()) {
                         binding.loadButton.visibility = View.GONE
@@ -342,7 +360,7 @@ abstract class BaseInfoFragment : Fragment() {
                 }
             }
             MediaItem.TYPE_AUDIO -> {
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     val list = viewModel.getAudios(page)
                     if(!list.isNullOrEmpty()) {
                         binding.loadButton.visibility = View.GONE
@@ -422,7 +440,7 @@ abstract class BaseInfoFragment : Fragment() {
             .setTitle("Вы уверены, что хотите удалить все сообщения?")
             .setPositiveButton("Удалить") { dialogInterface, _ ->
                 dialogInterface.dismiss()
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     val success = viewModel.deleteAllMessages()
                     if(success) requireActivity().onBackPressedDispatcher.onBackPressed()
                     else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()
@@ -441,7 +459,7 @@ abstract class BaseInfoFragment : Fragment() {
             .setTitle("Вы уверены, что хотите удалить этот чат?")
             .setPositiveButton("Удалить") { dialogInterface, _ ->
                 dialogInterface.dismiss()
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     val (success, message) = viewModel.deleteConv()
                     if(success) {
                         parentFragmentManager.beginTransaction()
@@ -492,7 +510,7 @@ abstract class BaseInfoFragment : Fragment() {
                         4 -> 600
                         else -> 0
                     }
-                    lifecycleScope.launch {
+                    viewLifecycleOwner.lifecycleScope.launch {
                         val success = viewModel.updateAutoDeleteInterval(interval)
                         if(success) Toast.makeText(requireContext(), "Установлено автоудаление: $selectedValue", Toast.LENGTH_SHORT).show()
                         else Toast.makeText(requireContext(), "Ошибка: Нет сети!", Toast.LENGTH_SHORT).show()

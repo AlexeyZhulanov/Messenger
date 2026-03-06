@@ -116,7 +116,7 @@ class GroupInfoFragment : BaseInfoFragment() {
 
     override fun deleteUserFromGroup(user: User) {
         showDeleteUserDialog(user.username) {
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 val success = viewModel.deleteUserFromGroup(user.id)
                 val txt = if(success) "Участник успешно удален" else "Не удалось удалить, нет сети"
                 Toast.makeText(requireContext(), txt, Toast.LENGTH_SHORT).show()
@@ -141,7 +141,7 @@ class GroupInfoFragment : BaseInfoFragment() {
             .setView(dialogView)
             .setPositiveButton("Добавить") { dialogInterface, _ ->
                 val input = dialogView.findViewById<EditText>(R.id.dialog_input).text.toString()
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     viewModel.addMember(group.key, input, currentUser.id) { message ->
                         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
                     }
@@ -162,7 +162,7 @@ class GroupInfoFragment : BaseInfoFragment() {
         popupMenu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.item_new_avatar -> {
-                    lifecycleScope.launch {
+                    viewLifecycleOwner.lifecycleScope.launch {
                         val res = async { filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf()) }
                         val photo = res.await()
                         if(photo.isNotEmpty()) {
@@ -180,7 +180,7 @@ class GroupInfoFragment : BaseInfoFragment() {
                 R.id.item_edit_avatar -> {
                     val fileTemp = fileUpdate
                     if (fileTemp != null) {
-                        lifecycleScope.launch {
+                        viewLifecycleOwner.lifecycleScope.launch {
                             val res = async { filePickerManager.openFilePicker(isCircle = true, isFreeStyleCrop = false, arrayListOf(viewModel.fileToLocalMedia(fileTemp))) }
                             val photo = res.await()
                             if(photo.isNotEmpty()) {
@@ -200,7 +200,7 @@ class GroupInfoFragment : BaseInfoFragment() {
                 }
                 R.id.item_delete_avatar -> {
                     if(group.avatar != null) {
-                        lifecycleScope.launch {
+                        viewLifecycleOwner.lifecycleScope.launch {
                             val success = async { viewModel.updateGroupAvatar("delete") }
                             if(success.await()) {
                                 Toast.makeText(requireContext(), "Аватарка удалена, полностью перезайдите чтобы увидеть", Toast.LENGTH_SHORT).show()
@@ -229,7 +229,7 @@ class GroupInfoFragment : BaseInfoFragment() {
         val dialog = AlertDialog.Builder(requireContext())
             .setView(dialogView)
             .setPositiveButton("Изменить") { dialogInterface, _ ->
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     val input = editText.text.toString()
                     input.forEach {
                         if(it !in alf) {
